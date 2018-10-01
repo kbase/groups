@@ -47,7 +47,7 @@ Provide a design for groups (e.g. organizations, projects, teams, etc) within KB
     * A mutable icon
 
 All properties are public except the list of workspaces and list of members. The list of
-administrators and owner are public. System administrators can view all properties when they
+administrators and owner are public. KBase System administrators can view all properties when they
 request to be viewed as system administrators and can reassign owners.
 
 ### Interactions with ACLs
