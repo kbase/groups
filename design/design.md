@@ -95,8 +95,8 @@ approving all ACL changes and allowing a user access to their workspace does not
 will be able to add other users via the groups mechanism. However, it means more work as they
 are explicitly approving all ACL changes (and users must request all ACL changes). It also
 reduces clutter for group members, as only the workspaces for which they have explicitly
-requested access appear in their dashboard and search, as opposed to all the workspaces in all
-their groups.
+requested access appear in their dashboard, data lists, and search, as opposed to all the
+workspaces in all their groups.
 
 **Decision: Option 3.**
 
@@ -116,7 +116,7 @@ their groups.
   users list for groups where they’re members. 
 * This could be implemented directly in the service or
   * Delegated to search2 (yikes)
-  * This would require implementing the EventHandler interface for search2 and extensive testing
+    * This would require implementing the EventHandler interface for search2 and extensive testing
 
 ## Dependencies
 * The workspace service changes as noted above
