@@ -3,7 +3,7 @@
 This document describes client interactions with the Groups service based on the design in
 `design.md` in this folder.
 
-The interactions for the stretch design goals are not included - they will be added if an when
+The interactions for the stretch design goals are not included - they will be added if and when
 it's clear there is time available for implementation.
 
 ## Data Structures
@@ -32,10 +32,10 @@ it's clear there is time available for implementation.
 ### Group creation
 
 * Client sends message to service with
-  * Requested group name
-  * Group type
-  * Description
-* Service returns `Group` with empty `GUsers` and `GWS`
+  * Requested `GName`
+  * `GType`
+  * `GDesc`
+* Service returns `Group` with empty `PF`
 
 ### Group view
 
@@ -83,10 +83,10 @@ it's clear there is time available for implementation.
 * Client sends a service message with
   * `GID`
   * username
-  * Requirement: user must be `GOwner`
 * Service
   * Stores invitation with `AddUserToGroup` type
   * Sends invitation to user with `IID` to Feeds service
+  * Requirement: user must be `GOwner`
 * ONE OF:
   * Accept
     * Client sends a service message with `IID` and `accept`
@@ -95,7 +95,7 @@ it's clear there is time available for implementation.
       * Deletes `Invitation`
       * Sends message to `GOwner` to Feeds
       * Returns 204
-    * Requirement: user must be `IUser`
+      * Requirement: user must be `IUser`
   * Deny
     * Client sends a service message with `IID` and `deny`
     * Service
@@ -109,5 +109,28 @@ it's clear there is time available for implementation.
       * Deletes `Invitation`
       * Deletes `IID` from Feeds
       * Returns 204
-    * Requirement: user must be `GOwner`
+      * Requirement: user must be `GOwner`
 
+### Remove user self
+
+* Client sends a service message with `GID`
+* Service
+  * Removes user from group
+  * Sends message to `GOwner` to Feeds
+  * Returns 204
+
+### Remove user
+
+* Client sends a service message with
+  * `GID`
+  * username`
+* Service
+  * Removes user from group
+  * DOES NOT send a message to feeds (or optionally does?)
+  * Returns 204
+  * Requirement: user must be owner of `GID`
+
+## TODO
+
+* KBase admins - can mutate groups at will, but must specify they are acting as admins
+* Delete group
