@@ -22,7 +22,7 @@ it's clear there is time available for implementation.
 ### `Invitation`:
 * Unique immutable ID (UUID) - `IID`
 * `GID`
-* username (optional, omitted if the group owner must respond) `IUser`
+* username (optional, included when a specific user is involved) - `IUser`
 * Invitation type
 * Workspace ID (optional, included when a workspace is involved. May be decorated with
   Narrative / workspace names when appropriate)
@@ -84,7 +84,7 @@ it's clear there is time available for implementation.
   * `GID`
   * username
 * Service
-  * Stores invitation with `AddUserToGroup` type
+  * Stores `Invitation` with `AddUserToGroup` type
   * Sends invitation to user with `IID` to Feeds service
   * Requirement: user must be `GOwner`
 * ONE OF:
@@ -97,10 +97,10 @@ it's clear there is time available for implementation.
       * Returns 204
       * Requirement: user must be `IUser`
   * Deny
-    * Client sends a service message with `IID` and `deny`
+    * Client sends a service message with `IID` and `deny` and reason (optional)
     * Service
       * Deletes `Invitation`
-      * Sends message to `GOwner` to Feeds
+      * Sends message to `GOwner` to Feeds with reason
       * Returns 204
       * Requirement: user must be `IUser`
   * Cancel
@@ -110,6 +110,36 @@ it's clear there is time available for implementation.
       * Deletes `IID` from Feeds
       * Returns 204
       * Requirement: user must be `GOwner`
+
+### Request membership
+
+* Client sends a service message with `GID`
+* Service
+  * Stores `invitation` with `RequestMembership` type
+  * Sends invitation to owner with `IID` to Feeds service
+* ONE OF:
+  * Accept
+    * Client sends a service message with `IID` and `accept`
+    * Service
+      * Adds user to group
+      * Deletes `Invitation`
+      * Sends message to `IUser` to Feeds
+      * Returns 204
+      * Requirement: user must be `GOwner`
+  * Deny
+    * Client sends a service message with `IID` and `deny` and reason (optional)
+    * Service
+      * Deletes `Invitation`
+      * Sends message to `IUser` to Feeds with reason
+      * Returns 204
+      * Requirement: user must be `GOwner`
+  * Cancel
+    * Client sends a service message with `IID` and `cancel`
+    * Service
+      * Deletes `Invitation`
+      * Deletes `IID` from Feeds
+      * Returns 204
+      * Requirement: user must be `IUser`
 
 ### Remove user self
 
