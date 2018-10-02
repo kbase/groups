@@ -270,3 +270,8 @@ it's clear there is time available for implementation.
 
 * When a `Group` is deleted, delete all related `Invitation`
 * When accessing `Invitation`, check that `Group` exists. If not, delete `Invitation`
+
+## TODO
+
+* KBase Sysadmins reassign owner
+* How users find groups they're interested in (KBaseSearch integration? Embed search in service?)
