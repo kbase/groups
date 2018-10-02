@@ -60,6 +60,15 @@ it's clear there is time available for implementation.
   * `PF` are not included in the list
   * Assume that this list is always small enough that returning all groups at once is not an issue
 
+* Client sends a service message with `WSID`
+* Service returns list of `Group` where:
+  * `PF` are not included in the list
+  * If user is a `WSID` administrator:
+    * `GWS` includes `WSID`
+  * Else:
+    * `GWS` includes `WSID` and `GUsers` includes user
+
+
 ### Mutate group name, type and description
 
 * Client sends a service message with
@@ -240,11 +249,17 @@ it's clear there is time available for implementation.
               * Requirement: user must be original `WSID` administrator
     * Else error
 
-
-
 ### Remove workspace
 
-TODO
+* Client sends a service message with
+  * `GID`
+  * `WSID`
+* Service
+  * Removes `WSID` from `Group`
+  * Sends message to `GOwner` and `WSID` administrators to Feeds
+    * Except requester
+  * Returns 204
+  * Requirement: user must be owner of `GID` or `WSID` administrator
 
 ### Administration
 
@@ -255,7 +270,3 @@ TODO
 
 * When a `Group` is deleted, delete all related `Invitation`
 * When accessing `Invitation`, check that `Group` exists. If not, delete `Invitation`
-
-## TODO
-
-* list groups associated with a workspace, requires ws admin
