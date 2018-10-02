@@ -15,7 +15,8 @@ it's clear there is time available for implementation.
 * Mutable group type - `GType`
 * Mutable description - `GDesc`
 * Mutable list of member users - `GUsers`
-* Mutable list of member workspaces / narratives - `GWS`
+* Mutable list of member workspaces / narratives ( May be decorated with
+  Narrative / workspace names when appropriate) - `GWS`
 
 `PF` - private fields; `GUsers` and `GWS`
 
@@ -25,7 +26,8 @@ it's clear there is time available for implementation.
 * username (optional, included when a specific user is involved) - `IUser`
 * Invitation type
 * Workspace ID (optional, included when a workspace is involved. May be decorated with
-  Narrative / workspace names when appropriate)
+  Narrative / workspace names when appropriate) - `WSID`
+* Status - one of `Open`, `Accept`, `Deny`, `Cancel`
 
 ## Interactions
 
@@ -36,6 +38,14 @@ it's clear there is time available for implementation.
   * `GType`
   * `GDesc`
 * Service returns `Group` with empty `PF`
+
+### Group deletion
+
+* Client sends message to service with `GID`
+* Service
+  * Deletes `Group`
+  * Returns 204
+  * Requirement: user must be `GID` owner
 
 ### Group view
 
@@ -75,7 +85,7 @@ it's clear there is time available for implementation.
     * Service returns list of `Invitation` for that user
   * Group owner
      * Client sends a service message with `GID`
-     * Service returns list of `Invitation` for that group
+     * Service returns list of `Invitation` for that `GID`
      * Requirement: user must be `GOwner`
 
 ### Add user
@@ -91,22 +101,22 @@ it's clear there is time available for implementation.
   * Accept
     * Client sends a service message with `IID` and `accept`
     * Service
-      * Adds user to group
-      * Deletes `Invitation`
+      * Adds user to `Group`
+      * Updates `Invitation`
       * Sends message to `GOwner` to Feeds
       * Returns 204
       * Requirement: user must be `IUser`
   * Deny
     * Client sends a service message with `IID` and `deny` and reason (optional)
     * Service
-      * Deletes `Invitation`
+      * Updates `Invitation`
       * Sends message to `GOwner` to Feeds with reason
       * Returns 204
       * Requirement: user must be `IUser`
   * Cancel
     * Client sends a service message with `IID` and `cancel`
     * Service
-      * Deletes `Invitation`
+      * Updates `Invitation`
       * Deletes `IID` from Feeds
       * Returns 204
       * Requirement: user must be `GOwner`
@@ -115,28 +125,28 @@ it's clear there is time available for implementation.
 
 * Client sends a service message with `GID`
 * Service
-  * Stores `invitation` with `RequestMembership` type
-  * Sends invitation to owner with `IID` to Feeds service
+  * Stores `Invitation` with `RequestMembership` type
+  * Sends invitation to owner with `IID` to Feeds
 * ONE OF:
   * Accept
     * Client sends a service message with `IID` and `accept`
     * Service
-      * Adds user to group
-      * Deletes `Invitation`
+      * Adds user to `Group`
+      * Updates `Invitation`
       * Sends message to `IUser` to Feeds
       * Returns 204
       * Requirement: user must be `GOwner`
   * Deny
     * Client sends a service message with `IID` and `deny` and reason (optional)
     * Service
-      * Deletes `Invitation`
+      * Updates `Invitation`
       * Sends message to `IUser` to Feeds with reason
       * Returns 204
       * Requirement: user must be `GOwner`
   * Cancel
     * Client sends a service message with `IID` and `cancel`
     * Service
-      * Deletes `Invitation`
+      * Updates `Invitation`
       * Deletes `IID` from Feeds
       * Returns 204
       * Requirement: user must be `IUser`
@@ -145,7 +155,7 @@ it's clear there is time available for implementation.
 
 * Client sends a service message with `GID`
 * Service
-  * Removes user from group
+  * Removes user from `Group`
   * Sends message to `GOwner` to Feeds
   * Returns 204
 
@@ -153,14 +163,99 @@ it's clear there is time available for implementation.
 
 * Client sends a service message with
   * `GID`
-  * username`
+  * username
 * Service
-  * Removes user from group
+  * Removes user from `Group`
   * DOES NOT send a message to feeds (or optionally does?)
   * Returns 204
   * Requirement: user must be owner of `GID`
 
+### Add workspace
+
+* Client sends a service message with
+  * `GID`
+  * `WSID`
+* Service
+  * ONE OF:
+    * If user is `GID` owner and `WSID` administrator, service:
+      * Adds `WSID` to `Group`
+      * Sends message to `WSID` administrators to Feeds
+      * Returns 204
+    * If user is `GID` owner
+      * Service:
+        * Stores `Invitation` with `RequestAddToGroup` type
+        * Sends invitation to `WSID` admins who are members of `GID` with `IID` to Feeds
+        * Requirement: user must have at least read access to `WSID`
+        * Requirement: at least one `WSID` admin must be a member of `GID`
+      * ONE OF:
+        * Accept
+          * Client sends a service message with `IID` and `accept`
+          * Service
+            * Adds `WSID` to `Group`
+            * Updates `Invitation`
+            * Sends message to `WSID` administrators and `GOwner` to Feeds
+            * Returns 204
+            * Requirement: user must be `WSID` administrator and `GID` member
+        * Deny
+          * Client sends a service message with `IID` and `deny` and reason (optional)
+          * Service
+            * Updates `Invitation`
+            * Sends message to `WSID` administrators who are members of `GID` and
+              `GOwner` to Feeds with reason
+            * Returns 204
+            * Requirement: user must be `WSID` administrator and `GID` member
+        * Cancel
+          * Client sends a service message with `IID` and `cancel`
+          * Service
+            * Updates `Invitation`
+            * Deletes `IID` from Feeds
+            * Returns 204
+            * Requirement: user must be `GOwner`
+    * If user is `WSID` administrator and `GID` member
+        * Service:
+          * Stores `Invitation` with `RequestAddWorkspace` type
+          * Sends invitation to `GOwner` with `IID` to Feeds
+        * ONE OF:
+          * Accept
+            * Client sends a service message with `IID` and `accept`
+            * Service
+              * Adds `WSID` to `Group`
+              * Updates `Invitation`
+              * Sends message to `WSID` administrators to Feeds
+              * Returns 204
+              * Requirement: user must be `GOwner`
+          * Deny
+            * Client sends a service message with `IID` and `deny` and reason (optional)
+            * Service
+              * Updates `Invitation`
+              * Sends message to original `WSID` administrator to Feeds with reason
+              * Returns 204
+              * Requirement: user must be `GOwner`
+          * Cancel
+            * Client sends a service message with `IID` and `cancel`
+            * Service
+              * Updates `Invitation`
+              * Deletes `IID` from Feeds
+              * Returns 204
+              * Requirement: user must be original `WSID` administrator
+    * Else error
+
+
+
+### Remove workspace
+
+TODO
+
+### Administration
+
+* KBase administrators can bypass all requirements and can always see `PF`, but must specify
+  they are acting in an administrative capacity by including that in the service message.
+
+## Implementation notes
+
+* When a `Group` is deleted, delete all related `Invitation`
+* When accessing `Invitation`, check that `Group` exists. If not, delete `Invitation`
+
 ## TODO
 
-* KBase admins - can mutate groups at will, but must specify they are acting as admins
-* Delete group
+* list groups associated with a workspace, requires ws admin
