@@ -60,6 +60,8 @@ it's clear there is time available for implementation.
   * `PF` are not included in the list
   * Assume that this list is always small enough that returning all groups at once is not an issue
 
+#### By workspace ID
+
 * Client sends a service message with `WSID`
 * Service returns list of `Group` where:
   * `PF` are not included in the list
@@ -184,70 +186,76 @@ it's clear there is time available for implementation.
 * Client sends a service message with
   * `GID`
   * `WSID`
-* Service
-  * ONE OF:
-    * If user is `GID` owner and `WSID` administrator, service:
+
+#### User is `GID` owner and `WSID` administrator
+
+* Service:
+  * Adds `WSID` to `Group`
+  * Sends message to `WSID` administrators to Feeds
+  * Returns 204
+
+#### User is `GID` owner
+
+* Service:
+  * Stores `Invitation` with `RequestAddToGroup` type
+  * Sends invitation to `WSID` admins who are members of `GID` with `IID` to Feeds
+  * Requirement: user must have at least read access to `WSID`
+  * Requirement: at least one `WSID` admin must be a member of `GID`
+* ONE OF:
+  * Accept
+    * Client sends a service message with `IID` and `accept`
+    * Service
       * Adds `WSID` to `Group`
+      * Updates `Invitation`
+      * Sends message to `WSID` administrators and `GOwner` to Feeds
+      * Returns 204
+      * Requirement: user must be `WSID` administrator and `GID` member
+  * Deny
+    * Client sends a service message with `IID` and `deny` and reason (optional)
+    * Service
+      * Updates `Invitation`
+      * Sends message to `WSID` administrators who are members of `GID` and
+        `GOwner` to Feeds with reason
+      * Returns 204
+      * Requirement: user must be `WSID` administrator and `GID` member
+  * Cancel
+    * Client sends a service message with `IID` and `cancel`
+    * Service
+      * Updates `Invitation`
+      * Deletes `IID` from Feeds
+      * Returns 204
+      * Requirement: user must be `GOwner`
+
+#### User is `WSID` administrator and `GID` member
+
+* Service:
+  * Stores `Invitation` with `RequestAddWorkspace` type
+  * Sends invitation to `GOwner` with `IID` to Feeds
+* ONE OF:
+  * Accept
+    * Client sends a service message with `IID` and `accept`
+    * Service
+      * Adds `WSID` to `Group`
+      * Updates `Invitation`
       * Sends message to `WSID` administrators to Feeds
       * Returns 204
-    * If user is `GID` owner
-      * Service:
-        * Stores `Invitation` with `RequestAddToGroup` type
-        * Sends invitation to `WSID` admins who are members of `GID` with `IID` to Feeds
-        * Requirement: user must have at least read access to `WSID`
-        * Requirement: at least one `WSID` admin must be a member of `GID`
-      * ONE OF:
-        * Accept
-          * Client sends a service message with `IID` and `accept`
-          * Service
-            * Adds `WSID` to `Group`
-            * Updates `Invitation`
-            * Sends message to `WSID` administrators and `GOwner` to Feeds
-            * Returns 204
-            * Requirement: user must be `WSID` administrator and `GID` member
-        * Deny
-          * Client sends a service message with `IID` and `deny` and reason (optional)
-          * Service
-            * Updates `Invitation`
-            * Sends message to `WSID` administrators who are members of `GID` and
-              `GOwner` to Feeds with reason
-            * Returns 204
-            * Requirement: user must be `WSID` administrator and `GID` member
-        * Cancel
-          * Client sends a service message with `IID` and `cancel`
-          * Service
-            * Updates `Invitation`
-            * Deletes `IID` from Feeds
-            * Returns 204
-            * Requirement: user must be `GOwner`
-    * If user is `WSID` administrator and `GID` member
-        * Service:
-          * Stores `Invitation` with `RequestAddWorkspace` type
-          * Sends invitation to `GOwner` with `IID` to Feeds
-        * ONE OF:
-          * Accept
-            * Client sends a service message with `IID` and `accept`
-            * Service
-              * Adds `WSID` to `Group`
-              * Updates `Invitation`
-              * Sends message to `WSID` administrators to Feeds
-              * Returns 204
-              * Requirement: user must be `GOwner`
-          * Deny
-            * Client sends a service message with `IID` and `deny` and reason (optional)
-            * Service
-              * Updates `Invitation`
-              * Sends message to original `WSID` administrator to Feeds with reason
-              * Returns 204
-              * Requirement: user must be `GOwner`
-          * Cancel
-            * Client sends a service message with `IID` and `cancel`
-            * Service
-              * Updates `Invitation`
-              * Deletes `IID` from Feeds
-              * Returns 204
-              * Requirement: user must be original `WSID` administrator
-    * Else error
+      * Requirement: user must be `GOwner`
+  * Deny
+    * Client sends a service message with `IID` and `deny` and reason (optional)
+    * Service
+      * Updates `Invitation`
+      * Sends message to original `WSID` administrator to Feeds with reason
+      * Returns 204
+      * Requirement: user must be `GOwner`
+  * Cancel
+    * Client sends a service message with `IID` and `cancel`
+    * Service
+      * Updates `Invitation`
+      * Deletes `IID` from Feeds
+      * Returns 204
+      * Requirement: user must be original `WSID` administrator
+
+Any other case results in an error.
 
 ### Remove workspace
 
