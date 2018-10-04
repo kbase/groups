@@ -122,3 +122,8 @@ workspaces in all their groups.
 * The workspace service changes as noted above
 * Potentially integration with the Feeds system
 
+## TODO
+
+* Should invitations (see `interactions.md`) eventually be purged?
+* Should uniqueness rules for names change with group hierarchies? E.g a subgroup's name could
+  be unique within its parent group, not globally.
