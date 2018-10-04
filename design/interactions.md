@@ -27,7 +27,10 @@ it's clear there is time available for implementation.
 * Invitation type
 * Workspace ID (optional, included when a workspace is involved. May be decorated with
   Narrative / workspace names when appropriate) - `WSID`
-* Status - one of `Open`, `Accept`, `Deny`, `Cancel`
+* Status - one of `Open`, `Accept`, `Deny`, `Cancel`, `Expired`
+* Expiration date - when the invitation automatically switches from `Open` to `Expired`
+
+TODO should non-open invitations eventually be purged?
 
 ## Interactions
 
