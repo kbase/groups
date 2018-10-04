@@ -8,16 +8,20 @@ Provide a design for groups (e.g. organizations, projects, teams, etc) within KB
 
 ### Group Properties
 
-  * A permanent unique ID generated at creation
-    * UUID or, less preferably, an autoincrementing integer
+  * A permanent, unique, user defined ID generated at creation
+    * Could be a slug based on the display name below
+    * Needs service endpoint to check if id is available and offer alternatives
+    * Very similar to auth
   * An owner
     * With the possibility for system administrators to reassign the owner
     * Only the owner may delete a group, which is permanent
   * A mutable, informational-only type (Organization, Project, Team, ...)
-  * A mutable unique name
+  * A mutable display name
   * A mutable description
   * A mutable list of members
     * Needs an invite & accept mechanism (feeds)
+    * The group owner can specify whether the member list is private or public (other
+      than the owner and administrators, which are always public.
   * A mutable list of workspaces / narratives that are part of the group
     * List mutation:
       * To add a workspace to a group, a group administrator must approve. 
@@ -30,6 +34,7 @@ Provide a design for groups (e.g. organizations, projects, teams, etc) within KB
       * At minimum, a group administrator must have read access to the workspace.
     * If a workspace is deleted, it is automatically removed from the group.
     * Workspace administrators can always remove their workspace from the group.
+    * Public workspaces are visible to group non-members.
   * Stretch properties:
     * A list of group administrators that is mutable by the owner
       * Mutable properties other than this list are mutable by administrators unless
@@ -45,10 +50,15 @@ Provide a design for groups (e.g. organizations, projects, teams, etc) within KB
       * Admins and app owners can requests addition
       * Who approves? Admin and app owner?
     * A mutable icon
+    * Admins can set select private workspaces to be appear in the organization
+      workspaces list when viewed by non-members
+    * Custom fields, where field validation & view are defined by modular field
+      handlers or built-in types and configured in the service configuration file
+    * Invitation based mechanism to change owner
 
-All properties are public except the list of workspaces and list of members. The list of
-administrators and owner are public. KBase System administrators can view all properties when they
-request to be viewed as system administrators and can reassign owners.
+All properties are public except the list of workspaces and list of members (but see above).
+The list of administrators and owner are public. KBase System administrators can view all
+properties when they request to be viewed as system administrators and can reassign owners.
 
 ### Interactions with ACLs
 There are many potential models for interaction with system ACLs. Here we present 3 options,
