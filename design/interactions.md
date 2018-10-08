@@ -55,6 +55,7 @@ TODO should non-open invitations eventually be purged?
 * Client sends message to service with `GID`
 * Service returns `Group`
   * `PF` is empty if user is not a member
+    * Except for public workspaces
 
 ### List groups
 
@@ -67,12 +68,17 @@ TODO should non-open invitations eventually be purged?
 
 * Client sends a service message with `WSID`
 * Service returns list of `Group` where:
-  * `PF` are not included in the list
   * If user is a `WSID` administrator:
     * `GWS` includes `WSID`
   * Else:
     * `GWS` includes `WSID` and `GUsers` includes user
+  * `PF` are not included in the list
 
+#### By user ID
+
+* Client sends a service message with user token
+* Service returns list of `Group` where user in `GUsers`
+  * `PF` are not included in the list
 
 ### Mutate group name, type and description
 
