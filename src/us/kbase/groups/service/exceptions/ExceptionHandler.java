@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.groups.service.Fields;
 import us.kbase.groups.service.SLF4JAutoLogger;
 
-/** Handler for exceptions thrown by the Assembly Homology service.
+/** Handler for exceptions thrown by the Groups service.
  * @author gaprice@lbl.gov
  *
  */
