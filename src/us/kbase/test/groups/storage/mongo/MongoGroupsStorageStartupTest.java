@@ -33,7 +33,7 @@ public class MongoGroupsStorageStartupTest {
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		manager = new MongoStorageTestManager("test_mongoahstorage");
+		manager = new MongoStorageTestManager("test_mongogroupsstorage");
 	}
 	
 	@AfterClass
@@ -173,11 +173,11 @@ public class MongoGroupsStorageStartupTest {
 						.append("unique", true)
 						.append("key", new Document("schema", 1))
 						.append("name", "schema_1")
-						.append("ns", "test_mongoahstorage.config"),
+						.append("ns", "test_mongogroupsstorage.config"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongoahstorage.config")
+						.append("ns", "test_mongogroupsstorage.config")
 				)));
 	}
 
