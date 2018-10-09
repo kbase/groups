@@ -1,7 +1,6 @@
 package us.kbase.groups.storage.mongo;
 
-/** This class defines the field names used in MongoDB documents for storing assembly homology
- * data.
+/** This class defines the field names used in MongoDB documents for storing groups data.
  * @author gaprice@lbl.gov
  *
  */
