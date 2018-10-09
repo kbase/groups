@@ -17,5 +17,12 @@
     * Null checking and string checking in utils classes
     * The Name class which is everywhere
     * Class loading helper methods in auth and assembly homology
+    * The call id handling really needs to be separated from the logger in the HTTP
+      services so it'd be easier to swap out the logger rather than use the
+      JsonServerSyslog class.
+    * The configuration classes have quite a bit in common - could add a MongoConfig
+      helper class for example.
+    * MongoStorageTestManger
+    * TestCommon
   * It'd be nice to use a separate repo from java-common as that's got so much cruft in it
     and the documentation and testing is almost non-existent
