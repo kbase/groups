@@ -264,6 +264,9 @@
         <sysproperty key="KBASE_GROUPS_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.groups.config.GroupsConfigTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
+        <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
+        <test name="us.kbase.test.groups.service.exceptions.ErrorMessageTest"/>
+        <test name="us.kbase.test.groups.service.exceptions.ExceptionHandlerTest"/>
         <test name="us.kbase.test.groups.util.UtilTest"/>
       </junit>
     </jacoco:coverage>
