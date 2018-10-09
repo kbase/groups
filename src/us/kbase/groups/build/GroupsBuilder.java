@@ -29,7 +29,7 @@ public class GroupsBuilder {
 	//TODO TEST
 	
 	private final MongoClient mc;
-	private final Groups assyhomol;
+	private final Groups groups;
 	private final GroupsStorage storage;
 	
 	/** Build a groups instance.
@@ -41,7 +41,7 @@ public class GroupsBuilder {
 		checkNotNull(cfg, "cfg");
 		mc = buildMongo(cfg);
 		storage = buildStorage(cfg, mc);
-		assyhomol = buildGroups(cfg, storage);
+		groups = buildGroups(cfg, storage);
 	}
 	
 	/** Build a groups instance with a previously existing MongoDB client. MongoDB
@@ -57,7 +57,7 @@ public class GroupsBuilder {
 		checkNotNull(mc, "mc");
 		this.mc = mc;
 		storage = buildStorage(cfg, mc);
-		assyhomol = buildGroups(cfg, storage);
+		groups = buildGroups(cfg, storage);
 	}
 	
 	private MongoClient buildMongo(final GroupsConfig c) throws StorageInitException {
@@ -101,18 +101,18 @@ public class GroupsBuilder {
 		return new MongoGroupsStorage(db);
 	}
 	
-	/** Get the mongo client associated with the assembly homology instance.
+	/** Get the mongo client associated with the groups instance.
 	 * @return the mongo client.
 	 */
 	public MongoClient getMongoClient() {
 		return mc;
 	}
 
-	/** Get the assembly homology instance.
-	 * @return the assembly homology instance.
+	/** Get the groups instance.
+	 * @return the groups instance.
 	 */
-	public Groups getAssemblyHomology() {
-		return assyhomol;
+	public Groups getGroups() {
+		return groups;
 	}
 	
 	/** Get the storage system for the groups instance.
