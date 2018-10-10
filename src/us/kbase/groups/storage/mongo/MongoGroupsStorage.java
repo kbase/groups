@@ -2,8 +2,8 @@ package us.kbase.groups.storage.mongo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.time.Clock;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +19,23 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 
+import us.kbase.groups.core.Group;
+import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.storage.GroupsStorage;
+import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 
 public class MongoGroupsStorage implements GroupsStorage {
+	
+	// TODO JAVADOC
+	// TODO TEST
 	
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
@@ -44,6 +57,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 	// collection names
 	private static final String COL_CONFIG = "config";
 	
+	private static final String COL_GROUPS = "groups";
+	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
 //	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
@@ -53,6 +68,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		//hardcoded indexes
 		INDEXES = new HashMap<String, Map<List<String>, IndexOptions>>();
 		
+		// groups indexes
+		final Map<List<String>, IndexOptions> groups = new HashMap<>();
+		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
+		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
+		INDEXES.put(COL_GROUPS, groups);
+		
 		//config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
 		//ensure only one config object
@@ -61,22 +82,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	private final MongoDatabase db;
-	@SuppressWarnings("unused")
-	private final Clock clock;
 	
 	/** Create MongoDB based storage for the Groups application.
 	 * @param db the Mongo database the storage system will use.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
-	public MongoGroupsStorage(final MongoDatabase db) throws StorageInitException {
-		this(db, Clock.systemDefaultZone());
-	}
-	
-	// for testing
-	private MongoGroupsStorage(final MongoDatabase db, final Clock clock) 
+	public MongoGroupsStorage(final MongoDatabase db) 
 			throws StorageInitException {
 		checkNotNull(db, "db");
-		this.clock = clock;
 		this.db = db;
 		ensureIndexes(); // MUST come before check config;
 		checkConfig();
@@ -216,4 +229,88 @@ public class MongoGroupsStorage implements GroupsStorage {
 		*/
 	}
 
+	@Override
+	public void createGroup(final Group group)
+			throws GroupExistsException, GroupsStorageException {
+		checkNotNull(group, "group");
+		final Document u = new Document(
+				Fields.GROUP_ID, group.getGroupID().getName())
+				.append(Fields.GROUP_NAME, group.getGroupName().getName())
+				.append(Fields.GROUP_OWNER, group.getOwner().getName())
+				.append(Fields.GROUP_TYPE, group.getType().toString())
+				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
+				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
+				.append(Fields.GROUP_DESCRIPTION, group.getDescription().isPresent() ?
+						group.getDescription().get() : null);
+		try {
+			db.getCollection(COL_GROUPS).insertOne(u);
+		} catch (MongoWriteException mwe) {
+			// not happy about this, but getDetails() returns an empty map
+			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
+				throw new GroupExistsException(group.getGroupID().getName());
+			} else {
+				throw new GroupsStorageException("Database write failed", mwe);
+			}
+		} catch (MongoException e) {
+			throw new GroupsStorageException("Connection to database failed: " +
+					e.getMessage(), e);
+		}
+	}
+	
+	@Override
+	public Group getGroup(final GroupID groupID)
+			throws GroupsStorageException, NoSuchGroupException {
+		checkNotNull(groupID, "groupID");
+		final Document grp = findOne(
+				COL_GROUPS, new Document(Fields.GROUP_ID, groupID.getName()));
+		if (grp == null) {
+			throw new NoSuchGroupException(groupID.getName());
+		} else {
+			return toNamespace(grp);
+		}
+	}
+	
+	private Group toNamespace(final Document ns) throws GroupsStorageException {
+		try {
+			return Group.getBuilder(
+					new GroupID(ns.getString(Fields.GROUP_ID)),
+					new GroupName(ns.getString(Fields.GROUP_NAME)),
+					new UserName(ns.getString(Fields.GROUP_OWNER)))
+					.withTimes(ns.getDate(Fields.GROUP_CREATION).toInstant(),
+							ns.getDate(Fields.GROUP_MODIFICATION).toInstant())
+					// TODO NOW check valueOf error conditions 
+					.withType(GroupType.valueOf(ns.getString(Fields.GROUP_TYPE)))
+					.withDescription(ns.getString(Fields.GROUP_DESCRIPTION))
+					.build();
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new GroupsStorageException(
+					"Unexpected value in database: " + e.getMessage(), e);
+		}
+	}
+	
+	/* Use this for finding documents where indexes should force only a single
+	 * document. Assumes the indexes are doing their job.
+	 */
+	private Document findOne(
+			final String collection,
+			final Document query)
+			throws GroupsStorageException {
+		return findOne(collection, query, null);
+	}
+	
+	/* Use this for finding documents where indexes should force only a single
+	 * document. Assumes the indexes are doing their job.
+	 */
+	private Document findOne(
+			final String collection,
+			final Document query,
+			final Document projection)
+			throws GroupsStorageException {
+		try {
+			return db.getCollection(collection).find(query).projection(projection).first();
+		} catch (MongoException e) {
+			throw new GroupsStorageException(
+					"Connection to database failed: " + e.getMessage(), e);
+		}
+	}
 }
