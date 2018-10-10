@@ -183,7 +183,7 @@ public class Group {
 		Group build();
 	}
 	
-	public static class Builder implements TimesStep, OptionalsStep{
+	public static class Builder implements TimesStep, OptionalsStep {
 		
 		private final GroupID groupID;
 		private final GroupName groupName;
