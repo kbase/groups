@@ -1,7 +1,5 @@
-import Converter from './Converter';
-
-console.log('foo')
+import Groups from './Groups';
 
 const rootElement = document.getElementById('rootElement');
-var conv = new Converter(rootElement, 1.11745);
-conv.render();
+var g = new Groups(rootElement);
+g.render();
