@@ -4,7 +4,9 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -49,6 +51,16 @@ public class GroupsAPI {
 		this.groups = groups;
 	}
 	
+	// this assumes there are a relatively small number of groups. If that proves false,
+	// will need to filter somehow. Remember, deep paging was invented by Satan.
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Map<String, Object>> getGroups(
+			@HeaderParam(HEADER_TOKEN) final String token)
+			throws GroupsStorageException {
+		return groups.getGroups().stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
+	}
+	
 	public static class CreateGroupJSON extends IncomingJSON {
 		
 		private final String groupName;
@@ -83,9 +95,7 @@ public class GroupsAPI {
 			//TODO NOW check out valueOf error cases for type
 			gbuilder.withType(GroupType.valueOf(create.type));
 		}
-		final Group g = groups.createGroup(getToken(token, true), gbuilder.build());
-		
-		return toGroupJSON(g);
+		return toGroupJSON(groups.createGroup(getToken(token, true), gbuilder.build()));
 	}
 	
 	@GET
@@ -97,8 +107,7 @@ public class GroupsAPI {
 			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException {
-		final Group g = groups.getGroup(getToken(token, false), new GroupID(groupID));
-		return toGroupJSON(g);
+		return toGroupJSON(groups.getGroup(getToken(token, false), new GroupID(groupID)));
 	}
 	
 	private Map<String, Object> toGroupJSON(final Group g) {
