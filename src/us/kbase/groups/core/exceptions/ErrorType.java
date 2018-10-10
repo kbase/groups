@@ -16,6 +16,8 @@ public enum ErrorType {
 	MISSING_PARAMETER		(30000, "Missing input parameter"),
 	/** An input parameter had an illegal value. */
 	ILLEGAL_PARAMETER		(30001, "Illegal input parameter"),
+	/** The provided user name was not legal. */
+	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
 	/** The group could not be created because it already exists. */
 	GROUP_ALREADY_EXISTS	(40000, "Group already exists"),
 	/** The requested group does not exist. */
