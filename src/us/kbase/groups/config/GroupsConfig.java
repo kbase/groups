@@ -29,6 +29,7 @@ import us.kbase.common.service.JsonServerSyslog.SyslogOutput;
  * mongo-pwd
  * auth-url
  * workspace-url
+ * allow-insecure-urls
  * dont-trust-x-ip-headers
  * </pre>
  * 
@@ -56,6 +57,7 @@ public class GroupsConfig {
 	private static final String KEY_AUTH_URL = "auth-url";
 	private static final String KEY_WORKSPACE_URL = "workspace-url";
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
+	private static final String KEY_ALLOW_INSECURE_URLS = "allow-insecure-urls";
 	
 	public static final String TRUE = "true";
 	
@@ -67,6 +69,7 @@ public class GroupsConfig {
 	private final URL workspaceURL;
 	private final SLF4JAutoLogger logger;
 	private final boolean ignoreIPHeaders;
+	private final boolean allowInsecureURLs;
 
 	/** Create a new configuration.
 	 * 
@@ -115,6 +118,7 @@ public class GroupsConfig {
 		}
 		final Map<String, String> cfg = getConfig(filepath, fileOpener);
 		ignoreIPHeaders = TRUE.equals(getString(KEY_IGNORE_IP_HEADERS, cfg));
+		allowInsecureURLs = TRUE.equals(getString(KEY_ALLOW_INSECURE_URLS, cfg));
 		authURL = getURL(KEY_AUTH_URL, cfg);
 		workspaceURL = getURL(KEY_WORKSPACE_URL, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
@@ -304,6 +308,13 @@ public class GroupsConfig {
 	 */
 	public SLF4JAutoLogger getLogger() {
 		return logger;
+	}
+	
+	/** True if non-https URLs are allowed.
+	 * @return true if insecure URLs are allowed.
+	 */
+	public boolean isAllowInsecureURLs() {
+		return allowInsecureURLs;
 	}
 	
 	/** True if the X-Real-IP and X-Forwarded-For headers should be ignored.
