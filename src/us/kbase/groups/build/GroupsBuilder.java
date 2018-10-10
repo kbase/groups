@@ -2,6 +2,8 @@ package us.kbase.groups.build;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,10 +16,13 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.groups.config.GroupsConfig;
+import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
+import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
+import us.kbase.groups.userhandler.KBaseUserHandler;
 
 /** A class for building a {@link Groups} instance given a {@link GroupsConfig}
  * configuration instance.
@@ -35,9 +40,11 @@ public class GroupsBuilder {
 	/** Build a groups instance.
 	 * @param cfg the configuration to build to.
 	 * @throws StorageInitException if the storage system could not be initialized.
+	 * @throws GroupsConfigurationException if the application could not be built from the 
+	 * configuration.
 	 */
 	public GroupsBuilder(final GroupsConfig cfg)
-			throws StorageInitException {
+			throws StorageInitException, GroupsConfigurationException {
 		checkNotNull(cfg, "cfg");
 		mc = buildMongo(cfg);
 		storage = buildStorage(cfg, mc);
@@ -50,9 +57,11 @@ public class GroupsBuilder {
 	 * @param cfg the configuration to build to.
 	 * @param mc the MongoDB client.
 	 * @throws StorageInitException if the storage system could not be initialized.
+	 * @throws GroupsConfigurationException if the application could not be built from the 
+	 * configuration.
 	 */
 	public GroupsBuilder(final GroupsConfig cfg, final MongoClient mc)
-			throws StorageInitException {
+			throws StorageInitException, GroupsConfigurationException {
 		checkNotNull(cfg, "cfg");
 		checkNotNull(mc, "mc");
 		this.mc = mc;
@@ -79,9 +88,15 @@ public class GroupsBuilder {
 	}
 	
 	private Groups buildGroups(final GroupsConfig c, final GroupsStorage storage)
-			throws StorageInitException {
-		// expecting this method to become more complicated as we add more to the config
-		return new Groups(storage);
+			throws StorageInitException, GroupsConfigurationException {
+		final UserHandler uh;
+		try {
+			uh = new KBaseUserHandler(c.getAuthURL(), c.isAllowInsecureURLs());
+		} catch (IOException | URISyntaxException e) {
+			throw new GroupsConfigurationException(
+					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
+		}
+		return new Groups(storage, uh);
 	}
 
 	private GroupsStorage buildStorage(

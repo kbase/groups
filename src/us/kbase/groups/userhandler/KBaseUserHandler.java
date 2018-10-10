@@ -53,6 +53,7 @@ public class KBaseUserHandler implements UserHandler {
 	@Override
 	public UserName getUser(final Token token)
 			throws InvalidTokenException, AuthenticationException {
+		checkNotNull(token, "token");
 		try {
 			final AuthToken user = auth.validateToken(token.getToken());
 			return new UserName(user.getUserName());

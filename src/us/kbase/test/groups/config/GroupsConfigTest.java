@@ -56,7 +56,7 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void sysPropNoUserNoIgnoreIPNoTimeout() throws Throwable {
+	public void sysPropNoUserNoBools() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		final GroupsConfig cfg;
 		try {
@@ -87,7 +87,7 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void sysPropNoUserNoIgnoreIPNoTimoutWhitespace() throws Throwable {
+	public void sysPropNoUserNoBoolsWhitespace() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		final GroupsConfig cfg;
 		try {
@@ -122,7 +122,7 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void envVarWithUserWithIgnoreIPWithTimeout() throws Throwable {
+	public void envVarWithUserWithBools() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		final GroupsConfig cfg;
 		try {
@@ -156,7 +156,7 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void pathNoUserNoIgnoreIPStdLogger() throws Throwable {
+	public void pathNoUserNoBoolsStdLogger() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		when(fo.open(Paths.get("some file2"))).thenReturn(new ByteArrayInputStream(
 				("[groups]\n" +
@@ -179,7 +179,7 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void pathWithUserWithIgnoreIPNullLogger() throws Throwable {
+	public void pathWithUserWithBoolsNullLogger() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		when(fo.open(Paths.get("some file2"))).thenReturn(new ByteArrayInputStream(
 				("[groups]\n" +
