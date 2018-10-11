@@ -1,10 +1,11 @@
 import $ from 'jquery';
+import DOMPurify from 'dompurify'
 
 export default class {
   
   constructor(rootElement) {
     this.rootElement = rootElement;
-    this.serviceUrl = 'http://localhost:20001';
+    this.serviceUrl = 'http://localhost:8080';
     this.token = null;
   }
   
@@ -49,13 +50,17 @@ export default class {
   }
   
   seeToken() {
-      alert("Token: " + this.token);
+      alert("Token: " + this.sanitize(this.token));
   }
   
   epochToDate(epoch) {
       const d = new Date(0);
       d.setUTCMilliseconds(epoch);
       return d;
+  }
+  
+  sanitize(dirtydirtystring) {
+      return DOMPurify.sanitize(dirtydirtystring, {SAFE_FOR_JQUERY: true});
   }
   
   setURL() {
@@ -67,17 +72,18 @@ export default class {
              if (response.ok) {
                  response.json().then( (json) => {
                      const d = this.epochToDate(json.servertime);
+                     const s = this.sanitize;
                      $('#servroot').html(
-                             `<strong>Service name</strong>: ${json.servname} ` +
-                             `<strong>version</strong>: ${json.version} ` + 
+                             `<strong>Service name</strong>: ${s(json.servname)} ` +
+                             `<strong>version</strong>: ${s(json.version)} ` + 
                              `<strong>time</strong>: ${d} ` +
-                             `<strong>commit</strong>: ${json.gitcommithash} `
+                             `<strong>commit</strong>: ${s(json.gitcommithash)} `
                              );
                      if (!url.endsWith('/')) {
                          url = url + '/'
                      }
                      this.serviceUrl = url;
-                     $('#url').val(this.serviceUrl);
+                     $('#url').val(s(this.serviceUrl));
                      console.log("Switched service url to " + this.serviceUrl);
                      this.renderGroups();
                  }).catch( (err) => {
@@ -100,11 +106,15 @@ export default class {
               response.json().then( (json) => {
                   //TODO NOW gotta be a better way than this
                   //TODO NOW how detect & handle clicks on table? need to parameterize onclick
-                  let gtable = '<table><tr><th>ID</th><th>Name</th><th>Type</th><th>Owner</th><th>Created</th><th>Modified</th></tr>';
+                  let gtable = '<table><tr><th>ID</th><th>Name</th><th>Type</th>' +
+                      '<th>Owner</th><th>Created</th><th>Modified</th></tr>';
+                  const s = this.sanitize;
                   for (const g of json) {
                       const c = this.epochToDate(g.createdate);
                       const m = this.epochToDate(g.moddate);
-                      gtable += `<tr><td>${g.id}</td><td>${g.name}</td><td>${g.type}</td><td>${g.owner}</td><td>${c}</td><td>${m}</td></tr>`;
+                      gtable += `<tr><td>${s(g.id)}</td><td>${s(g.name)}</td>` + 
+                          `<td>${s(g.type)}</td><td>${s(g.owner)}</td>` +
+                          `<td>${c}</td><td>${m}</td></tr>`;
                   }
                   gtable += '</table>';
                   $('#groups').html(gtable);
