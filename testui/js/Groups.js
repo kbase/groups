@@ -28,7 +28,7 @@ export default class {
       <div id="servroot"></div>
       <div id="error"></div>
       <div>
-        <button id="listview">List Groups</button>
+        <button id="listview">List Groups</button><button id="creategroup">Create Group</button>
       </div>
       <div id="groups"></div>
     `;
@@ -48,6 +48,9 @@ export default class {
     });
     $('#listview').on('click', () => {
         this.renderGroups();
+    });
+    $('#creategroup').on('click', () => {
+        this.renderCreateGroup();
     });
   }
   
@@ -106,6 +109,7 @@ export default class {
   }
   
   renderGroups() {
+      $('#error').text("");
       fetch(this.serviceUrl + "group").then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -138,6 +142,7 @@ export default class {
   }
   
   renderGroup(groupid) {
+      $('#error').text("");
       fetch(this.serviceUrl + "group/" + groupid).then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -165,6 +170,47 @@ export default class {
           }
       }).catch( (err) => {
           this.handleError(err);
+      });
+  }
+  
+  renderCreateGroup() {
+      $('#error').text("");
+      if (!this.token) {
+          this.handleError("Please set a token. Doofus.");
+          return;
+      }
+      // TODO NOW dropdown for type
+      const input = 
+          `
+          <div><strong>ID</strong>: <input id="groupid"/></div>
+          <div><strong>Name</strong>: <input id="groupname"/></div>
+          <div><strong>Type</strong>: <input id="grouptype"/></div>
+          <div><strong>Description</strong>: <input id="groupdescription"/></div>
+          <div><button id="creategroupinput">Create</button></div>
+          `;
+      $('#groups').html(input);
+      $('#creategroupinput').on('click', () => {
+          let id = $('#groupid').val();
+          let name = $('#groupname').val();
+          let type = $('#grouptype').val();
+          let desc = $('#groupdescription').val();
+          fetch(this.serviceUrl + "group/" + id,
+                {"method": "PUT",
+                 "headers": new Headers({"authorization": this.token,
+                                         "content-type": "application/json"
+                                         }),
+                 "body": JSON.stringify({"name": name, "type": type, "description": desc})
+                 }).then( (response) => {
+                     if (response.ok) {
+                         this.renderGroup(id);
+                     } else {
+                         response.text().then( (err) => {
+                             this.handleError(err);
+                         });
+                     }
+                 }).catch( (err) => {
+                     this.handleError(err);
+                 });
       });
   }
 };

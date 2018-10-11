@@ -91,7 +91,7 @@ public class GroupsAPI {
 		final Builder gbuilder = GroupCreationParams.getBuilder(
 				new GroupID(groupID), new GroupName(create.groupName))
 				.withDescription(create.description);
-		if (create.type != null) {
+		if (!isNullOrEmpty(create.type)) {
 			//TODO NOW check out valueOf error cases for type
 			gbuilder.withType(GroupType.valueOf(create.type));
 		}
