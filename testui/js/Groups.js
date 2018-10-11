@@ -3,8 +3,6 @@ import DOMPurify from 'dompurify'
 
 export default class {
     
-    //TODO JS handle errors better - parse json if possible
-  
   constructor(rootElement) {
     this.rootElement = rootElement;
     this.serviceUrl = 'http://localhost:8080/';
@@ -66,6 +64,11 @@ export default class {
       return DOMPurify.sanitize(dirtydirtystring, {SAFE_FOR_JQUERY: true});
   }
   
+  handleError(errortext) {
+      //TODO JS handle errors better - parse json if possible\
+      $('#error').text(errortext);
+  }
+  
   setURL() {
       $('#error').text("");
       $('#servroot').text("");
@@ -90,17 +93,16 @@ export default class {
                      console.log("Switched service url to " + this.serviceUrl);
                      this.renderGroups();
                  }).catch( (err) => {
-                     console.log(err);
-                     $('#error').text(err);
+                     this.handleError(err);
                  });
              } else {
-                 response.text().then( (text) => {
-                     $('#error').text(text);
+                 response.text().then( (err) => {
+                     this.handleError(err);
                  });
              }
-         }).catch(function(err) {
-             $('#error').text(err);
-         })
+         }).catch( (err) => {
+             this.handleError(err);
+         });
   }
   
   renderGroups() {
@@ -123,15 +125,15 @@ export default class {
                       });
                   }
               }).catch( (err) => {
-                  $('#error').text(text);
+                  this.handleError(err);
               });
           } else {
-              response.text().then(function(text) {
-                  $('#error').text(text);
+              response.text().then( (err) => {
+                  this.handleError(err);
               });
           }
       }).catch( (err) => {
-          $('#error').text(err);
+          this.handleError(err);
       });
   }
   
@@ -154,15 +156,15 @@ export default class {
                       `;
                   $('#groups').html(g);
               }).catch( (err) => {
-                  $('#error').text(text);
+                  this.handleError(err);
               });
           } else {
-              response.text().then(function(text) {
-                  $('#error').text(text);
+              response.text().then( (err) => {
+                  this.handleError(err);
               });
           }
       }).catch( (err) => {
-          $('#error').text(err);
+          this.handleError(err);
       });
   }
 };
