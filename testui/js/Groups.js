@@ -53,12 +53,6 @@ export default class {
       alert("Token: " + this.sanitize(this.token));
   }
   
-  epochToDate(epoch) {
-      const d = new Date(0);
-      d.setUTCMilliseconds(epoch);
-      return d;
-  }
-  
   sanitize(dirtydirtystring) {
       return DOMPurify.sanitize(dirtydirtystring, {SAFE_FOR_JQUERY: true});
   }
@@ -71,7 +65,7 @@ export default class {
          .then( (response) => {
              if (response.ok) {
                  response.json().then( (json) => {
-                     const d = this.epochToDate(json.servertime);
+                     const d = new Date(json.servertime).toLocaleString();
                      const s = this.sanitize;
                      $('#servroot').html(
                              `<strong>Service name</strong>: ${s(json.servname)} ` +
@@ -110,8 +104,8 @@ export default class {
                       '<th>Owner</th><th>Created</th><th>Modified</th></tr>';
                   const s = this.sanitize;
                   for (const g of json) {
-                      const c = this.epochToDate(g.createdate);
-                      const m = this.epochToDate(g.moddate);
+                      const c = new Date(g.createdate).toLocaleString();
+                      const m = new Date(g.moddate).toLocaleString();
                       gtable += `<tr><td>${s(g.id)}</td><td>${s(g.name)}</td>` + 
                           `<td>${s(g.type)}</td><td>${s(g.owner)}</td>` +
                           `<td>${c}</td><td>${m}</td></tr>`;
