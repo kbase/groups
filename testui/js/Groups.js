@@ -2,10 +2,12 @@ import $ from 'jquery';
 import DOMPurify from 'dompurify'
 
 export default class {
+    
+    //TODO JS handle errors better - parse json if possible
   
   constructor(rootElement) {
     this.rootElement = rootElement;
-    this.serviceUrl = 'http://localhost:8080';
+    this.serviceUrl = 'http://localhost:8080/';
     this.token = null;
   }
   
@@ -23,9 +25,13 @@ export default class {
         <button id="seetoken">See current value</button>
       </div>
       <div>Set service root url:</div>
-        <input id="url"/><button id="seturl">Set</button><span id="servroot"></span>
+        <input id="url"/><button id="seturl">Set</button>
       </div>
+      <div id="servroot"></div>
       <div id="error"></div>
+      <div>
+        <button id="listview">List Groups</button>
+      </div>
       <div id="groups"></div>
     `;
 
@@ -41,6 +47,9 @@ export default class {
     })
     $('#seturl').on('click', () => {
         this.setURL();
+    });
+    $('#listview').on('click', () => {
+        this.renderGroups();
     });
   }
   
@@ -99,19 +108,51 @@ export default class {
           if (response.ok) {
               response.json().then( (json) => {
                   //TODO NOW gotta be a better way than this
-                  //TODO NOW how detect & handle clicks on table? need to parameterize onclick
                   let gtable = '<table><tr><th>ID</th><th>Name</th><th>Type</th>' +
-                      '<th>Owner</th><th>Created</th><th>Modified</th></tr>';
+                      '<th>Owner</th></tr>';
                   const s = this.sanitize;
                   for (const g of json) {
-                      const c = new Date(g.createdate).toLocaleString();
-                      const m = new Date(g.moddate).toLocaleString();
-                      gtable += `<tr><td>${s(g.id)}</td><td>${s(g.name)}</td>` + 
-                          `<td>${s(g.type)}</td><td>${s(g.owner)}</td>` +
-                          `<td>${c}</td><td>${m}</td></tr>`;
+                      gtable += `<tr id="${s(g.id)}"><td>${s(g.id)}</td><td>${s(g.name)}</td>` + 
+                          `<td>${s(g.type)}</td><td>${s(g.owner)}</td></tr>`;
                   }
                   gtable += '</table>';
                   $('#groups').html(gtable);
+                  for (const g of json) {
+                      $(`#${s(g.id)}`).on('click', () => {
+                          this.renderGroup(g.id);
+                      });
+                  }
+              }).catch( (err) => {
+                  $('#error').text(text);
+              });
+          } else {
+              response.text().then(function(text) {
+                  $('#error').text(text);
+              });
+          }
+      }).catch( (err) => {
+          $('#error').text(err);
+      });
+  }
+  
+  renderGroup(groupid) {
+      fetch(this.serviceUrl + "group/" + groupid).then( (response) => {
+          if (response.ok) {
+              response.json().then( (json) => {
+                  const c = new Date(json.createdate).toLocaleString();
+                  const m = new Date(json.moddate).toLocaleString();
+                  const s = this.sanitize;
+                  const g =
+                      `
+                      <div><strong>ID</strong>: ${s(json.id)}</div>
+                      <div><strong>Name</strong>: ${s(json.name)}</div>
+                      <div><strong>Type</strong>: ${s(json.type)}</div>
+                      <div><strong>Owner</strong>: ${s(json.owner)}</div>
+                      <div><strong>Created</strong>: ${c}</div>
+                      <div><strong>Modified</strong>: ${m}</div>
+                      <div><strong>Description</strong>: ${s(json.description)}</div>
+                      `;
+                  $('#groups').html(g);
               }).catch( (err) => {
                   $('#error').text(text);
               });
