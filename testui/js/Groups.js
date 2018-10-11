@@ -22,8 +22,9 @@ export default class {
         <button id="seetoken">See current value</button>
       </div>
       <div>Set service root url:</div>
-        <input id="url"/><button id="seturl">Set</button>
+        <input id="url"/><button id="seturl">Set</button><span id="servroot"></span>
       </div>
+      <div id="error"></div>
     `;
 
     rootElement.innerHTML = html;
@@ -51,7 +52,34 @@ export default class {
   }
   
   setURL() {
-      this.serviceUrl = $('#url').val();
-      console.log("Switched service url to " + this.serviceUrl);
+      $('#error').text("");
+      $('#servroot').text("");
+      var url = $('#url').val();
+      fetch(url)
+         .then( (response) => {
+             if (response.ok) {
+                 response.json().then( (json) => {
+                     var d = new Date(0);
+                     d.setUTCMilliseconds(json.servertime);
+                     $('#servroot').html(
+                             `<strong>Service name</strong>: ${json.servname} ` +
+                             `<strong>version</strong>: ${json.version} ` + 
+                             `<strong>time</strong>: ${d} ` +
+                             `<strong>commit</strong>: ${json.gitcommithash} `
+                             );
+                     this.serviceUrl = url;
+                     console.log("Switched service url to " + this.serviceUrl);
+                 }).catch(function(err) {
+                     console.log(err);
+                     $('#error').text(err);
+                 });
+             } else {
+                 response.text().then(function(text) {
+                     $('#error').text(text);
+                 });
+             }
+         }).catch(function(err) {
+             $('#error').text(err);
+         })
   }
 };
