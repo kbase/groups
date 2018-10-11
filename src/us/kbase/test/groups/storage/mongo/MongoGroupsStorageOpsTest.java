@@ -20,6 +20,7 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.UserName;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
@@ -63,30 +64,32 @@ public class MongoGroupsStorageOpsTest {
 	@Test
 	public void createAndGetGroupMinimal() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("uname"))
-				.withTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.build());
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
 				is(Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("uname"))
-						.withTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+						new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 						.build()));
 	}
 	
 	@Test
 	public void createAndGetGroupMaximal() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("uname"))
-				.withTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withType(GroupType.project)
 				.withDescription("desc")
 				.build());
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
 				is(Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("uname"))
-						.withTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+						new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 						.withType(GroupType.project)
 						.withDescription("desc")
 						.build()));

@@ -55,7 +55,7 @@ public class Groups {
 		checkNotNull(createParams, "createParams");
 		final UserName owner = userHandler.getUser(userToken);
 		final Instant now = clock.instant();
-		storage.createGroup(createParams.toGroup(owner, now, now));
+		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(now)));
 		
 		try {
 			return storage.getGroup(createParams.getGroupID());
