@@ -188,7 +188,7 @@ public class Group {
 		private final GroupID groupID;
 		private final GroupName groupName;
 		private final UserName owner;
-		private GroupType type = GroupType.organisation;
+		private GroupType type = GroupType.organization;
 		private Instant creationDate;
 		private Instant modificationDate;
 		private Optional<String> description = Optional.absent();

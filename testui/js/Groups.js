@@ -179,12 +179,17 @@ export default class {
           this.handleError("Please set a token. Doofus.");
           return;
       }
-      // TODO NOW dropdown for type
       const input = 
           `
           <div><strong>ID</strong>: <input id="groupid"/></div>
           <div><strong>Name</strong>: <input id="groupname"/></div>
-          <div><strong>Type</strong>: <input id="grouptype"/></div>
+          <div><strong>Type</strong>:
+              <select id="grouptype">
+                  <option value="organization">Organization</option>
+                  <option value="project">Project</option>
+                  <option value="team">Team</option>
+              </select>
+          </div>
           <div><strong>Description</strong>: <input id="groupdescription"/></div>
           <div><button id="creategroupinput">Create</button></div>
           `;
