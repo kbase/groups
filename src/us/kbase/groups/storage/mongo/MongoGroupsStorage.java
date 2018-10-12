@@ -383,9 +383,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 							.withModificationTime(req.getDate(Fields.REQUEST_MODIFICATION)
 									.toInstant())
 							.build())
-					.withNullableTarget(target == null ? null : new UserName(target))
+					.withType(
+							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
+							target == null ? null : new UserName(target))
 					.withStatus(GroupRequestStatus.valueOf(req.getString(Fields.REQUEST_STATUS)))
-					.withType(GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)))
 					.build();
 		} catch (IllegalParameterException | MissingParameterException |
 				IllegalArgumentException e) {
