@@ -15,22 +15,32 @@ export default class {
     
     // define html 
     let html = `
-      <h2>This is a test/demo ui for the Groups service. It is not ever intended to be used
-        in production. Stop complaining about it.
-      </h2>
-      <div>Set a token to use with the service:</div>
-        <input id="token"/><button id="settoken">Set</button>
-        <button id="seetoken">See current value</button>
+      <div class="container">
+        <div class="row">
+          <h2 class="text-center">
+            This is a test/demo ui for the Groups service. It is not ever intended to be used
+              in production. Stop complaining about it.
+          </h2>
+        </div>
+        <div class="row">Set a token to use with the service:</div>
+        <div class="row">
+          <input id="token"/>
+          <button id="settoken" class="btn btn-primary">Set</button>
+          <button id="seetoken" class="btn btn-primary">See current value</button>
+        </div>
+        <div class="row">Set service root url:</div>
+        <div class="row">
+          <input id="url"/>
+          <button id="seturl" class="btn btn-primary">Set</button>
+        </div>
+        <div class="row" id="servroot"></div>
+        <div class="row" id="error"></div>
+        <div class="row">
+          <button id="listview" class="btn btn-primary">List Groups</button>
+          <button id="creategroup" class="btn btn-primary">Create Group</button>
+        </div>
+        <div id="groups"></div>
       </div>
-      <div>Set service root url:</div>
-        <input id="url"/><button id="seturl">Set</button>
-      </div>
-      <div id="servroot"></div>
-      <div id="error"></div>
-      <div>
-        <button id="listview">List Groups</button><button id="creategroup">Create Group</button>
-      </div>
-      <div id="groups"></div>
     `;
 
     rootElement.innerHTML = html;
@@ -83,11 +93,26 @@ export default class {
                      const d = new Date(json.servertime).toLocaleString();
                      const s = this.sanitize;
                      $('#servroot').html(
-                             `<strong>Service name</strong>: ${s(json.servname)} ` +
-                             `<strong>version</strong>: ${s(json.version)} ` + 
-                             `<strong>time</strong>: ${d} ` +
-                             `<strong>commit</strong>: ${s(json.gitcommithash)} `
-                             );
+                             `
+                             <table class="table">
+                               <thead>
+                                 <tr>
+                                   <th scope="col">Service name</th>
+                                   <th scope="col">Version</th>
+                                   <th scope="col">Server time</th>
+                                   <th scope="col">Git commit</th>
+                                 </tr>
+                               </thead>
+                               <tbody>
+                                 <tr>
+                                   <td>${s(json.servname)}</td>
+                                   <td>${s(json.version)}</td>
+                                   <td>${s(d)}</td>
+                                   <td>${s(json.gitcommithash)}</td>
+                                 </tr>
+                               </tbody>
+                             </table>
+                             `);
                      if (!url.endsWith('/')) {
                          url = url + '/'
                      }
@@ -114,14 +139,32 @@ export default class {
           if (response.ok) {
               response.json().then( (json) => {
                   //TODO NOW gotta be a better way than this
-                  let gtable = '<table><tr><th>ID</th><th>Name</th><th>Type</th>' +
-                      '<th>Owner</th></tr>';
+                  let gtable =
+                      `
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Owner</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                      `;
                   const s = this.sanitize;
                   for (const g of json) {
-                      gtable += `<tr id="${s(g.id)}"><td>${s(g.id)}</td><td>${s(g.name)}</td>` + 
-                          `<td>${s(g.type)}</td><td>${s(g.owner)}</td></tr>`;
+                      gtable +=
+                          `
+                          <tr id="${s(g.id)}">
+                            <th>${s(g.id)}</th>
+                            <td>${s(g.name)}</td>
+                            <td>${s(g.type)}</td>
+                            <td>${s(g.owner)}</td>
+                          </tr>
+                          `
                   }
-                  gtable += '</table>';
+                  gtable += `</tbody></table>`;
                   $('#groups').html(gtable);
                   for (const g of json) {
                       $(`#${s(g.id)}`).on('click', () => {
@@ -151,13 +194,17 @@ export default class {
                   const s = this.sanitize;
                   const g =
                       `
-                      <div><strong>ID</strong>: ${s(json.id)}</div>
-                      <div><strong>Name</strong>: ${s(json.name)}</div>
-                      <div><strong>Type</strong>: ${s(json.type)}</div>
-                      <div><strong>Owner</strong>: ${s(json.owner)}</div>
-                      <div><strong>Created</strong>: ${c}</div>
-                      <div><strong>Modified</strong>: ${m}</div>
-                      <div><strong>Description</strong>: ${s(json.description)}</div>
+                      <table class="table">
+                        <tbody>
+                          <tr><th>ID</th><td>${s(json.id)}</td></tr>
+                          <tr><th>Name</th><td>${s(json.name)}</td></tr>
+                          <tr><th>Type</th><td>${s(json.type)}</td></tr>
+                          <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
+                          <tr><th>Created</th><td>${c}</td></tr>
+                          <tr><th>Modified</th><td>${m}</td></tr>
+                          <tr><th>Description</th><td>${s(json.description)}</td></tr>
+                        </tbody>
+                      </table>
                       `;
                   $('#groups').html(g);
               }).catch( (err) => {
@@ -181,24 +228,50 @@ export default class {
       }
       const input = 
           `
-          <div><strong>ID</strong>: <input id="groupid"/></div>
-          <div><strong>Name</strong>: <input id="groupname"/></div>
-          <div><strong>Type</strong>:
-              <select id="grouptype">
+          <div>
+            <div class="form-group">
+              <label for="groupid">ID</label>
+              <input class="form-control" id="groupid" aria-describedby="idhelp"
+                placeholder="Enter group ID" required>
+              <small id="idhelp" class="form-text text-muted">
+                A unique immutable group ID. Lowercase ASCII letters, numbers and hyphens are
+                allowed. The first character must be a letter.
+              </small>
+            </div>
+            <div class="form-group">
+              <label for="groupname">Name</label>
+              <input class="form-control" id="groupname" aria-describedby="namehelp"
+                placeholder="Enter group name" required>
+              <small id="namehelp" class="form-text text-muted">
+                An arbitrary name for the group.
+              </small>
+            </div>
+            <div class="form-group">
+              <label for="grouptype">Type</label>
+              <select class="form-control" id="grouptype">
                   <option value="organization">Organization</option>
                   <option value="project">Project</option>
                   <option value="team">Team</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label for="groupdesc">Description</label>
+              <input class="form-control" id="groupdesc" aria-describedby="deschelp"
+                placeholder="Enter group description (optional)" >
+              <small id="deschelp" class="form-text text-muted">
+                An arbitrary description of the group.
+              </small>
+            </div>
+            <button id="creategroupinput" class="btn btn-primary">Submit</button>
           </div>
-          <div><strong>Description</strong>: <input id="groupdescription"/></div>
-          <div><button id="creategroupinput">Create</button></div>
           `;
       $('#groups').html(input);
       $('#creategroupinput').on('click', () => {
+          //TODO Do validation
           let id = $('#groupid').val();
           let name = $('#groupname').val();
           let type = $('#grouptype').val();
-          let desc = $('#groupdescription').val();
+          let desc = $('#groupdesc').val();
           fetch(this.serviceUrl + "group/" + id,
                 {"method": "PUT",
                  "headers": new Headers({"authorization": this.token,
