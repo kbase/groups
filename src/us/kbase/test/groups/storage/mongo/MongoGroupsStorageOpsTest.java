@@ -21,7 +21,11 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.CreateAndModTimes;
+import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
 
@@ -59,7 +63,7 @@ public class MongoGroupsStorageOpsTest {
 		logEvents.clear();
 	}
 	
-	// TODO TEST add more tests for create and get group minimal
+	// TODO TEST add more tests for create and get group /request
 	
 	@Test
 	public void createAndGetGroupMinimal() throws Exception {
@@ -93,6 +97,52 @@ public class MongoGroupsStorageOpsTest {
 						.withType(GroupType.project)
 						.withDescription("desc")
 						.build()));
+	}
+	
+	@Test
+	public void storeAndGetRequestMinimal() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				id, new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),
+				is(GroupRequest.getBuilder(
+				id, new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build()));
+	}
+	
+	@Test
+	public void storeAndGetRequestMaximal() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				id, new GroupID("foobar"), new UserName("barfoo"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
+					.withModificationTime(Instant.ofEpochMilli(50000))
+					.build())
+				.withNullableTarget(new UserName("target"))
+				.withStatus(GroupRequestStatus.ACCEPTED)
+				.withType(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),
+				is(GroupRequest.getBuilder(
+						id, new GroupID("foobar"), new UserName("barfoo"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
+						.withModificationTime(Instant.ofEpochMilli(50000))
+						.build())
+					.withNullableTarget(new UserName("target"))
+					.withStatus(GroupRequestStatus.ACCEPTED)
+					.withType(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)
+					.build()));
 	}
 	
 }
