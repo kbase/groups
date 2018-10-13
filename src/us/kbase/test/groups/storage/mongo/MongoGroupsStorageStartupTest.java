@@ -221,13 +221,17 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "gid_1")
 						.append("ns", "test_mongogroupsstorage.requests"),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("requester", 1))
-						.append("name", "requester_1")
+						.append("key", new Document("requester", 1).append("status", 1))
+						.append("name", "requester_1_status_1")
 						.append("ns", "test_mongogroupsstorage.requests"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("target", 1))
 						.append("sparse", true)
 						.append("name", "target_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("target", 1).append("status", 1))
+						.append("name", "target_1_status_1")
 						.append("ns", "test_mongogroupsstorage.requests"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("create", 1))

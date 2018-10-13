@@ -22,6 +22,8 @@ public enum ErrorType {
 	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
 	/** The group could not be created because it already exists. */
 	GROUP_ALREADY_EXISTS	(40000, "Group already exists"),
+	/** The user is already a member of the group. */
+	USER_IS_MEMBER			(40010, "User already group member"),
 	/** The request could not be created because it already exists. */
 	REQUEST_ALREADY_EXISTS	(40020, "Request already exists"),
 	/** The requested group does not exist. */

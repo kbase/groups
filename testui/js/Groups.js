@@ -205,6 +205,82 @@ export default class {
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
                         </tbody>
                       </table>
+                      <button id="requestgroupmembership" class="btn btn-primary">
+                        Request group membership</button>
+                      `;
+                  //TODO CODE inactivate button if group member
+                  $('#groups').html(g);
+                  $('#requestgroupmembership').on('click', () => {
+                      this.requestGroupMembership(groupid);
+                  });
+              }).catch( (err) => {
+                  this.handleError(err);
+              });
+          } else {
+              response.text().then( (err) => {
+                  this.handleError(err);
+              });
+          }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
+  }
+  
+  requestGroupMembership(groupid) {
+      $('#error').text("");
+      if (!this.checkToken()) {
+          return;
+      }
+      fetch(this.serviceUrl + "group/" + groupid + '/requestmembership',
+        {"method": "POST",
+         "headers": new Headers({"authorization": this.token,
+                                 "content-type": "application/json"
+                                 })
+         }).then( (response) => {
+             if (response.ok) {
+                 response.json().then( (json) => {
+                     this.renderRequest(json.id);
+                 }).catch ( (err) => {
+                     this.handleError(err);
+                 });
+                 // TODO NOW render request
+             } else {
+                 response.text().then( (err) => {
+                     this.handleError(err);
+                 });
+             }
+         }).catch( (err) => {
+             this.handleError(err);
+         });
+  }
+  
+  renderRequest(requestid) {
+      //TODO NOW handle accept / deny / cancel buttons
+      $('#error').text("");
+      fetch(this.serviceUrl + "request/id/" + requestid,
+       {"headers": new Headers({"authorization": this.token})
+        }).then( (response) => {
+          if (response.ok) {
+              response.json().then( (json) => {
+                  const c = new Date(json.createdate).toLocaleString();
+                  const m = new Date(json.moddate).toLocaleString();
+                  const e = new Date(json.expiredate).toLocaleString();
+                  const s = this.sanitize;
+                  const g =
+                      `
+                      <table class="table">
+                        <tbody>
+                          <tr><th>ID</th><td>${s(json.id)}</td></tr>
+                          <tr><th>Group ID</th><td>${s(json.groupid)}</td></tr>
+                          <tr><th>Requester</th><td>${s(json.requester)}</td></tr>
+                          <tr><th>Target user</th><td>${s(json.targetuser)}</td></tr>
+                          <tr><th>Type</th><td>${s(json.type)}</td></tr>
+                          <tr><th>Status</th><td>${s(json.status)}</td></tr>
+                          <tr><th>Created</th><td>${c}</td></tr>
+                          <tr><th>Modified</th><td>${m}</td></tr>
+                          <tr><th>Expires</th><td>${e}</td></tr>
+                        </tbody>
+                      </table>
                       `;
                   $('#groups').html(g);
               }).catch( (err) => {
@@ -220,10 +296,17 @@ export default class {
       });
   }
   
-  renderCreateGroup() {
-      $('#error').text("");
+  checkToken() {
       if (!this.token) {
           this.handleError("Please set a token. Doofus.");
+          return false;
+      }
+      return true;
+  }
+  
+  renderCreateGroup() {
+      $('#error').text("");
+      if (!this.checkToken()) {
           return;
       }
       const input = 

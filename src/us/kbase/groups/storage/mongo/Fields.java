@@ -38,21 +38,21 @@ public class Fields {
 	
 	/** The request ID */
 	public static final String REQUEST_ID = "id";
-	/** The request ID */
+	/** The group ID for the request */
 	public static final String REQUEST_GROUP_ID = "gid";
-	/** The request ID */
+	/** The user the request targets, if any. */
 	public static final String REQUEST_TARGET = "target";
-	/** The request ID */
+	/** The user that made the request. */
 	public static final String REQUEST_REQUESTER = "requester";
-	/** The request ID */
+	/** The type of the request. */
 	public static final String REQUEST_TYPE = "type";
-	/** The request ID */
+	/** The the status of the request. */
 	public static final String REQUEST_STATUS = "status";
-	/** The request ID */
+	/** The creation date of the request. */
 	public static final String REQUEST_CREATION = "create";
-	/** The request ID */
+	/** The modification date of the request. */
 	public static final String REQUEST_MODIFICATION = "mod";
-	/** The request ID */
+	/** The expiration date of the request. */
 	public static final String REQUEST_EXPIRATION = "expire";
 	
 	/* ***********************
