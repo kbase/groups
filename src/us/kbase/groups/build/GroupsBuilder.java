@@ -19,6 +19,7 @@ import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
+import us.kbase.groups.notifications.SLF4JNotifier;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -96,7 +97,8 @@ public class GroupsBuilder {
 			throw new GroupsConfigurationException(
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
-		return new Groups(storage, uh);
+		// TODO NOTIFICATIONS replace with actual implementation
+		return new Groups(storage, uh, new SLF4JNotifier());
 	}
 
 	private GroupsStorage buildStorage(
