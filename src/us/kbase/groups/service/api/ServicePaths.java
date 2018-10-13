@@ -22,7 +22,10 @@ public class ServicePaths {
 	public static final String GROUP = SEP + "group";
 	/** The group ID */
 	public static final String GROUP_ID = "{" + Fields.GROUP_ID + "}";
+	/** The location to request membership in a group. */
 	public static final String GROUP_REQUEST_MEMBERSHIP = GROUP_ID + SEP + "requestmembership";
+	/** the location to get requests targeted at a group. */
+	public static final String GROUP_REQUESTS = GROUP_ID + SEP + "requests";
 	
 	/* Request endpoints */
 	

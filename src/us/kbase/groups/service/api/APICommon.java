@@ -2,8 +2,11 @@ package us.kbase.groups.service.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import us.kbase.groups.core.request.GroupRequest;
 
@@ -28,4 +31,9 @@ public class APICommon {
 		return ret;
 	}
 	
+	
+	public static List<Map<String, Object>> toGroupRequestJSON(
+			final Collection<GroupRequest> requests) {
+		return requests.stream().map(r -> toGroupRequestJSON(r)).collect(Collectors.toList());
+	}
 }

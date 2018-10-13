@@ -211,11 +211,16 @@ export default class {
                       </table>
                       <button id="requestgroupmembership" class="btn btn-primary">
                         Request group membership</button>
+                      <button id="grouprequests" class="btn btn-primary">
+                        Requests for group</button>
                       `;
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#requestgroupmembership').on('click', () => {
                       this.requestGroupMembership(groupid);
+                  });
+                  $('#grouprequests').on('click', () => {
+                      this.renderGroupRequests(groupid);
                   });
               }).catch( (err) => {
                   this.handleError(err);
@@ -258,12 +263,20 @@ export default class {
          });
   }
   
+  renderGroupRequests(groupid) {
+      this.renderRequests(this.serviceUrl + "group/" + groupid + "/requests")
+  }
+  
   renderCreatedRequests() {
+      this.renderRequests(this.serviceUrl + "request/created");
+  }
+  
+  renderRequests(requesturl) {
       $('#error').text("");
       if (!this.checkToken()) {
           return;
       }
-      fetch(this.serviceUrl + "request/created",
+      fetch(requesturl,
         {"headers": new Headers({"authorization": this.token,
                                  "content-type": "application/json"
                                  })
@@ -277,6 +290,7 @@ export default class {
                           <table class="table">
                             <thead>
                               <tr>
+                                <th scope="col">Requester</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Type</th>
                                 <th scope="col">Group ID</th>
@@ -290,6 +304,7 @@ export default class {
                           gtable +=
                               `
                               <tr id="${s(r.id)}">
+                                <td>${s(r.requester)}</td>
                                 <td>${s(r.status)}</td>
                                 <td>${s(r.type)}</td>
                                 <td>${s(r.groupid)}</td>

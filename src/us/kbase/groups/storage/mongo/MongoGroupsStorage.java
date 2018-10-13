@@ -395,17 +395,25 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final UserName requester,
 			final GroupRequestStatus status,
 			final String field,
-			final String userType)
+			final String fieldType)
 			throws GroupsStorageException {
-		checkNotNull(requester, userType);
-		final Set<GroupRequest> ret = new HashSet<>();
-		final Document query = new Document(field, requester.getName());
+		checkNotNull(requester, fieldType);
+		return findRequests(withStatus(new Document(field, requester.getName()), status));
+	}
+
+
+	private Document withStatus(final Document query, final GroupRequestStatus status) {
 		if (status != null) {
 			query.append(Fields.REQUEST_STATUS, status.toString());
 		}
+		return query;
+	}
+
+	private Set<GroupRequest> findRequests(final Document query)
+			throws GroupsStorageException {
+		final Set<GroupRequest> ret = new HashSet<>();
 		try {
-			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS)
-					.find(new Document());
+			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query);
 			for (final Document rdoc: gdocs) {
 				ret.add(toRequest(rdoc));
 			}
@@ -414,6 +422,17 @@ public class MongoGroupsStorage implements GroupsStorage {
 					"Connection to database failed: " + e.getMessage(), e);
 		}
 		return ret;
+	}
+	
+	@Override
+	public Set<GroupRequest> getRequestsByGroupID(
+			final GroupID groupID,
+			final GroupRequestStatus status)
+			throws GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
+				.append(Fields.REQUEST_TARGET, null);
+		return findRequests(withStatus(query, status));
 	}
 	
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {

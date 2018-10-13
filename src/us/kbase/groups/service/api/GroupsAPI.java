@@ -36,6 +36,7 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -126,6 +127,18 @@ public class GroupsAPI {
 				new Token(token), new GroupID(groupID)));
 	}
 	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(ServicePaths.GROUP_REQUESTS)
+	public List<Map<String, Object>> getRequestsForGroup(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID)
+			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,
+				AuthenticationException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException {
+		return APICommon.toGroupRequestJSON(groups.getRequestsForGroupID(
+				new Token(token), new GroupID(groupID)));
+	}
 
 	private Map<String, Object> toGroupJSON(final Group g) {
 		final Map<String, Object> ret = new HashMap<>();

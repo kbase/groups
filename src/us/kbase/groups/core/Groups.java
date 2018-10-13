@@ -130,6 +130,8 @@ public class Groups {
 		return request;
 	}
 	
+	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
+	
 	public GroupRequest getRequest(final Token userToken, final UUID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
@@ -162,6 +164,19 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
 		return storage.getRequestsByTarget(user, GroupRequestStatus.OPEN);
+	}
+	
+	public Set<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
+			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
+				NoSuchGroupException, GroupsStorageException {
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(groupID);
+		if (!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format(
+					"User %s cannot view requests for group %s",
+					user.getName(), groupID.getName()));
+		}
+		return storage.getRequestsByGroupID(groupID, GroupRequestStatus.OPEN);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
