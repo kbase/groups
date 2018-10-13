@@ -109,6 +109,7 @@ public class Groups {
 		checkNotNull(groupID, "groupID");
 		final UserName user = userHandler.getUser(userToken);
 		//TODO NOW pass in UUID factory for mocking purposes
+		//TODO NOW check an equivalent request doesn't already exist
 		final Group g = storage.getGroup(groupID);
 		if (g.isMember(user)) {
 			throw new UserIsMemberException(String.format(

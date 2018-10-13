@@ -30,6 +30,10 @@ public class ServicePaths {
 	public static final String REQUEST = SEP + "request";
 	/** The location to access a request by ID */
 	public static final String REQUEST_ID = "/id/{" + Fields.REQUEST_ID + "}";
+	/** The location to list requests created by the user */
+	public static final String REQUEST_CREATED = "/created";
+	/** The location to list requests targeted at the user */
+	public static final String REQUEST_TARGETED = "/targeted";
 	
 	
 }
