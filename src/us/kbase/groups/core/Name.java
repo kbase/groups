@@ -14,6 +14,8 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  */
 public class Name implements Comparable<Name> {
 	
+	//TODO CODE would be useful to pass in a regex and have this do the matching + check 1st char
+	// vs duplicating everywhere
 	private final String name;
 	
 	/** Create a new name.
