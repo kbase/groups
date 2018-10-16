@@ -153,7 +153,8 @@ public class MongoGroupsStorageStartupTest {
 	public void checkCollectionNames() throws Exception {
 		final Set<String> names = new HashSet<>();
 		final Set<String> expected = set(
-				"config");
+				"config",
+				"groups");
 		if (manager.includeSystemIndexes) {
 			expected.add("system.indexes");
 		}
@@ -178,6 +179,28 @@ public class MongoGroupsStorageStartupTest {
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongogroupsstorage.config")
+				)));
+	}
+	
+	@Test
+	public void indexesGroups() {
+		final Set<Document> indexes = new HashSet<>();
+		manager.db.getCollection("groups").listIndexes()
+				.forEach((Consumer<Document>) indexes::add);
+		assertThat("incorrect indexes", indexes, is(set(
+				new Document("v", manager.indexVer)
+						.append("unique", true)
+						.append("key", new Document("id", 1))
+						.append("name", "id_1")
+						.append("ns", "test_mongogroupsstorage.groups"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("own", 1))
+						.append("name", "own_1")
+						.append("ns", "test_mongogroupsstorage.groups"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_")
+						.append("ns", "test_mongogroupsstorage.groups")
 				)));
 	}
 

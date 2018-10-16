@@ -12,6 +12,25 @@ public class Fields {
 	/** The key for the MongoDB ID in documents. */
 	public static final String MONGO_ID = "_id";
 
+	/* ***********************
+	 * groups fields
+	 * ***********************
+	 */
+	
+	/** The group id. */
+	public static final String GROUP_ID = "id";
+	/** The group name. */
+	public static final String GROUP_NAME = "name";
+	/** The group type. */
+	public static final String GROUP_TYPE = "type";
+	/** The username of the group owner. */
+	public static final String GROUP_OWNER = "own";
+	/** The group creation date. */
+	public static final String GROUP_CREATION = "create";
+	/** The group modifcation date. */
+	public static final String GROUP_MODIFICATION = "mod";
+	/** The group description. */
+	public static final String GROUP_DESCRIPTION = "desc";
 	
 	/* ***********************
 	 * database schema fields
