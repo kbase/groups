@@ -48,6 +48,10 @@ public class Fields {
 	public static final String REQUEST_TYPE = "type";
 	/** The the status of the request. */
 	public static final String REQUEST_STATUS = "status";
+	/** The user that closed the request. */
+	public static final String REQUEST_CLOSED_BY = "closedby";
+	/** The the reason the request was closed. */
+	public static final String REQUEST_REASON_CLOSED = "reasonclosed";
 	/** The creation date of the request. */
 	public static final String REQUEST_CREATION = "create";
 	/** The modification date of the request. */

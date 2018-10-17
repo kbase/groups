@@ -47,4 +47,6 @@ public class Fields {
 	public static final String REQUEST_EXPIRATION = "expiredate";
 	/** The permitted actions for the user. */
 	public static final String REQUEST_USER_ACTIONS = "actions";
+	/** The reason a request was denied. */
+	public static final String REQUEST_DENIED_REASON = "reason";
 }

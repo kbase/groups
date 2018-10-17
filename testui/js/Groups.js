@@ -82,7 +82,7 @@ export default class {
   }
   
   handleError(errortext) {
-      //TODO JS handle errors better - parse json if possible\
+      //TODO JS handle errors better - parse json if possible
       $('#error').text(errortext);
   }
   
@@ -252,7 +252,6 @@ export default class {
                  }).catch ( (err) => {
                      this.handleError(err);
                  });
-                 // TODO NOW render request
              } else {
                  response.text().then( (err) => {
                      this.handleError(err);
@@ -344,6 +343,7 @@ export default class {
                   const m = new Date(json.moddate).toLocaleString();
                   const e = new Date(json.expiredate).toLocaleString();
                   const canCancel = json.actions.includes('CANCEL');
+                  const canDeny = json.actions.includes('DENY');
                   const s = this.sanitize;
                   let g =
                       `
@@ -364,14 +364,33 @@ export default class {
                   if (canCancel) {
                       g +=
                       `
-                      <button id="cancelrequest" class="btn btn-primary">Cancel</button>
+                      <div><button id="cancelrequest" class="btn btn-primary">Cancel</button><div>
                       `
                   }
-                  //TODO NOW only display appropriate actions
+                  if (canDeny) {
+                      g +=
+                      `
+                      <div class="form-group">
+                          <label for="denyreason">Denial reason</label>
+                          <input class="form-control" id="denyreason" aria-describedby="denyhelp"
+                              placeholder="Reason request denied" required>
+                          <small id="denyhelp" class="form-text text-muted">
+                              The reason the request was denied.
+                          </small>
+                      </div>
+                      <button id="denyrequest" class="btn btn-primary">Deny</button>
+                      `
+                  }
                   $('#groups').html(g);
                   if (canCancel) {
                       $('#cancelrequest').on('click', () => {
                           this.cancelRequest(requestid);
+                      });
+                  }
+                  if (canDeny) {
+                      $('#denyrequest').on('click', () => {
+                          const denyReason = $('#denyreason').val();
+                          this.denyRequest(requestid, denyReason);
                       });
                   }
               }).catch( (err) => {
@@ -388,10 +407,20 @@ export default class {
   }
   
   cancelRequest(requestid) {
+      this.processRequest("/cancel", requestid);
+  }
+  
+  denyRequest(requestid, denialReason) {
+      this.processRequest("/deny", requestid, denialReason);
+  }
+  
+  processRequest(posturl, requestid, denialReason) {
       $('#error').text("");
-      fetch(this.serviceUrl + "request/id/" + requestid + "/cancel",
+      fetch(this.serviceUrl + "request/id/" + requestid + posturl,
        {"method": "PUT",
-        "headers": new Headers({"authorization": this.token})
+        "headers": new Headers({"authorization": this.token,
+                                "content-type": "application/json"}),
+        "body": JSON.stringify({"reason": denialReason})
         }).then( (response) => {
           if (response.ok) {
               this.renderCreatedRequests()

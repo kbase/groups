@@ -42,5 +42,14 @@ public class SLF4JNotifier implements Notifications {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"Canceled request %s", requestID.toString()));
 	}
+	
+	@Override
+	public void deny(
+			final Set<UserName> targets,
+			final GroupRequest request,
+			final UserName user) {
+		LoggerFactory.getLogger(getClass()).info(String.format(
+				"User %s denied request %s", user.getName(), request.getID().toString()));
+	}
 
 }

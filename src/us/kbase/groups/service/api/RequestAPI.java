@@ -18,6 +18,9 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -95,6 +98,32 @@ public class RequestAPI {
 				UnauthorizedException, MissingParameterException, GroupsStorageException {
 		return APICommon.toGroupRequestJSON(groups.cancelRequest(
 				new Token(token), UUID.fromString(requestID)));
+	}
+	
+	public static class DenyRequestJSON extends IncomingJSON {
+		
+		private final String deniedReason;
+		
+		@JsonCreator
+		public DenyRequestJSON(
+				@JsonProperty(Fields.REQUEST_DENIED_REASON) final String reason) {
+			this.deniedReason = reason;
+		}
+	}
+	
+	@PUT
+	@Path(ServicePaths.REQUEST_DENY)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> denyRequest(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID,
+			final DenyRequestJSON denyJSON)
+			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
+				UnauthorizedException, MissingParameterException, GroupsStorageException {
+		final String reason = denyJSON == null ? null : denyJSON.deniedReason;
+		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
+		return APICommon.toGroupRequestJSON(groups.denyRequest(
+				new Token(token), UUID.fromString(requestID), reason));
 	}
 
 	private List<Map<String, Object>> toList(final Set<GroupRequest> reqs) {

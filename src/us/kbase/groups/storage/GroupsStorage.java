@@ -54,6 +54,13 @@ public interface GroupsStorage {
 	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatus status)
 			throws GroupsStorageException;
 	
-	void closeRequest(UUID requestID, GroupRequestStatus status, Instant modificationTime)
+	//TODO NOW make a status class that includes the status, closedby, and closed reason and checks the states. pass it in here and use it in GroupRequest
+	// might want a builder for this
+	void closeRequest(
+			UUID requestID,
+			GroupRequestStatus status,
+			Instant modificationTime,
+			UserName closedBy,
+			String closedReason)
 			throws NoSuchRequestException, GroupsStorageException;
 }

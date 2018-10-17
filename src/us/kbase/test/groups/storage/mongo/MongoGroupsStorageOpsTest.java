@@ -129,7 +129,7 @@ public class MongoGroupsStorageOpsTest {
 					.withModificationTime(Instant.ofEpochMilli(50000))
 					.build())
 				.withInviteToGroup(new UserName("target"))
-				.withStatus(GroupRequestStatus.ACCEPTED)
+				.withStatus(GroupRequestStatus.DENIED, new UserName("whee"), "jerkface")
 				.build());
 		
 		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),
@@ -140,7 +140,7 @@ public class MongoGroupsStorageOpsTest {
 						.withModificationTime(Instant.ofEpochMilli(50000))
 						.build())
 					.withInviteToGroup(new UserName("target"))
-					.withStatus(GroupRequestStatus.ACCEPTED)
+					.withDenied(new UserName("whee"), "jerkface")
 					.build()));
 	}
 	
