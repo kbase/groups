@@ -45,4 +45,6 @@ public class Fields {
 	public static final String REQUEST_MODIFICATION = "moddate";
 	/** The expiration date of the request. */
 	public static final String REQUEST_EXPIRATION = "expiredate";
+	/** The permitted actions for the user. */
+	public static final String REQUEST_USER_ACTIONS = "actions";
 }

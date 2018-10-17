@@ -343,6 +343,7 @@ export default class {
                   const c = new Date(json.createdate).toLocaleString();
                   const m = new Date(json.moddate).toLocaleString();
                   const e = new Date(json.expiredate).toLocaleString();
+                  const canCancel = json.actions.includes('CANCEL');
                   const s = this.sanitize;
                   let g =
                       `
@@ -360,7 +361,7 @@ export default class {
                         </tbody>
                       </table>
                       `;
-                  if (true) {
+                  if (canCancel) {
                       g +=
                       `
                       <button id="cancelrequest" class="btn btn-primary">Cancel</button>
@@ -368,7 +369,7 @@ export default class {
                   }
                   //TODO NOW only display appropriate actions
                   $('#groups').html(g);
-                  if (true) {
+                  if (canCancel) {
                       $('#cancelrequest').on('click', () => {
                           this.cancelRequest(requestid);
                       });

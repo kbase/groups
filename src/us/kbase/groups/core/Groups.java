@@ -6,6 +6,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -22,6 +24,8 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestUserAction;
+import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -138,7 +142,7 @@ public class Groups {
 	
 	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
 	
-	public GroupRequest getRequest(final Token userToken, final UUID requestID)
+	public GroupRequestWithActions getRequest(final Token userToken, final UUID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
 		checkNotNull(userToken, "userToken");
@@ -146,14 +150,29 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(request);
+		return getAuthorizedActions(user, request, g);
+	}
+	
+	private final Set<GroupRequestUserAction> CREATOR_ACTIONS = new HashSet<>(Arrays.asList(
+			GroupRequestUserAction.CANCEL));
+	private final Set<GroupRequestUserAction> TARGET_ACTIONS = new HashSet<>(Arrays.asList(
+			GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+
+	private GroupRequestWithActions getAuthorizedActions(
+			final UserName user,
+			final GroupRequest request,
+			final Group group)
+			throws UnauthorizedException {
 		//TODO NOW handle case where user is workspace admin for request against workspace
-		if (!user.equals(request.getTarget().orNull()) &&
-				!user.equals(request.getRequester()) &&
-				!g.isAdministrator(user)) {
+		if (user.equals(request.getRequester())) {
+			return new GroupRequestWithActions(request, CREATOR_ACTIONS);
+		}
+		if (user.equals(request.getTarget().orNull()) || group.isAdministrator(user)) {
+			return new GroupRequestWithActions(request, TARGET_ACTIONS);
+		} else {
 			throw new UnauthorizedException(String.format("User %s cannot access request %s",
 					user.getName(), request.getID().toString()));
 		}
-		return request;
 	}
 	
 	//TODO CODE allow getting closed requests

@@ -5,6 +5,7 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.REQUEST)
@@ -50,9 +52,11 @@ public class RequestAPI {
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException {
 		//TODO NOW make request id class vs. uuid.
-		//TODO NOW return list of acceptable actions for request for user.
-		return APICommon.toGroupRequestJSON(groups.getRequest(
-				new Token(token), UUID.fromString(requestID)));
+		final GroupRequestWithActions actions = groups.getRequest(
+							new Token(token), UUID.fromString(requestID));
+		final Map<String, Object> json = APICommon.toGroupRequestJSON(actions.getRequest());
+		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions()));
+		return json;
 	}
 	
 	@GET
