@@ -23,6 +23,7 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
@@ -230,7 +231,7 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
 					user.getName(), requestID.toString()));
 		}
-		storage.closeRequest(requestID, GroupRequestStatusType.CANCELED, clock.instant(), null, null);
+		storage.closeRequest(requestID, GroupRequestStatus.canceled(), clock.instant());
 		notifications.cancel(requestID);
 		return storage.getRequest(requestID);
 	}
@@ -248,7 +249,7 @@ public class Groups {
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureCanAcceptOrDeny(request, group, user, false);
 		
-		storage.closeRequest(requestID, GroupRequestStatusType.DENIED, clock.instant(), user, reason);
+		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
 		//TODO NOW who should get notified?
 		notifications.deny(new HashSet<>(), request, user);
 		
