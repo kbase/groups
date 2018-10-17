@@ -16,4 +16,11 @@ public class ServicePaths {
 	/** The root endpoint location. */
 	public static final String ROOT = SEP;
 	
+	/* Groups endpoints */
+	
+	/** The group endpoint location. */
+	public static final String GROUP = SEP + "group";
+	/** The group ID */
+	public static final String GROUP_ID = "{" + Fields.GROUP_ID + "}";
+	
 }

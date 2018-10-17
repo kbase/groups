@@ -45,29 +45,19 @@ public class Groups {
 		this.clock = clock;
 	}
 	
-	
 	public Group createGroup(
 			final Token userToken,
-			final GroupID groupID,
-			final GroupName groupName,
-			final GroupType groupType,
-			final String description)
+			final GroupCreationParams createParams)
 			throws InvalidTokenException, AuthenticationException, GroupExistsException,
 				GroupsStorageException {
 		checkNotNull(userToken, "userToken");
-		checkNotNull(groupID, "groupID");
-		checkNotNull(groupName, "groupName");
-		checkNotNull(groupType, "groupType");
+		checkNotNull(createParams, "createParams");
 		final UserName owner = userHandler.getUser(userToken);
 		final Instant now = clock.instant();
-		storage.createGroup(Group.getBuilder(groupID, groupName, owner)
-				.withTimes(now, now)
-				.withType(groupType)
-				.withDescription(description)
-				.build());
+		storage.createGroup(createParams.toGroup(owner, now, now));
 		
 		try {
-			return storage.getGroup(groupID);
+			return storage.getGroup(createParams.getGroupID());
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
 					"Just created a group and it's already gone. Something's really broken", e);
@@ -97,10 +87,10 @@ public class Groups {
 		final Token t = new Token(args[0]);
 		final Group g1 = g.createGroup(
 				t,
-				new GroupID("foo"),
-				new GroupName("bar"),
-				GroupType.team,
-				"desc");
+				GroupCreationParams.getBuilder(new GroupID("foo"), new GroupName("bar"))
+						.withType(GroupType.team)
+						.withDescription("desc")
+						.build());
 		System.out.println(g1);
 		
 		System.out.println(g.getGroup(t, new GroupID("foo")));

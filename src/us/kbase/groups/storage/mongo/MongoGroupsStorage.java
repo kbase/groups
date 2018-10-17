@@ -240,8 +240,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_TYPE, group.getType().toString())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
-				.append(Fields.GROUP_DESCRIPTION, group.getDescription().isPresent() ?
-						group.getDescription().get() : null);
+				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orNull());
 		try {
 			db.getCollection(COL_GROUPS).insertOne(u);
 		} catch (MongoWriteException mwe) {
