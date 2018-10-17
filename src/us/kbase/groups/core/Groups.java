@@ -199,6 +199,24 @@ public class Groups {
 		return g;
 	}
 	
+	public GroupRequest cancelRequest(final Token userToken, final UUID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest gr = storage.getRequest(requestID);
+		if (!gr.getRequester().equals(user)) {
+			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
+					user.getName(), requestID.toString()));
+		}
+		storage.closeRequest(requestID, GroupRequestStatus.CANCELED, clock.instant());
+		notifications.cancel(requestID);
+		return storage.getRequest(requestID);
+	}
+	
+	//TODO NOW on request accept/deny, record the user that accepted or denied the request
+
 	public static void main(final String[] args) throws Exception {
 		System.setProperty("KB_DEPLOYMENT_CONFIG", "./deploy.cfg");
 		final Groups g = new GroupsBuilder(new GroupsConfig()).getGroups();

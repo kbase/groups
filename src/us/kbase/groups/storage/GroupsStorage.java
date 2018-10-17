@@ -1,5 +1,6 @@
 package us.kbase.groups.storage;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -52,4 +53,7 @@ public interface GroupsStorage {
 	// pass null for any status
 	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatus status)
 			throws GroupsStorageException;
+	
+	void closeRequest(UUID requestID, GroupRequestStatus status, Instant modificationTime)
+			throws NoSuchRequestException, GroupsStorageException;
 }

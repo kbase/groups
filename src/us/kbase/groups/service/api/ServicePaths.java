@@ -31,11 +31,13 @@ public class ServicePaths {
 	
 	/** The request endpoint location. */
 	public static final String REQUEST = SEP + "request";
-	/** The location to access a request by ID */
+	/** The location to access a request by ID. */
 	public static final String REQUEST_ID = "/id/{" + Fields.REQUEST_ID + "}";
-	/** The location to list requests created by the user */
+	/** The location to cancel a request. */
+	public static final String REQUEST_CANCEL = REQUEST_ID + "/cancel";
+	/** The location to list requests created by the user. */
 	public static final String REQUEST_CREATED = "/created";
-	/** The location to list requests targeted at the user */
+	/** The location to list requests targeted at the user. */
 	public static final String REQUEST_TARGETED = "/targeted";
 	
 	
