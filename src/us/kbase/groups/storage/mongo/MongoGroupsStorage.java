@@ -46,7 +46,7 @@ import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -413,7 +413,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	 * @return the characteristic string.
 	 */
 	private String getCharacteristicString(final GroupRequest request) {
-		if (!request.getStatus().equals(GroupRequestStatus.OPEN)) {
+		if (!request.getStatus().equals(GroupRequestStatusType.OPEN)) {
 			return null;
 		}
 		final StringBuilder builder = new StringBuilder();
@@ -453,21 +453,21 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public Set<GroupRequest> getRequestsByRequester(
 			final UserName requester,
-			final GroupRequestStatus status) throws GroupsStorageException {
+			final GroupRequestStatusType status) throws GroupsStorageException {
 		return getRequestsByUser(requester, status, Fields.REQUEST_REQUESTER, "requester");
 	}
 	
 	@Override
 	public Set<GroupRequest> getRequestsByTarget(
 			final UserName target,
-			final GroupRequestStatus status)
+			final GroupRequestStatusType status)
 			throws GroupsStorageException {
 		return getRequestsByUser(target, status, Fields.REQUEST_TARGET, "target");
 	}
 
 	private Set<GroupRequest> getRequestsByUser(
 			final UserName requester,
-			final GroupRequestStatus status,
+			final GroupRequestStatusType status,
 			final String field,
 			final String fieldType)
 			throws GroupsStorageException {
@@ -476,7 +476,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 
 
-	private Document withStatus(final Document query, final GroupRequestStatus status) {
+	private Document withStatus(final Document query, final GroupRequestStatusType status) {
 		if (status != null) {
 			query.append(Fields.REQUEST_STATUS, status.toString());
 		}
@@ -501,7 +501,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public Set<GroupRequest> getRequestsByGroupID(
 			final GroupID groupID,
-			final GroupRequestStatus status)
+			final GroupRequestStatusType status)
 			throws GroupsStorageException {
 		checkNotNull(groupID, "groupID");
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
@@ -527,7 +527,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target))
 					.withStatus(
-							GroupRequestStatus.valueOf(req.getString(Fields.REQUEST_STATUS)),
+							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),
 							req.getString(Fields.REQUEST_REASON_CLOSED))
 					.build();
@@ -541,7 +541,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void closeRequest(
 			final UUID requestID,
-			final GroupRequestStatus newStatus,
+			final GroupRequestStatusType newStatus,
 			final Instant modificationTime,
 			final UserName closedBy,
 			final String closedReason)
@@ -549,9 +549,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 		checkNotNull(requestID, "requestID");
 		checkNotNull(newStatus, "newStatus");
 		checkNotNull(modificationTime, "modificationTime");
-		if (newStatus.equals(GroupRequestStatus.OPEN)) {
+		if (newStatus.equals(GroupRequestStatusType.OPEN)) {
 			throw new IllegalArgumentException(
-					"newStatus cannot be " + GroupRequestStatus.OPEN);
+					"newStatus cannot be " + GroupRequestStatusType.OPEN);
 		}
 		final Document set = new Document(
 				Fields.REQUEST_STATUS, newStatus.toString())
@@ -564,7 +564,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
 		final Document query = new Document(Fields.REQUEST_ID, requestID.toString())
-				.append(Fields.REQUEST_STATUS, GroupRequestStatus.OPEN.toString());
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.toString());
 		try {
 			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
 					query, new Document("$set", set).append("$unset", unset));

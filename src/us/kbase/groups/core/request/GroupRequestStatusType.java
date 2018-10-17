@@ -1,6 +1,6 @@
 package us.kbase.groups.core.request;
 
-public enum GroupRequestStatus {
+public enum GroupRequestStatusType {
 	
 	// TODO JAVADOC
 	// TODO TEST

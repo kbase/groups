@@ -13,7 +13,7 @@ import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 public interface GroupsStorage {
@@ -39,26 +39,26 @@ public interface GroupsStorage {
 	// pass null for any status
 	Set<GroupRequest> getRequestsByRequester(
 			UserName requester,
-			GroupRequestStatus status) throws GroupsStorageException;
+			GroupRequestStatusType status) throws GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// pass null for any status
 	Set<GroupRequest> getRequestsByTarget(
 			UserName target,
-			GroupRequestStatus status) throws GroupsStorageException;
+			GroupRequestStatusType status) throws GroupsStorageException;
 
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// maybe also specify optional target user? YAGNI for now
 	// only returns requests for that group specifically, e.g. no target user
 	// pass null for any status
-	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatus status)
+	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatusType status)
 			throws GroupsStorageException;
 	
 	//TODO NOW make a status class that includes the status, closedby, and closed reason and checks the states. pass it in here and use it in GroupRequest
 	// might want a builder for this
 	void closeRequest(
 			UUID requestID,
-			GroupRequestStatus status,
+			GroupRequestStatusType status,
 			Instant modificationTime,
 			UserName closedBy,
 			String closedReason)

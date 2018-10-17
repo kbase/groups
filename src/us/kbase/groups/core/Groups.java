@@ -23,7 +23,7 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
@@ -181,7 +181,7 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByRequester(user, GroupRequestStatus.OPEN);
+		return storage.getRequestsByRequester(user, GroupRequestStatusType.OPEN);
 	}
 	
 	//TODO CODE allow getting closed requests
@@ -189,7 +189,7 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByTarget(user, GroupRequestStatus.OPEN);
+		return storage.getRequestsByTarget(user, GroupRequestStatusType.OPEN);
 	}
 	
 	public Set<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
@@ -203,7 +203,7 @@ public class Groups {
 					"User %s cannot view requests for group %s",
 					user.getName(), groupID.getName()));
 		}
-		return storage.getRequestsByGroupID(groupID, GroupRequestStatus.OPEN);
+		return storage.getRequestsByGroupID(groupID, GroupRequestStatusType.OPEN);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
@@ -230,7 +230,7 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
 					user.getName(), requestID.toString()));
 		}
-		storage.closeRequest(requestID, GroupRequestStatus.CANCELED, clock.instant(), null, null);
+		storage.closeRequest(requestID, GroupRequestStatusType.CANCELED, clock.instant(), null, null);
 		notifications.cancel(requestID);
 		return storage.getRequest(requestID);
 	}
@@ -248,7 +248,7 @@ public class Groups {
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureCanAcceptOrDeny(request, group, user, false);
 		
-		storage.closeRequest(requestID, GroupRequestStatus.DENIED, clock.instant(), user, reason);
+		storage.closeRequest(requestID, GroupRequestStatusType.DENIED, clock.instant(), user, reason);
 		//TODO NOW who should get notified?
 		notifications.deny(new HashSet<>(), request, user);
 		
