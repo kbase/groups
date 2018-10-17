@@ -81,6 +81,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
+		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -100,6 +101,7 @@ public class GroupsConfigTest {
 					 "mongo-pwd=\n" +
 					 "auth-url=http://auth.com\n" +
 					 "workspace-url=http://ws.com\n" +
+					 "allow-insecure-urls=true1\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
 			cfg = getConfig(fo);
@@ -114,6 +116,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
+		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -132,6 +135,7 @@ public class GroupsConfigTest {
 					 "mongo-pwd=somepwd\n" +
 					 "auth-url=https://auth.com\n" +
 					 "workspace-url=https://ws.com\n" +
+					 "allow-insecure-urls=true\n" +
 					 "dont-trust-x-ip-headers=true\n")
 					.getBytes()));
 			cfg = getConfig(fo);
@@ -146,6 +150,7 @@ public class GroupsConfigTest {
 				equalTo("somepwd".toCharArray()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -168,6 +173,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -183,6 +189,7 @@ public class GroupsConfigTest {
 				 "mongo-pwd=somepwd\n" +
 				 "auth-url=https://auth.com\n" +
 				 "workspace-url=https://ws.com\n" +
+				 "allow-insecure-urls=true\n" +
 				 "dont-trust-x-ip-headers=true\n")
 				.getBytes()));
 		final GroupsConfig cfg = getConfig(Paths.get("some file2"), true, fo);
@@ -194,6 +201,7 @@ public class GroupsConfigTest {
 				equalTo("somepwd".toCharArray()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), true);
 	}

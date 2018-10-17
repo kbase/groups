@@ -10,6 +10,8 @@ public enum ErrorType {
 	AUTHENTICATION_FAILED	(10000, "Authentication failed"),
 	/** No token was provided when required */
 	NO_TOKEN				(10010, "No authentication token"),
+	/** The token provided is not valid. */
+	INVALID_TOKEN			(10020, "Invalid token"),
 	/** The user is not authorized to perform the requested action. */
 	UNAUTHORIZED			(20000, "Unauthorized"),
 	/** A required input parameter was not provided. */
