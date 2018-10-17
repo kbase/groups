@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -64,7 +65,9 @@ public class GroupsConfigTest {
 			when(fo.open(Paths.get("some file"))).thenReturn(new ByteArrayInputStream(
 					("[groups]\n" +
 					 "mongo-host=mongo\n" +
-					 "mongo-db=database\n")
+					 "mongo-db=database\n" +
+					 "auth-url=     http://auth.com       \n" +
+					 "workspace-url=http://ws.com\n")
 					.getBytes()));
 			cfg = getConfig(fo);
 		} finally {
@@ -76,6 +79,8 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
+		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -93,6 +98,8 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=\n" +
 					 "mongo-pwd=\n" +
+					 "auth-url=http://auth.com\n" +
+					 "workspace-url=http://ws.com\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
 			cfg = getConfig(fo);
@@ -105,6 +112,8 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
+		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -121,6 +130,8 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=userfoo\n" +
 					 "mongo-pwd=somepwd\n" +
+					 "auth-url=https://auth.com\n" +
+					 "workspace-url=https://ws.com\n" +
 					 "dont-trust-x-ip-headers=true\n")
 					.getBytes()));
 			cfg = getConfig(fo);
@@ -133,6 +144,8 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("userfoo")));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd().get(),
 				equalTo("somepwd".toCharArray()));
+		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
+		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -143,7 +156,9 @@ public class GroupsConfigTest {
 		when(fo.open(Paths.get("some file2"))).thenReturn(new ByteArrayInputStream(
 				("[groups]\n" +
 				 "mongo-host=mongo\n" +
-				 "mongo-db=database\n")
+				 "mongo-db=database\n" +
+				 "auth-url=https://auth.com\n" +
+				 "workspace-url=https://ws.com\n")
 				.getBytes()));
 		final GroupsConfig cfg = getConfig(Paths.get("some file2"), false, fo);
 		
@@ -151,6 +166,8 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
+		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
 	}
@@ -164,6 +181,8 @@ public class GroupsConfigTest {
 				 "mongo-db=database\n" +
 				 "mongo-user=userfoo\n" +
 				 "mongo-pwd=somepwd\n" +
+				 "auth-url=https://auth.com\n" +
+				 "workspace-url=https://ws.com\n" +
 				 "dont-trust-x-ip-headers=true\n")
 				.getBytes()));
 		final GroupsConfig cfg = getConfig(Paths.get("some file2"), true, fo);
@@ -173,6 +192,8 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("userfoo")));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd().get(),
 				equalTo("somepwd".toCharArray()));
+		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
+		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), true);
 	}
@@ -233,17 +254,19 @@ public class GroupsConfigTest {
 	public void configFailNoHost() throws Throwable {
 		failConfigBoth(
 				"[groups]\n" +
-				"temp-dir=foo\n" +
-				"mongo-db=bar",
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-host not provided in configuration file " +
 						"some file, section groups"));
 		
 		failConfigBoth(
 				"[groups]\n" +
-				"temp-dir=foo\n" +
 				"mongo-db=bar\n" +
-				"mongo-host=     \t     \n",
+				"mongo-host=     \t     \n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-host not provided in configuration file " +
 						"some file, section groups"));
@@ -254,7 +277,8 @@ public class GroupsConfigTest {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
-				"temp-dir=bar",
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-db not provided in configuration file " +
 						"some file, section groups"));
@@ -262,8 +286,9 @@ public class GroupsConfigTest {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
-				"temp-dir=bar\n" +
-				"mongo-db=     \t     \n",
+				"mongo-db=     \t     \n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-db not provided in configuration file " +
 						"some file, section groups"));
@@ -275,7 +300,8 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
-				"temp-dir=baz\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n" +
 				"mongo-user=user",
 				new GroupsConfigurationException(
 						"Must provide both mongo-user and mongo-pwd params in config file " +
@@ -286,7 +312,8 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
-				"temp-dir=baz\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n" +
 				"mongo-user=user\n" +
 				"mongo-pwd=   \t    ",
 				new GroupsConfigurationException(
@@ -301,7 +328,8 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
-				"temp-dir=baz\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n" +
 				"mongo-pwd=pwd",
 				new GroupsConfigurationException(
 						"Must provide both mongo-user and mongo-pwd params in config file " +
@@ -312,13 +340,83 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
-				"temp-dir=baz\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=https://ws.com\n" +
 				"mongo-pwd=pwd\n" +
 				"mongo-user=   \t    ",
 				new GroupsConfigurationException(
 						"Must provide both mongo-user and mongo-pwd params in config file " +
 						"some file section groups if MongoDB authentication is to " +
 						"be used"));
+	}
+	
+	@Test
+	public void configFailNoAuth() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"workspace-url=https://ws.com\n",
+				new GroupsConfigurationException(
+						"Required parameter auth-url not provided in configuration file " +
+						"some file, section groups"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=     \t     \n" +
+				"workspace-url=https://ws.com\n",
+				new GroupsConfigurationException(
+						"Required parameter auth-url not provided in configuration file " +
+						"some file, section groups"));
+	}
+	
+	@Test
+	public void configFailBadAuth() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=   htp://foo.com\n" +
+				"workspace-url=https://ws.com\n",
+				new GroupsConfigurationException("Value htp://foo.com of parameter auth-url " +
+						"in section groups of config file some file is not a valid URL"));
+	}
+	
+	@Test
+	public void configFailNoWS() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n",
+				new GroupsConfigurationException(
+						"Required parameter workspace-url not provided in configuration file " +
+						"some file, section groups"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=     \t     \n",
+				new GroupsConfigurationException(
+						"Required parameter workspace-url not provided in configuration file " +
+						"some file, section groups"));
+	}
+	
+	@Test
+	public void configFailBadWS() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=htp://foo.com\n",
+				new GroupsConfigurationException("Value htp://foo.com of parameter " +
+						"workspace-url in section groups of config file some file is not a " +
+						"valid URL"));
 	}
 	
 	private InputStream toStr(final String input) {
