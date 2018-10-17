@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -265,11 +266,27 @@ public class MongoGroupsStorage implements GroupsStorage {
 		if (grp == null) {
 			throw new NoSuchGroupException(groupID.getName());
 		} else {
-			return toNamespace(grp);
+			return toGroup(grp);
 		}
 	}
 	
-	private Group toNamespace(final Document ns) throws GroupsStorageException {
+	@Override
+	public List<Group> getGroups() throws GroupsStorageException {
+		final List<Group> ret = new LinkedList<>();
+		try {
+			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS)
+					.find().sort(new Document(Fields.GROUP_ID, 1));
+			for (final Document gdoc: gdocs) {
+				ret.add(toGroup(gdoc));
+			}
+		} catch (MongoException e) {
+			throw new GroupsStorageException(
+					"Connection to database failed: " + e.getMessage(), e);
+		}
+		return ret;
+	}
+	
+	private Group toGroup(final Document ns) throws GroupsStorageException {
 		try {
 			return Group.getBuilder(
 					new GroupID(ns.getString(Fields.GROUP_ID)),

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
 import us.kbase.groups.build.GroupsBuilder;
 import us.kbase.groups.config.GroupsConfig;
@@ -67,8 +68,8 @@ public class Groups {
 	public Group getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException {
-		// TODO CODE handle privacy concerns
-		// TODO CODE allow admins & std users to see private parts
+		// TODO PRIVATE handle privacy concerns
+		// TODO PRIVATE allow admins & std users to see private parts
 		// for now there's no private stuff in groups so we ignore the token. Usually we'd
 		// check and see if the user is a group member, and if not, remove private stuff
 		final Group g = storage.getGroup(groupID);
@@ -78,6 +79,16 @@ public class Groups {
 			// if not a member, remove private stuff from group
 		}
 		return g;
+	}
+	
+	// this assumes the number of groups is small enough that listing them all is OK.
+	// obviously if the number of groups gets > ~100k something will have to change
+	public List<Group> getGroups()
+			throws GroupsStorageException {
+		final List<Group> groups = storage.getGroups();
+		// TODO PRIVATE handle privacy concerns - remove all private stuff
+		// for now no private stuff to remove
+		return groups;
 	}
 	
 	public static void main(final String[] args) throws Exception {
