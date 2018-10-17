@@ -1,5 +1,7 @@
 package us.kbase.groups.notifications;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,13 +30,17 @@ public class SLF4JNotifier implements Notifications {
 			final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"Notifying %s of request %s %s for group %s (%s) with target %s requested by %s",
-				targets.stream().map(t -> t.getName()).collect(Collectors.toList()),
+				userNamesToStrings(targets),
 				request.getID().toString(),
 				request.getType().toString(),
 				request.getGroupID().getName(),
 				group.getGroupName().getName(),
 				request.getTarget().isPresent() ? request.getTarget().get().getName() : null,
 				request.getRequester().getName()));
+	}
+
+	private List<String> userNamesToStrings(final Collection<UserName> targets) {
+		return targets.stream().map(t -> t.getName()).collect(Collectors.toList());
 	}
 
 	@Override
@@ -47,9 +53,20 @@ public class SLF4JNotifier implements Notifications {
 	public void deny(
 			final Set<UserName> targets,
 			final GroupRequest request,
-			final UserName user) {
+			final UserName deniedBy) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
-				"User %s denied request %s", user.getName(), request.getID().toString()));
+				"User %s denied request %s, targets: %s",
+				deniedBy.getName(), request.getID().toString(), userNamesToStrings(targets)));
+	}
+
+	@Override
+	public void accept(
+			final Set<UserName> targets,
+			final GroupRequest request,
+			final UserName acceptedBy) {
+		LoggerFactory.getLogger(getClass()).info(String.format(
+				"User %s accepted request %s, targets: %s",
+				acceptedBy.getName(), request.getID().toString(), userNamesToStrings(targets)));
 	}
 
 }

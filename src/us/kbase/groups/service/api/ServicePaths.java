@@ -35,6 +35,8 @@ public class ServicePaths {
 	public static final String REQUEST_ID = "/id/{" + Fields.REQUEST_ID + "}";
 	/** The location to cancel a request. */
 	public static final String REQUEST_CANCEL = REQUEST_ID + "/cancel";
+	/** The location to accept a request. */
+	public static final String REQUEST_ACCEPT = REQUEST_ID + "/accept";
 	/** The location to deny a request. */
 	public static final String REQUEST_DENY = REQUEST_ID + "/deny";
 	/** The location to list requests created by the user. */

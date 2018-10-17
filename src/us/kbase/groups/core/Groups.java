@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.build.GroupsBuilder;
 import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -220,6 +221,17 @@ public class Groups {
 		return g;
 	}
 	
+	private void addMemberToKnownGoodGroup(final GroupID groupID, final UserName newMember)
+			throws GroupsStorageException {
+		try {
+			storage.addMember(groupID, newMember);
+		} catch (NoSuchGroupException e) {
+			// shouldn't happen
+			throw new RuntimeException(String.format("Group %s doesn't exist: %s",
+					groupID.getName(), e.getMessage()), e);
+		}
+	}
+	
 	public GroupRequest cancelRequest(final Token userToken, final UUID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
@@ -254,6 +266,40 @@ public class Groups {
 		notifications.deny(new HashSet<>(), request, user);
 		
 		return storage.getRequest(requestID);
+	}
+	
+	public GroupRequest acceptRequest(
+			final Token userToken,
+			final UUID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest request = storage.getRequest(requestID);
+		final Group group = getGroupFromKnownGoodRequest(request);
+		ensureCanAcceptOrDeny(request, group, user, true);
+		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
+			processAcceptGroupMembershipRequest(request, user, group);
+		} else {
+			throw new UnimplementedException();
+		}
+		return storage.getRequest(requestID);
+	}
+
+	// assumes group exists
+	private void processAcceptGroupMembershipRequest(
+			final GroupRequest request,
+			final UserName acceptedBy,
+			final Group group)
+			throws GroupsStorageException, NoSuchRequestException {
+		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
+		storage.closeRequest(
+				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
+		final Set<UserName> targets = new HashSet<>(group.getAdministrators());
+		targets.add(request.getRequester());
+		targets.remove(acceptedBy);
+		notifications.accept(targets, request, acceptedBy);
 	}
 	
 	private void ensureCanAcceptOrDeny(

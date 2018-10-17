@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.bson.Document;
 
@@ -271,6 +272,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 				Fields.GROUP_ID, group.getGroupID().getName())
 				.append(Fields.GROUP_NAME, group.getGroupName().getName())
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
+				.append(Fields.GROUP_MEMBERS, group.getMembers().stream().map(m -> m.getName())
+						.collect(Collectors.toList()))
 				.append(Fields.GROUP_TYPE, group.getType().toString())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
@@ -321,7 +324,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	private Group toGroup(final Document grp) throws GroupsStorageException {
 		try {
-			return Group.getBuilder(
+			final Group.Builder b = Group.getBuilder(
 					new GroupID(grp.getString(Fields.GROUP_ID)),
 					new GroupName(grp.getString(Fields.GROUP_NAME)),
 					new UserName(grp.getString(Fields.GROUP_OWNER)),
@@ -330,11 +333,46 @@ public class MongoGroupsStorage implements GroupsStorage {
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
 					// TODO NOW check valueOf error conditions 
 					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
-					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION))
-					.build();
+					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
+			addMembers(b, grp);
+			return b.build();
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new GroupsStorageException(
 					"Unexpected value in database: " + e.getMessage(), e);
+		}
+	}
+	
+	private void addMembers(final Group.Builder builder, final Document groupDoc)
+			throws MissingParameterException, IllegalParameterException {
+		@SuppressWarnings("unchecked")
+		final List<String> members = (List<String>) groupDoc.get(Fields.GROUP_MEMBERS);
+		if (members == null) {
+			return;
+		}
+		for (final String m: members) {
+			builder.withMember(new UserName(m));
+		}
+	}
+	
+	@Override
+	public void addMember(final GroupID groupID, final UserName newMember)
+			throws NoSuchGroupException, GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		checkNotNull(newMember, "newMember");
+		
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
+		final Document addToSet = new Document("$addToSet",
+				new Document(Fields.GROUP_MEMBERS, newMember.getName()));
+		
+		try {
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
+			if (res.getMatchedCount() != 1) {
+				throw new NoSuchGroupException(groupID.getName());
+			}
+			// if no modified, just means user was already in the list
+		} catch (MongoException e) {
+			throw new GroupsStorageException("Connection to database failed: " +
+					e.getMessage(), e);
 		}
 	}
 	

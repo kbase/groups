@@ -15,6 +15,8 @@ public class Fields {
 	public static final String GROUP_TYPE = "type";
 	/** The username of the group owner. */
 	public static final String GROUP_OWNER = "owner";
+	/** The group members. */
+	public static final String GROUP_MEMBERS = "members";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "createdate";
 	/** The group modification date. */
