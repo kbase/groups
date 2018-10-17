@@ -64,6 +64,29 @@ public class Group {
 	public Optional<String> getDescription() {
 		return description;
 	}
+	
+	
+
+	@Override
+	public String toString() {
+		StringBuilder builder2 = new StringBuilder();
+		builder2.append("Group [groupID=");
+		builder2.append(groupID);
+		builder2.append(", groupName=");
+		builder2.append(groupName);
+		builder2.append(", owner=");
+		builder2.append(owner);
+		builder2.append(", type=");
+		builder2.append(type);
+		builder2.append(", creationDate=");
+		builder2.append(creationDate);
+		builder2.append(", modificationDate=");
+		builder2.append(modificationDate);
+		builder2.append(", description=");
+		builder2.append(description);
+		builder2.append("]");
+		return builder2.toString();
+	}
 
 	@Override
 	public int hashCode() {
