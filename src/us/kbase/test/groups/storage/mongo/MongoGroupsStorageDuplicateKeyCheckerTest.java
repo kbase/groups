@@ -19,7 +19,7 @@ import com.mongodb.WriteError;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.test.auth2.TestCommon;
 
-public class MongoStorageDuplicateKeyCheckerTest {
+public class MongoGroupsStorageDuplicateKeyCheckerTest {
 	
 	/* Note the duplicate key error message style changed in 3.2 */
 
