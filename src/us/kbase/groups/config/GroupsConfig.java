@@ -2,6 +2,8 @@ package us.kbase.groups.config;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -25,6 +27,8 @@ import us.kbase.common.service.JsonServerSyslog.SyslogOutput;
  * mongo-db
  * mongo-user
  * mongo-pwd
+ * auth-url
+ * workspace-url
  * dont-trust-x-ip-headers
  * </pre>
  * 
@@ -49,6 +53,8 @@ public class GroupsConfig {
 	private static final String KEY_MONGO_DB = "mongo-db";
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
+	private static final String KEY_AUTH_URL = "auth-url";
+	private static final String KEY_WORKSPACE_URL = "workspace-url";
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
 	
 	public static final String TRUE = "true";
@@ -57,6 +63,8 @@ public class GroupsConfig {
 	private final String mongoDB;
 	private final Optional<String> mongoUser;
 	private final Optional<char[]> mongoPwd;
+	private final URL authURL;
+	private final URL workspaceURL;
 	private final SLF4JAutoLogger logger;
 	private final boolean ignoreIPHeaders;
 
@@ -107,6 +115,8 @@ public class GroupsConfig {
 		}
 		final Map<String, String> cfg = getConfig(filepath, fileOpener);
 		ignoreIPHeaders = TRUE.equals(getString(KEY_IGNORE_IP_HEADERS, cfg));
+		authURL = getURL(KEY_AUTH_URL, cfg);
+		workspaceURL = getURL(KEY_WORKSPACE_URL, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 		mongoDB = getString(KEY_MONGO_DB, cfg, true);
 		mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -145,6 +155,19 @@ public class GroupsConfig {
 					paramName, config.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 		} else {
 			return null;
+		}
+	}
+	
+	private URL getURL(final String key, final Map<String, String> cfg)
+			throws GroupsConfigurationException {
+		final String url = getString(key, cfg, true);
+		try {
+			return new URL(url);
+		} catch (MalformedURLException e) {
+			throw new GroupsConfigurationException(String.format(
+					"Value %s of parameter %s in section %s of config " +
+					"file %s is not a valid URL",
+					url, key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
 		}
 	}
 	
@@ -258,6 +281,20 @@ public class GroupsConfig {
 	 */
 	public Optional<char[]> getMongoPwd() {
 		return mongoPwd;
+	}
+	
+	/** Get the root url of the KBase authentication service.
+	 * @return the url
+	 */
+	public URL getAuthURL() {
+		return authURL;
+	}
+	
+	/** Get the root url of the KBase workspace service.
+	 * @return the url
+	 */
+	public URL getWorkspaceURL() {
+		return workspaceURL;
 	}
 	
 	/** Get a logger. The logger is expected to intercept SLF4J log events and log them

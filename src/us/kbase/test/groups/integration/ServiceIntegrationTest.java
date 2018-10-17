@@ -122,7 +122,7 @@ public class ServiceIntegrationTest {
 				WS_CLI1.ver(), WS_URL));
 
 		// set up the Groups server
-		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME);
+		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME, authURL, WS_URL);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		SERVER = new StandaloneGroupsServer();
 		new ServerThread(SERVER).start();
@@ -136,13 +136,17 @@ public class ServiceIntegrationTest {
 	
 	public static Path generateTempConfigFile(
 			final MongoStorageTestManager manager,
-			final String dbName)
+			final String dbName,
+			final URL authURL,
+			final URL wsURL)
 			throws IOException {
 		
 		final Ini ini = new Ini();
 		final Section sec = ini.add("groups");
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
+		sec.add("auth-url", authURL.toString());
+		sec.add("workspace-url", wsURL.toString());
 		
 		final Path deploy = Files.createTempFile(TEMP_DIR, "cli_test_deploy", ".cfg");
 		ini.store(deploy.toFile());
