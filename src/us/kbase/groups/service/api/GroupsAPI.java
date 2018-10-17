@@ -42,6 +42,7 @@ public class GroupsAPI {
 
 	// TODO JAVADOC
 	// TODO TEST
+	// TODO FEATURE add endpoint for getting group types
 	
 	private final Groups groups;
 	
@@ -52,7 +53,7 @@ public class GroupsAPI {
 	}
 	
 	// this assumes there are a relatively small number of groups. If that proves false,
-	// will need to filter somehow. Remember, deep paging was invented by Satan.
+	// will need to filter somehow. Remember, deep paging was invented by Satan himself.
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getGroups(
@@ -91,7 +92,7 @@ public class GroupsAPI {
 		final Builder gbuilder = GroupCreationParams.getBuilder(
 				new GroupID(groupID), new GroupName(create.groupName))
 				.withDescription(create.description);
-		if (create.type != null) {
+		if (!isNullOrEmpty(create.type)) {
 			//TODO NOW check out valueOf error cases for type
 			gbuilder.withType(GroupType.valueOf(create.type));
 		}

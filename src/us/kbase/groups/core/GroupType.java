@@ -6,7 +6,7 @@ public enum GroupType {
 	
 	// TODO NOW consider making presentation names to display to users. Store the actual enum vals in the db so presentation names can change
 	
-	organisation,
+	organization,
 	project,
 	team;
 	
