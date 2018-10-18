@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.build.GroupsBuilder;
@@ -96,15 +97,14 @@ public class Groups {
 	public Group getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException {
-		// TODO PRIVATE handle privacy concerns
-		// TODO PRIVATE allow admins & std users to see private parts
-		// for now there's no private stuff in groups so we ignore the token. Usually we'd
-		// check and see if the user is a group member, and if not, remove private stuff
-		final Group g = storage.getGroup(groupID);
+		Group g = storage.getGroup(groupID);
 		if (userToken != null) {
-			@SuppressWarnings("unused")
 			final UserName user = userHandler.getUser(userToken);
-			// if not a member, remove private stuff from group
+			if (!g.isMember(user)) {
+				g = g.withoutPrivateFields();
+			}
+		} else {
+			g = g.withoutPrivateFields();
 		}
 		return g;
 	}
@@ -114,9 +114,7 @@ public class Groups {
 	public List<Group> getGroups()
 			throws GroupsStorageException {
 		final List<Group> groups = storage.getGroups();
-		// TODO PRIVATE handle privacy concerns - remove all private stuff
-		// for now no private stuff to remove
-		return groups;
+		return groups.stream().map(g -> g.withoutPrivateFields()).collect(Collectors.toList());
 	}
 	
 	public GroupRequest requestGroupMembership(final Token userToken, final GroupID groupID)
@@ -139,7 +137,7 @@ public class Groups {
 				.withRequestGroupMembership()
 				.build();
 		storage.storeRequest(request);
-		notifications.notify(g.getAdministrators(), g, request);
+		notifications.notify(g.getAdministratorsAndOwner(), g, request);
 		return request;
 	}
 	
@@ -296,7 +294,7 @@ public class Groups {
 		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
 		storage.closeRequest(
 				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
-		final Set<UserName> targets = new HashSet<>(group.getAdministrators());
+		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
 		targets.add(request.getRequester());
 		targets.remove(acceptedBy);
 		notifications.accept(targets, request, acceptedBy);

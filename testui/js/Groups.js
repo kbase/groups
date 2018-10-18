@@ -6,7 +6,9 @@ export default class {
   constructor(rootElement) {
     this.rootElement = rootElement;
     this.serviceUrl = 'http://localhost:8080/';
+    this.authUrl = 'https://ci.kbase.us/services/auth/';
     this.token = null;
+    this.user = null;
   }
   
   render() {
@@ -27,7 +29,14 @@ export default class {
           <input id="token"/>
           <button id="settoken" class="btn btn-primary">Set</button>
           <button id="seetoken" class="btn btn-primary">See current value</button>
+          <span id="useridentity"></span>
         </div>
+        <div class="row">Set auth root url:</div>
+        <div class="row">
+          <input id="authurl"/>
+          <button id="setauthurl" class="btn btn-primary">Set</button>
+        </div>
+        <div class="row" id="authroot"></div>
         <div class="row">Set service root url:</div>
         <div class="row">
           <input id="url"/>
@@ -46,6 +55,7 @@ export default class {
 
     rootElement.innerHTML = html;
     $('#url').val(this.serviceUrl);
+    $('#authurl').val(this.authUrl);
     
     // attach event listeners
     $('#settoken').on('click', () => {
@@ -57,6 +67,9 @@ export default class {
     $('#seturl').on('click', () => {
         this.setURL();
     });
+    $('#setauthurl').on('click', () => {
+        this.setAuthURL();
+    });
     $('#listview').on('click', () => {
         this.renderGroups();
     });
@@ -66,11 +79,6 @@ export default class {
     $('#createdrequests').on('click', () => {
         this.renderCreatedRequests();
     });
-  }
-  
-  setToken() {
-      this.token = $('#token').val();
-      $('#token').val("");
   }
   
   seeToken() {
@@ -86,17 +94,69 @@ export default class {
       $('#error').text(errortext);
   }
   
-  setURL() {
+  setToken() {
+      const token = $('#token').val();
+      $('#token').val("");
+      $('#useridentity').text("");
       $('#error').text("");
+      fetch(this.authUrl + 'api/V2/me', {"headers": new Headers({'authorization': token})})
+         .then( (response) => {
+             if (response.ok) {
+                 response.json().then( (json) => {
+                     this.token = token;
+                     this.user = json.user;
+                     const s = this.sanitize;
+                     $('#useridentity').html(
+                             `<strong>I. AM. </strong>${s(json.user)}<strong>!</strong>`);
+                 }).catch( (err) => {
+                     this.handleError(err);
+                 });
+             } else {
+                 response.text().then( (err) => {
+                     this.handleError(err);
+                 });
+             }
+         }).catch( (err) => {
+             this.handleError(err);
+         });
+  }
+  
+  setURL() {
       $('#servroot').text("");
       let url = $('#url').val();
-      fetch(url)
+      this.setServiceURL(url, $('#servroot'), this.completeSetURL);
+  }
+  
+  completeSetURL(url) {
+      this.serviceUrl = url;
+      const s = this.sanitize;
+      $('#url').val(s(this.serviceUrl));
+      console.log("Switched service url to " + this.serviceUrl);
+      this.renderGroups();
+  }
+  
+  setAuthURL() {
+      $('#authroot').text("");
+      let url = $('#authurl').val();
+      this.setServiceURL(url, $('#authroot'), this.completeAuthUrl);
+  }
+  
+  completeAuthUrl(url) {
+      this.authUrl = url;
+      const s = this.sanitize;
+      $('#authurl').val(s(this.authUrl));
+      console.log("Switched auth url to " + this.authUrl);
+  }
+  
+  setServiceURL(url, tableelement, callback) {
+      $('#error').text("");
+      fetch(url, {"headers": new Headers({"accept": "application/json"})})
          .then( (response) => {
              if (response.ok) {
                  response.json().then( (json) => {
                      const d = new Date(json.servertime).toLocaleString();
                      const s = this.sanitize;
-                     $('#servroot').html(
+                     tableelement.html(
                              `
                              <table class="table">
                                <thead>
@@ -120,10 +180,8 @@ export default class {
                      if (!url.endsWith('/')) {
                          url = url + '/'
                      }
-                     this.serviceUrl = url;
-                     $('#url').val(s(this.serviceUrl));
-                     console.log("Switched service url to " + this.serviceUrl);
-                     this.renderGroups();
+                     console.log("call callback");
+                     callback.call(this, url);
                  }).catch( (err) => {
                      this.handleError(err);
                  });
@@ -190,12 +248,18 @@ export default class {
   
   renderGroup(groupid) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid).then( (response) => {
+      fetch(this.serviceUrl + "group/" + groupid,
+            {"headers": new Headers({"authorization": this.token})})
+        .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
                   const c = new Date(json.createdate).toLocaleString();
                   const m = new Date(json.moddate).toLocaleString();
                   const s = this.sanitize;
+                  let members = json.members;
+                  if (!members.includes(this.user) && json.owner != this.user) {
+                      members = ['*** User list is private ***']
+                  }
                   const g =
                       `
                       <table class="table">
@@ -204,7 +268,7 @@ export default class {
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
-                          <tr><th>Members</th><td>${s(json.members.join(', '))}</td></tr>
+                          <tr><th>Members</th><td>${s(members.join(', '))}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
@@ -215,7 +279,6 @@ export default class {
                       <button id="grouprequests" class="btn btn-primary">
                         Requests for group</button>
                       `;
-                  //TODO CODE say private members if user not owner and not a member
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#requestgroupmembership').on('click', () => {
@@ -334,7 +397,6 @@ export default class {
   }
   
   renderRequest(requestid) {
-      //TODO NOW handle accept / deny / cancel buttons
       $('#error').text("");
       fetch(this.serviceUrl + "request/id/" + requestid,
        {"headers": new Headers({"authorization": this.token})

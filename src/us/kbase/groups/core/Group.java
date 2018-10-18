@@ -81,7 +81,7 @@ public class Group {
 		return owner.equals(user);
 	}
 	
-	public Set<UserName> getAdministrators() {
+	public Set<UserName> getAdministratorsAndOwner() {
 		//TODO NOW deal with group admins
 		return new HashSet<>(Arrays.asList(owner));
 	}
@@ -90,6 +90,15 @@ public class Group {
 		checkNotNull("user", user);
 		// TODO NOW check admins
 		return owner.equals(user) || members.contains(user);
+	}
+	
+	public Group withoutPrivateFields() {
+		final Builder b = getBuilder(groupID, groupName, owner,
+				new CreateAndModTimes(creationDate, modificationDate))
+				.withDescription(description.orNull())
+				.withType(type);
+		// may need to do other stuff here.
+		return b.build();
 	}
 
 	@Override
