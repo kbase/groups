@@ -10,6 +10,10 @@ services:
       - "8080:8080"
     environment:
       - KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+      - mongo-host=localhost:27017
+      - mongo-db=dc_groups_test
+      - auth_url=https://ci.kbase.us/services/auth
+      - workspace_url=https://ci.kbase.us/services/ws
     command:
       - "-wait"
       - "tcp://ci-mongo:27017"

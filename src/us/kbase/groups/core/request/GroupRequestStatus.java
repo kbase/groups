@@ -81,7 +81,7 @@ public class GroupRequestStatus {
 	 * @return the new status.
 	 */
 	public static GroupRequestStatus denied(final UserName deniedBy, String reason) {
-		checkNotNull(deniedBy, "acceptedBy");
+		checkNotNull(deniedBy, "deniedBy");
 		if (isNullOrEmpty(reason)) {
 			reason = null;
 		}
