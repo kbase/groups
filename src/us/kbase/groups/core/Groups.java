@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +22,7 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
@@ -165,11 +167,16 @@ public class Groups {
 			final Group group)
 			throws UnauthorizedException {
 		//TODO NOW handle case where user is workspace admin for request against workspace
+		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
+		final Set<GroupRequestUserAction> creator = isOpen ?
+				CREATOR_ACTIONS : Collections.emptySet();
+		final Set<GroupRequestUserAction> target = isOpen ?
+				TARGET_ACTIONS : Collections.emptySet();
 		if (user.equals(request.getRequester())) {
-			return new GroupRequestWithActions(request, CREATOR_ACTIONS);
+			return new GroupRequestWithActions(request, creator);
 		}
 		if (user.equals(request.getTarget().orNull()) || group.isAdministrator(user)) {
-			return new GroupRequestWithActions(request, TARGET_ACTIONS);
+			return new GroupRequestWithActions(request, target);
 		} else {
 			throw new UnauthorizedException(String.format("User %s cannot access request %s",
 					user.getName(), request.getID().toString()));
@@ -315,6 +322,23 @@ public class Groups {
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
 					user.getName(), accept ? "accept" : "deny", request.getID().toString()));
+		}
+	}
+	
+	public void removeMember(final Token userToken, final GroupID groupID, final UserName member)
+			throws NoSuchGroupException, GroupsStorageException, InvalidTokenException,
+				AuthenticationException, NoSuchUserException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(member, "member");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		if (member.equals(user) || group.isAdministrator(user)) {
+			storage.removeMember(groupID, member);
+			//any notification here? I don't think so
+		} else {
+			throw new UnauthorizedException(String.format("User %s may not administrate group %s",
+					user.getName(), groupID.getName()));
 		}
 	}
 

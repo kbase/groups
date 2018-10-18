@@ -10,6 +10,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -30,12 +31,14 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
+import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
@@ -140,6 +143,18 @@ public class GroupsAPI {
 				GroupsStorageException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroupID(
 				new Token(token), new GroupID(groupID)));
+	}
+	
+	@DELETE
+	@Path(ServicePaths.GROUP_USER_ID)
+	public void removeMember(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String member)
+			throws NoSuchGroupException, InvalidTokenException, NoSuchUserException,
+				AuthenticationException, UnauthorizedException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException {
+		groups.removeMember(new Token(token), new GroupID(groupID), new UserName(member));
 	}
 
 	private Map<String, Object> toGroupJSON(final Group g) {

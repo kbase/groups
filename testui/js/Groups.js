@@ -94,6 +94,15 @@ export default class {
       $('#error').text(errortext);
   }
   
+  getHeaders() {
+      const h = {'accept': 'application/json',
+                 'content-type': 'application/json'};
+      if (this.token) {
+          h['authorization'] = this.token;
+      }
+      return new Headers(h);
+  }
+  
   setToken() {
       const token = $('#token').val();
       $('#token').val("");
@@ -150,7 +159,7 @@ export default class {
   
   setServiceURL(url, tableelement, callback) {
       $('#error').text("");
-      fetch(url, {"headers": new Headers({"accept": "application/json"})})
+      fetch(url, {"headers": this.getHeaders()})
          .then( (response) => {
              if (response.ok) {
                  response.json().then( (json) => {
@@ -248,7 +257,7 @@ export default class {
   renderGroup(groupid) {
       $('#error').text("");
       fetch(this.serviceUrl + "group/" + groupid,
-            {"headers": new Headers({"authorization": this.token})})
+            {"headers": this.getHeaders()})
         .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -256,10 +265,8 @@ export default class {
                   const m = new Date(json.moddate).toLocaleString();
                   const s = this.sanitize;
                   let members = json.members;
-                  if (!members.includes(this.user) && json.owner != this.user) {
-                      members = ['*** User list is private ***']
-                  }
-                  const g =
+                  const priv = !members.includes(this.user) && json.owner != this.user;
+                  let g =
                       `
                       <table class="table">
                         <tbody>
@@ -267,12 +274,25 @@ export default class {
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
-                          <tr><th>Members</th><td>${s(members.join(', '))}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
                         </tbody>
                       </table>
+                      `
+                  if (priv) {
+                      g += `<div>*** Group membership is private ***</div>`;
+                  } else {
+                      g += `<div>Members</div><table class="table"><tbody>`;
+                      for (const m of members) {
+                          g += `<tr><td>${s(m)}</td><td>
+                                    <button id="remove_${s(m)}" class="btn btn-primary">Remove
+                                        </button></td><tr>`
+                      }
+                      g += '</tbody></table>';
+                  }
+                  g +=
+                      `
                       <button id="requestgroupmembership" class="btn btn-primary">
                         Request group membership</button>
                       <button id="grouprequests" class="btn btn-primary">
@@ -286,9 +306,34 @@ export default class {
                   $('#grouprequests').on('click', () => {
                       this.renderGroupRequests(groupid);
                   });
+                  if (!priv) {
+                      for (const m of members) {
+                          $(`#remove_${s(m)}`).on('click', () => {
+                              this.removeMember(groupid, m);
+                          });
+                      }
+                  }
               }).catch( (err) => {
                   this.handleError(err);
               });
+          } else {
+              response.text().then( (err) => {
+                  this.handleError(err);
+              });
+          }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
+  }
+  
+  removeMember(groupid, member) {
+      $('#error').text("");
+      fetch(this.serviceUrl + "group/" + groupid + "/user/" + member,
+              {"method": "DELETE",
+               "headers": this.getHeaders()})
+        .then( (response) => {
+          if (response.ok) {
+              this.renderGroup(groupid);
           } else {
               response.text().then( (err) => {
                   this.handleError(err);
@@ -306,9 +351,7 @@ export default class {
       }
       fetch(this.serviceUrl + "group/" + groupid + '/requestmembership',
         {"method": "POST",
-         "headers": new Headers({"authorization": this.token,
-                                 "content-type": "application/json"
-                                 })
+         "headers": this.getHeaders()
          }).then( (response) => {
              if (response.ok) {
                  response.json().then( (json) => {
@@ -340,11 +383,8 @@ export default class {
           return;
       }
       fetch(requesturl,
-        {"headers": new Headers({"authorization": this.token,
-                                 "content-type": "application/json"
-                                 })
-                
-         }).then( (response) => {
+        {"headers": this.getHeaders()})
+         .then( (response) => {
               if (response.ok) {
                   response.json().then( (json) => {
                       //TODO NOW gotta be a better way than this
@@ -398,7 +438,7 @@ export default class {
   renderRequest(requestid) {
       $('#error').text("");
       fetch(this.serviceUrl + "request/id/" + requestid,
-       {"headers": new Headers({"authorization": this.token})
+       {"headers": this.getHeaders()
         }).then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -497,8 +537,7 @@ export default class {
       $('#error').text("");
       fetch(this.serviceUrl + "request/id/" + requestid + posturl,
        {"method": "PUT",
-        "headers": new Headers({"authorization": this.token,
-                                "content-type": "application/json"}),
+        "headers": this.getHeaders(),
         "body": JSON.stringify({"reason": denialReason})
         }).then( (response) => {
           if (response.ok) {
@@ -574,9 +613,7 @@ export default class {
           let desc = $('#groupdesc').val();
           fetch(this.serviceUrl + "group/" + id,
                 {"method": "PUT",
-                 "headers": new Headers({"authorization": this.token,
-                                         "content-type": "application/json"
-                                         }),
+                 "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name, "type": type, "description": desc})
                  }).then( (response) => {
                      if (response.ok) {
