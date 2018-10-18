@@ -8,4 +8,6 @@ public interface UserHandler {
 	// TODO JAVADOC
 
 	UserName getUser(Token token) throws InvalidTokenException, AuthenticationException;
+
+	boolean isValidUser(UserName userName) throws AuthenticationException;
 }

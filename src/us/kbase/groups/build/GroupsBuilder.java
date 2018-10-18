@@ -19,6 +19,7 @@ import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
+import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.notifications.SLF4JNotifier;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -92,8 +93,9 @@ public class GroupsBuilder {
 			throws StorageInitException, GroupsConfigurationException {
 		final UserHandler uh;
 		try {
-			uh = new KBaseUserHandler(c.getAuthURL(), c.isAllowInsecureURLs());
-		} catch (IOException | URISyntaxException e) {
+			uh = new KBaseUserHandler(
+					c.getAuthURL(), c.getWorkspaceAdminToken(), c.isAllowInsecureURLs());
+		} catch (IOException | URISyntaxException | AuthenticationException e) {
 			throw new GroupsConfigurationException(
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
