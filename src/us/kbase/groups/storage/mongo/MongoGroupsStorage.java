@@ -2,6 +2,9 @@ package us.kbase.groups.storage.mongo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -11,9 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bson.Document;
 
+import com.google.common.base.Optional;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -74,8 +80,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
 	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
-//	private static final IndexOptions IDX_UNIQ_SPARSE =
-//			new IndexOptions().unique(true).sparse(true);
+	private static final IndexOptions IDX_UNIQ_SPARSE = new IndexOptions()
+			.unique(true).sparse(true);
 	static {
 		//hardcoded indexes
 		INDEXES = new HashMap<String, Map<List<String>, IndexOptions>>();
@@ -100,6 +106,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		requests.put(Arrays.asList(Fields.REQUEST_CREATION), null);
 		requests.put(Arrays.asList(Fields.REQUEST_STATUS), null);
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
+		requests.put(Arrays.asList(Fields.REQUEST_CHARACTERISTIC_STRING), IDX_UNIQ_SPARSE);
 		INDEXES.put(COL_REQUESTS, requests);
 		
 		//config indexes
@@ -192,7 +199,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		
 		// might need this stuff later, so keeping for now.
 		
-		/*
 		// super hacky and fragile, but doesn't seem another way to do this.
 		private final Pattern keyPattern = Pattern.compile("dup key:\\s+\\{ : \"(.*)\" \\}");
 		private final Pattern indexPattern = Pattern.compile(
@@ -205,7 +211,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		private final Optional<String> key;
 		
 		public DuplicateKeyExceptionChecker(final MongoWriteException mwe)
-				throws AssemblyHomologyStorageException {
+				throws GroupsStorageException {
 			// split up indexes better at some point - e.g. in a Document
 			isDuplicate = isDuplicate(mwe);
 			if (isDuplicate) {
@@ -214,7 +220,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					collection = Optional.of(indexMatcher.group(2));
 					index = Optional.of(indexMatcher.group(4));
 				} else {
-					throw new AssemblyHomologyStorageException(
+					throw new GroupsStorageException(
 							"Unable to parse duplicate key error: " +
 							// could include a token hash as the key, so split it out if it's there
 							mwe.getMessage().split("dup key")[0], mwe);
@@ -230,14 +236,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 				index = Optional.absent();
 				key = Optional.absent();
 			}
-			
-		} */
+		}
 		
 		public static boolean isDuplicate(final MongoWriteException mwe) {
 			return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
 		}
 		
-		/*
 		public boolean isDuplicate() {
 			return isDuplicate;
 		}
@@ -254,7 +258,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		public Optional<String> getKey() {
 			return key;
 		}
-		*/
 	}
 
 	@Override
@@ -336,6 +339,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public void storeRequest(final GroupRequest request)
 			throws RequestExistsException, GroupsStorageException {
 		checkNotNull(request, "request");
+		final String charString = getCharacteristicString(request);
 		final Document u = new Document(
 				Fields.REQUEST_ID, request.getID().toString())
 				.append(Fields.REQUEST_GROUP_ID, request.getGroupID().getName())
@@ -346,22 +350,86 @@ public class MongoGroupsStorage implements GroupsStorage {
 						request.getTarget().get().getName() : null)
 				.append(Fields.REQUEST_CREATION, Date.from(request.getCreationDate()))
 				.append(Fields.REQUEST_MODIFICATION, Date.from(request.getModificationDate()))
-				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()));
+				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()))
+				.append(Fields.REQUEST_CHARACTERISTIC_STRING, charString);
 		try {
 			db.getCollection(COL_REQUESTS).insertOne(u);
 		} catch (MongoWriteException mwe) {
 			// not happy about this, but getDetails() returns an empty map
-			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
-				throw new RequestExistsException(request.getID().toString());
-			} else {
-				throw new GroupsStorageException("Database write failed", mwe);
+			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
+			if (dk.isDuplicate() && COL_REQUESTS.equals(dk.getCollection().get())) {
+				if ((Fields.REQUEST_ID + "_1").equals(dk.getIndex().get())) {
+					throw new IllegalArgumentException(String.format("ID %s already exists " +
+							"in the database. The programmer is responsible for maintaining " +
+							"unique IDs.", request.getID().toString()));
+				} else if ((Fields.REQUEST_CHARACTERISTIC_STRING + "_1")
+						.equals(dk.getIndex().get())) {
+					// there's a tiny possibility of race condition here but not worth
+					// worrying about
+					final String requestID = getRequestIDFromCharacteristicString(charString);
+					throw new RequestExistsException("Request exists with ID: " +
+						requestID);
+				} // otherwise throw next exception
 			}
+			throw new GroupsStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new GroupsStorageException("Connection to database failed: " +
 					e.getMessage(), e);
 		}
 	}
 	
+	// this should only be called when it's known the characteristic string is in the DB.
+	private String getRequestIDFromCharacteristicString(final String charString)
+			throws GroupsStorageException {
+		checkNotNull(charString, "charString");
+		final Document otherRequest = findOne(
+				COL_REQUESTS, new Document(Fields.REQUEST_CHARACTERISTIC_STRING, charString));
+		if (otherRequest == null) {
+			// this is difficult to test without doing nutty reflection stuff assuming
+			// this function is being called correctly
+			throw new GroupsStorageException("Couldn't find request with characteristic string " +
+					charString);
+		}
+		return otherRequest.getString(Fields.REQUEST_ID);
+	}
+
+
+	//TODO WORKSPACE will also need to include ws id
+	/** Get a string that is arbitrary in structure but represents the characteristics of a
+	 * request that differentiate it from other requests. This string can be used to find
+	 * requests that are effectively identical but not {@link GroupRequest#equals(Object)}.
+	 * The fields used in the characteristic string are the group id, the requester,
+	 * the type, and the target (if present). The charstring should ONLY BE SET ON OPEN REQUESTS.
+	 * Requests in the closed state should have the charstring set to null. This prevents users
+	 * from opening more than one request for the same thing, but allows new requests to be
+	 * submitted if the open request is closed.
+	 * @param request the request to characterize.
+	 * @return the characteristic string.
+	 */
+	private String getCharacteristicString(final GroupRequest request) {
+		if (!request.getStatus().equals(GroupRequestStatus.OPEN)) {
+			return null;
+		}
+		final StringBuilder builder = new StringBuilder();
+		builder.append(request.getGroupID().getName());
+		builder.append(request.getRequester().getName());
+		builder.append(request.getType().toString());
+		builder.append(request.getTarget().isPresent() ? request.getTarget().get().getName() : "");
+		final MessageDigest digester;
+		try {
+			digester = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+		final byte[] digest = digester.digest(builder.toString().getBytes(StandardCharsets.UTF_8));
+		final StringBuilder sb = new StringBuilder();
+		for (final byte b : digest) {
+			sb.append(String.format("%02x", b));
+		}
+		return sb.toString();
+	}
+
+
 	@Override
 	public GroupRequest getRequest(final UUID requestID)
 			throws NoSuchRequestException, GroupsStorageException {

@@ -114,12 +114,11 @@ public class Groups {
 	
 	public GroupRequest requestGroupMembership(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				NoSuchGroupException, UserIsMemberException {
+				NoSuchGroupException, UserIsMemberException, RequestExistsException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		final UserName user = userHandler.getUser(userToken);
 		//TODO NOW pass in UUID factory for mocking purposes
-		//TODO NOW check an equivalent request doesn't already exist
 		final Group g = storage.getGroup(groupID);
 		if (g.isMember(user)) {
 			throw new UserIsMemberException(String.format(
@@ -132,11 +131,7 @@ public class Groups {
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withRequestGroupMembership()
 				.build();
-		try {
-			storage.storeRequest(request);
-		} catch (RequestExistsException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
+		storage.storeRequest(request);
 		notifications.notify(g.getAdministrators(), g, request);
 		return request;
 	}

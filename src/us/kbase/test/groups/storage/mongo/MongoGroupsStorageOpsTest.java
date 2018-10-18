@@ -2,6 +2,7 @@ package us.kbase.test.groups.storage.mongo;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.test.groups.MongoStorageTestManager;
@@ -140,6 +142,86 @@ public class MongoGroupsStorageOpsTest {
 					.withInviteToGroup(new UserName("target"))
 					.withStatus(GroupRequestStatus.ACCEPTED)
 					.build()));
+	}
+	
+	//TODO TEST that saving requests with similar but not identical characteristics works
+	//TODO TEST that saving requests with identical characteristics but with open vs. closed states works
+	
+	@Test
+	public void storeRequestFailDuplicateID() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				id, new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build());
+		
+		final GroupRequest request = GroupRequest.getBuilder(
+				id, new GroupID("foo1"), new UserName("bar1"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
+				.build())
+			.build();
+		
+		failStoreRequest(request, new IllegalArgumentException(String.format(
+				"ID %s already exists in the database. The programmer is responsible for " +
+				"maintaining unique IDs.",
+				id.toString())));
+	}
+	
+	@Test
+	public void storeRequestFailEquivalentRequestNoTarget() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				id, new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build());
+		
+		final GroupRequest request = GroupRequest.getBuilder(
+				UUID.randomUUID(), new GroupID("foo"), new UserName("bar"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
+				.build())
+			.build();
+		
+		failStoreRequest(request, new RequestExistsException(String.format(
+				"Request exists with ID: %s", id.toString())));
+	}
+	
+	@Test
+	public void storeRequestFailEquivalentRequestWithTarget() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				id, new GroupID("foo1"), new UserName("bar1"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.withInviteToGroup(new UserName("baz1"))
+				.build());
+		
+		final GroupRequest request = GroupRequest.getBuilder(
+				UUID.randomUUID(), new GroupID("foo1"), new UserName("bar1"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
+				.build())
+				.withInviteToGroup(new UserName("baz1"))
+			.build();
+		
+		failStoreRequest(request, new RequestExistsException(String.format(
+				"Request exists with ID: %s", id.toString())));
+	}
+	
+	private void failStoreRequest(final GroupRequest request, final Exception expected) {
+		
+		try {
+			manager.storage.storeRequest(request);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 }

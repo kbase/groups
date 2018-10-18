@@ -54,6 +54,8 @@ public class Fields {
 	public static final String REQUEST_MODIFICATION = "mod";
 	/** The expiration date of the request. */
 	public static final String REQUEST_EXPIRATION = "expire";
+	/** The characteristic string for a request. */
+	public static final String REQUEST_CHARACTERISTIC_STRING = "charstr";
 	
 	/* ***********************
 	 * database schema fields

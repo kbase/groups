@@ -246,6 +246,12 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "expire_1")
 						.append("ns", "test_mongogroupsstorage.requests"),
 				new Document("v", manager.indexVer)
+						.append("unique", true)
+						.append("sparse", true)
+						.append("key", new Document("charstr", 1))
+						.append("name", "charstr_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongogroupsstorage.requests")
