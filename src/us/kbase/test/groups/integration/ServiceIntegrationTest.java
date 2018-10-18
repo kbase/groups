@@ -122,7 +122,7 @@ public class ServiceIntegrationTest {
 				WS_CLI1.ver(), WS_URL));
 
 		// set up the Groups server
-		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME, authURL, WS_URL);
+		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME, authURL, TOKEN2, WS_URL);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		SERVER = new StandaloneGroupsServer();
 		new ServerThread(SERVER).start();
@@ -138,6 +138,7 @@ public class ServiceIntegrationTest {
 			final MongoStorageTestManager manager,
 			final String dbName,
 			final URL authURL,
+			final String wsToken,
 			final URL wsURL)
 			throws IOException {
 		
@@ -146,6 +147,7 @@ public class ServiceIntegrationTest {
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
 		sec.add("auth-url", authURL.toString());
+		sec.add("workspace-admin-token", wsToken);
 		sec.add("workspace-url", wsURL.toString());
 		sec.add("allow-insecure-urls", "true");
 		
