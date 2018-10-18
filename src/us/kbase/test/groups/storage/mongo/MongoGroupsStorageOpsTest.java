@@ -26,7 +26,7 @@ import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
 
@@ -129,7 +129,7 @@ public class MongoGroupsStorageOpsTest {
 					.withModificationTime(Instant.ofEpochMilli(50000))
 					.build())
 				.withInviteToGroup(new UserName("target"))
-				.withStatus(GroupRequestStatus.DENIED, new UserName("whee"), "jerkface")
+				.withStatus(GroupRequestStatusType.DENIED, new UserName("whee"), "jerkface")
 				.build());
 		
 		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),

@@ -2,11 +2,11 @@ package us.kbase.groups.core.request;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
-import static us.kbase.groups.core.request.GroupRequestStatus.OPEN;
-import static us.kbase.groups.core.request.GroupRequestStatus.CANCELED;
-import static us.kbase.groups.core.request.GroupRequestStatus.ACCEPTED;
-import static us.kbase.groups.core.request.GroupRequestStatus.DENIED;
-import static us.kbase.groups.core.request.GroupRequestStatus.EXPIRED;
+import static us.kbase.groups.core.request.GroupRequestStatusType.OPEN;
+import static us.kbase.groups.core.request.GroupRequestStatusType.CANCELED;
+import static us.kbase.groups.core.request.GroupRequestStatusType.ACCEPTED;
+import static us.kbase.groups.core.request.GroupRequestStatusType.DENIED;
+import static us.kbase.groups.core.request.GroupRequestStatusType.EXPIRED;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,7 +29,7 @@ public class GroupRequest {
 	private final Optional<UserName> target;
 	private final UserName requester;
 	private final GroupRequestType type;
-	private final GroupRequestStatus status;
+	private final GroupRequestStatusType status;
 	private final Optional<UserName> closedBy;
 	private final Optional<String> closedReason;
 	private final Instant creationDate;
@@ -42,7 +42,7 @@ public class GroupRequest {
 			final Optional<UserName> target,
 			final UserName requester,
 			final GroupRequestType type,
-			final GroupRequestStatus status,
+			final GroupRequestStatusType status,
 			final Optional<UserName> closedBy,
 			final Optional<String> closedReason,
 			final CreateModAndExpireTimes times) {
@@ -79,7 +79,7 @@ public class GroupRequest {
 		return type;
 	}
 
-	public GroupRequestStatus getStatus() {
+	public GroupRequestStatusType getStatus() {
 		return status;
 	}
 
@@ -234,7 +234,7 @@ public class GroupRequest {
 		private final CreateModAndExpireTimes times;
 		private Optional<UserName> target = Optional.absent();
 		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
-		private GroupRequestStatus status = GroupRequestStatus.OPEN;
+		private GroupRequestStatusType status = GroupRequestStatusType.OPEN;
 		private Optional<UserName> closedBy = Optional.absent();
 		private Optional<String> closedReason = Optional.absent();
 
@@ -359,13 +359,13 @@ public class GroupRequest {
 		 * appropriate with[Status] method was called.
 		 * @param status the status.
 		 * @param closedBy the user that closed the request. Required for
-		 * {@link GroupRequestStatus#ACCEPTED} and {@link GroupRequestStatus#DENIED}.
+		 * {@link GroupRequestStatusType#ACCEPTED} and {@link GroupRequestStatusType#DENIED}.
 		 * @param closedReason the reason the request was closed. Ignored if null, whitespace
-		 * only, or for requests that are not {@link GroupRequestStatus#DENIED}.
+		 * only, or for requests that are not {@link GroupRequestStatusType#DENIED}.
 		 * @return this builder.
 		 */
 		public Builder withStatus(
-				final GroupRequestStatus status,
+				final GroupRequestStatusType status,
 				final UserName closedBy,
 				final String closedReason) {
 			checkNotNull(status, "status");
@@ -380,7 +380,7 @@ public class GroupRequest {
 			}
 		}
 		
-		private Builder setSimpleStatus(final GroupRequestStatus status) {
+		private Builder setSimpleStatus(final GroupRequestStatusType status) {
 			checkNotNull(status, "status");
 			this.status = status;
 			this.closedBy = Optional.absent();
