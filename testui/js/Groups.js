@@ -48,6 +48,7 @@ export default class {
           <button id="listview" class="btn btn-primary">List Groups</button>
           <button id="creategroup" class="btn btn-primary">Create Group</button>
           <button id="createdrequests" class="btn btn-primary">Created Requests</button>
+          <button id="targetedrequests" class="btn btn-primary">Incoming Requests</button>
         </div>
         <div id="groups"></div>
       </div>
@@ -78,6 +79,9 @@ export default class {
     });
     $('#createdrequests').on('click', () => {
         this.renderCreatedRequests();
+    });
+    $('#targetedrequests').on('click', () => {
+        this.renderTargetedRequests();
     });
   }
   
@@ -408,6 +412,10 @@ export default class {
   
   renderCreatedRequests() {
       this.renderRequests(this.serviceUrl + "request/created");
+  }
+  
+  renderTargetedRequests() {
+      this.renderRequests(this.serviceUrl + "request/targeted");
   }
   
   renderRequests(requesturl) {

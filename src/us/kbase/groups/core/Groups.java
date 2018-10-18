@@ -321,10 +321,26 @@ public class Groups {
 		ensureCanAcceptOrDeny(request, group, user, true);
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 			processAcceptGroupMembershipRequest(request, user, group);
+		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
+			processAcceptGroupInviteRequest(request, group);
 		} else {
 			throw new UnimplementedException();
 		}
 		return storage.getRequest(requestID);
+	}
+
+	// assumes group exists
+	// TODO CODE this and the accept membership request code is similar - DRY up a bit?
+	private void processAcceptGroupInviteRequest(
+			final GroupRequest request,
+			final Group group)
+			throws GroupsStorageException, NoSuchRequestException {
+		final UserName acceptedBy = request.getTarget().get();
+		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
+		storage.closeRequest(
+				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
+		notifications.accept(
+				new HashSet<>(group.getAdministratorsAndOwner()), request, acceptedBy);
 	}
 
 	// assumes group exists
