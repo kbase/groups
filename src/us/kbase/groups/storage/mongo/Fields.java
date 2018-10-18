@@ -33,6 +33,29 @@ public class Fields {
 	public static final String GROUP_DESCRIPTION = "desc";
 	
 	/* ***********************
+	 * request fields
+	 */
+	
+	/** The request ID */
+	public static final String REQUEST_ID = "id";
+	/** The request ID */
+	public static final String REQUEST_GROUP_ID = "gid";
+	/** The request ID */
+	public static final String REQUEST_TARGET = "target";
+	/** The request ID */
+	public static final String REQUEST_REQUESTER = "requester";
+	/** The request ID */
+	public static final String REQUEST_TYPE = "type";
+	/** The request ID */
+	public static final String REQUEST_STATUS = "status";
+	/** The request ID */
+	public static final String REQUEST_CREATION = "create";
+	/** The request ID */
+	public static final String REQUEST_MODIFICATION = "mod";
+	/** The request ID */
+	public static final String REQUEST_EXPIRATION = "expire";
+	
+	/* ***********************
 	 * database schema fields
 	 * ***********************
 	 */

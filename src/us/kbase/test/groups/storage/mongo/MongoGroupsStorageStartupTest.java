@@ -154,6 +154,7 @@ public class MongoGroupsStorageStartupTest {
 		final Set<String> names = new HashSet<>();
 		final Set<String> expected = set(
 				"config",
+				"requests",
 				"groups");
 		if (manager.includeSystemIndexes) {
 			expected.add("system.indexes");
@@ -203,5 +204,47 @@ public class MongoGroupsStorageStartupTest {
 						.append("ns", "test_mongogroupsstorage.groups")
 				)));
 	}
-
+	
+	@Test
+	public void indexesRequests() {
+		final Set<Document> indexes = new HashSet<>();
+		manager.db.getCollection("requests").listIndexes()
+				.forEach((Consumer<Document>) indexes::add);
+		assertThat("incorrect indexes", indexes, is(set(
+				new Document("v", manager.indexVer)
+						.append("unique", true)
+						.append("key", new Document("id", 1))
+						.append("name", "id_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("gid", 1))
+						.append("name", "gid_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("requester", 1))
+						.append("name", "requester_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("target", 1))
+						.append("sparse", true)
+						.append("name", "target_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("create", 1))
+						.append("name", "create_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("status", 1))
+						.append("name", "status_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("expire", 1))
+						.append("name", "expire_1")
+						.append("ns", "test_mongogroupsstorage.requests"),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_")
+						.append("ns", "test_mongogroupsstorage.requests")
+				)));
+	}
 }

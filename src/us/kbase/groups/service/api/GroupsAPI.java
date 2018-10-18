@@ -42,7 +42,7 @@ public class GroupsAPI {
 
 	// TODO JAVADOC
 	// TODO TEST
-	// TODO FEATURE add endpoint for getting group types
+	// TODO NOW add endpoint for getting group types
 	
 	private final Groups groups;
 	

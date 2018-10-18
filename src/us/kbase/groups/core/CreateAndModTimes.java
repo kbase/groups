@@ -1,5 +1,7 @@
 package us.kbase.groups.core;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.time.Instant;
 
 public class CreateAndModTimes {
@@ -16,6 +18,8 @@ public class CreateAndModTimes {
 	}
 	
 	public CreateAndModTimes(final Instant creationTime, final Instant modificationTime) {
+		checkNotNull(creationTime, "creationTime");
+		checkNotNull(modificationTime, "modificationTime");
 		this.creationTime = creationTime;
 		this.modificationTime = modificationTime;
 		if (creationTime.isAfter(modificationTime)) {
