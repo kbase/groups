@@ -344,7 +344,7 @@ export default class {
                   const m = new Date(json.moddate).toLocaleString();
                   const e = new Date(json.expiredate).toLocaleString();
                   const s = this.sanitize;
-                  const g =
+                  let g =
                       `
                       <table class="table">
                         <tbody>
@@ -360,10 +360,40 @@ export default class {
                         </tbody>
                       </table>
                       `;
+                  if (true) {
+                      g +=
+                      `
+                      <button id="cancelrequest" class="btn btn-primary">Cancel</button>
+                      `
+                  }
+                  //TODO NOW only display appropriate actions
                   $('#groups').html(g);
+                  if (true) {
+                      $('#cancelrequest').on('click', () => {
+                          this.cancelRequest(requestid);
+                      });
+                  }
               }).catch( (err) => {
                   this.handleError(err);
               });
+          } else {
+              response.text().then( (err) => {
+                  this.handleError(err);
+              });
+          }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
+  }
+  
+  cancelRequest(requestid) {
+      $('#error').text("");
+      fetch(this.serviceUrl + "request/id/" + requestid + "/cancel",
+       {"method": "PUT",
+        "headers": new Headers({"authorization": this.token})
+        }).then( (response) => {
+          if (response.ok) {
+              this.renderCreatedRequests()
           } else {
               response.text().then( (err) => {
                   this.handleError(err);

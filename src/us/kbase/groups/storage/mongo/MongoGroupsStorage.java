@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.result.UpdateResult;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -525,6 +527,39 @@ public class MongoGroupsStorage implements GroupsStorage {
 				IllegalArgumentException e) {
 			throw new GroupsStorageException(
 					"Unexpected value in database: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
+	public void closeRequest(
+			final UUID requestID,
+			final GroupRequestStatus newStatus,
+			final Instant modificationTime)
+			throws NoSuchRequestException, GroupsStorageException {
+		checkNotNull(requestID, "requestID");
+		checkNotNull(newStatus, "newStatus");
+		checkNotNull(modificationTime, "modificationTime");
+		if (newStatus.equals(GroupRequestStatus.OPEN)) {
+			throw new IllegalArgumentException(
+					"newStatus cannot be " + GroupRequestStatus.OPEN);
+		}
+		final Document set = new Document(
+				Fields.REQUEST_STATUS, newStatus.toString())
+				.append(Fields.REQUEST_MODIFICATION, Date.from(modificationTime))
+				.append(Fields.REQUEST_CHARACTERISTIC_STRING, null);
+		final Document query = new Document(Fields.REQUEST_ID, requestID.toString())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatus.OPEN.toString());
+		try {
+			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
+					query, new Document("$set", set));
+			if (res.getMatchedCount() != 1) {
+				throw new NoSuchRequestException("No open request with ID " +
+						requestID.toString());
+			}
+			// has to be modified, so no need to check
+		} catch (MongoException e) {
+			throw new GroupsStorageException(
+					"Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 

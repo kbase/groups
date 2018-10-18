@@ -1,6 +1,7 @@
 package us.kbase.groups.notifications;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,12 @@ public class SLF4JNotifier implements Notifications {
 				group.getGroupName().getName(),
 				request.getTarget().isPresent() ? request.getTarget().get().getName() : null,
 				request.getRequester().getName()));
+	}
+
+	@Override
+	public void cancel(final UUID requestID) {
+		LoggerFactory.getLogger(getClass()).info(String.format(
+				"Canceled request %s", requestID.toString()));
 	}
 
 }
