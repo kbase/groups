@@ -38,6 +38,7 @@ export default class {
         <div class="row">
           <button id="listview" class="btn btn-primary">List Groups</button>
           <button id="creategroup" class="btn btn-primary">Create Group</button>
+          <button id="createdrequests" class="btn btn-primary">Created Requests</button>
         </div>
         <div id="groups"></div>
       </div>
@@ -61,6 +62,9 @@ export default class {
     });
     $('#creategroup').on('click', () => {
         this.renderCreateGroup();
+    });
+    $('#createdrequests').on('click', () => {
+        this.renderCreatedRequests();
     });
   }
   
@@ -207,11 +211,16 @@ export default class {
                       </table>
                       <button id="requestgroupmembership" class="btn btn-primary">
                         Request group membership</button>
+                      <button id="grouprequests" class="btn btn-primary">
+                        Requests for group</button>
                       `;
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#requestgroupmembership').on('click', () => {
                       this.requestGroupMembership(groupid);
+                  });
+                  $('#grouprequests').on('click', () => {
+                      this.renderGroupRequests(groupid);
                   });
               }).catch( (err) => {
                   this.handleError(err);
@@ -252,6 +261,75 @@ export default class {
          }).catch( (err) => {
              this.handleError(err);
          });
+  }
+  
+  renderGroupRequests(groupid) {
+      this.renderRequests(this.serviceUrl + "group/" + groupid + "/requests")
+  }
+  
+  renderCreatedRequests() {
+      this.renderRequests(this.serviceUrl + "request/created");
+  }
+  
+  renderRequests(requesturl) {
+      $('#error').text("");
+      if (!this.checkToken()) {
+          return;
+      }
+      fetch(requesturl,
+        {"headers": new Headers({"authorization": this.token,
+                                 "content-type": "application/json"
+                                 })
+                
+         }).then( (response) => {
+              if (response.ok) {
+                  response.json().then( (json) => {
+                      //TODO NOW gotta be a better way than this
+                      let gtable =
+                          `
+                          <table class="table">
+                            <thead>
+                              <tr>
+                                <th scope="col">Requester</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Group ID</th>
+                                <th scope="col">Target</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                          `;
+                      const s = this.sanitize;
+                      for (const r of json) {
+                          gtable +=
+                              `
+                              <tr id="${s(r.id)}">
+                                <td>${s(r.requester)}</td>
+                                <td>${s(r.status)}</td>
+                                <td>${s(r.type)}</td>
+                                <td>${s(r.groupid)}</td>
+                                <td>${s(r.targetuser)}</td>
+                              </tr>
+                              `
+                      }
+                      gtable += `</tbody></table>`;
+                      $('#groups').html(gtable);
+                      for (const r of json) {
+                          $(`#${s(r.id)}`).on('click', () => {
+                              this.renderRequest(r.id);
+                          });
+                      }
+                  }).catch( (err) => {
+                      this.handleError(err);
+                  });
+              } else {
+                  response.text().then( (err) => {
+                      this.handleError(err);
+                  });
+              }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
   }
   
   renderRequest(requestid) {

@@ -4,6 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.base.Optional;
 
@@ -68,6 +71,11 @@ public class Group {
 		checkNotNull("user", user);
 		//TODO NOW deal with group admins
 		return owner.equals(user);
+	}
+	
+	public Set<UserName> getAdministrators() {
+		//TODO NOW deal with group admins
+		return new HashSet<>(Arrays.asList(owner));
 	}
 	
 	public boolean isMember(final UserName user) {

@@ -19,7 +19,7 @@ public interface GroupsStorage {
 	
 	//TODO JAVADOC
 
-	void createGroup(final Group group) throws GroupExistsException, GroupsStorageException;
+	void createGroup(Group group) throws GroupExistsException, GroupsStorageException;
 
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
@@ -34,13 +34,22 @@ public interface GroupsStorage {
 	GroupRequest getRequest(UUID requestID)
 			throws NoSuchRequestException, GroupsStorageException;
 	
+	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// pass null for any status
 	Set<GroupRequest> getRequestsByRequester(
-			final UserName requester,
-			final GroupRequestStatus status) throws GroupsStorageException;
+			UserName requester,
+			GroupRequestStatus status) throws GroupsStorageException;
 	
+	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// pass null for any status
 	Set<GroupRequest> getRequestsByTarget(
-			final UserName target,
-			final GroupRequestStatus status) throws GroupsStorageException;
+			UserName target,
+			GroupRequestStatus status) throws GroupsStorageException;
+
+	//TODO NOW need date range, limit & sort by date up /down if there's a lot
+	// maybe also specify optional target user? YAGNI for now
+	// only returns requests for that group specifically, e.g. no target user
+	// pass null for any status
+	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatus status)
+			throws GroupsStorageException;
 }

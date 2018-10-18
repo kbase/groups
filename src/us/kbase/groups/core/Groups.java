@@ -38,22 +38,32 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
+	private final Notifications notifications;
 	private final Clock clock;
 	
 	/** Create a new {@link Groups} class.
 	 * @param storage the storage system to be used by the class.
 	 * @param userHandler the user handler by which users shall be handled.
+	 * @param notifications where notification should be sent.
 	 */
-	public Groups(final GroupsStorage storage, final UserHandler userHandler) {
-		this(storage, userHandler, Clock.systemDefaultZone());
+	public Groups(
+			final GroupsStorage storage,
+			final UserHandler userHandler,
+			final Notifications notifications) {
+		this(storage, userHandler, notifications, Clock.systemDefaultZone());
 	}
 	
 	// for testing
-	private Groups(final GroupsStorage storage, final UserHandler userHandler, final Clock clock) {
+	private Groups(
+			final GroupsStorage storage,
+			final UserHandler userHandler,
+			final Notifications notifications,
+			final Clock clock) {
 		checkNotNull(storage, "storage");
 		checkNotNull(userHandler, "userHandler");
 		this.storage = storage;
 		this.userHandler = userHandler;
+		this.notifications = notifications;
 		this.clock = clock;
 	}
 	
@@ -109,6 +119,7 @@ public class Groups {
 		checkNotNull(groupID, "groupID");
 		final UserName user = userHandler.getUser(userToken);
 		//TODO NOW pass in UUID factory for mocking purposes
+		//TODO NOW check an equivalent request doesn't already exist
 		final Group g = storage.getGroup(groupID);
 		if (g.isMember(user)) {
 			throw new UserIsMemberException(String.format(
@@ -126,8 +137,11 @@ public class Groups {
 		} catch (RequestExistsException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
+		notifications.notify(g.getAdministrators(), g, request);
 		return request;
 	}
+	
+	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
 	
 	public GroupRequest getRequest(final Token userToken, final UUID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
@@ -161,6 +175,20 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
 		return storage.getRequestsByTarget(user, GroupRequestStatus.OPEN);
+	}
+	
+	public Set<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
+			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
+				NoSuchGroupException, GroupsStorageException {
+		// TODO NOW specify request types in search - just excluding target in mongo storage class won't work.
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(groupID);
+		if (!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format(
+					"User %s cannot view requests for group %s",
+					user.getName(), groupID.getName()));
+		}
+		return storage.getRequestsByGroupID(groupID, GroupRequestStatus.OPEN);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
