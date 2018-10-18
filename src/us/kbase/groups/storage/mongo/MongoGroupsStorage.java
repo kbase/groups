@@ -44,6 +44,7 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
@@ -355,21 +356,39 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public void addMember(final GroupID groupID, final UserName newMember)
+	public void addMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException {
+		try {
+			alterMember(groupID, member, true);
+		} catch (NoSuchUserException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	@Override
+	public void removeMember(final GroupID groupID, final UserName member)
+			throws NoSuchGroupException, NoSuchUserException, GroupsStorageException {
+		alterMember(groupID, member, false);
+	}
+
+	private void alterMember(final GroupID groupID, final UserName member, final boolean add)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
 		checkNotNull(groupID, "groupID");
-		checkNotNull(newMember, "newMember");
+		checkNotNull(member, "member");
 		
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
-		final Document addToSet = new Document("$addToSet",
-				new Document(Fields.GROUP_MEMBERS, newMember.getName()));
+		final Document addToSet = new Document(add ? "$addToSet" : "$pull",
+				new Document(Fields.GROUP_MEMBERS, member.getName()));
 		
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
 			if (res.getMatchedCount() != 1) {
 				throw new NoSuchGroupException(groupID.getName());
 			}
-			// if no modified, just means user was already in the list
+			if (!add && res.getModifiedCount() != 1) {
+				throw new NoSuchUserException("No user %s in group %s");
+			}
+			// if add = true && not modified, just means user was already in the list
 		} catch (MongoException e) {
 			throw new GroupsStorageException("Connection to database failed: " +
 					e.getMessage(), e);
