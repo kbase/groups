@@ -143,6 +143,41 @@ public class Groups {
 		return request;
 	}
 	
+	public GroupRequest inviteUserToGroup(
+			final Token userToken,
+			final GroupID groupID,
+			final UserName newMember)
+			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
+				UserIsMemberException, NoSuchGroupException, GroupsStorageException,
+				RequestExistsException, NoSuchUserException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		final UserName user = userHandler.getUser(userToken);
+		if (!userHandler.isValidUser(newMember)) {
+			throw new NoSuchUserException(newMember.getName());
+		}
+		//TODO NOW pass in UUID factory for mocking purposes
+		final Group g = storage.getGroup(groupID);
+		if (!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format("User %s may not administrate group %s",
+					user.getName(), groupID.getName()));
+		}
+		if (g.isMember(newMember)) {
+			throw new UserIsMemberException(String.format(
+					"User %s is already a member of group %s", newMember.getName(),
+					g.getGroupID().getName()));
+		}
+		final Instant now = clock.instant();
+		final GroupRequest request = GroupRequest.getBuilder(
+				UUID.randomUUID(), groupID, user, CreateModAndExpireTimes.getBuilder(
+						now, now.plus(REQUEST_EXPIRE_TIME)).build())
+				.withInviteToGroup(newMember)
+				.build();
+		storage.storeRequest(request);
+		notifications.notify(new HashSet<>(Arrays.asList(newMember)), g, request);
+		return request;
+	}
+	
 	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
 	
 	public GroupRequestWithActions getRequest(final Token userToken, final UUID requestID)
