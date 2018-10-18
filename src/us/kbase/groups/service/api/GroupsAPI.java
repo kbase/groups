@@ -6,6 +6,7 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -150,6 +151,8 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
 		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
 		ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
+		ret.put(Fields.GROUP_MEMBERS, new TreeSet<>(g.getMembers()).stream().map(n -> n.getName())
+				.collect(Collectors.toList()));
 		return ret;
 	}
 	

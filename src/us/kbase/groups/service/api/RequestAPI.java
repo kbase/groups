@@ -100,6 +100,19 @@ public class RequestAPI {
 				new Token(token), UUID.fromString(requestID)));
 	}
 	
+	@PUT
+	@Path(ServicePaths.REQUEST_ACCEPT)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> acceptRequest(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID)
+					throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
+					UnauthorizedException, MissingParameterException, GroupsStorageException {
+		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
+		return APICommon.toGroupRequestJSON(groups.acceptRequest(
+				new Token(token), UUID.fromString(requestID)));
+	}
+
 	public static class DenyRequestJSON extends IncomingJSON {
 		
 		private final String deniedReason;

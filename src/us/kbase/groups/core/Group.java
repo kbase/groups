@@ -5,6 +5,7 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,6 +19,7 @@ public class Group {
 	private final GroupID groupID;
 	private final GroupName groupName;
 	private final UserName owner;
+	private final Set<UserName> members;
 	private final GroupType type;
 	private final Instant creationDate;
 	private final Instant modificationDate;
@@ -27,12 +29,14 @@ public class Group {
 			final GroupID groupID,
 			final GroupName groupName,
 			final UserName owner,
+			final Set<UserName> members,
 			final GroupType type,
 			final CreateAndModTimes times,
 			final Optional<String> description) {
 		this.groupID = groupID;
 		this.groupName = groupName;
 		this.owner = owner;
+		this.members = Collections.unmodifiableSet(members);
 		this.type = type;
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
@@ -49,6 +53,10 @@ public class Group {
 
 	public UserName getOwner() {
 		return owner;
+	}
+	
+	public Set<UserName> getMembers() {
+		return members;
 	}
 
 	public GroupType getType() {
@@ -80,8 +88,8 @@ public class Group {
 	
 	public boolean isMember(final UserName user) {
 		checkNotNull("user", user);
-		// TODO NOW check admins and users list
-		return owner.equals(user);
+		// TODO NOW check admins
+		return owner.equals(user) || members.contains(user);
 	}
 
 	@Override
@@ -93,6 +101,8 @@ public class Group {
 		builder2.append(groupName);
 		builder2.append(", owner=");
 		builder2.append(owner);
+		builder2.append(", members=");
+		builder2.append(members);
 		builder2.append(", type=");
 		builder2.append(type);
 		builder2.append(", creationDate=");
@@ -113,6 +123,7 @@ public class Group {
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
@@ -159,6 +170,13 @@ public class Group {
 		} else if (!groupName.equals(other.groupName)) {
 			return false;
 		}
+		if (members == null) {
+			if (other.members != null) {
+				return false;
+			}
+		} else if (!members.equals(other.members)) {
+			return false;
+		}
 		if (modificationDate == null) {
 			if (other.modificationDate != null) {
 				return false;
@@ -192,6 +210,7 @@ public class Group {
 		private final GroupID groupID;
 		private final GroupName groupName;
 		private final UserName owner;
+		private final Set<UserName> members = new HashSet<>();
 		private final CreateAndModTimes times;
 		private GroupType type = GroupType.organization;
 		private Optional<String> description = Optional.absent();
@@ -227,8 +246,14 @@ public class Group {
 			return this;
 		}
 		
+		public Builder withMember(final UserName member) {
+			checkNotNull(member, "member");
+			this.members.add(member);
+			return this;
+		}
+		
 		public Group build() {
-			return new Group(groupID, groupName, owner, type, times, description);
+			return new Group(groupID, groupName, owner, members, type, times, description);
 		}
 	}
 	

@@ -204,6 +204,7 @@ export default class {
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
+                          <tr><th>Members</th><td>${s(json.members.join(', '))}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
@@ -214,6 +215,7 @@ export default class {
                       <button id="grouprequests" class="btn btn-primary">
                         Requests for group</button>
                       `;
+                  //TODO CODE say private members if user not owner and not a member
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#requestgroupmembership').on('click', () => {
@@ -344,6 +346,7 @@ export default class {
                   const e = new Date(json.expiredate).toLocaleString();
                   const canCancel = json.actions.includes('CANCEL');
                   const canDeny = json.actions.includes('DENY');
+                  const canAccept = json.actions.includes('ACCEPT');
                   const s = this.sanitize;
                   let g =
                       `
@@ -367,6 +370,12 @@ export default class {
                       <div><button id="cancelrequest" class="btn btn-primary">Cancel</button><div>
                       `
                   }
+                  if (canAccept) {
+                      g +=
+                      `
+                      <div><button id="acceptrequest" class="btn btn-primary">Accept</button><div>
+                      `
+                  }
                   if (canDeny) {
                       g +=
                       `
@@ -385,6 +394,11 @@ export default class {
                   if (canCancel) {
                       $('#cancelrequest').on('click', () => {
                           this.cancelRequest(requestid);
+                      });
+                  }
+                  if (canAccept) {
+                      $('#acceptrequest').on('click', () => {
+                          this.acceptRequest(requestid);
                       });
                   }
                   if (canDeny) {
@@ -408,6 +422,10 @@ export default class {
   
   cancelRequest(requestid) {
       this.processRequest("/cancel", requestid);
+  }
+  
+  acceptRequest(requestid) {
+      this.processRequest("/accept", requestid);
   }
   
   denyRequest(requestid, denialReason) {

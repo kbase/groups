@@ -29,6 +29,9 @@ public interface GroupsStorage {
 	// something will have to change.
 	// ordered by group ID
 	List<Group> getGroups() throws GroupsStorageException;
+	
+	void addMember(GroupID groupID, UserName newMember)
+			throws NoSuchGroupException, GroupsStorageException;
 
 	void storeRequest(GroupRequest request)
 			throws RequestExistsException, GroupsStorageException;
