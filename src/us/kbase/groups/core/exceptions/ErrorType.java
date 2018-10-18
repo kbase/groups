@@ -28,6 +28,8 @@ public enum ErrorType {
 	REQUEST_ALREADY_EXISTS	(40020, "Request already exists"),
 	/** The requested group does not exist. */
 	NO_SUCH_GROUP			(50000, "No such group"),
+	/** The requested request does not exist. */
+	NO_SUCH_REQUEST			(50010, "No such request"),
 	/** The requested operation is not supported. */
 	UNSUPPORTED_OP			(60000, "Unsupported operation");
 	
