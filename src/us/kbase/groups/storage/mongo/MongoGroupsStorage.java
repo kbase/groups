@@ -1,6 +1,7 @@
 package us.kbase.groups.storage.mongo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -350,6 +351,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_TYPE, request.getType().toString())
 				.append(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
 						request.getTarget().get().getName() : null)
+				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy().isPresent() ?
+						request.getClosedBy().get().getName() : null)
+				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orNull())
 				.append(Fields.REQUEST_CREATION, Date.from(request.getCreationDate()))
 				.append(Fields.REQUEST_MODIFICATION, Date.from(request.getModificationDate()))
 				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()))
@@ -508,6 +512,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {
 		try {
 			final String target = req.getString(Fields.REQUEST_TARGET);
+			final String closedBy = req.getString(Fields.REQUEST_CLOSED_BY);
 			return GroupRequest.getBuilder(
 					UUID.fromString(req.getString(Fields.REQUEST_ID)),
 					new GroupID(req.getString(Fields.REQUEST_GROUP_ID)),
@@ -521,7 +526,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.withType(
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target))
-					.withStatus(GroupRequestStatus.valueOf(req.getString(Fields.REQUEST_STATUS)))
+					.withStatus(
+							GroupRequestStatus.valueOf(req.getString(Fields.REQUEST_STATUS)),
+							closedBy == null ? null : new UserName(closedBy),
+							req.getString(Fields.REQUEST_REASON_CLOSED))
 					.build();
 		} catch (IllegalParameterException | MissingParameterException |
 				IllegalArgumentException e) {
@@ -534,7 +542,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public void closeRequest(
 			final UUID requestID,
 			final GroupRequestStatus newStatus,
-			final Instant modificationTime)
+			final Instant modificationTime,
+			final UserName closedBy,
+			final String closedReason)
 			throws NoSuchRequestException, GroupsStorageException {
 		checkNotNull(requestID, "requestID");
 		checkNotNull(newStatus, "newStatus");
@@ -546,6 +556,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document set = new Document(
 				Fields.REQUEST_STATUS, newStatus.toString())
 				.append(Fields.REQUEST_MODIFICATION, Date.from(modificationTime));
+		if (closedBy != null) {
+			set.append(Fields.REQUEST_CLOSED_BY, closedBy.getName());
+		}
+		if (!isNullOrEmpty(closedReason)) {
+			set.append(Fields.REQUEST_REASON_CLOSED, closedReason);
+		}
 		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
 		final Document query = new Document(Fields.REQUEST_ID, requestID.toString())
 				.append(Fields.REQUEST_STATUS, GroupRequestStatus.OPEN.toString());

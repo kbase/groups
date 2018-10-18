@@ -24,6 +24,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.storage.GroupsStorage;
@@ -229,12 +230,48 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
 					user.getName(), requestID.toString()));
 		}
-		storage.closeRequest(requestID, GroupRequestStatus.CANCELED, clock.instant());
+		storage.closeRequest(requestID, GroupRequestStatus.CANCELED, clock.instant(), null, null);
 		notifications.cancel(requestID);
 		return storage.getRequest(requestID);
 	}
 	
-	//TODO NOW on request accept/deny, record the user that accepted or denied the request
+	public GroupRequest denyRequest(
+			final Token userToken,
+			final UUID requestID,
+			final String reason)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest request = storage.getRequest(requestID);
+		final Group group = getGroupFromKnownGoodRequest(request);
+		ensureCanAcceptOrDeny(request, group, user, false);
+		
+		storage.closeRequest(requestID, GroupRequestStatus.DENIED, clock.instant(), user, reason);
+		//TODO NOW who should get notified?
+		notifications.deny(new HashSet<>(), request, user);
+		
+		return storage.getRequest(requestID);
+	}
+	
+	private void ensureCanAcceptOrDeny(
+			final GroupRequest request,
+			final Group group,
+			final UserName user,
+			final boolean accept)
+			throws UnauthorizedException {
+		//TODO WORKSPACE will need to handle workspace based auth for requests aimed at workspaces
+		if (user.equals(request.getTarget().orNull())) {
+			return;
+		} else if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) &&
+				group.isAdministrator(user)) {
+			return;
+		} else {
+			throw new UnauthorizedException(String.format("User %s may not %s request %s",
+					user.getName(), accept ? "accept" : "deny", request.getID().toString()));
+		}
+	}
 
 	public static void main(final String[] args) throws Exception {
 		System.setProperty("KB_DEPLOYMENT_CONFIG", "./deploy.cfg");
