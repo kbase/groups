@@ -3,8 +3,12 @@ package us.kbase.groups.userhandler;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
+
+import org.slf4j.LoggerFactory;
 
 import us.kbase.auth.AuthConfig;
 import us.kbase.auth.AuthException;
@@ -29,25 +33,29 @@ public class KBaseUserHandler implements UserHandler {
 	private static final String GLOBUS_URL_SUFFIX = "api/legacy/globus";
 	private static final String KBASE_URL_SUFFIX = "api/legacy/KBase/Sessions/Login";
 	
-	private final URL rootAuthURL;
+	private final URI rootAuthURI;
 	private final ConfigurableAuthService auth;
+	private final Token serviceToken;
 	
-	public KBaseUserHandler(final URL rootAuthURL) throws IOException, URISyntaxException {
-		this(rootAuthURL, false);
-	}
-	
-	public KBaseUserHandler(final URL rootAuthURL, final boolean allowInsecureURL)
-			throws IOException, URISyntaxException {
+	public KBaseUserHandler(
+			final URL rootAuthURL,
+			final Token serviceToken,
+			final boolean allowInsecureURL)
+			throws IOException, URISyntaxException, InvalidTokenException,
+				AuthenticationException {
 		checkNotNull(rootAuthURL, "rootAuthURL");
+		checkNotNull(serviceToken, "serviceToken");
 		if (rootAuthURL.toString().endsWith("/")) {
-			this.rootAuthURL = rootAuthURL;
+			this.rootAuthURI = rootAuthURL.toURI();
 		} else {
-			this.rootAuthURL = new URL(rootAuthURL.toString() + "/");
+			this.rootAuthURI = new URL(rootAuthURL.toString() + "/").toURI();
 		}
 		auth = new ConfigurableAuthService(new AuthConfig()
 				.withAllowInsecureURLs(allowInsecureURL)
-				.withKBaseAuthServerURL(this.rootAuthURL.toURI().resolve(KBASE_URL_SUFFIX).toURL())
-				.withGlobusAuthURL(this.rootAuthURL.toURI().resolve(GLOBUS_URL_SUFFIX).toURL()));
+				.withKBaseAuthServerURL(this.rootAuthURI.resolve(KBASE_URL_SUFFIX).toURL())
+				.withGlobusAuthURL(this.rootAuthURI.resolve(GLOBUS_URL_SUFFIX).toURL()));
+		this.serviceToken = serviceToken;
+		getUser(this.serviceToken); // check token is valid
 	}
 	
 	@Override
@@ -67,11 +75,30 @@ public class KBaseUserHandler implements UserHandler {
 					"The auth service is returning invalid usernames, something is very wrong", e);
 		}
 	}
+	
+	@Override
+	public boolean isValidUser(final UserName userName) throws AuthenticationException {
+		checkNotNull(userName, "userName");
+		try {
+			return auth.isValidUserName(
+					Arrays.asList(userName.getName()),
+					new AuthToken(serviceToken.getToken(), "fakeuser"))
+					.get(userName.getName());
+		} catch (IOException | AuthException e) {
+			LoggerFactory.getLogger(getClass()).error("Unexpected auth service response", e);
+			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+					"Recieved unexpected response from authentication server.", e);
+		}
+	}
 
 	public static void main(final String[] args) throws Exception {
 		final String token = args[0];
-		final UserHandler uh = new KBaseUserHandler(new URL("https://ci.kbase.us/services/auth"));
+		final UserHandler uh = new KBaseUserHandler(new URL("https://ci.kbase.us/services/auth"),
+				new Token(token), false);
 		System.out.println(uh.getUser(new Token(token)));
+		
+		System.out.println(uh.isValidUser(new UserName("kkeller")));
+		System.out.println(uh.isValidUser(new UserName("veryfakeindeed")));
 	}
 	
 }

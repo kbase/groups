@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 
 import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
+import us.kbase.groups.core.Token;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
 import us.kbase.test.groups.TestCommon;
@@ -67,6 +68,7 @@ public class GroupsConfigTest {
 					 "mongo-host=mongo\n" +
 					 "mongo-db=database\n" +
 					 "auth-url=     http://auth.com       \n" +
+					 "workspace-admin-token=wstoken      \n" +
 					 "workspace-url=http://ws.com\n")
 					.getBytes()));
 			cfg = getConfig(fo);
@@ -81,6 +83,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
+		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
@@ -101,6 +104,7 @@ public class GroupsConfigTest {
 					 "mongo-pwd=\n" +
 					 "auth-url=http://auth.com\n" +
 					 "workspace-url=http://ws.com\n" +
+					 "workspace-admin-token=               wstoken3      \n" +
 					 "allow-insecure-urls=true1\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
@@ -116,6 +120,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
+		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken3")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
@@ -135,6 +140,7 @@ public class GroupsConfigTest {
 					 "mongo-pwd=somepwd\n" +
 					 "auth-url=https://auth.com\n" +
 					 "workspace-url=https://ws.com\n" +
+					 "workspace-admin-token=wstoken      \n" +
 					 "allow-insecure-urls=true\n" +
 					 "dont-trust-x-ip-headers=true\n")
 					.getBytes()));
@@ -150,6 +156,7 @@ public class GroupsConfigTest {
 				equalTo("somepwd".toCharArray()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), false);
@@ -163,6 +170,7 @@ public class GroupsConfigTest {
 				 "mongo-host=mongo\n" +
 				 "mongo-db=database\n" +
 				 "auth-url=https://auth.com\n" +
+				 "workspace-admin-token=wstoken      \n" +
 				 "workspace-url=https://ws.com\n")
 				.getBytes()));
 		final GroupsConfig cfg = getConfig(Paths.get("some file2"), false, fo);
@@ -173,6 +181,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		testLogger(cfg.getLogger(), false);
@@ -189,6 +198,7 @@ public class GroupsConfigTest {
 				 "mongo-pwd=somepwd\n" +
 				 "auth-url=https://auth.com\n" +
 				 "workspace-url=https://ws.com\n" +
+				 "workspace-admin-token=wstoken      \n" +
 				 "allow-insecure-urls=true\n" +
 				 "dont-trust-x-ip-headers=true\n")
 				.getBytes()));
@@ -201,6 +211,7 @@ public class GroupsConfigTest {
 				equalTo("somepwd".toCharArray()));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
+		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		testLogger(cfg.getLogger(), true);
@@ -264,6 +275,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-host not provided in configuration file " +
@@ -274,6 +286,7 @@ public class GroupsConfigTest {
 				"mongo-db=bar\n" +
 				"mongo-host=     \t     \n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-host not provided in configuration file " +
@@ -286,6 +299,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-db not provided in configuration file " +
@@ -296,6 +310,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=     \t     \n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter mongo-db not provided in configuration file " +
@@ -309,6 +324,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
 				"mongo-user=user",
 				new GroupsConfigurationException(
@@ -321,6 +337,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
 				"mongo-user=user\n" +
 				"mongo-pwd=   \t    ",
@@ -337,6 +354,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
 				"mongo-pwd=pwd",
 				new GroupsConfigurationException(
@@ -349,6 +367,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
 				"mongo-pwd=pwd\n" +
 				"mongo-user=   \t    ",
@@ -364,6 +383,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter auth-url not provided in configuration file " +
@@ -374,6 +394,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=     \t     \n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
 						"Required parameter auth-url not provided in configuration file " +
@@ -387,6 +408,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=   htp://foo.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException("Value htp://foo.com of parameter auth-url " +
 						"in section groups of config file some file is not a valid URL"));
@@ -398,6 +420,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"auth-url=https://auth.com\n",
 				new GroupsConfigurationException(
 						"Required parameter workspace-url not provided in configuration file " +
@@ -408,6 +431,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=     \t     \n",
 				new GroupsConfigurationException(
 						"Required parameter workspace-url not provided in configuration file " +
@@ -421,10 +445,35 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=htp://foo.com\n",
 				new GroupsConfigurationException("Value htp://foo.com of parameter " +
 						"workspace-url in section groups of config file some file is not a " +
 						"valid URL"));
+	}
+	
+	@Test
+	public void configFailNoToken() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter workspace-admin-token not provided in " +
+						"configuration file some file, section groups"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=  \t       \n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter workspace-admin-token not provided in " +
+						"configuration file some file, section groups"));
 	}
 	
 	private InputStream toStr(final String input) {

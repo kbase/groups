@@ -13,6 +13,8 @@ import org.productivity.java.syslog4j.SyslogIF;
 
 import com.google.common.base.Optional;
 
+import us.kbase.groups.core.Token;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
 import us.kbase.common.service.JsonServerSyslog;
@@ -56,6 +58,7 @@ public class GroupsConfig {
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
 	private static final String KEY_AUTH_URL = "auth-url";
 	private static final String KEY_WORKSPACE_URL = "workspace-url";
+	private static final String KEY_WORKSPACE_TOKEN = "workspace-admin-token";
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
 	private static final String KEY_ALLOW_INSECURE_URLS = "allow-insecure-urls";
 	
@@ -67,6 +70,7 @@ public class GroupsConfig {
 	private final Optional<char[]> mongoPwd;
 	private final URL authURL;
 	private final URL workspaceURL;
+	private final Token workspaceAdminToken;
 	private final SLF4JAutoLogger logger;
 	private final boolean ignoreIPHeaders;
 	private final boolean allowInsecureURLs;
@@ -121,6 +125,7 @@ public class GroupsConfig {
 		allowInsecureURLs = TRUE.equals(getString(KEY_ALLOW_INSECURE_URLS, cfg));
 		authURL = getURL(KEY_AUTH_URL, cfg);
 		workspaceURL = getURL(KEY_WORKSPACE_URL, cfg);
+		workspaceAdminToken = getToken(KEY_WORKSPACE_TOKEN, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 		mongoDB = getString(KEY_MONGO_DB, cfg, true);
 		mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -137,6 +142,16 @@ public class GroupsConfig {
 		mongop = null; //GC
 	}
 	
+	private Token getToken(final String paramName, final Map<String, String> cfg)
+			throws GroupsConfigurationException {
+		final String t = getString(paramName, cfg, true);
+		try {
+			return new Token(t);
+		} catch (MissingParameterException e) {
+			throw new RuntimeException("This should be impossible");
+		}
+	}
+
 	// returns null if no string
 	private String getString(
 			final String paramName,
@@ -299,6 +314,13 @@ public class GroupsConfig {
 	 */
 	public URL getWorkspaceURL() {
 		return workspaceURL;
+	}
+	
+	/** Get the administrator token to use with the workspace.
+	 * @return the token.
+	 */
+	public Token getWorkspaceAdminToken() {
+		return workspaceAdminToken;
 	}
 	
 	/** Get a logger. The logger is expected to intercept SLF4J log events and log them
