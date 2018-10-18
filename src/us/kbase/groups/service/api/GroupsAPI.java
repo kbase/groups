@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -35,6 +36,7 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -111,6 +113,20 @@ public class GroupsAPI {
 		return toGroupJSON(groups.getGroup(getToken(token, false), new GroupID(groupID)));
 	}
 	
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(ServicePaths.GROUP_REQUEST_MEMBERSHIP)
+	public Map<String, Object> requestGroupMembership(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID)
+			throws InvalidTokenException, NoSuchGroupException, AuthenticationException,
+				UserIsMemberException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException {
+		return APICommon.toGroupRequestJSON(groups.requestGroupMembership(
+				new Token(token), new GroupID(groupID)));
+	}
+	
+
 	private Map<String, Object> toGroupJSON(final Group g) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());

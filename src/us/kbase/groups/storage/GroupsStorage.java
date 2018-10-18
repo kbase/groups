@@ -1,15 +1,18 @@
 package us.kbase.groups.storage;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 public interface GroupsStorage {
@@ -30,4 +33,14 @@ public interface GroupsStorage {
 	
 	GroupRequest getRequest(UUID requestID)
 			throws NoSuchRequestException, GroupsStorageException;
+	
+	// pass null for any status
+	Set<GroupRequest> getRequestsByRequester(
+			final UserName requester,
+			final GroupRequestStatus status) throws GroupsStorageException;
+	
+	// pass null for any status
+	Set<GroupRequest> getRequestsByTarget(
+			final UserName target,
+			final GroupRequestStatus status) throws GroupsStorageException;
 }

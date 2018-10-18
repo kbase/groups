@@ -169,6 +169,15 @@ public class GroupRequest {
 		return true;
 	}
 
+	/** Get a builder for a {@link GroupRequest}. By default, the type is
+	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and the target user is
+	 * {@link Optional#absent()}.
+	 * @param id the request ID.
+	 * @param groupID the ID of the group at which the request is targeted.
+	 * @param requester the user making the request.
+	 * @param times the creation, modification, and expiration times for the request.
+	 * @return
+	 */
 	public static Builder getBuilder(
 			final UUID id,
 			final GroupID groupID,
@@ -177,6 +186,10 @@ public class GroupRequest {
 		return new Builder(id, groupID, requester, times);
 	}
 	
+	/** A {@link GroupRequest} builder.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder {
 		
 		private final UUID id;
@@ -184,10 +197,10 @@ public class GroupRequest {
 		private final UserName requester;
 		private final CreateModAndExpireTimes times;
 		private Optional<UserName> target = Optional.absent();
-		private GroupRequestType type = GroupRequestType.INVITE_TO_GROUP;
+		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 		private GroupRequestStatus status = GroupRequestStatus.OPEN;
 
-		public Builder(
+		private Builder(
 				final UUID id,
 				final GroupID groupID,
 				final UserName requester,
@@ -202,26 +215,64 @@ public class GroupRequest {
 			this.times = times;
 		}
 		
-		public Builder withNullableTarget(final UserName target) {
-			this.target = Optional.fromNullable(target);
+		/** The equivalent of {@link #withType(GroupRequestType, UserName)}
+		 * with {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} as the type and a null user.
+		 * @return this builder.
+		 */
+		public Builder withRequestGroupMembership() {
+			this.target = Optional.absent();
+			this.type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 			return this;
 		}
 		
-		public Builder withType(final GroupRequestType type) {
+		/** The equivalent of {@link #withType(GroupRequestType, UserName)}
+		 * with {@link GroupRequestType#INVITE_TO_GROUP} as the type and a non-null user.
+		 * @param target the user to invite to the group.
+		 * @return this builder.
+		 */
+		public Builder withInviteToGroup(final UserName target) {
+			checkNotNull(target, "target");
+			this.target = Optional.of(target);
+			this.type = GroupRequestType.INVITE_TO_GROUP;
+			return this;
+		}
+		
+		// this'll need a workspace ID in the future
+		/** Set the type of this request. A user is required for
+		 * {@link GroupRequestType#INVITE_TO_GROUP} requests.
+		 * @param type the type of the request.
+		 * @param nullableUser an optional user.
+		 * @return this builder.
+		 */
+		public Builder withType(final GroupRequestType type, final UserName nullableUser) {
 			checkNotNull(type, "type");
-			this.type = type;
-			return this;
+			if (type.equals(GroupRequestType.INVITE_TO_GROUP)) {
+				if (nullableUser == null) {
+					throw new IllegalArgumentException("Group invites must have a target user");
+				}
+				return withInviteToGroup(nullableUser);
+			} else if (type.equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
+				return withRequestGroupMembership();
+			} else {
+				// since type is an enum, this is impossible to test unless we're missing a case
+				throw new RuntimeException("Unknown type: " + type);
+			}
 		}
 		
+		/** Set the status of this request.
+		 * @param status the status.
+		 * @return this builder.
+		 */
 		public Builder withStatus(final GroupRequestStatus status) {
 			checkNotNull(status, "status");
 			this.status = status;
 			return this;
 		}
 		
+		/** Builder the {@link GroupRequest}.
+		 * @return the new instance.
+		 */
 		public GroupRequest build() {
-			//TODO NOW check for proper config based on the request type.
-			// some types require a user, some require a workspace ID, etc.
 			return new GroupRequest(id, groupID, target, requester, type, status, times);
 		}
 	}

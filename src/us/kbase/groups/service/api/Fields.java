@@ -22,4 +22,27 @@ public class Fields {
 	/** The group description. */
 	public static final String GROUP_DESCRIPTION = "description";
 
+	/* ***********************
+	 * request fields
+	 * ***********************
+	 */
+	
+	/** The request ID */
+	public static final String REQUEST_ID = "id";
+	/** The group ID for the request */
+	public static final String REQUEST_GROUP_ID = "groupid";
+	/** The user the request targets, if any. */
+	public static final String REQUEST_TARGET = "targetuser";
+	/** The user that made the request. */
+	public static final String REQUEST_REQUESTER = "requester";
+	/** The type of the request. */
+	public static final String REQUEST_TYPE = "type";
+	/** The the status of the request. */
+	public static final String REQUEST_STATUS = "status";
+	/** The creation date of the request. */
+	public static final String REQUEST_CREATION = "createdate";
+	/** The modification date of the request. */
+	public static final String REQUEST_MODIFICATION = "moddate";
+	/** The expiration date of the request. */
+	public static final String REQUEST_EXPIRATION = "expiredate";
 }

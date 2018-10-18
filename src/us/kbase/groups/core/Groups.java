@@ -3,8 +3,12 @@ package us.kbase.groups.core;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import us.kbase.groups.build.GroupsBuilder;
 import us.kbase.groups.config.GroupsConfig;
@@ -12,6 +16,12 @@ import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
+import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.UnauthorizedException;
+import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -25,6 +35,7 @@ public class Groups {
 	//TODO TEST
 	//TODO LOGGING for all actions
 	
+	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Clock clock;
@@ -91,6 +102,80 @@ public class Groups {
 		return groups;
 	}
 	
+	public GroupRequest requestGroupMembership(final Token userToken, final GroupID groupID)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+				NoSuchGroupException, UserIsMemberException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		final UserName user = userHandler.getUser(userToken);
+		//TODO NOW pass in UUID factory for mocking purposes
+		final Group g = storage.getGroup(groupID);
+		if (g.isMember(user)) {
+			throw new UserIsMemberException(String.format(
+					"User %s is already a member of group %s", user.getName(),
+					g.getGroupID().getName()));
+		}
+		final Instant now = clock.instant();
+		final GroupRequest request = GroupRequest.getBuilder(
+				UUID.randomUUID(), groupID, user, CreateModAndExpireTimes.getBuilder(
+						now, now.plus(REQUEST_EXPIRE_TIME)).build())
+				.withRequestGroupMembership()
+				.build();
+		try {
+			storage.storeRequest(request);
+		} catch (RequestExistsException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+		return request;
+	}
+	
+	public GroupRequest getRequest(final Token userToken, final UUID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest request = storage.getRequest(requestID);
+		final Group g = getGroupFromKnownGoodRequest(request);
+		//TODO NOW handle case where user is workspace admin for request against workspace
+		if (!user.equals(request.getTarget().orNull()) &&
+				!user.equals(request.getRequester()) &&
+				!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format("User %s cannot access request %s",
+					user.getName(), request.getID().toString()));
+		}
+		return request;
+	}
+	
+	//TODO CODE allow getting closed requests
+	public Set<GroupRequest> getRequestsForRequester(final Token userToken)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+		checkNotNull(userToken, "userToken");
+		final UserName user = userHandler.getUser(userToken);
+		return storage.getRequestsByRequester(user, GroupRequestStatus.OPEN);
+	}
+	
+	//TODO CODE allow getting closed requests
+	public Set<GroupRequest> getRequestsForTarget(final Token userToken)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+		checkNotNull(userToken, "userToken");
+		final UserName user = userHandler.getUser(userToken);
+		return storage.getRequestsByTarget(user, GroupRequestStatus.OPEN);
+	}
+
+	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
+			throws GroupsStorageException {
+		final Group g;
+		try {
+			g = storage.getGroup(request.getGroupID());
+		} catch (NoSuchGroupException e) {
+			// shouldn't happen
+			throw new RuntimeException(String.format("Request %s's group doesn't exist: %s",
+					request.getID().toString(), e.getMessage()), e);
+		}
+		return g;
+	}
+	
 	public static void main(final String[] args) throws Exception {
 		System.setProperty("KB_DEPLOYMENT_CONFIG", "./deploy.cfg");
 		final Groups g = new GroupsBuilder(new GroupsConfig()).getGroups();
@@ -98,13 +183,16 @@ public class Groups {
 		final Token t = new Token(args[0]);
 		final Group g1 = g.createGroup(
 				t,
-				GroupCreationParams.getBuilder(new GroupID("foo"), new GroupName("bar"))
+				GroupCreationParams.getBuilder(
+						new GroupID("foo"), new GroupName("from Groups.java"))
 						.withType(GroupType.team)
 						.withDescription("desc")
 						.build());
 		System.out.println(g1);
 		
 		System.out.println(g.getGroup(t, new GroupID("foo")));
+		
+		g.requestGroupMembership(t, new GroupID("foo"));
 	}
 	
 }

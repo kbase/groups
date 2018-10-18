@@ -5,9 +5,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -90,8 +92,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// may need compound indexes to speed things up.
 		requests.put(Arrays.asList(Fields.REQUEST_ID), IDX_UNIQ);
 		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID), null);
-		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER), null);
+		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_STATUS), null);
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET), IDX_SPARSE);
+		// keep both target indexes as the sparse index will speed lookups when the status
+		// isn't required
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS), null);
 		requests.put(Arrays.asList(Fields.REQUEST_CREATION), null);
 		requests.put(Arrays.asList(Fields.REQUEST_STATUS), null);
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
@@ -370,6 +375,47 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
+	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
+	@Override
+	public Set<GroupRequest> getRequestsByRequester(
+			final UserName requester,
+			final GroupRequestStatus status) throws GroupsStorageException {
+		return getRequestsByUser(requester, status, Fields.REQUEST_REQUESTER, "requester");
+	}
+	
+	@Override
+	public Set<GroupRequest> getRequestsByTarget(
+			final UserName target,
+			final GroupRequestStatus status)
+			throws GroupsStorageException {
+		return getRequestsByUser(target, status, Fields.REQUEST_TARGET, "target");
+	}
+
+	private Set<GroupRequest> getRequestsByUser(
+			final UserName requester,
+			final GroupRequestStatus status,
+			final String field,
+			final String userType)
+			throws GroupsStorageException {
+		checkNotNull(requester, userType);
+		final Set<GroupRequest> ret = new HashSet<>();
+		final Document query = new Document(field, requester.getName());
+		if (status != null) {
+			query.append(Fields.REQUEST_STATUS, status.toString());
+		}
+		try {
+			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS)
+					.find(new Document());
+			for (final Document rdoc: gdocs) {
+				ret.add(toRequest(rdoc));
+			}
+		} catch (MongoException e) {
+			throw new GroupsStorageException(
+					"Connection to database failed: " + e.getMessage(), e);
+		}
+		return ret;
+	}
+	
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {
 		try {
 			final String target = req.getString(Fields.REQUEST_TARGET);
@@ -383,9 +429,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 							.withModificationTime(req.getDate(Fields.REQUEST_MODIFICATION)
 									.toInstant())
 							.build())
-					.withNullableTarget(target == null ? null : new UserName(target))
+					.withType(
+							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
+							target == null ? null : new UserName(target))
 					.withStatus(GroupRequestStatus.valueOf(req.getString(Fields.REQUEST_STATUS)))
-					.withType(GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)))
 					.build();
 		} catch (IllegalParameterException | MissingParameterException |
 				IllegalArgumentException e) {

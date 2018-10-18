@@ -64,7 +64,17 @@ public class Group {
 		return description;
 	}
 	
+	public boolean isAdministrator(final UserName user) {
+		checkNotNull("user", user);
+		//TODO NOW deal with group admins
+		return owner.equals(user);
+	}
 	
+	public boolean isMember(final UserName user) {
+		checkNotNull("user", user);
+		// TODO NOW check admins and users list
+		return owner.equals(user);
+	}
 
 	@Override
 	public String toString() {
