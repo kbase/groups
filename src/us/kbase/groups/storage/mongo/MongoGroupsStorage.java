@@ -545,13 +545,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 		final Document set = new Document(
 				Fields.REQUEST_STATUS, newStatus.toString())
-				.append(Fields.REQUEST_MODIFICATION, Date.from(modificationTime))
-				.append(Fields.REQUEST_CHARACTERISTIC_STRING, null);
+				.append(Fields.REQUEST_MODIFICATION, Date.from(modificationTime));
+		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
 		final Document query = new Document(Fields.REQUEST_ID, requestID.toString())
 				.append(Fields.REQUEST_STATUS, GroupRequestStatus.OPEN.toString());
 		try {
 			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
-					query, new Document("$set", set));
+					query, new Document("$set", set).append("$unset", unset));
 			if (res.getMatchedCount() != 1) {
 				throw new NoSuchRequestException("No open request with ID " +
 						requestID.toString());
