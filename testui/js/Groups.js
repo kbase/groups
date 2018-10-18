@@ -180,7 +180,6 @@ export default class {
                      if (!url.endsWith('/')) {
                          url = url + '/'
                      }
-                     console.log("call callback");
                      callback.call(this, url);
                  }).catch( (err) => {
                      this.handleError(err);

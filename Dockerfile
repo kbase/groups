@@ -20,7 +20,7 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       maintainer="Steve Chan sychan@lbl.gov"
 
 WORKDIR /kb/deployment/jettybase
-ENV KB_DEPLOY_CONFIG=/kb/deployment/conf/deployment.cfg
+ENV KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
 
 RUN chmod -R a+rwx /kb/deployment/conf /kb/deployment/jettybase/
 
