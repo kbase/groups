@@ -13,6 +13,7 @@ services:
       - mongo-db=dc_groups_test
       - auth_url=https://ci.kbase.us/services/auth
       - workspace_url=https://ci.kbase.us/services/ws
+      - workspace_admin_token=faketoken_replace
     command:
       - "-wait"
       - "tcp://ci-mongo:27017"
