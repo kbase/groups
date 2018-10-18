@@ -10,6 +10,6 @@ public class NoSuchRequestException extends NoDataException {
 	//TODO TEST
 	
 	public NoSuchRequestException(final String message) {
-		super(ErrorType.NO_SUCH_GROUP, message);
+		super(ErrorType.NO_SUCH_REQUEST, message);
 	}
 }
