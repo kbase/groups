@@ -13,6 +13,7 @@ import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -54,13 +55,9 @@ public interface GroupsStorage {
 	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatusType status)
 			throws GroupsStorageException;
 	
-	//TODO NOW make a status class that includes the status, closedby, and closed reason and checks the states. pass it in here and use it in GroupRequest
-	// might want a builder for this
 	void closeRequest(
 			UUID requestID,
-			GroupRequestStatusType status,
-			Instant modificationTime,
-			UserName closedBy,
-			String closedReason)
+			GroupRequestStatus status,
+			Instant modificationTime)
 			throws NoSuchRequestException, GroupsStorageException;
 }

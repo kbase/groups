@@ -1,12 +1,6 @@
 package us.kbase.groups.core.request;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static us.kbase.groups.util.Util.isNullOrEmpty;
-import static us.kbase.groups.core.request.GroupRequestStatusType.OPEN;
-import static us.kbase.groups.core.request.GroupRequestStatusType.CANCELED;
-import static us.kbase.groups.core.request.GroupRequestStatusType.ACCEPTED;
-import static us.kbase.groups.core.request.GroupRequestStatusType.DENIED;
-import static us.kbase.groups.core.request.GroupRequestStatusType.EXPIRED;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,7 +23,7 @@ public class GroupRequest {
 	private final Optional<UserName> target;
 	private final UserName requester;
 	private final GroupRequestType type;
-	private final GroupRequestStatusType status;
+	private final GroupRequestStatusType statusType;
 	private final Optional<UserName> closedBy;
 	private final Optional<String> closedReason;
 	private final Instant creationDate;
@@ -51,7 +45,7 @@ public class GroupRequest {
 		this.target = target;
 		this.requester = requester;
 		this.type = type;
-		this.status = status;
+		this.statusType = status;
 		this.closedBy = closedBy;
 		this.closedReason = closedReason;
 		this.creationDate = times.getCreationTime();
@@ -79,8 +73,8 @@ public class GroupRequest {
 		return type;
 	}
 
-	public GroupRequestStatusType getStatus() {
-		return status;
+	public GroupRequestStatusType getStatusType() {
+		return statusType;
 	}
 
 	public Optional<UserName> getClosedBy() {
@@ -115,7 +109,7 @@ public class GroupRequest {
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((requester == null) ? 0 : requester.hashCode());
-		result = prime * result + ((status == null) ? 0 : status.hashCode());
+		result = prime * result + ((statusType == null) ? 0 : statusType.hashCode());
 		result = prime * result + ((target == null) ? 0 : target.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
@@ -189,7 +183,7 @@ public class GroupRequest {
 		} else if (!requester.equals(other.requester)) {
 			return false;
 		}
-		if (status != other.status) {
+		if (statusType != other.statusType) {
 			return false;
 		}
 		if (target == null) {
@@ -297,94 +291,16 @@ public class GroupRequest {
 			}
 		}
 		
-		/** Set the request to an open state. The user that closed the request and the reason
-		 * for closing are missing in this case.
-		 * @return this builder.
-		 */
-		public Builder withOpen() {
-			return setSimpleStatus(OPEN);
-		}
 		
-		/** Set the request to a canceled state. The user that closed the request and the reason
-		 * for closing are missing in this case.
-		 * @return this builder.
-		 */
-		public Builder withCanceled() {
-			return setSimpleStatus(CANCELED);
-		}
-		
-		
-		/** Set the request to an expired state. The user that closed the request and the reason
-		 * for closing are missing in this case.
-		 * @return this builder.
-		 */
-		public Builder withExpired() {
-			return setSimpleStatus(EXPIRED);
-		}
-		
-		/** Set the request to an accepted state. The user that closed the request must be
-		 * specified. The reason for closing is missing in this case.
-		 * @param acceptedBy the user that accepted the request.
-		 * @return this builder.
-		 */
-		public Builder withAccepted(final UserName acceptedBy) {
-			checkNotNull(acceptedBy, "acceptedBy");
-			this.status = ACCEPTED;
-			this.closedBy = Optional.of(acceptedBy);
-			this.closedReason = Optional.absent();
-			return this;
-		}
-		
-		/** Set the request to a denied state. The user that closed the request must be
-		 * specified. The reason for closing may be specified, but is ignored if null or whitespace
-		 * only.
-		 * @param deniedBy the user that denied the request.
-		 * @param reason the reason the request was closed. Ignored if null or whitespace
-		 * only.
-		 * @return this builder.
-		 */
-		public Builder withDenied(final UserName deniedBy, final String reason) {
-			checkNotNull(deniedBy, "deniedBy");
-			this.status = DENIED;
-			this.closedBy = Optional.of(deniedBy);
-			if (isNullOrEmpty(reason)) {
-				this.closedReason = Optional.absent();
-			} else {
-				this.closedReason = Optional.of(reason);
-			}
-			return this;
-		}
-		
-		/** Set the status of this request. Checks the status type and behaves as if the
-		 * appropriate with[Status] method was called.
+		/** Set the status of the request. The default status is {@link GroupRequestStatus#open()}.
 		 * @param status the status.
-		 * @param closedBy the user that closed the request. Required for
-		 * {@link GroupRequestStatusType#ACCEPTED} and {@link GroupRequestStatusType#DENIED}.
-		 * @param closedReason the reason the request was closed. Ignored if null, whitespace
-		 * only, or for requests that are not {@link GroupRequestStatusType#DENIED}.
 		 * @return this builder.
 		 */
-		public Builder withStatus(
-				final GroupRequestStatusType status,
-				final UserName closedBy,
-				final String closedReason) {
+		public Builder withStatus(final GroupRequestStatus status) {
 			checkNotNull(status, "status");
-			if (OPEN.equals(status) || EXPIRED.equals(status) || CANCELED.equals(status)) {
-				return setSimpleStatus(status);
-			}
-			checkNotNull(closedBy, "closedBy");
-			if (ACCEPTED.equals(status)) {
-				return withAccepted(closedBy);
-			} else {
-				return withDenied(closedBy, closedReason);
-			}
-		}
-		
-		private Builder setSimpleStatus(final GroupRequestStatusType status) {
-			checkNotNull(status, "status");
-			this.status = status;
-			this.closedBy = Optional.absent();
-			this.closedReason = Optional.absent();
+			this.status = status.getStatusType();
+			this.closedBy = status.getClosedBy();
+			this.closedReason = status.getClosedReason();
 			return this;
 		}
 		
