@@ -3,8 +3,6 @@ package us.kbase.groups.core;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
-import java.time.Instant;
-
 import com.google.common.base.Optional;
 
 public class GroupCreationParams {
@@ -44,14 +42,10 @@ public class GroupCreationParams {
 		return description;
 	}
 	
-	public Group toGroup(
-			final UserName owner,
-			final Instant createdDate,
-			final Instant modifiedDate) {
-		return Group.getBuilder(groupID, groupName, owner)
-				.withTimes(createdDate, modifiedDate)
+	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
+		return Group.getBuilder(groupID, groupName, owner, times)
 				.withType(type)
-				.withDescription(description.isPresent() ? description.get() : null)
+				.withDescription(description.orNull())
 				.build();
 	}
 

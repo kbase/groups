@@ -24,6 +24,7 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -291,9 +292,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 			return Group.getBuilder(
 					new GroupID(ns.getString(Fields.GROUP_ID)),
 					new GroupName(ns.getString(Fields.GROUP_NAME)),
-					new UserName(ns.getString(Fields.GROUP_OWNER)))
-					.withTimes(ns.getDate(Fields.GROUP_CREATION).toInstant(),
-							ns.getDate(Fields.GROUP_MODIFICATION).toInstant())
+					new UserName(ns.getString(Fields.GROUP_OWNER)),
+					new CreateAndModTimes(
+							ns.getDate(Fields.GROUP_CREATION).toInstant(),
+							ns.getDate(Fields.GROUP_MODIFICATION).toInstant()))
 					// TODO NOW check valueOf error conditions 
 					.withType(GroupType.valueOf(ns.getString(Fields.GROUP_TYPE)))
 					.withDescription(ns.getString(Fields.GROUP_DESCRIPTION))
