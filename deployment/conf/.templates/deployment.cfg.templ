@@ -1,6 +1,8 @@
 [groups]
 mongo-host={{ default .Env.mongo_host "ci-mongo" }}
-mongo-db={{ default .Env.mongo_db "assemblyhomology" }}
+mongo-db={{ default .Env.mongo_db "groups" }}
 mongo-user={{ default .Env.mongo_user "" }}
 mongo-pwd={{ default .Env.mongo_pwd "" }}
-
+auth-url={{ default .Env.auth_url "https://ci.kbase.us/services/auth" }}
+workspace-url={{ default .Env.workspace_url "https://ci.kbase.us/services/ws" }}
+allow-insecure-urls= {{ .Env.allow_insecure_urls }}

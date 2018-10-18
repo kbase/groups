@@ -4,6 +4,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.base.Optional;
 
@@ -15,6 +19,7 @@ public class Group {
 	private final GroupID groupID;
 	private final GroupName groupName;
 	private final UserName owner;
+	private final Set<UserName> members;
 	private final GroupType type;
 	private final Instant creationDate;
 	private final Instant modificationDate;
@@ -24,16 +29,17 @@ public class Group {
 			final GroupID groupID,
 			final GroupName groupName,
 			final UserName owner,
+			final Set<UserName> members,
 			final GroupType type,
-			final Instant creationDate,
-			final Instant modificationDate,
+			final CreateAndModTimes times,
 			final Optional<String> description) {
 		this.groupID = groupID;
 		this.groupName = groupName;
 		this.owner = owner;
+		this.members = Collections.unmodifiableSet(members);
 		this.type = type;
-		this.creationDate = creationDate;
-		this.modificationDate = modificationDate;
+		this.creationDate = times.getCreationTime();
+		this.modificationDate = times.getModificationTime();
 		this.description = description;
 	}
 
@@ -47,6 +53,10 @@ public class Group {
 
 	public UserName getOwner() {
 		return owner;
+	}
+	
+	public Set<UserName> getMembers() {
+		return members;
 	}
 
 	public GroupType getType() {
@@ -64,6 +74,55 @@ public class Group {
 	public Optional<String> getDescription() {
 		return description;
 	}
+	
+	public boolean isAdministrator(final UserName user) {
+		checkNotNull("user", user);
+		//TODO NOW deal with group admins
+		return owner.equals(user);
+	}
+	
+	public Set<UserName> getAdministratorsAndOwner() {
+		//TODO NOW deal with group admins
+		return new HashSet<>(Arrays.asList(owner));
+	}
+	
+	public boolean isMember(final UserName user) {
+		checkNotNull("user", user);
+		// TODO NOW check admins
+		return owner.equals(user) || members.contains(user);
+	}
+	
+	public Group withoutPrivateFields() {
+		final Builder b = getBuilder(groupID, groupName, owner,
+				new CreateAndModTimes(creationDate, modificationDate))
+				.withDescription(description.orNull())
+				.withType(type);
+		// may need to do other stuff here.
+		return b.build();
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder2 = new StringBuilder();
+		builder2.append("Group [groupID=");
+		builder2.append(groupID);
+		builder2.append(", groupName=");
+		builder2.append(groupName);
+		builder2.append(", owner=");
+		builder2.append(owner);
+		builder2.append(", members=");
+		builder2.append(members);
+		builder2.append(", type=");
+		builder2.append(type);
+		builder2.append(", creationDate=");
+		builder2.append(creationDate);
+		builder2.append(", modificationDate=");
+		builder2.append(modificationDate);
+		builder2.append(", description=");
+		builder2.append(description);
+		builder2.append("]");
+		return builder2.toString();
+	}
 
 	@Override
 	public int hashCode() {
@@ -73,6 +132,7 @@ public class Group {
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
@@ -119,6 +179,13 @@ public class Group {
 		} else if (!groupName.equals(other.groupName)) {
 			return false;
 		}
+		if (members == null) {
+			if (other.members != null) {
+				return false;
+			}
+		} else if (!members.equals(other.members)) {
+			return false;
+		}
 		if (modificationDate == null) {
 			if (other.modificationDate != null) {
 				return false;
@@ -139,68 +206,47 @@ public class Group {
 		return true;
 	}
 
-	public static TimesStep getBuilder(
+	public static Builder getBuilder(
 			final GroupID id,
 			final GroupName name,
-			final UserName owner) {
-		return new Builder(id, name, owner);
+			final UserName owner,
+			final CreateAndModTimes times) {
+		return new Builder(id, name, owner, times);
 	}
 	
-	public interface TimesStep {
-		
-		OptionalsStep withTimes(Instant createdDate, Instant modifiedDate);
-	}
-	
-	public interface OptionalsStep {
-		
-		OptionalsStep withType(final GroupType type);
-		
-		OptionalsStep withDescription(final String description);
-		
-		Group build();
-	}
-	
-	public static class Builder implements TimesStep, OptionalsStep{
+	public static class Builder {
 		
 		private final GroupID groupID;
 		private final GroupName groupName;
 		private final UserName owner;
-		private GroupType type = GroupType.organisation;
-		private Instant creationDate;
-		private Instant modificationDate;
+		private final Set<UserName> members = new HashSet<>();
+		private final CreateAndModTimes times;
+		private GroupType type = GroupType.organization;
 		private Optional<String> description = Optional.absent();
 		
-		public Builder(final GroupID id, final GroupName name, final UserName owner) {
+		public Builder(
+				final GroupID id,
+				final GroupName name,
+				final UserName owner,
+				final CreateAndModTimes times) {
 			checkNotNull(id, "id");
 			checkNotNull(name, "name");
 			checkNotNull(owner, "owner");
+			checkNotNull(times, "times");
 			this.groupID = id;
 			this.groupName = name;
 			this.owner = owner;
+			this.times = times;
 		}
 		
-		public OptionalsStep withTimes(
-				final Instant creationDate,
-				final Instant modificationDate) {
-			checkNotNull(creationDate, "creationDate");
-			checkNotNull(modificationDate, "modificationDate");
-			if (modificationDate.isBefore(creationDate)) {
-				throw new IllegalArgumentException(
-						"modification date must be after creation date");
-			}
-			this.creationDate = creationDate;
-			this.modificationDate = modificationDate;
-			return this;
-		}
-		
-		public OptionalsStep withType(final GroupType type) {
+		public Builder withType(final GroupType type) {
 			checkNotNull(type, "type");
 			this.type = type;
 			return this;
 		}
 		
 		// null or whitespace only == remove description
-		public OptionalsStep withDescription(final String description) {
+		public Builder withDescription(final String description) {
 			if (isNullOrEmpty(description)) {
 				this.description = Optional.absent();
 			} else {
@@ -209,12 +255,14 @@ public class Group {
 			return this;
 		}
 		
+		public Builder withMember(final UserName member) {
+			checkNotNull(member, "member");
+			this.members.add(member);
+			return this;
+		}
+		
 		public Group build() {
-			if (creationDate == null || modificationDate == null) {
-				throw new NullPointerException("Don't skip the withTimes step");
-			}
-			return new Group(groupID, groupName, owner, type, creationDate, modificationDate,
-					description);
+			return new Group(groupID, groupName, owner, members, type, times, description);
 		}
 	}
 	

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import us.kbase.groups.core.exceptions.GroupsException;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.NoDataException;
+import us.kbase.groups.core.exceptions.UnauthorizedException;
 
 /** An error message to be returned to the server client. Expected to be serialized to JSON.
  * 
@@ -61,9 +62,8 @@ public class ErrorMessage {
 			apperror = ae.getErr().getError();
 			if (ae instanceof AuthenticationException) {
 				status = Response.Status.UNAUTHORIZED;
-			// may need this later
-//			} else if (ae instanceof UnauthorizedException) {
-//				status = Response.Status.FORBIDDEN;
+			} else if (ae instanceof UnauthorizedException) {
+				status = Response.Status.FORBIDDEN;
 			} else if (ae instanceof NoDataException) {
 				status = Response.Status.NOT_FOUND;
 			} else {

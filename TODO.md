@@ -12,6 +12,7 @@
   * Particular items:
     * DB schema version checking (many java services)
       * UJS has some update code as well
+    * The mongo duplicate key exception checking code
     * UI logging & exception handling stuff (HTTP/RESTish)
     * ErrorType enum and exception hierarchy
     * Null checking and string checking in utils classes

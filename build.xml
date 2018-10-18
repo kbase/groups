@@ -267,6 +267,7 @@
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
         <test name="us.kbase.test.groups.service.api.RootTest"/>
+        <test name="us.kbase.test.groups.service.api.IncomingJSONTest"/>
         <test name="us.kbase.test.groups.service.exceptions.ErrorMessageTest"/>
         <test name="us.kbase.test.groups.service.exceptions.ExceptionHandlerTest"/>
         <test name="us.kbase.test.groups.util.UtilTest"/>
@@ -288,6 +289,7 @@
         <sysproperty key="KBASE_GROUPS_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.groups.storage.mongo.MongoGroupsStorageOpsTest"/>
         <test name="us.kbase.test.groups.storage.mongo.MongoGroupsStorageStartupTest"/>
+        <test name="us.kbase.test.groups.storage.mongo.MongoGroupsStorageDuplicateKeyCheckerTest"/>
       </junit>
     </jacoco:coverage>
     <fail message="Test failure detected, check test results." if="test.failed" />

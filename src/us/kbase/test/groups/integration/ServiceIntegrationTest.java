@@ -147,6 +147,7 @@ public class ServiceIntegrationTest {
 		sec.add("mongo-db", dbName);
 		sec.add("auth-url", authURL.toString());
 		sec.add("workspace-url", wsURL.toString());
+		sec.add("allow-insecure-urls", "true");
 		
 		final Path deploy = Files.createTempFile(TEMP_DIR, "cli_test_deploy", ".cfg");
 		ini.store(deploy.toFile());

@@ -25,12 +25,43 @@ public class Fields {
 	public static final String GROUP_TYPE = "type";
 	/** The username of the group owner. */
 	public static final String GROUP_OWNER = "own";
+	/** The group members. */
+	public static final String GROUP_MEMBERS = "memb";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "create";
-	/** The group modifcation date. */
+	/** The group modification date. */
 	public static final String GROUP_MODIFICATION = "mod";
 	/** The group description. */
 	public static final String GROUP_DESCRIPTION = "desc";
+	
+	/* ***********************
+	 * request fields
+	 */
+	
+	/** The request ID */
+	public static final String REQUEST_ID = "id";
+	/** The group ID for the request */
+	public static final String REQUEST_GROUP_ID = "gid";
+	/** The user the request targets, if any. */
+	public static final String REQUEST_TARGET = "target";
+	/** The user that made the request. */
+	public static final String REQUEST_REQUESTER = "requester";
+	/** The type of the request. */
+	public static final String REQUEST_TYPE = "type";
+	/** The the status of the request. */
+	public static final String REQUEST_STATUS = "status";
+	/** The user that closed the request. */
+	public static final String REQUEST_CLOSED_BY = "closedby";
+	/** The the reason the request was closed. */
+	public static final String REQUEST_REASON_CLOSED = "reasonclosed";
+	/** The creation date of the request. */
+	public static final String REQUEST_CREATION = "create";
+	/** The modification date of the request. */
+	public static final String REQUEST_MODIFICATION = "mod";
+	/** The expiration date of the request. */
+	public static final String REQUEST_EXPIRATION = "expire";
+	/** The characteristic string for a request. */
+	public static final String REQUEST_CHARACTERISTIC_STRING = "charstr";
 	
 	/* ***********************
 	 * database schema fields

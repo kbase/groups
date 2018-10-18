@@ -1,0 +1,24 @@
+{
+  "name": "groupstestui",
+  "version": "1.0.0",
+  "description": "Test UI for the KBase groups service",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.2",
+    "bootstrap": "^4.1.3",
+    "dompurify": "^1.0.8",
+    "jquery": "^3.3.1",
+    "popper.js": "^1.14.4"
+  },
+  "devDependencies": {
+    "path": "^0.12.7",
+    "webpack": "^4.20.2",
+    "webpack-cli": "^3.1.2"
+  }
+}
