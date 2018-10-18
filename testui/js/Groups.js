@@ -297,6 +297,10 @@ export default class {
                         Request group membership</button>
                       <button id="grouprequests" class="btn btn-primary">
                         Requests for group</button>
+                      <div>
+                        <input id="addmember"/>
+                        <button id="addmemberbtn" class="btn btn-primary">Add member</button>
+                      </div>
                       `;
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
@@ -305,6 +309,10 @@ export default class {
                   });
                   $('#grouprequests').on('click', () => {
                       this.renderGroupRequests(groupid);
+                  });
+                  $('#addmemberbtn').on('click', () => {
+                      const member = $('#addmember').val();
+                      this.addMember(groupid, member);
                   });
                   if (!priv) {
                       for (const m of members) {
@@ -324,6 +332,31 @@ export default class {
       }).catch( (err) => {
           this.handleError(err);
       });
+  }
+  
+  addMember(groupid, member) {
+      $('#error').text("");
+      if (!this.checkToken()) {
+          return;
+      }
+      fetch(this.serviceUrl + "group/" + groupid + '/user/' + member,
+        {"method": "PUT",
+         "headers": this.getHeaders()
+         }).then( (response) => {
+             if (response.ok) {
+                 response.json().then( (json) => {
+                     this.renderRequest(json.id);
+                 }).catch ( (err) => {
+                     this.handleError(err);
+                 });
+             } else {
+                 response.text().then( (err) => {
+                     this.handleError(err);
+                 });
+             }
+         }).catch( (err) => {
+             this.handleError(err);
+         });
   }
   
   removeMember(groupid, member) {

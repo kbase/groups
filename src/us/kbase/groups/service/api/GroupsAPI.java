@@ -132,6 +132,20 @@ public class GroupsAPI {
 				new Token(token), new GroupID(groupID)));
 	}
 	
+	@PUT
+	@Path(ServicePaths.GROUP_USER_ID)
+	public Map<String, Object> inviteMember(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String member)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				AuthenticationException, UnauthorizedException, UserIsMemberException,
+				RequestExistsException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException {
+		return APICommon.toGroupRequestJSON(groups.inviteUserToGroup(
+				new Token(token), new GroupID(groupID), new UserName(member)));
+	}
+	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(ServicePaths.GROUP_REQUESTS)
