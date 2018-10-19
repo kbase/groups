@@ -42,14 +42,6 @@ TODO should non-open invitations eventually be purged?
   * `GDesc`
 * Service returns `Group` with empty `PF`
 
-### Group deletion
-
-* Client sends message to service with `GID`
-* Service
-  * Deletes `Group`
-  * Returns 204
-  * Requirement: user must be `GID` owner
-
 ### Group view
 
 * Client sends message to service with `GID`
