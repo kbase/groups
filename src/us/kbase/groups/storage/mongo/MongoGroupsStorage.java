@@ -404,7 +404,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				Fields.REQUEST_ID, request.getID().getID())
 				.append(Fields.REQUEST_GROUP_ID, request.getGroupID().getName())
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
-				.append(Fields.REQUEST_STATUS, request.getStatusType().toString())
+				.append(Fields.REQUEST_STATUS, request.getStatusType().name())
 				.append(Fields.REQUEST_TYPE, request.getType().toString())
 				.append(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
 						request.getTarget().get().getName() : null)
@@ -535,7 +535,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 
 	private Document withStatus(final Document query, final GroupRequestStatusType status) {
 		if (status != null) {
-			query.append(Fields.REQUEST_STATUS, status.toString());
+			query.append(Fields.REQUEST_STATUS, status.name());
 		}
 		return query;
 	}
@@ -619,7 +619,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
 		final Document query = new Document(Fields.REQUEST_ID, requestID.getID())
-				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.toString());
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
 		try {
 			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
 					query, new Document("$set", set).append("$unset", unset));
