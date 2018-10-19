@@ -8,10 +8,19 @@ import java.util.UUID;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
+/** The ID of a request. The format is a UUID.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class RequestID {
 	
 	private final String id;
 	
+	/** Create a request ID.
+	 * @param id the ID. Format is identical to a UUID.
+	 * @throws IllegalParameterException if the input is not a UUID.
+	 * @throws MissingParameterException if the input is null or whitespace only.
+	 */
 	public RequestID(final String id)
 			throws IllegalParameterException, MissingParameterException {
 		checkString(id, "request id");
@@ -23,11 +32,17 @@ public class RequestID {
 		this.id = id;
 	}
 	
+	/** Create a request ID from a UUID.
+	 * @param id the UUID.
+	 */
 	public RequestID(final UUID id) {
 		checkNotNull(id, "id");
 		this.id = id.toString();
 	}
 
+	/** Get the request ID.
+	 * @return the request ID.
+	 */
 	public String getID() {
 		return id;
 	}
