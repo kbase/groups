@@ -9,6 +9,7 @@ export default class {
     this.authUrl = 'https://ci.kbase.us/services/auth/';
     this.token = null;
     this.user = null;
+    this.cookieName = 'kbase_session';
   }
   
   render() {
@@ -28,7 +29,7 @@ export default class {
         <div class="row">
           <input id="token"/>
           <button id="settoken" class="btn btn-primary">Set</button>
-          <button id="seetoken" class="btn btn-primary">See current value</button>
+          <button id="loadtoken" class="btn btn-primary">Reload from cookie</button>
           <span id="useridentity"></span>
         </div>
         <div class="row">Set auth root url:</div>
@@ -62,8 +63,8 @@ export default class {
     $('#settoken').on('click', () => {
         this.setToken();
     });
-    $('#seetoken').on('click', () => {
-        this.seeToken();
+    $('#loadtoken').on('click', () => {
+        this.loadTokenFromCookie(true);
     })
     $('#seturl').on('click', () => {
         this.setURL();
@@ -83,6 +84,14 @@ export default class {
     $('#targetedrequests').on('click', () => {
         this.renderTargetedRequests();
     });
+    
+    this.loadTokenFromCookie(false);
+  }
+  
+  // https://stackoverflow.com/a/25490531/643675
+  getCookieValue(name) {
+      var b = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return b ? b.pop() : '';
   }
   
   seeToken() {
@@ -107,10 +116,22 @@ export default class {
       return new Headers(h);
   }
   
+  loadTokenFromCookie(reportErr) {
+      const token = this.getCookieValue(this.cookieName);
+      if (token) {
+          this.setTokenValue(token);
+      } else if (reportErr) {
+          $('#error').text("No " + this.cookieName + " cookie set");
+      }
+  }
+  
   setToken() {
       const token = $('#token').val();
+      this.setTokenValue(token);
+  }
+  
+  setTokenValue(token) {
       $('#token').val("");
-      $('#useridentity').text("");
       $('#error').text("");
       fetch(this.authUrl + 'api/V2/me', {"headers": new Headers({'authorization': token})})
          .then( (response) => {
