@@ -1,4 +1,4 @@
-package us.kbase.test.groups.core;
+package us.kbase.test.groups.core.request;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
