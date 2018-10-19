@@ -264,6 +264,7 @@
         <sysproperty key="KBASE_GROUPS_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.groups.config.GroupsConfigTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
+        <test name="us.kbase.test.groups.core.request.GroupRequestStatusTypeTest"/>
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
