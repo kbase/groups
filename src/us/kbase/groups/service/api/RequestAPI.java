@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -24,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestWithActions;
+import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.REQUEST)
@@ -53,10 +54,10 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
-				UnauthorizedException, MissingParameterException, GroupsStorageException {
-		//TODO NOW make request id class vs. uuid.
+				UnauthorizedException, MissingParameterException, GroupsStorageException,
+				IllegalParameterException {
 		final GroupRequestWithActions actions = groups.getRequest(
-							new Token(token), UUID.fromString(requestID));
+							new Token(token), new RequestID(requestID));
 		final Map<String, Object> json = APICommon.toGroupRequestJSON(actions.getRequest());
 		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions()));
 		return json;
@@ -95,9 +96,10 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
-				UnauthorizedException, MissingParameterException, GroupsStorageException {
+				UnauthorizedException, MissingParameterException, GroupsStorageException,
+				IllegalParameterException {
 		return APICommon.toGroupRequestJSON(groups.cancelRequest(
-				new Token(token), UUID.fromString(requestID)));
+				new Token(token), new RequestID(requestID)));
 	}
 	
 	@PUT
@@ -107,10 +109,11 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 					throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
-					UnauthorizedException, MissingParameterException, GroupsStorageException {
+					UnauthorizedException, MissingParameterException, GroupsStorageException,
+					IllegalParameterException {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return APICommon.toGroupRequestJSON(groups.acceptRequest(
-				new Token(token), UUID.fromString(requestID)));
+				new Token(token), new RequestID(requestID)));
 	}
 
 	public static class DenyRequestJSON extends IncomingJSON {
@@ -132,11 +135,12 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID,
 			final DenyRequestJSON denyJSON)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
-				UnauthorizedException, MissingParameterException, GroupsStorageException {
+				UnauthorizedException, MissingParameterException, GroupsStorageException,
+				IllegalParameterException {
 		final String reason = denyJSON == null ? null : denyJSON.deniedReason;
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return APICommon.toGroupRequestJSON(groups.denyRequest(
-				new Token(token), UUID.fromString(requestID), reason));
+				new Token(token), new RequestID(requestID), reason));
 	}
 
 	private List<Map<String, Object>> toList(final Set<GroupRequest> reqs) {

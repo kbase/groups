@@ -32,6 +32,7 @@ import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
+import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -125,7 +126,6 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		final UserName user = userHandler.getUser(userToken);
-		//TODO NOW pass in UUID factory for mocking purposes
 		final Group g = storage.getGroup(groupID);
 		if (g.isMember(user)) {
 			throw new UserIsMemberException(String.format(
@@ -134,7 +134,9 @@ public class Groups {
 		}
 		final Instant now = clock.instant();
 		final GroupRequest request = GroupRequest.getBuilder(
-				UUID.randomUUID(), groupID, user, CreateModAndExpireTimes.getBuilder(
+				//TODO NOW pass in UUID factory for mocking purposes
+				new RequestID(UUID.randomUUID()), groupID, user,
+				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withRequestGroupMembership()
 				.build();
@@ -156,7 +158,6 @@ public class Groups {
 		if (!userHandler.isValidUser(newMember)) {
 			throw new NoSuchUserException(newMember.getName());
 		}
-		//TODO NOW pass in UUID factory for mocking purposes
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
 			throw new UnauthorizedException(String.format("User %s may not administrate group %s",
@@ -169,7 +170,9 @@ public class Groups {
 		}
 		final Instant now = clock.instant();
 		final GroupRequest request = GroupRequest.getBuilder(
-				UUID.randomUUID(), groupID, user, CreateModAndExpireTimes.getBuilder(
+				//TODO NOW pass in UUID factory for mocking purposes
+				new RequestID(UUID.randomUUID()), groupID, user,
+				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withInviteToGroup(newMember)
 				.build();
@@ -180,7 +183,7 @@ public class Groups {
 	
 	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
 	
-	public GroupRequestWithActions getRequest(final Token userToken, final UUID requestID)
+	public GroupRequestWithActions getRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
 		checkNotNull(userToken, "userToken");
@@ -214,7 +217,7 @@ public class Groups {
 			return new GroupRequestWithActions(request, target);
 		} else {
 			throw new UnauthorizedException(String.format("User %s cannot access request %s",
-					user.getName(), request.getID().toString()));
+					user.getName(), request.getID().getID()));
 		}
 	}
 	
@@ -256,7 +259,7 @@ public class Groups {
 		} catch (NoSuchGroupException e) {
 			// shouldn't happen
 			throw new RuntimeException(String.format("Request %s's group doesn't exist: %s",
-					request.getID().toString(), e.getMessage()), e);
+					request.getID().getID(), e.getMessage()), e);
 		}
 		return g;
 	}
@@ -272,7 +275,7 @@ public class Groups {
 		}
 	}
 	
-	public GroupRequest cancelRequest(final Token userToken, final UUID requestID)
+	public GroupRequest cancelRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
 		checkNotNull(userToken, "userToken");
@@ -290,7 +293,7 @@ public class Groups {
 	
 	public GroupRequest denyRequest(
 			final Token userToken,
-			final UUID requestID,
+			final RequestID requestID,
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
@@ -310,7 +313,7 @@ public class Groups {
 	
 	public GroupRequest acceptRequest(
 			final Token userToken,
-			final UUID requestID)
+			final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
 		checkNotNull(userToken, "userToken");
@@ -372,7 +375,7 @@ public class Groups {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
-					user.getName(), accept ? "accept" : "deny", request.getID().toString()));
+					user.getName(), accept ? "accept" : "deny", request.getID().getID()));
 		}
 	}
 	

@@ -28,6 +28,7 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
+import us.kbase.groups.core.request.RequestID;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
 
@@ -105,26 +106,26 @@ public class MongoGroupsStorageOpsTest {
 	public void storeAndGetRequestMinimal() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				id, new GroupID("foo"), new UserName("bar"),
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 					.build())
 				.build());
 		
-		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
 				is(GroupRequest.getBuilder(
-				id, new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-					.build())
-				.build()));
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+						.build())
+						.build()));
 	}
 	
 	@Test
 	public void storeAndGetRequestMaximal() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				id, new GroupID("foobar"), new UserName("barfoo"),
+				new RequestID(id), new GroupID("foobar"), new UserName("barfoo"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
 					.withModificationTime(Instant.ofEpochMilli(50000))
@@ -134,9 +135,9 @@ public class MongoGroupsStorageOpsTest {
 						GroupRequestStatusType.DENIED, new UserName("whee"), "jerkface"))
 				.build());
 		
-		assertThat("incorrect request", manager.storage.getRequest(UUID.fromString(id.toString())),
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
 				is(GroupRequest.getBuilder(
-						id, new GroupID("foobar"), new UserName("barfoo"),
+						new RequestID(id), new GroupID("foobar"), new UserName("barfoo"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
 						.withModificationTime(Instant.ofEpochMilli(50000))
@@ -153,14 +154,14 @@ public class MongoGroupsStorageOpsTest {
 	public void storeRequestFailDuplicateID() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				id, new GroupID("foo"), new UserName("bar"),
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 					.build())
 				.build());
 		
 		final GroupRequest request = GroupRequest.getBuilder(
-				id, new GroupID("foo1"), new UserName("bar1"),
+				new RequestID(id), new GroupID("foo1"), new UserName("bar1"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
 				.build())
@@ -176,14 +177,14 @@ public class MongoGroupsStorageOpsTest {
 	public void storeRequestFailEquivalentRequestNoTarget() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				id, new GroupID("foo"), new UserName("bar"),
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 					.build())
 				.build());
 		
 		final GroupRequest request = GroupRequest.getBuilder(
-				UUID.randomUUID(), new GroupID("foo"), new UserName("bar"),
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
 				.build())
@@ -197,7 +198,7 @@ public class MongoGroupsStorageOpsTest {
 	public void storeRequestFailEquivalentRequestWithTarget() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				id, new GroupID("foo1"), new UserName("bar1"),
+				new RequestID(id), new GroupID("foo1"), new UserName("bar1"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 					.build())
@@ -205,7 +206,7 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		final GroupRequest request = GroupRequest.getBuilder(
-				UUID.randomUUID(), new GroupID("foo1"), new UserName("bar1"),
+				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("bar1"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
 				.build())
