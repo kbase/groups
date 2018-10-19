@@ -3,7 +3,6 @@ package us.kbase.groups.storage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -16,6 +15,7 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
+import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 public interface GroupsStorage {
@@ -40,7 +40,7 @@ public interface GroupsStorage {
 	void storeRequest(GroupRequest request)
 			throws RequestExistsException, GroupsStorageException;
 	
-	GroupRequest getRequest(UUID requestID)
+	GroupRequest getRequest(RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
@@ -63,7 +63,7 @@ public interface GroupsStorage {
 			throws GroupsStorageException;
 	
 	void closeRequest(
-			UUID requestID,
+			RequestID requestID,
 			GroupRequestStatus status,
 			Instant modificationTime)
 			throws NoSuchRequestException, GroupsStorageException;

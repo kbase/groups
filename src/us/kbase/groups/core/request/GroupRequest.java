@@ -3,7 +3,6 @@ package us.kbase.groups.core.request;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import com.google.common.base.Optional;
 
@@ -17,8 +16,7 @@ public class GroupRequest {
 	// TODO TEST
 	// TODO NOW expire requests in DB - need a thread running
 	
-	// TODO NOW make a real ID class that wraps UUID
-	private final UUID id;
+	private final RequestID id;
 	private final GroupID groupID;
 	private final Optional<UserName> target;
 	private final UserName requester;
@@ -31,7 +29,7 @@ public class GroupRequest {
 	private final Instant expirationDate;
 	
 	private GroupRequest(
-			final UUID id,
+			final RequestID id,
 			final GroupID groupID,
 			final Optional<UserName> target,
 			final UserName requester,
@@ -53,7 +51,7 @@ public class GroupRequest {
 		this.expirationDate = times.getExpirationTime();
 	}
 
-	public UUID getID() {
+	public RequestID getID() {
 		return id;
 	}
 
@@ -209,7 +207,7 @@ public class GroupRequest {
 	 * @return
 	 */
 	public static Builder getBuilder(
-			final UUID id,
+			final RequestID id,
 			final GroupID groupID,
 			final UserName requester,
 			final CreateModAndExpireTimes times) {
@@ -222,7 +220,7 @@ public class GroupRequest {
 	 */
 	public static class Builder {
 		
-		private final UUID id;
+		private final RequestID id;
 		private final GroupID groupID;
 		private final UserName requester;
 		private final CreateModAndExpireTimes times;
@@ -233,7 +231,7 @@ public class GroupRequest {
 		private Optional<String> closedReason = Optional.absent();
 
 		private Builder(
-				final UUID id,
+				final RequestID id,
 				final GroupID groupID,
 				final UserName requester,
 				final CreateModAndExpireTimes times) {

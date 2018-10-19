@@ -14,7 +14,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,6 +49,7 @@ import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
+import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -401,7 +401,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		checkNotNull(request, "request");
 		final String charString = getCharacteristicString(request);
 		final Document u = new Document(
-				Fields.REQUEST_ID, request.getID().toString())
+				Fields.REQUEST_ID, request.getID().getID())
 				.append(Fields.REQUEST_GROUP_ID, request.getGroupID().getName())
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
 				.append(Fields.REQUEST_STATUS, request.getStatusType().toString())
@@ -424,7 +424,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				if ((Fields.REQUEST_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format("ID %s already exists " +
 							"in the database. The programmer is responsible for maintaining " +
-							"unique IDs.", request.getID().toString()));
+							"unique IDs.", request.getID().getID()));
 				} else if ((Fields.REQUEST_CHARACTERISTIC_STRING + "_1")
 						.equals(dk.getIndex().get())) {
 					// there's a tiny possibility of race condition here but not worth
@@ -494,13 +494,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 
 
 	@Override
-	public GroupRequest getRequest(final UUID requestID)
+	public GroupRequest getRequest(final RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException {
 		checkNotNull(requestID, "requestID");
 		final Document req = findOne(
-				COL_REQUESTS, new Document(Fields.REQUEST_ID, requestID.toString()));
+				COL_REQUESTS, new Document(Fields.REQUEST_ID, requestID.getID()));
 		if (req == null) {
-			throw new NoSuchRequestException(requestID.toString());
+			throw new NoSuchRequestException(requestID.getID());
 		} else {
 			return toRequest(req);
 		}
@@ -571,7 +571,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final String target = req.getString(Fields.REQUEST_TARGET);
 			final String closedBy = req.getString(Fields.REQUEST_CLOSED_BY);
 			return GroupRequest.getBuilder(
-					UUID.fromString(req.getString(Fields.REQUEST_ID)),
+					new RequestID(req.getString(Fields.REQUEST_ID)),
 					new GroupID(req.getString(Fields.REQUEST_GROUP_ID)),
 					new UserName(req.getString(Fields.REQUEST_REQUESTER)),
 					CreateModAndExpireTimes.getBuilder(
@@ -597,7 +597,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	@Override
 	public void closeRequest(
-			final UUID requestID,
+			final RequestID requestID,
 			final GroupRequestStatus newStatus,
 			final Instant modificationTime)
 			throws NoSuchRequestException, GroupsStorageException {
@@ -618,14 +618,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 			set.append(Fields.REQUEST_REASON_CLOSED, newStatus.getClosedReason().get());
 		}
 		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
-		final Document query = new Document(Fields.REQUEST_ID, requestID.toString())
+		final Document query = new Document(Fields.REQUEST_ID, requestID.getID())
 				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.toString());
 		try {
 			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
 					query, new Document("$set", set).append("$unset", unset));
 			if (res.getMatchedCount() != 1) {
 				throw new NoSuchRequestException("No open request with ID " +
-						requestID.toString());
+						requestID.getID());
 			}
 			// has to be modified, so no need to check
 		} catch (MongoException e) {

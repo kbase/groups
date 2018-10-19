@@ -1,9 +1,9 @@
 package us.kbase.groups.core;
 
 import java.util.Set;
-import java.util.UUID;
 
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.RequestID;
 
 public interface Notifications {
 
@@ -11,7 +11,7 @@ public interface Notifications {
 	
 	void notify(Set<UserName> targets, Group group, GroupRequest request);
 
-	void cancel(UUID requestID);
+	void cancel(RequestID requestID);
 
 	void deny(Set<UserName> targets, GroupRequest request, UserName deniedBy);
 

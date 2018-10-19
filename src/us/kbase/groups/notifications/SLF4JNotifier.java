@@ -3,7 +3,6 @@ package us.kbase.groups.notifications;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -12,6 +11,7 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Notifications;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.RequestID;
 
 /** A notification implementation that sends a message to SLF4J but otherwise does nothing
  * useful. 
@@ -31,7 +31,7 @@ public class SLF4JNotifier implements Notifications {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"Notifying %s of request %s %s for group %s (%s) with target %s requested by %s",
 				userNamesToStrings(targets),
-				request.getID().toString(),
+				request.getID().getID(),
 				request.getType().toString(),
 				request.getGroupID().getName(),
 				group.getGroupName().getName(),
@@ -44,9 +44,9 @@ public class SLF4JNotifier implements Notifications {
 	}
 
 	@Override
-	public void cancel(final UUID requestID) {
+	public void cancel(final RequestID requestID) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
-				"Canceled request %s", requestID.toString()));
+				"Canceled request %s", requestID.getID()));
 	}
 	
 	@Override
@@ -56,7 +56,7 @@ public class SLF4JNotifier implements Notifications {
 			final UserName deniedBy) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s denied request %s, targets: %s",
-				deniedBy.getName(), request.getID().toString(), userNamesToStrings(targets)));
+				deniedBy.getName(), request.getID().getID(), userNamesToStrings(targets)));
 	}
 
 	@Override
@@ -66,7 +66,7 @@ public class SLF4JNotifier implements Notifications {
 			final UserName acceptedBy) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s accepted request %s, targets: %s",
-				acceptedBy.getName(), request.getID().toString(), userNamesToStrings(targets)));
+				acceptedBy.getName(), request.getID().getID(), userNamesToStrings(targets)));
 	}
 
 }

@@ -18,7 +18,7 @@ public class APICommon {
 	public static Map<String, Object> toGroupRequestJSON(final GroupRequest request) {
 		checkNotNull(request, "request");
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put(Fields.REQUEST_ID, request.getID().toString());
+		ret.put(Fields.REQUEST_ID, request.getID().getID());
 		ret.put(Fields.REQUEST_GROUP_ID, request.getGroupID().getName());
 		ret.put(Fields.REQUEST_REQUESTER, request.getRequester().getName());
 		ret.put(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
