@@ -221,7 +221,7 @@ public class Group {
 		private final UserName owner;
 		private final Set<UserName> members = new HashSet<>();
 		private final CreateAndModTimes times;
-		private GroupType type = GroupType.organization;
+		private GroupType type = GroupType.ORGANIZATION;
 		private Optional<String> description = Optional.absent();
 		
 		public Builder(

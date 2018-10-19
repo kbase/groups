@@ -2,8 +2,10 @@ package us.kbase.test.groups.core.request;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static us.kbase.test.groups.TestCommon.set;
 
 import java.util.Arrays;
+import java.util.HashSet;
 
 import org.junit.Test;
 
@@ -24,6 +26,18 @@ public class GroupRequestStatusTypeTest {
 			assertThat("incorrect rep",
 					GroupRequestStatusType.valueOf(split[0]).getRepresentation(), is(split[1]));
 		}
+	}
+	
+	@Test
+	public void values() {
+		assertThat("incorrect values",
+				new HashSet<>(Arrays.asList(GroupRequestStatusType.values())),
+				is(set(
+						GroupRequestStatusType.OPEN,
+						GroupRequestStatusType.CANCELED,
+						GroupRequestStatusType.EXPIRED,
+						GroupRequestStatusType.ACCEPTED,
+						GroupRequestStatusType.DENIED)));
 	}
 
 }

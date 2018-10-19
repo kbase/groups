@@ -650,9 +650,9 @@ export default class {
             <div class="form-group">
               <label for="grouptype">Type</label>
               <select class="form-control" id="grouptype">
-                  <option value="organization">Organization</option>
-                  <option value="project">Project</option>
-                  <option value="team">Team</option>
+                  <option value="Organization">Organization</option>
+                  <option value="Project">Project</option>
+                  <option value="Team">Team</option>
               </select>
             </div>
             <div class="form-group">

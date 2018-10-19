@@ -275,7 +275,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
 				.append(Fields.GROUP_MEMBERS, group.getMembers().stream().map(m -> m.getName())
 						.collect(Collectors.toList()))
-				.append(Fields.GROUP_TYPE, group.getType().toString())
+				.append(Fields.GROUP_TYPE, group.getType().name())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
 				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orNull());
@@ -332,12 +332,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
-					// TODO NOW check valueOf error conditions 
+					// TODO TEST check valueOf error conditions
 					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
 			addMembers(b, grp);
 			return b.build();
-		} catch (MissingParameterException | IllegalParameterException e) {
+		} catch (MissingParameterException | IllegalParameterException |
+				IllegalArgumentException e) {
 			throw new GroupsStorageException(
 					"Unexpected value in database: " + e.getMessage(), e);
 		}
@@ -405,7 +406,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_GROUP_ID, request.getGroupID().getName())
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
 				.append(Fields.REQUEST_STATUS, request.getStatusType().name())
-				.append(Fields.REQUEST_TYPE, request.getType().toString())
+				.append(Fields.REQUEST_TYPE, request.getType().name())
 				.append(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
 						request.getTarget().get().getName() : null)
 				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy().isPresent() ?
@@ -476,7 +477,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final StringBuilder builder = new StringBuilder();
 		builder.append(request.getGroupID().getName());
 		builder.append(request.getRequester().getName());
-		builder.append(request.getType().toString());
+		builder.append(request.getType().name());
 		builder.append(request.getTarget().isPresent() ? request.getTarget().get().getName() : "");
 		final MessageDigest digester;
 		try {
@@ -581,6 +582,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 									.toInstant())
 							.build())
 					.withType(
+							// TODO TEST check valueOf error conditions
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target))
 					.withStatus(GroupRequestStatus.from(
@@ -609,7 +611,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					"newStatus cannot be " + GroupRequestStatusType.OPEN);
 		}
 		final Document set = new Document(
-				Fields.REQUEST_STATUS, newStatus.getStatusType().toString())
+				Fields.REQUEST_STATUS, newStatus.getStatusType().name())
 				.append(Fields.REQUEST_MODIFICATION, Date.from(modificationTime));
 		if (newStatus.getClosedBy().isPresent()) {
 			set.append(Fields.REQUEST_CLOSED_BY, newStatus.getClosedBy().get().getName());

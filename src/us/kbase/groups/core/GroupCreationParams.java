@@ -125,7 +125,7 @@ public class GroupCreationParams {
 		
 		private final GroupID groupID;
 		private final GroupName groupName;
-		private GroupType type = GroupType.organization;
+		private GroupType type = GroupType.ORGANIZATION;
 		private Optional<String> description = Optional.absent();
 		
 		public Builder(final GroupID id, final GroupName name) {

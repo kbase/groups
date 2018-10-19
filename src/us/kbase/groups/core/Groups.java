@@ -405,7 +405,7 @@ public class Groups {
 				t,
 				GroupCreationParams.getBuilder(
 						new GroupID("foo"), new GroupName("from Groups.java"))
-						.withType(GroupType.team)
+						.withType(GroupType.TEAM)
 						.withDescription("desc")
 						.build());
 		System.out.println(g1);
