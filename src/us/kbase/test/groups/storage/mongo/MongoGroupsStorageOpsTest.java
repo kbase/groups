@@ -88,7 +88,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withType(GroupType.project)
+				.withType(GroupType.PROJECT)
 				.withDescription("desc")
 				.build());
 		
@@ -97,7 +97,7 @@ public class MongoGroupsStorageOpsTest {
 						new GroupID("gid"), new GroupName("name"), new UserName("uname"),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-						.withType(GroupType.project)
+						.withType(GroupType.PROJECT)
 						.withDescription("desc")
 						.build()));
 	}

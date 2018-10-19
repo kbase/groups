@@ -101,8 +101,7 @@ public class GroupsAPI {
 				new GroupID(groupID), new GroupName(create.groupName))
 				.withDescription(create.description);
 		if (!isNullOrEmpty(create.type)) {
-			//TODO NOW check out valueOf error cases for type
-			gbuilder.withType(GroupType.valueOf(create.type));
+			gbuilder.withType(GroupType.fromRepresentation(create.type));
 		}
 		return toGroupJSON(groups.createGroup(getToken(token, true), gbuilder.build()));
 	}
@@ -176,7 +175,7 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
-		ret.put(Fields.GROUP_TYPE, g.getType().toString());
+		ret.put(Fields.GROUP_TYPE, g.getType().getRepresentation());
 		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
 		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
 		ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
