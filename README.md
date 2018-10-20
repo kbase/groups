@@ -78,9 +78,13 @@ This data structure is returned for all service errors.
 }
 ```
 
-The application code and application error are two ways of representing the same error type.
-
 The call ID and service time can be used to find more details about the error in the service logs.
+
+The application code and application error are two ways of representing the same error type. They
+are only present for 4XX errors that are not general service errors. For example, navigating
+to `/grops` instead of `/groups` will result in a 404 error without application error
+information. Similarly, 405 and 415 errors will not include an application error code.
+
 
 Current error types are:
 
@@ -385,7 +389,6 @@ see /design/*.md
 * Gravatar support
 * System admin support (what do they need to be able to do other than see everything?)
 * travis
-  * update mongo versions - out of date
   * try mongo 4 - maybe wait for a couple bugfix versions
 * Maybe filter groups by mod date & set limit to allow for cheap paging. Not really expecting a
   huge number of groups though.
