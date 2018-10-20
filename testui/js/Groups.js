@@ -365,7 +365,7 @@ export default class {
           return;
       }
       fetch(this.serviceUrl + "group/" + groupid + '/user/' + member,
-        {"method": "PUT",
+        {"method": "POST",
          "headers": this.getHeaders()
          }).then( (response) => {
              if (response.ok) {

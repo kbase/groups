@@ -38,6 +38,7 @@ public class RequestAPI {
 	
 	// TODO JAVADOC
 	// TODO TEST
+	// TODO NOW use getToken method for all endpoints
 	
 	private final Groups groups;
 	

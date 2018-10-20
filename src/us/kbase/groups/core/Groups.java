@@ -45,6 +45,7 @@ public class Groups {
 	//TODO JAVADOC
 	//TODO TEST
 	//TODO LOGGING for all actions
+	//TODO NOW use getToken method for all endpoints
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -322,6 +323,7 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureCanAcceptOrDeny(request, group, user, true);
+		//TODO NOW check if user is member and if so throw error
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 			processAcceptGroupMembershipRequest(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
