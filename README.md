@@ -389,7 +389,6 @@ see /design/*.md
 * Gravatar support
 * System admin support (what do they need to be able to do other than see everything?)
 * travis
-  * update mongo versions - out of date
   * try mongo 4 - maybe wait for a couple bugfix versions
 * Maybe filter groups by mod date & set limit to allow for cheap paging. Not really expecting a
   huge number of groups though.
