@@ -266,6 +266,7 @@
         <test name="us.kbase.test.groups.core.GroupTypeTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTypeTest"/>
+      	<test name="us.kbase.test.groups.core.request.GroupRequestUserActionTest"/>
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>

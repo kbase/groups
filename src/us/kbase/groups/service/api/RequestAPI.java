@@ -59,7 +59,8 @@ public class RequestAPI {
 		final GroupRequestWithActions actions = groups.getRequest(
 							new Token(token), new RequestID(requestID));
 		final Map<String, Object> json = APICommon.toGroupRequestJSON(actions.getRequest());
-		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions()));
+		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions())
+				.stream().map(a -> a.getRepresentation()).collect(Collectors.toList()));
 		return json;
 	}
 	
