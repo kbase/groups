@@ -143,6 +143,7 @@ public class GroupCreationParams {
 		
 		// null or whitespace only == remove description
 		public Builder withDescription(final String description) {
+			// TODO NOW max length 5000 code points. Put in Group class as well
 			if (isNullOrEmpty(description)) {
 				this.description = Optional.absent();
 			} else {

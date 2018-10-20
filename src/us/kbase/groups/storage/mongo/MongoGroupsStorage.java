@@ -359,6 +359,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void addMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException {
+		//TODO NOW check if user is member and if so throw error
 		try {
 			alterMember(groupID, member, true);
 		} catch (NoSuchUserException e) {

@@ -131,7 +131,8 @@ public class GroupsAPI {
 				new Token(token), new GroupID(groupID)));
 	}
 	
-	@PUT
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
 	@Path(ServicePaths.GROUP_USER_ID)
 	public Map<String, Object> inviteMember(
 			@HeaderParam(HEADER_TOKEN) final String token,

@@ -270,15 +270,6 @@ Any other case results in an error.
   * Returns 204
   * Requirement: user must be owner of `GID` or `WSID` administrator
 
-### Request workspace access
-
-* Client sends a service message with
-  * `GID`
-  * `WSID`
-* Service
-  * Sends message to `WSID` administrators to Feeds
-  * Requirement: user must be in `GUseres` and `WSID` must be in `GWS`
-
 ### Administration
 
 * KBase administrators can bypass all requirements and can always see `PF`, but must specify
