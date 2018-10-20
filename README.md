@@ -71,7 +71,7 @@ This data structure is returned for all service errors.
         "apperror": <the application error string, a descriptive string for the error>,
         "callid": <the ID of the service request>,
         "httpcode": <the http error code, e.g. 404>,
-        "httpstatus": <the http status, e.g. Not Found,
+        "httpstatus": <the http status, e.g. Not Found>,
         "message": <an error message>,
         "time": <the time the error occurred in epoch ms>
     }
@@ -79,6 +79,7 @@ This data structure is returned for all service errors.
 ```
 
 The application code and application error are two ways of representing the same error type.
+
 The call ID and service time can be used to find more details about the error in the service logs.
 
 Current error types are:
@@ -366,7 +367,7 @@ an html server for the UI behind a reverse proxy to avoid CORS issues.
 
 ## TODO
 
-see design/*.md
+see /design/*.md
 
 * Add / remove workspaces from group
   * return minimal metadata (probably have a workspaces endpoint rather than returning with
