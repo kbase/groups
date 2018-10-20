@@ -32,7 +32,7 @@ public class SLF4JNotifier implements Notifications {
 				"Notifying %s of request %s %s for group %s (%s) with target %s requested by %s",
 				userNamesToStrings(targets),
 				request.getID().getID(),
-				request.getType().toString(),
+				request.getType().getRepresentation(),
 				request.getGroupID().getName(),
 				group.getGroupName().getName(),
 				request.getTarget().isPresent() ? request.getTarget().get().getName() : null,
