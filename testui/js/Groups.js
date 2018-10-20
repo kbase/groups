@@ -507,9 +507,9 @@ export default class {
                   const c = new Date(json.createdate).toLocaleString();
                   const m = new Date(json.moddate).toLocaleString();
                   const e = new Date(json.expiredate).toLocaleString();
-                  const canCancel = json.actions.includes('CANCEL');
-                  const canDeny = json.actions.includes('DENY');
-                  const canAccept = json.actions.includes('ACCEPT');
+                  const canCancel = json.actions.includes('Cancel');
+                  const canDeny = json.actions.includes('Deny');
+                  const canAccept = json.actions.includes('Accept');
                   const s = this.sanitize;
                   let g =
                       `
