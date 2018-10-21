@@ -7,15 +7,23 @@ import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
+/** A group ID. Lowercase ASCII letters, numbers, and hyphens are allowed, but the first
+ * character must be a letter. The maximum length is 100 characters.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GroupID extends Name {
 	
-	//TODO JAVADOC
 	//TODO TEST
 	
-	private static final String INVALID_CHARS_REGEX = "[^a-z\\d_-]+";
+	private static final String INVALID_CHARS_REGEX = "[^a-z\\d-]+";
 	private final static Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
-	public final static int MAX_NAME_LENGTH = 100;
-	
+
+	/** Create a new ID. The ID will be {@link String#trim()}ed.
+	 * @param id the ID.
+	 * @throws MissingParameterException if the ID is null or whitespace only.
+	 * @throws IllegalParameterException if the ID is too long or has illegal characters.
+	 */
 	public GroupID(final String id) throws MissingParameterException, IllegalParameterException {
 		super(id, " group id", 100);
 		final Matcher m = INVALID_CHARS.matcher(id);
