@@ -247,10 +247,6 @@ public class Group {
 	 * @author gaprice@lbl.gov
 	 *
 	 */
-	/**
-	 * @author gaprice@lbl.gov
-	 *
-	 */
 	public static class Builder {
 		
 		private final GroupID groupID;
