@@ -73,16 +73,15 @@ public class GroupTest {
 	
 	@Test
 	public void buildWithEmptyDescription() throws Exception {
-		buildWitEmptyDescription(null);
-		buildWitEmptyDescription("   \t     ");
+		buildWithEmptyDescription(null);
+		buildWithEmptyDescription("   \t     ");
 	}
 	
-	private void buildWitEmptyDescription(final String description) throws Exception {
+	private void buildWithEmptyDescription(final String description) throws Exception {
 		final Group g = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withDescription(description)
-				.withType(GroupType.PROJECT)
 				.build();
 
 		assertThat("incorrect desc", g.getDescription(), is(Optional.absent()));
@@ -180,7 +179,7 @@ public class GroupTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
-					"description must be < 5000 Unicode code points"));
+					"description must be <= 5000 Unicode code points"));
 		}
 	}
 	
@@ -262,7 +261,4 @@ public class GroupTest {
 		
 		assertThat("incorrect priv", g.withoutPrivateFields(), is(gprivate));
 	}
-	
-	
-	
 }
