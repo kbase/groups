@@ -1,6 +1,7 @@
 package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
+import static us.kbase.groups.service.api.APICommon.getToken;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.HashMap;
@@ -30,7 +31,6 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.Groups;
-import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -48,8 +48,7 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
 @Path(ServicePaths.GROUP)
 public class GroupsAPI {
 
-	// TODO JAVADOC
-	// TODO TEST
+	// TODO JAVADOC / swagger
 	// TODO NOW add endpoint for getting group types
 	
 	private final Groups groups;
@@ -62,6 +61,7 @@ public class GroupsAPI {
 	
 	// this assumes there are a relatively small number of groups. If that proves false,
 	// will need to filter somehow. Remember, deep paging was invented by Satan himself.
+	// might want to remove description, members, and other fields
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getGroups(
@@ -128,7 +128,7 @@ public class GroupsAPI {
 				UserIsMemberException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException, RequestExistsException {
 		return APICommon.toGroupRequestJSON(groups.requestGroupMembership(
-				new Token(token), new GroupID(groupID)));
+				getToken(token, true), new GroupID(groupID)));
 	}
 	
 	@POST
@@ -143,7 +143,7 @@ public class GroupsAPI {
 				RequestExistsException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException {
 		return APICommon.toGroupRequestJSON(groups.inviteUserToGroup(
-				new Token(token), new GroupID(groupID), new UserName(member)));
+				getToken(token, true), new GroupID(groupID), new UserName(member)));
 	}
 	
 	@GET
@@ -156,7 +156,7 @@ public class GroupsAPI {
 				AuthenticationException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroupID(
-				new Token(token), new GroupID(groupID)));
+				getToken(token, true), new GroupID(groupID)));
 	}
 	
 	@DELETE
@@ -168,7 +168,7 @@ public class GroupsAPI {
 			throws NoSuchGroupException, InvalidTokenException, NoSuchUserException,
 				AuthenticationException, UnauthorizedException, MissingParameterException,
 				IllegalParameterException, GroupsStorageException {
-		groups.removeMember(new Token(token), new GroupID(groupID), new UserName(member));
+		groups.removeMember(getToken(token, true), new GroupID(groupID), new UserName(member));
 	}
 
 	private Map<String, Object> toGroupJSON(final Group g) {
@@ -183,23 +183,6 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_MEMBERS, new TreeSet<>(g.getMembers()).stream().map(n -> n.getName())
 				.collect(Collectors.toList()));
 		return ret;
-	}
-	
-	private Token getToken(final String token, final boolean required)
-			throws NoTokenProvidedException {
-		if (isNullOrEmpty(token)) {
-			if (required) {
-				throw new NoTokenProvidedException("No token provided");
-			} else {
-				return null;
-			}
-		} else {
-			try {
-				return new Token(token);
-			} catch (MissingParameterException e) {
-				throw new RuntimeException("This is impossible. It didn't happen.", e);
-			}
-		}
 	}
 	
 	private void checkIncomingJson(final IncomingJSON json)

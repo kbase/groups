@@ -1,6 +1,7 @@
 package us.kbase.groups.service.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.Token;
+import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
 
 public class APICommon {
@@ -34,6 +38,24 @@ public class APICommon {
 	
 	public static List<Map<String, Object>> toGroupRequestJSON(
 			final Collection<GroupRequest> requests) {
+		checkNotNull(requests, "requests");
 		return requests.stream().map(r -> toGroupRequestJSON(r)).collect(Collectors.toList());
+	}
+	
+	public static Token getToken(final String token, final boolean required)
+			throws NoTokenProvidedException {
+		if (isNullOrEmpty(token)) {
+			if (required) {
+				throw new NoTokenProvidedException("No token provided");
+			} else {
+				return null;
+			}
+		} else {
+			try {
+				return new Token(token);
+			} catch (MissingParameterException e) {
+				throw new RuntimeException("This is impossible. It didn't happen.", e);
+			}
+		}
 	}
 }

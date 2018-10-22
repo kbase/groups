@@ -9,11 +9,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -510,21 +508,21 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
 	@Override
-	public Set<GroupRequest> getRequestsByRequester(
+	public List<GroupRequest> getRequestsByRequester(
 			final UserName requester,
 			final GroupRequestStatusType status) throws GroupsStorageException {
 		return getRequestsByUser(requester, status, Fields.REQUEST_REQUESTER, "requester");
 	}
 	
 	@Override
-	public Set<GroupRequest> getRequestsByTarget(
+	public List<GroupRequest> getRequestsByTarget(
 			final UserName target,
 			final GroupRequestStatusType status)
 			throws GroupsStorageException {
 		return getRequestsByUser(target, status, Fields.REQUEST_TARGET, "target");
 	}
 
-	private Set<GroupRequest> getRequestsByUser(
+	private List<GroupRequest> getRequestsByUser(
 			final UserName requester,
 			final GroupRequestStatusType status,
 			final String field,
@@ -542,9 +540,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 		return query;
 	}
 
-	private Set<GroupRequest> findRequests(final Document query)
+	private List<GroupRequest> findRequests(final Document query)
 			throws GroupsStorageException {
-		final Set<GroupRequest> ret = new HashSet<>();
+		final List<GroupRequest> ret = new LinkedList<>();
 		try {
 			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query);
 			for (final Document rdoc: gdocs) {
@@ -558,7 +556,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public Set<GroupRequest> getRequestsByGroupID(
+	public List<GroupRequest> getRequestsByGroupID(
 			final GroupID groupID,
 			final GroupRequestStatusType status)
 			throws GroupsStorageException {

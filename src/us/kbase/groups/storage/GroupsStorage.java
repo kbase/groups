@@ -2,7 +2,6 @@ package us.kbase.groups.storage;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -45,13 +44,13 @@ public interface GroupsStorage {
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// pass null for any status
-	Set<GroupRequest> getRequestsByRequester(
+	List<GroupRequest> getRequestsByRequester(
 			UserName requester,
 			GroupRequestStatusType status) throws GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// pass null for any status
-	Set<GroupRequest> getRequestsByTarget(
+	List<GroupRequest> getRequestsByTarget(
 			UserName target,
 			GroupRequestStatusType status) throws GroupsStorageException;
 
@@ -59,7 +58,7 @@ public interface GroupsStorage {
 	// maybe also specify optional target user? YAGNI for now
 	// only returns requests for that group specifically, e.g. no target user
 	// pass null for any status
-	Set<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatusType status)
+	List<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatusType status)
 			throws GroupsStorageException;
 	
 	void closeRequest(

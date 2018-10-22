@@ -4,7 +4,6 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -145,7 +144,7 @@ public class RequestAPI {
 				new Token(token), new RequestID(requestID), reason));
 	}
 
-	private List<Map<String, Object>> toList(final Set<GroupRequest> reqs) {
+	private List<Map<String, Object>> toList(final List<GroupRequest> reqs) {
 		return reqs.stream().map(r -> APICommon.toGroupRequestJSON(r))
 				.collect(Collectors.toList());
 	}

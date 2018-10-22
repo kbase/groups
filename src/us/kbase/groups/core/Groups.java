@@ -45,7 +45,6 @@ public class Groups {
 	//TODO JAVADOC
 	//TODO TEST
 	//TODO LOGGING for all actions
-	//TODO NOW use getToken method for all endpoints
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -223,7 +222,7 @@ public class Groups {
 	}
 	
 	//TODO CODE allow getting closed requests
-	public Set<GroupRequest> getRequestsForRequester(final Token userToken)
+	public List<GroupRequest> getRequestsForRequester(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
@@ -231,14 +230,14 @@ public class Groups {
 	}
 	
 	//TODO CODE allow getting closed requests
-	public Set<GroupRequest> getRequestsForTarget(final Token userToken)
+	public List<GroupRequest> getRequestsForTarget(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
 		return storage.getRequestsByTarget(user, GroupRequestStatusType.OPEN);
 	}
 	
-	public Set<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
+	public List<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
 		// TODO NOW specify request types in search - just excluding target in mongo storage class won't work.

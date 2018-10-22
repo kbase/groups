@@ -25,7 +25,7 @@ public class GroupID extends Name {
 	 * @throws IllegalParameterException if the ID is too long or has illegal characters.
 	 */
 	public GroupID(final String id) throws MissingParameterException, IllegalParameterException {
-		super(id, " group id", 100);
+		super(id, "group id", 100);
 		final Matcher m = INVALID_CHARS.matcher(id);
 		if (m.find()) {
 			throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
