@@ -16,9 +16,13 @@ import us.kbase.groups.core.request.GroupRequest;
 
 public class APICommon {
 	
-	// TODO JAVADOC
 	// TODO TEST
 
+	/** Transform a {@link GroupRequest} object into a Map/List structure suitable for
+	 * serializing to JSON.
+	 * @param request the request object.
+	 * @return the JSONable structure.
+	 */
 	public static Map<String, Object> toGroupRequestJSON(final GroupRequest request) {
 		checkNotNull(request, "request");
 		final Map<String, Object> ret = new HashMap<>();
@@ -35,13 +39,26 @@ public class APICommon {
 		return ret;
 	}
 	
-	
+	/** Transform {@link GroupRequest} objects into a list of  Map/List structures suitable for
+	 * serializing to JSON.
+	 * @param requests the request objects.
+	 * @return the list of JSONable structures.
+	 */
 	public static List<Map<String, Object>> toGroupRequestJSON(
 			final Collection<GroupRequest> requests) {
 		checkNotNull(requests, "requests");
 		return requests.stream().map(r -> toGroupRequestJSON(r)).collect(Collectors.toList());
 	}
 	
+	/** Get a {@link Token} from a string.
+	 * @param token the string containing the token.
+	 * @param required true if the token is required, false if not. If true, if the token string
+	 * is null or whitespace only, an exception will be thrown. If false, null will be
+	 * returned in that case.
+	 * @return the token or null.
+	 * @throws NoTokenProvidedException if the token is required and the token string is null
+	 * or whitespace only.
+	 */
 	public static Token getToken(final String token, final boolean required)
 			throws NoTokenProvidedException {
 		if (isNullOrEmpty(token)) {

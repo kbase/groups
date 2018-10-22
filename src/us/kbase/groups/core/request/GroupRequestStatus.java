@@ -84,6 +84,8 @@ public class GroupRequestStatus {
 		checkNotNull(deniedBy, "deniedBy");
 		if (isNullOrEmpty(reason)) {
 			reason = null;
+		} else {
+			reason = reason.trim();
 		}
 		return new GroupRequestStatus(
 				DENIED, Optional.of(deniedBy), Optional.fromNullable(reason));

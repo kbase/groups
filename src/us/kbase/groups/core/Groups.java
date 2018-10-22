@@ -191,6 +191,7 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(request);
+		//TODO PRIVATE may want to censor accepter/denier and deny reason here and in other methods that return a closed request
 		return getAuthorizedActions(user, request, g);
 	}
 	
