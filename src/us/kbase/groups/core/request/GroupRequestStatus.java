@@ -12,11 +12,14 @@ import com.google.common.base.Optional;
 
 import us.kbase.groups.core.UserName;
 
+/** The status of a {@link GroupRequest}. Includes a {@link GroupRequestStatusType},
+ * the user that accepted or denied the request for those types, and an optional denial reason
+ * for denied requests.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GroupRequestStatus {
 	
-	// TODO JAVADOC
-	// TODO TEST
-
 	private final GroupRequestStatusType statusType;
 	private final Optional<UserName> closedBy;
 	private final Optional<String> closedReason;
@@ -30,14 +33,23 @@ public class GroupRequestStatus {
 		this.closedReason = closedReason;
 	}
 
+	/** Get the type of the status.
+	 * @return the type.
+	 */
 	public GroupRequestStatusType getStatusType() {
 		return statusType;
 	}
 
+	/** Get the user that closed the request for accepted and denied requests.
+	 * @return the closing user.
+	 */
 	public Optional<UserName> getClosedBy() {
 		return closedBy;
 	}
 
+	/** Get the reason the request was closed, if any. Only present for denied requests.
+	 * @return the closure reason.
+	 */
 	public Optional<String> getClosedReason() {
 		return closedReason;
 	}
