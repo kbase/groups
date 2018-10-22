@@ -295,7 +295,7 @@ public class Group {
 				if (description.codePointCount(0, description.length()) >
 						MAX_DESCRIPTION_CODE_POINTS) {
 					throw new IllegalArgumentException(
-							"description must be < 5000 Unicode code points");
+							"description must be <= 5000 Unicode code points");
 				}
 				this.description = Optional.of(description.trim());
 			}

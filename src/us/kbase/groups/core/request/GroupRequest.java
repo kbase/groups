@@ -204,7 +204,7 @@ public class GroupRequest {
 	 * @param groupID the ID of the group at which the request is targeted.
 	 * @param requester the user making the request.
 	 * @param times the creation, modification, and expiration times for the request.
-	 * @return
+	 * @return the builder.
 	 */
 	public static Builder getBuilder(
 			final RequestID id,
