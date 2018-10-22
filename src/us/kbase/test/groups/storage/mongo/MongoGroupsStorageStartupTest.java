@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +23,11 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.groups.core.CreateAndModTimes;
+import us.kbase.groups.core.Group;
+import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.test.groups.MongoStorageTestManager;
@@ -72,10 +78,18 @@ public class MongoGroupsStorageStartupTest {
 		assertThat("schema v1", (Integer)d.get("schemaver"), is(1));
 		
 		//check startup works with the config object in place
-		@SuppressWarnings("unused")
 		final MongoGroupsStorage ms = new MongoGroupsStorage(db);
 		
-		//TODO TEST perform some operation or other to make sure things are ok
+		ms.createGroup(Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("u"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.build());
+		
+		assertThat("incorrect group", ms.getGroup(new GroupID("id")), is(
+				Group.getBuilder(
+						new GroupID("id"), new GroupName("name"), new UserName("u"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.build()));
 	}
 	
 	@Test
