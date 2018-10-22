@@ -4,19 +4,26 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
 
+/** Creation and modification times for some item.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class CreateAndModTimes {
-	
-	// TODO JAVADOC
-	// TODO TEST
 	
 	private final Instant creationTime;
 	private final Instant modificationTime;
 	
-	// uses same instant for create + mod
+	/** Construct times where the creation and modification times are identical.
+	 * @param creationTime the creation and modification time.
+	 */
 	public CreateAndModTimes(final Instant creationTime) {
 		this(creationTime, creationTime);
 	}
 	
+	/** Construct times.
+	 * @param creationTime the creation time.
+	 * @param modificationTime the modification time.
+	 */
 	public CreateAndModTimes(final Instant creationTime, final Instant modificationTime) {
 		checkNotNull(creationTime, "creationTime");
 		checkNotNull(modificationTime, "modificationTime");
@@ -27,10 +34,16 @@ public class CreateAndModTimes {
 		}
 	}
 
+	/** Get the creation time.
+	 * @return
+	 */
 	public Instant getCreationTime() {
 		return creationTime;
 	}
 
+	/** Get the modification time.
+	 * @return
+	 */
 	public Instant getModificationTime() {
 		return modificationTime;
 	}

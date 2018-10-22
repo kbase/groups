@@ -393,4 +393,5 @@ see /design/*.md
 * Maybe filter groups by mod date & set limit to allow for cheap paging. Not really expecting a
   huge number of groups though.
 * Add lots of tests.
+  * Integration and otherwise
 * HTTP2 support

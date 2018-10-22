@@ -263,6 +263,7 @@
         <formatter type="plain" usefile="false" />
         <sysproperty key="KBASE_GROUPS_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.groups.config.GroupsConfigTest"/>
+        <test name="us.kbase.test.groups.core.CreateModExpireTimesTest"/>
         <test name="us.kbase.test.groups.core.GroupTest"/>
         <test name="us.kbase.test.groups.core.GroupCreationParamsTest"/>
         <test name="us.kbase.test.groups.core.GroupTypeTest"/>
