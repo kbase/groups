@@ -319,7 +319,7 @@ public class RequestAPITest {
 						.withStatus(GroupRequestStatus.canceled())
 						.build());
 		
-		final Map<String, Object> ret = new RequestAPI(g).cancelRequest("  tok  ", id.toString());
+		final Map<String, Object> ret = new RequestAPI(g).cancelRequest("tok", id.toString());
 		
 		assertThat("incorrect request", ret, is(MapBuilder.newHashMap()
 				.with("id", id.toString())
@@ -395,7 +395,7 @@ public class RequestAPITest {
 						.withStatus(GroupRequestStatus.accepted(new UserName("inv2")))
 						.build());
 		
-		final Map<String, Object> ret = new RequestAPI(g).acceptRequest("  tok  ", id.toString());
+		final Map<String, Object> ret = new RequestAPI(g).acceptRequest("tok", id.toString());
 		
 		assertThat("incorrect request", ret, is(MapBuilder.newHashMap()
 				.with("id", id.toString())
@@ -491,7 +491,7 @@ public class RequestAPITest {
 						.build());
 		
 		final Map<String, Object> ret = new RequestAPI(g).denyRequest(
-				"  tok  ", id.toString(), body);
+				"tok", id.toString(), body);
 		
 		assertThat("incorrect request", ret, is(MapBuilder.newHashMap()
 				.with("id", id.toString())

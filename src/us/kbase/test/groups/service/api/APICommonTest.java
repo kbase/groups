@@ -150,12 +150,12 @@ public class APICommonTest {
 	public void getToken() throws Exception {
 		assertThat("incorrect token", APICommon.getToken(null, false), is(nullValue()));
 		assertThat("incorrect token", APICommon.getToken("    \t   ", false), is(nullValue()));
-		assertThat("incorrect token", APICommon.getToken(" tok \t ", false), is(new Token("tok")));
+		assertThat("incorrect token", APICommon.getToken("tok", false), is(new Token("tok")));
 	}
 	
 	@Test
 	public void getTokenRequired() throws Exception {
-		assertThat("incorrect token", APICommon.getToken(" tok \t ", true), is(new Token("tok")));
+		assertThat("incorrect token", APICommon.getToken("tok", true), is(new Token("tok")));
 	}
 	
 	@Test

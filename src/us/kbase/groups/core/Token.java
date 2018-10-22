@@ -5,20 +5,21 @@ import static us.kbase.groups.util.Util.checkString;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
 
+/** An authentication token used to identify a user.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class Token {
-	
-	// TODO JAVADOC
-	// TODO TEST
 	
 	private final String token;
 
 	/** Create a token.
 	 * @param token the token string
-	 * @throws MissingParameterException if the token string is null or empty.
+	 * @throws MissingParameterException if the token string is null or whitespace only.
 	 */
 	public Token(final String token) throws MissingParameterException {
 		checkString(token, "token");
-		this.token = token.trim();
+		this.token = token;
 	}
 
 	/** Get the token string.
