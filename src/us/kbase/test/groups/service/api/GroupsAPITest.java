@@ -213,7 +213,7 @@ public class GroupsAPITest {
 	
 	@Test
 	public void getGroupWithToken() throws Exception {
-		getGroup("   foo   ", new Token("foo"));
+		getGroup("foo", new Token("foo"));
 	}
 	
 	private void getGroup(final String token, final Token expected) throws Exception {
