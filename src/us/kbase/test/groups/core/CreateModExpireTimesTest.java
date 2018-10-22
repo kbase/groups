@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
+import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.test.groups.TestCommon;
 
 public class CreateModExpireTimesTest {
@@ -57,6 +58,73 @@ public class CreateModExpireTimesTest {
 	private void failConstruct(final Instant create, final Instant mod, final Exception expected) {
 		try {
 			new CreateAndModTimes(create, mod);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void equalsExpire() throws Exception {
+		EqualsVerifier.forClass(CreateModAndExpireTimes.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void buildExpireMinimal() throws Exception {
+		final CreateModAndExpireTimes t = CreateModAndExpireTimes.getBuilder(
+				Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+				.build();
+		
+		assertThat("incorrect create", t.getCreationTime(), is(Instant.ofEpochMilli(10000)));
+		assertThat("incorrect mod", t.getModificationTime(), is(Instant.ofEpochMilli(10000)));
+		assertThat("incorrect expire", t.getExpirationTime(), is(Instant.ofEpochMilli(20000)));
+	}
+	
+	@Test
+	public void buildExpireMaximal() throws Exception {
+		final CreateModAndExpireTimes t = CreateModAndExpireTimes.getBuilder(
+				Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+				.withModificationTime(Instant.ofEpochMilli(15000))
+				.build();
+		
+		assertThat("incorrect create", t.getCreationTime(), is(Instant.ofEpochMilli(10000)));
+		assertThat("incorrect mod", t.getModificationTime(), is(Instant.ofEpochMilli(15000)));
+		assertThat("incorrect expire", t.getExpirationTime(), is(Instant.ofEpochMilli(20000)));
+	}
+	
+	@Test
+	public void getBuilderExpireFail() throws Exception {
+		final Instant i = Instant.ofEpochMilli(10000);
+		
+		failGetBuilder(null, i, new NullPointerException("creationTime"));
+		failGetBuilder(i, null, new NullPointerException("expirationTime"));
+		failGetBuilder(i, Instant.ofEpochMilli(5000), new IllegalArgumentException(
+				"creation time must be before expiration time"));
+	}
+	
+	private void failGetBuilder(
+			final Instant create,
+			final Instant expire,
+			final Exception expected) {
+		try {
+			CreateModAndExpireTimes.getBuilder(create, expire);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void withModificationTimeFail() throws Exception {
+		failWithModificationTime(null, new NullPointerException("modificationTime"));
+		failWithModificationTime(Instant.ofEpochMilli(5000), new IllegalArgumentException(
+				"creation time must be before modification time"));
+	}
+	
+	private void failWithModificationTime(final Instant mod, final Exception expected) {
+		final Instant i = Instant.ofEpochMilli(10000);
+		try {
+			CreateModAndExpireTimes.getBuilder(i, i).withModificationTime(mod);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
