@@ -9,11 +9,14 @@ import com.google.common.base.Optional;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group;
 
+/** Represents a request to modify a {@link Group} in some way.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GroupRequest {
 	
-	// TODO JAVADOC
-	// TODO TEST
 	// TODO NOW expire requests in DB - need a thread running
 	
 	private final RequestID id;
@@ -51,46 +54,85 @@ public class GroupRequest {
 		this.expirationDate = times.getExpirationTime();
 	}
 
+	/** Get the ID of the request.
+	 * @return the ID.
+	 */
 	public RequestID getID() {
 		return id;
 	}
 
+	/** Get the ID of the group the request will affect if accepted.
+	 * @return the group ID.
+	 */
 	public GroupID getGroupID() {
 		return groupID;
 	}
 
+	/** Get the user targeted by the request, if any. The target is present when the request
+	 * type is {@link GroupRequestType#INVITE_TO_GROUP}. In this case the user is added to the
+	 * group if the request is accepted.
+	 * @return the target user.
+	 */
 	public Optional<UserName> getTarget() {
 		return target;
 	}
 
+	/** Get the user that created the request. If the request type is
+	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}, the user is added to the group if
+	 * the request is accepted.
+	 * @return the user that made the request.
+	 */
 	public UserName getRequester() {
 		return requester;
 	}
 
+	/** Get the type of the request.
+	 * @return the request type.
+	 */
 	public GroupRequestType getType() {
 		return type;
 	}
 
+	/** Get the type of the status of the request.
+	 * @return the request status type.
+	 */
 	public GroupRequestStatusType getStatusType() {
 		return statusType;
 	}
 
+	/** Get the user that closed the request. Only present when the status type is
+	 * {@link GroupRequestStatusType#ACCEPTED} or {@link GroupRequestStatusType#DENIED}.
+	 * @return the closing user.
+	 */
 	public Optional<UserName> getClosedBy() {
 		return closedBy;
 	}
 
+	/** Get the reason the request was closed. Only present when the status type is
+	 * {@link GroupRequestStatusType#DENIED}, and even then may be omitted.
+	 * @return the close reason.
+	 */
 	public Optional<String> getClosedReason() {
 		return closedReason;
 	}
 
+	/** Get the date the request was created.
+	 * @return the creation date.
+	 */
 	public Instant getCreationDate() {
 		return creationDate;
 	}
 
+	/** Get the date the request was modified.
+	 * @return the modification date.
+	 */
 	public Instant getModificationDate() {
 		return modificationDate;
 	}
 
+	/** Get the date the request expires.
+	 * @return the expiration date.
+	 */
 	public Instant getExpirationDate() {
 		return expirationDate;
 	}
