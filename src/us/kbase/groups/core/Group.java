@@ -11,10 +11,15 @@ import java.util.Set;
 
 import com.google.common.base.Optional;
 
+/** Represents a group consisting primarily of a set of users and set of workspaces associated
+ * with those users.
+ * 
+ * @author gaprice@lbl.gov
+ *
+ */
 public class Group {
 	
-	// TODO JAVADOC
-	// TODO TESTS
+	public static final int MAX_DESCRIPTION_CODE_POINTS = 5000;
 	
 	private final GroupID groupID;
 	private final GroupName groupName;
@@ -43,55 +48,95 @@ public class Group {
 		this.description = description;
 	}
 
+	/** The ID of the group.
+	 * @return the ID.
+	 */
 	public GroupID getGroupID() {
 		return groupID;
 	}
 
+	/** The name of the group.
+	 * @return the name.
+	 */
 	public GroupName getGroupName() {
 		return groupName;
 	}
 
+	/** Get the user that owns the group.
+	 * @return the owner.
+	 */
 	public UserName getOwner() {
 		return owner;
 	}
 	
+	/** Get the members of the group.
+	 * @return the members.
+	 */
 	public Set<UserName> getMembers() {
 		return members;
 	}
 
+	/** Get the type of the group.
+	 * @return the group type.
+	 */
 	public GroupType getType() {
 		return type;
 	}
 
+	/** Get the date the group was created.
+	 * @return the creation date.
+	 */
 	public Instant getCreationDate() {
 		return creationDate;
 	}
 
+	/** Get the date the group was modified.
+	 * @return the modification date.
+	 */
 	public Instant getModificationDate() {
 		return modificationDate;
 	}
 
+	/** Get the description of the group, if any.
+	 * @return the description or {@link Optional#absent()}.
+	 */
 	public Optional<String> getDescription() {
 		return description;
 	}
 	
+	/** Check if a user is a group administrator.
+	 * @param user the user to check.
+	 * @return true if the user is a group administrator, false otherwise.
+	 */
 	public boolean isAdministrator(final UserName user) {
-		checkNotNull("user", user);
+		checkNotNull(user, "user");
 		//TODO NOW deal with group admins
 		return owner.equals(user);
 	}
 	
+	/** Get the administrators, including the owner, of the group.
+	 * @return the administrators.
+	 */
 	public Set<UserName> getAdministratorsAndOwner() {
 		//TODO NOW deal with group admins
 		return new HashSet<>(Arrays.asList(owner));
 	}
 	
+	/** Check if a user is a member of the group. 'Member' includes the group owner and
+	 * administrators.
+	 * @param user the user to check.
+	 * @return true if the user is a group member, false otherwise.
+	 */
 	public boolean isMember(final UserName user) {
-		checkNotNull("user", user);
+		checkNotNull(user, "user");
 		// TODO NOW check admins
 		return owner.equals(user) || members.contains(user);
 	}
 	
+	/** Return a copy of the group with any private fields removed. This currently is only
+	 * the members field.
+	 * @return a group copy without private fields.
+	 */
 	public Group withoutPrivateFields() {
 		final Builder b = getBuilder(groupID, groupName, owner,
 				new CreateAndModTimes(creationDate, modificationDate))
@@ -99,29 +144,6 @@ public class Group {
 				.withType(type);
 		// may need to do other stuff here.
 		return b.build();
-	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder2 = new StringBuilder();
-		builder2.append("Group [groupID=");
-		builder2.append(groupID);
-		builder2.append(", groupName=");
-		builder2.append(groupName);
-		builder2.append(", owner=");
-		builder2.append(owner);
-		builder2.append(", members=");
-		builder2.append(members);
-		builder2.append(", type=");
-		builder2.append(type);
-		builder2.append(", creationDate=");
-		builder2.append(creationDate);
-		builder2.append(", modificationDate=");
-		builder2.append(modificationDate);
-		builder2.append(", description=");
-		builder2.append(description);
-		builder2.append("]");
-		return builder2.toString();
 	}
 
 	@Override
@@ -206,6 +228,13 @@ public class Group {
 		return true;
 	}
 
+	/** Get a builder for a {@link Group}.
+	 * @param id the group ID.
+	 * @param name the group name.
+	 * @param owner the owner of the group.
+	 * @param times the creation and modification times for the group.
+	 * @return the new builder.
+	 */
 	public static Builder getBuilder(
 			final GroupID id,
 			final GroupName name,
@@ -214,17 +243,21 @@ public class Group {
 		return new Builder(id, name, owner, times);
 	}
 	
+	/** A builder for a {@link Group}.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder {
 		
 		private final GroupID groupID;
 		private final GroupName groupName;
 		private final UserName owner;
-		private final Set<UserName> members = new HashSet<>();
 		private final CreateAndModTimes times;
+		private final Set<UserName> members = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
 		private Optional<String> description = Optional.absent();
 		
-		public Builder(
+		private Builder(
 				final GroupID id,
 				final GroupName name,
 				final UserName owner,
@@ -239,28 +272,49 @@ public class Group {
 			this.times = times;
 		}
 		
+		/** Change the type of the group. The default type is {@link GroupType#ORGANIZATION}.
+		 * @param type the new type.
+		 * @return this builder.
+		 */
 		public Builder withType(final GroupType type) {
 			checkNotNull(type, "type");
 			this.type = type;
 			return this;
 		}
 		
-		// null or whitespace only == remove description
+		/** Add a group description. The maximum description size is
+		 * {@link Group#MAX_DESCRIPTION_CODE_POINTS} Unicode code points.
+		 * @param description the new description. If null or whitespace only, the description
+		 * is set to {@link Optional#absent()}. The description will be {@link String#trim()}ed.
+		 * @return this builder.
+		 */
 		public Builder withDescription(final String description) {
 			if (isNullOrEmpty(description)) {
 				this.description = Optional.absent();
 			} else {
-				this.description = Optional.of(description);
+				if (description.codePointCount(0, description.length()) >
+						MAX_DESCRIPTION_CODE_POINTS) {
+					throw new IllegalArgumentException(
+							"description must be < 5000 Unicode code points");
+				}
+				this.description = Optional.of(description.trim());
 			}
 			return this;
 		}
 		
+		/** Add a member to the builder.
+		 * @param member the member.
+		 * @return this builder.
+		 */
 		public Builder withMember(final UserName member) {
 			checkNotNull(member, "member");
 			this.members.add(member);
 			return this;
 		}
 		
+		/** Build the {@link Group}.
+		 * @return the new group.
+		 */
 		public Group build() {
 			return new Group(groupID, groupName, owner, members, type, times, description);
 		}
