@@ -274,6 +274,7 @@
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
+        <test name="us.kbase.test.groups.service.api.APICommonTest"/>
         <test name="us.kbase.test.groups.service.api.GroupsAPITest"/>
         <test name="us.kbase.test.groups.service.api.RequestAPITest"/>
         <test name="us.kbase.test.groups.service.api.RootTest"/>

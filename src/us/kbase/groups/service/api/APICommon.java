@@ -16,8 +16,6 @@ import us.kbase.groups.core.request.GroupRequest;
 
 public class APICommon {
 	
-	// TODO TEST
-
 	/** Transform a {@link GroupRequest} object into a Map/List structure suitable for
 	 * serializing to JSON.
 	 * @param request the request object.
