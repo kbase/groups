@@ -43,6 +43,7 @@ import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -355,36 +356,66 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	@Override
 	public void addMember(final GroupID groupID, final UserName member)
-			throws NoSuchGroupException, GroupsStorageException {
-		//TODO NOW check if user is member and if so throw error including owner & admins - how to do this w/o race conds might be tricky
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
+		checkNotNull(groupID, "groupID");
+		checkNotNull(member, "member");
+		
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				// TODO ADMIN handle case where user is admin when admin support added
+				.append(Fields.GROUP_OWNER, new Document("$ne", member.getName()));
+			
+		final Document addToSet = new Document("$addToSet",
+				new Document(Fields.GROUP_MEMBERS, member.getName()));
+		
 		try {
-			alterMember(groupID, member, true);
-		} catch (NoSuchUserException e) {
-			throw new RuntimeException("This should be impossible", e);
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
+			if (res.getMatchedCount() != 1) {
+				final Group g = getGroup(groupID); // will throw no such group
+				if (g.getOwner().equals(member)) {
+					throw new UserIsMemberException(String.format(
+							"User %s is the owner of group %s",
+							member.getName(), groupID.getName()));
+				} else {
+					/* this *could* be caused by a race condition if owner/admins change or group
+					 * deletions are implemented. However, it should be extremely rare and the
+					 * user add can just be retried so it's not worth special handling beyond
+					 * throwing an exception.
+					 * If this prediction is wrong, just retry X (5?) times.
+					 * 
+					 * This is also really hard to test.
+					 */
+					throw new RuntimeException(String.format("Unexpected result: No group " +
+							"matched addmember query for group id %s and member %s.",
+							groupID.getName(), member.getName()));
+				}
+			}
+			if (res.getModifiedCount() != 1) {
+				throw new UserIsMemberException(String.format(
+						"User %s is already a member of group %s",
+						member.getName(), groupID.getName()));
+			}
+		} catch (MongoException e) {
+			throw new GroupsStorageException("Connection to database failed: " +
+					e.getMessage(), e);
 		}
 	}
 	
 	@Override
 	public void removeMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, NoSuchUserException, GroupsStorageException {
-		alterMember(groupID, member, false);
-	}
-
-	private void alterMember(final GroupID groupID, final UserName member, final boolean add)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(member, "member");
 		
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
-		final Document addToSet = new Document(add ? "$addToSet" : "$pull",
+		final Document pull = new Document("$pull",
 				new Document(Fields.GROUP_MEMBERS, member.getName()));
 		
 		try {
-			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, pull);
 			if (res.getMatchedCount() != 1) {
 				throw new NoSuchGroupException(groupID.getName());
 			}
-			if (!add && res.getModifiedCount() != 1) {
+			if (res.getModifiedCount() != 1) {
 				throw new NoSuchUserException(String.format("No member %s in group %s",
 						member.getName(), groupID.getName()));
 			}
