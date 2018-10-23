@@ -10,8 +10,6 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  */
 public class GroupName extends Name {
 	
-	//TODO TEST
-	
 	/** Create a new name. The name will be {@link String#trim()}ed.
 	 * @param name the name.
 	 * @throws MissingParameterException if the name is null or whitespace only.

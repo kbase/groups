@@ -266,6 +266,7 @@
         <test name="us.kbase.test.groups.core.CreateModExpireTimesTest"/>
         <test name="us.kbase.test.groups.core.GroupTest"/>
         <test name="us.kbase.test.groups.core.GroupCreationParamsTest"/>
+        <test name="us.kbase.test.groups.core.GroupNameTest"/>
         <test name="us.kbase.test.groups.core.GroupTypeTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
         <test name="us.kbase.test.groups.core.TokenTest"/>
