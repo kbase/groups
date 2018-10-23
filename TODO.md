@@ -1,8 +1,6 @@
 # KBase Groups TODOs
 
 
-* Add a docker-compose.yml that starts the service
-
 * This really applies to most of the java services, and especially the HTTP/RESTish services -
   there's a bunch of very similar or identical code across the services that really should
   be packaged into a common jar for reuse rather than having very similar code in many repos.
