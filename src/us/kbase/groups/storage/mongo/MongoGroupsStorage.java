@@ -284,6 +284,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
 				throw new GroupExistsException(group.getGroupID().getName());
 			} else {
+				// painful to test
 				throw new GroupsStorageException("Database write failed", mwe);
 			}
 		} catch (MongoException e) {
@@ -310,6 +311,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final List<Group> ret = new LinkedList<>();
 		try {
 			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS)
+					// may want to allow alternate sorts later, will need indexes
 					.find().sort(new Document(Fields.GROUP_ID, 1));
 			for (final Document gdoc: gdocs) {
 				ret.add(toGroup(gdoc));
@@ -330,7 +332,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
-					// TODO TEST check valueOf error conditions
 					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
 			addMembers(b, grp);
@@ -344,11 +345,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	private void addMembers(final Group.Builder builder, final Document groupDoc)
 			throws MissingParameterException, IllegalParameterException {
+		// can't be null
 		@SuppressWarnings("unchecked")
 		final List<String> members = (List<String>) groupDoc.get(Fields.GROUP_MEMBERS);
-		if (members == null) {
-			return;
-		}
 		for (final String m: members) {
 			builder.withMember(new UserName(m));
 		}
@@ -357,7 +356,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void addMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException {
-		//TODO NOW check if user is member and if so throw error
+		//TODO NOW check if user is member and if so throw error including owner & admins - how to do this w/o race conds might be tricky
 		try {
 			alterMember(groupID, member, true);
 		} catch (NoSuchUserException e) {
@@ -386,7 +385,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 				throw new NoSuchGroupException(groupID.getName());
 			}
 			if (!add && res.getModifiedCount() != 1) {
-				throw new NoSuchUserException("No user %s in group %s");
+				throw new NoSuchUserException(String.format("No member %s in group %s",
+						member.getName(), groupID.getName()));
 			}
 			// if add = true && not modified, just means user was already in the list
 		} catch (MongoException e) {
