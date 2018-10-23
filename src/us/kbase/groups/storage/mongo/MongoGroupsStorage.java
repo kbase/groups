@@ -431,7 +431,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throws RequestExistsException, GroupsStorageException {
 		checkNotNull(request, "request");
 		final String charString = getCharacteristicString(request);
-		final Document u = new Document(
+		final Document req = new Document(
 				Fields.REQUEST_ID, request.getID().getID())
 				.append(Fields.REQUEST_GROUP_ID, request.getGroupID().getName())
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
@@ -444,10 +444,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orNull())
 				.append(Fields.REQUEST_CREATION, Date.from(request.getCreationDate()))
 				.append(Fields.REQUEST_MODIFICATION, Date.from(request.getModificationDate()))
-				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()))
-				.append(Fields.REQUEST_CHARACTERISTIC_STRING, charString);
+				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()));
+		if (charString != null) {
+				req.append(Fields.REQUEST_CHARACTERISTIC_STRING, charString);
+		}
 		try {
-			db.getCollection(COL_REQUESTS).insertOne(u);
+			db.getCollection(COL_REQUESTS).insertOne(req);
 		} catch (MongoWriteException mwe) {
 			// not happy about this, but getDetails() returns an empty map
 			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
@@ -612,7 +614,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 									.toInstant())
 							.build())
 					.withType(
-							// TODO TEST check valueOf error conditions
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target))
 					.withStatus(GroupRequestStatus.from(

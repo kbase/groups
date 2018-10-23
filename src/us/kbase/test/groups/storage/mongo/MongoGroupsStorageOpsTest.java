@@ -29,6 +29,7 @@ import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
+import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
@@ -73,8 +74,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.reset();
 		logEvents.clear();
 	}
-	
-	// TODO TEST add more tests for create and get group /request
 	
 	@Test
 	public void createAndGetGroupMinimal() throws Exception {
@@ -161,6 +160,8 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void illegalGroupDataInDB() throws Exception {
+		// just test each type of exception. Not testing every possible exception that could be
+		// thrown.
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
@@ -179,11 +180,11 @@ public class MongoGroupsStorageOpsTest {
 				"Illegal character in user name a*b: *"));
 		
 		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
-				new Document("$set", new Document("own", "a").append("type", "Teem")));
+				new Document("$set", new Document("own", "a").append("type", "TEEM")));
 	
 		failGetGroup(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: No enum constant " +
-				"us.kbase.groups.core.GroupType.Teem"));
+				"us.kbase.groups.core.GroupType.TEEM"));
 	}
 	
 	@Test
@@ -386,7 +387,7 @@ public class MongoGroupsStorageOpsTest {
 				new RequestID(id), new GroupID("foo"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-					.build())
+							.build())
 				.build());
 		
 		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
@@ -394,7 +395,28 @@ public class MongoGroupsStorageOpsTest {
 						new RequestID(id), new GroupID("foo"), new UserName("bar"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-						.build())
+								.build())
+						.build()));
+	}
+	
+	@Test
+	public void storeAndGetRequestMinimalWithTarget() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withInviteToGroup(new UserName("target"))
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
+				is(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+								.build())
+						.withInviteToGroup(new UserName("target"))
 						.build()));
 	}
 	
@@ -424,8 +446,189 @@ public class MongoGroupsStorageOpsTest {
 					.build()));
 	}
 	
-	//TODO TEST that saving requests with similar but not identical characteristics works
-	//TODO TEST that saving requests with identical characteristics but with open vs. closed states works
+	@Test
+	public void storeRequestWithIdenticalCharacteristicString() throws Exception {
+		// tests that storage with identical characteristic strings works as long as
+		// there's only one open request
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		final UUID id3 = UUID.randomUUID();
+		final UUID id4 = UUID.randomUUID();
+		final UUID id5 = UUID.randomUUID();
+		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
+				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+				.build();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.canceled()).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.expired()).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build());
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
+				.build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.canceled()).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.expired()).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
+				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
+	}
+	
+	@Test
+	public void storeRequestWithIdenticalCharacteristicStringAndTarget() throws Exception {
+		// tests that storage with identical characteristic strings works as long as
+		// there's only one open request
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		final UUID id3 = UUID.randomUUID();
+		final UUID id4 = UUID.randomUUID();
+		final UUID id5 = UUID.randomUUID();
+		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
+				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+				.build();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.canceled()).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.expired()).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build());
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.canceled()).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.expired()).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
+	}
+	
+	@Test
+	public void storeRequestsWithSimilarCharacteristicStrings() throws Exception {
+		// tests that request with nearly, but not exactly, identical characteristic strings
+		// can be saved
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		final UUID id3 = UUID.randomUUID();
+		final UUID id4 = UUID.randomUUID();
+		final UUID id5 = UUID.randomUUID();
+		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
+				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+				.build();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build());
+		
+		// with no target - implies different type
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.build());
+		
+		// with different target
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("tarjeh"))
+				.build());
+		
+		// with different group
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("fooo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build());
+		
+		// with different user
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id5), new GroupID("foo"), new UserName("barr"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build());
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("tarjeh"))
+				.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id4), new GroupID("fooo"), new UserName("bar"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id5), new GroupID("foo"), new UserName("barr"), times)
+				.withInviteToGroup(new UserName("target"))
+				.build()));
+	}
+	
+	@Test
+	public void storeRequestFailNull() throws Exception {
+		failStoreRequest(null, new NullPointerException("request"));
+	}
 	
 	@Test
 	public void storeRequestFailDuplicateID() throws Exception {
@@ -498,6 +701,66 @@ public class MongoGroupsStorageOpsTest {
 		
 		try {
 			manager.storage.storeRequest(request);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+
+	@Test
+	public void getRequestFail() throws Exception {
+		failGetRequest(null, new NullPointerException("requestID"));
+		
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("bar1"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build());
+		
+		final UUID id = UUID.randomUUID();
+		failGetRequest(new RequestID(id), new NoSuchRequestException(id.toString()));
+	}
+	
+	@Test
+	public void illegalRequestDataInDB() throws Exception {
+		// just test each type of exception. Not testing every possible exception that could be
+		// thrown.
+		
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar1"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+					.build())
+				.build());
+		
+		manager.db.getCollection("requests").updateOne(new Document("id", id.toString()),
+				new Document("$set", new Document("gid", "")));
+		
+		failGetRequest(new RequestID(id), new GroupsStorageException(
+				"Unexpected value in database: 30000 Missing input parameter: group id"));
+		
+		manager.db.getCollection("requests").updateOne(new Document("id", id.toString()),
+				new Document("$set", new Document("gid", "foo").append("requester", "a*b")));
+	
+		failGetRequest(new RequestID(id), new GroupsStorageException(
+				"Unexpected value in database: 30010 Illegal user name: " +
+				"Illegal character in user name a*b: *"));
+		
+		manager.db.getCollection("requests").updateOne(new Document("id", id.toString()),
+				new Document("$set", new Document("requester", "a")
+						.append("type", "KICK_FROM_GROUP")));
+	
+		failGetRequest(new RequestID(id), new GroupsStorageException(
+				"Unexpected value in database: No enum constant " +
+				"us.kbase.groups.core.request.GroupRequestType.KICK_FROM_GROUP"));
+	}
+	
+	
+	private void failGetRequest(final RequestID id, final Exception expected) {
+		try {
+			manager.storage.getRequest(id);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
