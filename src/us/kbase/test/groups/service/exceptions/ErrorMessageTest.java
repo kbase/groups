@@ -19,6 +19,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.service.exceptions.ErrorMessage;
 import us.kbase.test.groups.TestCommon;
 
@@ -60,6 +61,23 @@ public class ErrorMessageTest {
 		assertThat("incorrect http status", em.getHttpstatus(), is("Unauthorized"));
 		assertThat("incorrect message", em.getMessage(),
 				is("10010 No authentication token: token"));
+		assertThat("incorrect time", em.getTime(), is(20000L));
+	}
+	
+	@Test
+	public void constructWithUnauthorizedExceptionNoCallID() {
+		final ErrorMessage em = new ErrorMessage(
+				new UnauthorizedException("naughty person"),
+				null,
+				Instant.ofEpochMilli(20000));
+		
+		assertThat("incorrect app code", em.getAppcode(), is(20000));
+		assertThat("incorrect app err", em.getApperror(), is("Unauthorized"));
+		assertThat("incorrect call id", em.getCallid(), is((String) null));
+		assertThat("incorrect http code", em.getHttpcode(), is(403));
+		assertThat("incorrect http status", em.getHttpstatus(), is("Forbidden"));
+		assertThat("incorrect message", em.getMessage(),
+				is("20000 Unauthorized: naughty person"));
 		assertThat("incorrect time", em.getTime(), is(20000L));
 	}
 	
