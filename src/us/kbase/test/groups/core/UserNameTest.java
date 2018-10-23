@@ -11,16 +11,19 @@ import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.groups.TestCommon;
 
 public class UserNameTest {
 	
 	@Test
 	public void construct() throws Exception {
-		final UserName un = new UserName("a8nba9");
-		assertThat("incorrect username", un.getName(), is("a8nba9"));
-		assertThat("incorrect toString", un.toString(), is("UserName [getName()=a8nba9]"));
-		assertThat("incorrect hashCode" , un.hashCode(), is(-1462848190));
+		final UserName un = new UserName("a8n_ba9");
+		assertThat("incorrect username", un.getName(), is("a8n_ba9"));
+		assertThat("incorrect toString", un.toString(), is("UserName [name=a8n_ba9]"));
+		assertThat("incorrect hashCode" , un.hashCode(), is(1896258321));
+		
+		final UserName un2 = new UserName(TestCommon.LONG101.substring(0, 100));
+		assertThat("incorrect username", un2.getName(), is(TestCommon.LONG101.substring(0, 100)));
 	}
 	
 	@Test
@@ -35,6 +38,8 @@ public class UserNameTest {
 				"Illegal character in user name abaeataΔfoo: Δ"));
 		failConstruct("abaea*tafoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 				"Illegal character in user name abaea*tafoo: *"));
+		failConstruct("abaea-tafoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+				"Illegal character in user name abaea-tafoo: -"));
 		failConstruct(TestCommon.LONG101, new IllegalParameterException(
 				ErrorType.ILLEGAL_PARAMETER,
 				"user name size greater than limit 100"));

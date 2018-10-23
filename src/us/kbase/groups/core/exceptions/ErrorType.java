@@ -20,6 +20,8 @@ public enum ErrorType {
 	ILLEGAL_PARAMETER		(30001, "Illegal input parameter"),
 	/** The provided user name was not legal. */
 	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
+	/** The provided group id was not legal. */
+	ILLEGAL_GROUP_ID		(30020, "Illegal group ID"),
 	/** The group could not be created because it already exists. */
 	GROUP_ALREADY_EXISTS	(40000, "Group already exists"),
 	/** The user is already a member of the group. */

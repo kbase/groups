@@ -14,8 +14,6 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  */
 public class GroupID extends Name {
 	
-	//TODO TEST
-	
 	private static final String INVALID_CHARS_REGEX = "[^a-z\\d-]+";
 	private final static Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
 
@@ -28,11 +26,11 @@ public class GroupID extends Name {
 		super(id, "group id", 100);
 		final Matcher m = INVALID_CHARS.matcher(id);
 		if (m.find()) {
-			throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
+			throw new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID, String.format(
 					"Illegal character in group id %s: %s", id, m.group()));
 		}
 		if (!Character.isLetter(id.codePointAt(0))) {
-			throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+			throw new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 					"Group ID must start with a letter");
 		}
 	}

@@ -40,13 +40,4 @@ public class UserName extends Name {
 					"Username must start with a letter");
 		}
 	}
-	
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("UserName [getName()=");
-		builder.append(getName());
-		builder.append("]");
-		return builder.toString();
-	}
 }
