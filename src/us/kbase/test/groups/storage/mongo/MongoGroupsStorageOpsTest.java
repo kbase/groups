@@ -31,6 +31,7 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -277,7 +278,6 @@ public class MongoGroupsStorageOpsTest {
 		failAddMember(new GroupID("gid1"), new UserName("foo"), new NoSuchGroupException("gid1"));
 	}
 	
-	/* currently failing. TODO NOW fix this test
 	@Test
 	public void addMemberFailExists() throws Exception {
 		// add test for admin fail when admins are supported
@@ -288,11 +288,9 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		failAddMember(new GroupID("gid"), new UserName("foo"),
-				new UserIsMemberException("foo"));
+				new UserIsMemberException("User foo is already a member of group gid"));
 	}
-	*/
 	
-	/* currently failing. TODO NOW fix this test
 	@Test
 	public void addMemberFailOwner() throws Exception {
 		// add test for admin fail when admins are supported
@@ -302,10 +300,9 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		failAddMember(new GroupID("gid"), new UserName("uname3"),
-				new UserIsMemberException("uname3"));
+				new UserIsMemberException("User uname3 is the owner of group gid"));
 		
 	}
-	*/
 	
 	private void failAddMember(
 			final GroupID gid,

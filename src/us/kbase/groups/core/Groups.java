@@ -266,7 +266,7 @@ public class Groups {
 	}
 	
 	private void addMemberToKnownGoodGroup(final GroupID groupID, final UserName newMember)
-			throws GroupsStorageException {
+			throws GroupsStorageException, UserIsMemberException {
 		try {
 			storage.addMember(groupID, newMember);
 		} catch (NoSuchGroupException e) {
@@ -316,14 +316,13 @@ public class Groups {
 			final Token userToken,
 			final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException {
+				GroupsStorageException, UnauthorizedException, UserIsMemberException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureCanAcceptOrDeny(request, group, user, true);
-		//TODO NOW check if user is member and if so throw error
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 			processAcceptGroupMembershipRequest(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
@@ -339,7 +338,7 @@ public class Groups {
 	private void processAcceptGroupInviteRequest(
 			final GroupRequest request,
 			final Group group)
-			throws GroupsStorageException, NoSuchRequestException {
+			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		final UserName acceptedBy = request.getTarget().get();
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
 		storage.closeRequest(
@@ -353,7 +352,7 @@ public class Groups {
 			final GroupRequest request,
 			final UserName acceptedBy,
 			final Group group)
-			throws GroupsStorageException, NoSuchRequestException {
+			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
 		storage.closeRequest(
 				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());

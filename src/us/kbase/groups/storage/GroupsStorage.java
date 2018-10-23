@@ -11,6 +11,7 @@ import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -31,7 +32,7 @@ public interface GroupsStorage {
 	List<Group> getGroups() throws GroupsStorageException;
 	
 	void addMember(GroupID groupID, UserName member)
-			throws NoSuchGroupException, GroupsStorageException;
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException;
 	
 	void removeMember(GroupID groupID, UserName member)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
