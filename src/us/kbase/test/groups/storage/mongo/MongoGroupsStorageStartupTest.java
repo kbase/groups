@@ -224,51 +224,65 @@ public class MongoGroupsStorageStartupTest {
 		final Set<Document> indexes = new HashSet<>();
 		manager.db.getCollection("requests").listIndexes()
 				.forEach((Consumer<Document>) indexes::add);
+		final String col = "test_mongogroupsstorage.requests";
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("gid", 1))
-						.append("name", "gid_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("gid", 1).append("mod", 1))
+						.append("name", "gid_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("requester", 1).append("status", 1))
-						.append("name", "requester_1_status_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("gid", 1)
+								.append("status", 1)
+								.append("mod", 1))
+						.append("name", "gid_1_status_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("target", 1))
-						.append("sparse", true)
-						.append("name", "target_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("requester", 1).append("mod", 1))
+						.append("name", "requester_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("target", 1).append("status", 1))
-						.append("name", "target_1_status_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("requester", 1)
+								.append("status", 1)
+								.append("mod", 1))
+						.append("name", "requester_1_status_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("create", 1))
-						.append("name", "create_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("target", 1).append("mod", 1))
+						.append("name", "target_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("status", 1))
-						.append("name", "status_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("key", new Document("target", 1)
+								.append("status", 1)
+								.append("mod", 1))
+						.append("name", "target_1_status_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("mod", 1))
+						.append("name", "mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("status", 1).append("mod", 1))
+						.append("name", "status_1_mod_1")
+						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("expire", 1))
 						.append("name", "expire_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("sparse", true)
 						.append("key", new Document("charstr", 1))
 						.append("name", "charstr_1")
-						.append("ns", "test_mongogroupsstorage.requests"),
+						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongogroupsstorage.requests")
+						.append("ns", col)
 				)));
 	}
 }
