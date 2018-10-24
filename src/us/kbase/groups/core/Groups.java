@@ -303,7 +303,7 @@ public class Groups {
 		final GroupRequest gr = storage.getRequest(requestID);
 		if (!gr.getRequester().equals(user)) {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
-					user.getName(), requestID.toString()));
+					user.getName(), requestID.getID()));
 		}
 		storage.closeRequest(requestID, GroupRequestStatus.canceled(), clock.instant());
 		notifications.cancel(requestID);
