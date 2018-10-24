@@ -119,7 +119,7 @@ public interface GroupsStorage {
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<GroupRequest> getRequestsByGroupID(GroupID groupID)
+	List<GroupRequest> getRequestsByGroup(GroupID groupID)
 			throws GroupsStorageException;
 	
 	/** Close a request. WARNING: this function will allow setting the modification time to

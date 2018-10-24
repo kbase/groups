@@ -585,7 +585,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
 	// TODO NOW allow including closed requests
 	@Override
-	public List<GroupRequest> getRequestsByGroupID(
+	public List<GroupRequest> getRequestsByGroup(
 			final GroupID groupID)
 			throws GroupsStorageException {
 		checkNotNull(groupID, "groupID");

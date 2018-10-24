@@ -158,7 +158,7 @@ public class GroupsAPI {
 		//TODO NOW allow getting all vs just open requests
 		//TODO NOW sort by created date, up or down
 		//TODO NOW allow date ranges and set limit
-		return APICommon.toGroupRequestJSON(groups.getRequestsForGroupID(
+		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID)));
 	}
 	

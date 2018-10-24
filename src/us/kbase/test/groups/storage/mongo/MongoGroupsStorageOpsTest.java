@@ -995,22 +995,22 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.storeRequest(second);
 
 		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroupID(new GroupID("foo")), is(
+				manager.storage.getRequestsByGroup(new GroupID("foo")), is(
 						Arrays.asList(first, second, third, fourth)));
 		
 		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroupID(new GroupID("other")), is(
+				manager.storage.getRequestsByGroup(new GroupID("other")), is(
 						Arrays.asList(othergroup)));
 		
 		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroupID(new GroupID("baz")), is(
+				manager.storage.getRequestsByGroup(new GroupID("baz")), is(
 						Collections.emptyList()));
 	}
 	
 	@Test
 	public void failGetRequestsByGroup() {
 		try {
-			manager.storage.getRequestsByGroupID(null);
+			manager.storage.getRequestsByGroup(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));

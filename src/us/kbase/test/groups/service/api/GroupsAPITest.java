@@ -404,7 +404,7 @@ public class GroupsAPITest {
 		final UUID id2 = UUID.randomUUID();
 		
 		
-		when(g.getRequestsForGroupID(new Token("t"), new GroupID("id"))).thenReturn(Arrays.asList(
+		when(g.getRequestsForGroup(new Token("t"), new GroupID("id"))).thenReturn(Arrays.asList(
 				GroupRequest.getBuilder(new RequestID(id1), new GroupID("id"), new UserName("foo"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(40000))
@@ -466,7 +466,7 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailUnauthorized() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForGroupID(new Token("t"), new GroupID("i"))).thenThrow(
+		when(g.getRequestsForGroup(new Token("t"), new GroupID("i"))).thenThrow(
 				new UnauthorizedException("yay"));
 		
 		failGetRequestsForGroup(g, "t", "i", new UnauthorizedException("yay"));
