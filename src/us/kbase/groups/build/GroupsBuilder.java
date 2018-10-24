@@ -25,6 +25,7 @@ import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.groups.userhandler.KBaseUserHandler;
+import us.kbase.groups.workspaceHandler.DefaultWorkspaceHandler;
 
 /** A class for building a {@link Groups} instance given a {@link GroupsConfig}
  * configuration instance.
@@ -100,7 +101,7 @@ public class GroupsBuilder {
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
 		// TODO NOTIFICATIONS replace with actual implementation
-		return new Groups(storage, uh, new SLF4JNotifier());
+		return new Groups(storage, uh, new DefaultWorkspaceHandler(), new SLF4JNotifier());
 	}
 
 	private GroupsStorage buildStorage(

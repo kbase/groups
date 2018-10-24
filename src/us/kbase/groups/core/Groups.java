@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
@@ -49,7 +48,10 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
+	@SuppressWarnings("unused")
+	private final WorkspaceHandler wsHandler;
 	private final Notifications notifications;
+	private final UUIDGenerator uuidGen;
 	private final Clock clock;
 	
 	/** Create a new {@link Groups} class.
@@ -60,21 +62,29 @@ public class Groups {
 	public Groups(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
+			final WorkspaceHandler wsHandler,
 			final Notifications notifications) {
-		this(storage, userHandler, notifications, Clock.systemDefaultZone());
+		this(storage, userHandler, wsHandler, notifications, new UUIDGenerator(),
+				Clock.systemDefaultZone());
 	}
 	
 	// for testing
 	private Groups(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
+			final WorkspaceHandler wsHandler,
 			final Notifications notifications,
+			final UUIDGenerator uuidGen,
 			final Clock clock) {
 		checkNotNull(storage, "storage");
 		checkNotNull(userHandler, "userHandler");
+		checkNotNull(wsHandler, "wsHandler");
+		checkNotNull(notifications, "notifications");
 		this.storage = storage;
 		this.userHandler = userHandler;
+		this.wsHandler = wsHandler;
 		this.notifications = notifications;
+		this.uuidGen = uuidGen;
 		this.clock = clock;
 	}
 	
@@ -134,8 +144,7 @@ public class Groups {
 		}
 		final Instant now = clock.instant();
 		final GroupRequest request = GroupRequest.getBuilder(
-				//TODO NOW pass in UUID factory for mocking purposes
-				new RequestID(UUID.randomUUID()), groupID, user,
+				new RequestID(uuidGen.randomUUID()), groupID, user,
 				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withRequestGroupMembership()
@@ -170,8 +179,7 @@ public class Groups {
 		}
 		final Instant now = clock.instant();
 		final GroupRequest request = GroupRequest.getBuilder(
-				//TODO NOW pass in UUID factory for mocking purposes
-				new RequestID(UUID.randomUUID()), groupID, user,
+				new RequestID(uuidGen.randomUUID()), groupID, user,
 				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withInviteToGroup(newMember)
