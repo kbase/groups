@@ -1362,4 +1362,99 @@ public class GroupsTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void cancelRequest() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("invite"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteToGroup(new UserName("invite"))
+						.withStatus(GroupRequestStatus.canceled())
+						.build());
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		final GroupRequest req = mocks.groups.cancelRequest(new Token("token"), new RequestID(id));
+		
+		verify(mocks.storage).closeRequest(new RequestID(id), GroupRequestStatus.canceled(),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).cancel(new RequestID(id));
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteToGroup(new UserName("invite"))
+						.withStatus(GroupRequestStatus.canceled())
+						.build()));
+	}
+	
+	@Test
+	public void cancelRequestFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		
+		failCancelRequest(g, null, new RequestID(UUID.randomUUID()),
+				new NullPointerException("userToken"));
+		failCancelRequest(g, new Token("t"), null, new NullPointerException("requestID"));
+	}
+	
+	@Test
+	public void cancelRequestFailNoSuchRequest() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.storage.getRequest(new RequestID(id)))
+				.thenThrow(new NoSuchRequestException(id.toString()));
+		
+		failCancelRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new NoSuchRequestException(id.toString()));
+	}
+	
+	@Test
+	public void cancelRequestFailUnauthed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("otheruser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("invite"))
+						.build());
+		
+		failCancelRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User otheruser may not cancel request " + id));
+	}
+	
+	private void failCancelRequest(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final Exception expected) {
+		try {
+			g.cancelRequest(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }
