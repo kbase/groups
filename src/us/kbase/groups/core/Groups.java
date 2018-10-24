@@ -14,8 +14,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
-import us.kbase.groups.build.GroupsBuilder;
-import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
@@ -201,34 +199,44 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(request);
 		//TODO PRIVATE may want to censor accepter/denier and deny reason here and in other methods that return a closed request
-		return getAuthorizedActions(user, request, g);
+		return getAuthorizedActions(user, request, g.isAdministrator(user));
 	}
 	
 	private final Set<GroupRequestUserAction> CREATOR_ACTIONS = new HashSet<>(Arrays.asList(
 			GroupRequestUserAction.CANCEL));
 	private final Set<GroupRequestUserAction> TARGET_ACTIONS = new HashSet<>(Arrays.asList(
 			GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+	private final Set<GroupRequestUserAction> NO_ACTIONS = Collections.emptySet();
 
 	private GroupRequestWithActions getAuthorizedActions(
 			final UserName user,
 			final GroupRequest request,
-			final Group group)
+			final boolean isAdmin)
 			throws UnauthorizedException {
 		//TODO NOW handle case where user is workspace admin for request against workspace
 		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
-		final Set<GroupRequestUserAction> creator = isOpen ?
-				CREATOR_ACTIONS : Collections.emptySet();
-		final Set<GroupRequestUserAction> target = isOpen ?
-				TARGET_ACTIONS : Collections.emptySet();
+		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
+		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
 		if (user.equals(request.getRequester())) {
 			return new GroupRequestWithActions(request, creator);
 		}
-		if (user.equals(request.getTarget().orNull()) || group.isAdministrator(user)) {
-			return new GroupRequestWithActions(request, target);
-		} else {
-			throw new UnauthorizedException(String.format("User %s cannot access request %s",
-					user.getName(), request.getID().getID()));
+		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) && isAdmin) {
+					return new GroupRequestWithActions(request, target);
 		}
+		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
+			if (user.equals(request.getTarget().orNull())) {
+				return new GroupRequestWithActions(request, target);
+			}
+			/* this means that admins can't see this request unless they created it (same deal
+			 * for the list fns). I think that's ok - the request is between a particular admin
+			 * and a user. The othe admins will get a notification if it's accepted and then can
+			 * remove the user.
+			 * Still though, maybe some admin endpoint or this one should just return any request.
+			 * Or maybe admins should be able to view and cancel each other's requests.
+			 */
+		}
+		throw new UnauthorizedException(String.format("User %s cannot access request %s",
+				user.getName(), request.getID().getID()));
 	}
 	
 	//TODO NOW allow getting closed requests
@@ -263,15 +271,13 @@ public class Groups {
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
 			throws GroupsStorageException {
-		final Group g;
 		try {
-			g = storage.getGroup(request.getGroupID());
+			return storage.getGroup(request.getGroupID());
 		} catch (NoSuchGroupException e) {
 			// shouldn't happen
 			throw new RuntimeException(String.format("Request %s's group doesn't exist: %s",
 					request.getID().getID(), e.getMessage()), e);
 		}
-		return g;
 	}
 	
 	private void addMemberToKnownGoodGroup(final GroupID groupID, final UserName newMember)
@@ -280,7 +286,7 @@ public class Groups {
 			storage.addMember(groupID, newMember);
 		} catch (NoSuchGroupException e) {
 			// shouldn't happen
-			throw new RuntimeException(String.format("Group %s doesn't exist: %s",
+			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
 					groupID.getName(), e.getMessage()), e);
 		}
 	}
@@ -405,24 +411,4 @@ public class Groups {
 					user.getName(), groupID.getName()));
 		}
 	}
-
-	public static void main(final String[] args) throws Exception {
-		System.setProperty("KB_DEPLOYMENT_CONFIG", "./deploy.cfg");
-		final Groups g = new GroupsBuilder(new GroupsConfig()).getGroups();
-		
-		final Token t = new Token(args[0]);
-		final Group g1 = g.createGroup(
-				t,
-				GroupCreationParams.getBuilder(
-						new GroupID("foo"), new GroupName("from Groups.java"))
-						.withType(GroupType.TEAM)
-						.withDescription("desc")
-						.build());
-		System.out.println(g1);
-		
-		System.out.println(g.getGroup(t, new GroupID("foo")));
-		
-		g.requestGroupMembership(t, new GroupID("foo"));
-	}
-	
 }
