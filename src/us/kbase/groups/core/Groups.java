@@ -221,7 +221,7 @@ public class Groups {
 			return new GroupRequestWithActions(request, creator);
 		}
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) && isAdmin) {
-					return new GroupRequestWithActions(request, target);
+			return new GroupRequestWithActions(request, target);
 		}
 		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			if (user.equals(request.getTarget().orNull())) {
@@ -256,9 +256,12 @@ public class Groups {
 	}
 
 	//TODO NOW allow getting closed requests
-	public List<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
+	// only returns requests where the group is the target
+	public List<GroupRequest> getRequestsForGroup(final Token userToken, final GroupID groupID)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
@@ -266,7 +269,7 @@ public class Groups {
 					"User %s cannot view requests for group %s",
 					user.getName(), groupID.getName()));
 		}
-		return storage.getRequestsByGroupID(groupID);
+		return storage.getRequestsByGroup(groupID);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
