@@ -53,10 +53,11 @@ import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 
+/** A {@link GroupsStorage} implementation using MongoDB as the backend.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class MongoGroupsStorage implements GroupsStorage {
-	
-	// TODO JAVADOC
-	// TODO TEST
 	
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
@@ -138,7 +139,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private final MongoDatabase db;
 	
 	/** Create MongoDB based storage for the Groups application.
-	 * @param db the Mongo database the storage system will use.
+	 * @param db the MongoDB database the storage system will use.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
 	public MongoGroupsStorage(final MongoDatabase db) 

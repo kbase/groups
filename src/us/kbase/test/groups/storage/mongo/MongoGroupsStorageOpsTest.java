@@ -1017,4 +1017,204 @@ public class MongoGroupsStorageOpsTest {
 		}
 	}
 	
+	@Test
+	public void closeRequestCancel() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		manager.storage.closeRequest(new RequestID(id), GroupRequestStatus.canceled(),
+				Instant.ofEpochMilli(25000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+						.withStatus(GroupRequestStatus.canceled())
+						.build()));
+	}
+	
+	@Test
+	public void closeRequestAccept() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		manager.storage.closeRequest(new RequestID(id),
+				GroupRequestStatus.accepted(new UserName("a")), Instant.ofEpochMilli(25000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+						.withStatus(GroupRequestStatus.accepted(new UserName("a")))
+						.build()));
+	}
+	
+	@Test
+	public void closeRequestDeny() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		manager.storage.closeRequest(new RequestID(id),
+				GroupRequestStatus.denied(new UserName("a"), "r"), Instant.ofEpochMilli(25000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+						.withStatus(GroupRequestStatus.denied(new UserName("a"), "r"))
+						.build()));
+	}
+	
+	@Test
+	public void closeRequestDenyNoReason() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		manager.storage.closeRequest(new RequestID(id),
+				GroupRequestStatus.denied(new UserName("a"), null), Instant.ofEpochMilli(25000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+						.withStatus(GroupRequestStatus.denied(new UserName("a"), null))
+						.build()));
+	}
+	
+	@Test
+	public void closeRequestAndCreateNew() throws Exception {
+		// tests that the characteristic string for the request is removed so that
+		// the request can be remade if desired.
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		manager.storage.closeRequest(new RequestID(id), GroupRequestStatus.canceled(),
+				Instant.ofEpochMilli(25000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+						.withStatus(GroupRequestStatus.canceled())
+						.build()));
+		
+		final UUID newID = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(newID), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(newID)), is(
+				GroupRequest.getBuilder(
+						new RequestID(newID), new GroupID("foo"), new UserName("bar"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.build())
+						.build()));
+	}
+	
+	@Test
+	public void closeRequestFailNulls() throws Exception {
+		final RequestID id = new RequestID(UUID.randomUUID());
+		final GroupRequestStatus s = GroupRequestStatus.canceled();
+		final Instant m = Instant.ofEpochMilli(10000);
+		
+		failCloseRequest(null, s, m, new NullPointerException("requestID"));
+		failCloseRequest(id, null, m, new NullPointerException("newStatus"));
+		failCloseRequest(id, s, null, new NullPointerException("modificationTime"));
+	}
+	
+	@Test
+	public void closeRequestFailOpen() throws Exception {
+		failCloseRequest(new RequestID(UUID.randomUUID()), GroupRequestStatus.open(),
+				Instant.ofEpochMilli(10000), new IllegalArgumentException(
+						"newStatus cannot be OPEN"));
+	}
+	
+	@Test
+	public void closeRequestFailNoSuchID() throws Exception {
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		
+		final UUID newID = UUID.randomUUID();
+		failCloseRequest(new RequestID(newID), GroupRequestStatus.canceled(),
+				Instant.ofEpochMilli(10000), new NoSuchRequestException(
+						"No open request with ID " + newID.toString()));
+	}
+	
+	@Test
+	public void closeRequestFailAlreadyClosed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withStatus(GroupRequestStatus.canceled())
+				.build());
+		
+		failCloseRequest(new RequestID(id), GroupRequestStatus.canceled(),
+				Instant.ofEpochMilli(10000), new NoSuchRequestException(
+						"No open request with ID " + id.toString()));
+	}
+	
+	private void failCloseRequest(
+			final RequestID id,
+			final GroupRequestStatus status,
+			final Instant mod,
+			final Exception expected) {
+		try {
+			manager.storage.closeRequest(id, status, mod);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 }
