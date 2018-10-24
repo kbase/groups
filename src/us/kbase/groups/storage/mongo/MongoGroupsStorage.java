@@ -83,7 +83,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
-	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
+//	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
 	private static final IndexOptions IDX_UNIQ_SPARSE = new IndexOptions()
 			.unique(true).sparse(true);
 	static {
@@ -92,24 +92,39 @@ public class MongoGroupsStorage implements GroupsStorage {
 		
 		// groups indexes
 		final Map<List<String>, IndexOptions> groups = new HashMap<>();
+		// will probably need to sort by time at some point
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
+		// find by owner
 		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
 		INDEXES.put(COL_GROUPS, groups);
 		
-		
 		// requests indexes
+		// TODO CODE mongo 3.2 has partial indexes that might help here
 		final Map<List<String>, IndexOptions> requests = new HashMap<>();
 		// may need compound indexes to speed things up.
 		requests.put(Arrays.asList(Fields.REQUEST_ID), IDX_UNIQ);
-		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID), null);
-		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_STATUS), null);
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET), IDX_SPARSE);
-		// keep both target indexes as the sparse index will speed lookups when the status
-		// isn't required
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS), null);
-		requests.put(Arrays.asList(Fields.REQUEST_CREATION), null);
-		requests.put(Arrays.asList(Fields.REQUEST_STATUS), null);
+		// find by group & sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_MODIFICATION), null);
+		// find by group & status and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_STATUS,
+				Fields.REQUEST_MODIFICATION), null);
+		// find by requester and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_MODIFICATION), null);
+		// find by requester and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_STATUS,
+				Fields.REQUEST_MODIFICATION), null);
+		// find by target and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_MODIFICATION), null);
+		// find by target and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS,
+				Fields.REQUEST_MODIFICATION), null);
+		// sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_MODIFICATION), null);
+		// find by state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_STATUS, Fields.REQUEST_MODIFICATION), null);
+		// find expired requests.
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
+		// ensure equivalent requests are rejected. See getCharacteristicString()
 		requests.put(Arrays.asList(Fields.REQUEST_CHARACTERISTIC_STRING), IDX_UNIQ_SPARSE);
 		INDEXES.put(COL_REQUESTS, requests);
 		
@@ -540,44 +555,56 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
+	// TODO NOW allow including closed requests
 	@Override
 	public List<GroupRequest> getRequestsByRequester(
-			final UserName requester,
-			final GroupRequestStatusType status) throws GroupsStorageException {
-		return getRequestsByUser(requester, status, Fields.REQUEST_REQUESTER, "requester");
+			final UserName requester) throws GroupsStorageException {
+		return getRequestsByUser(requester, Fields.REQUEST_REQUESTER, "requester");
 	}
 	
+	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
+	// TODO NOW allow including closed requests
 	@Override
 	public List<GroupRequest> getRequestsByTarget(
-			final UserName target,
-			final GroupRequestStatusType status)
+			final UserName target)
 			throws GroupsStorageException {
-		return getRequestsByUser(target, status, Fields.REQUEST_TARGET, "target");
+		return getRequestsByUser(target, Fields.REQUEST_TARGET, "target");
 	}
 
 	private List<GroupRequest> getRequestsByUser(
 			final UserName requester,
-			final GroupRequestStatusType status,
 			final String field,
 			final String fieldType)
 			throws GroupsStorageException {
 		checkNotNull(requester, fieldType);
-		return findRequests(withStatus(new Document(field, requester.getName()), status));
+		return findRequests(new Document(field, requester.getName())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name()));
 	}
 
-
-	private Document withStatus(final Document query, final GroupRequestStatusType status) {
-		if (status != null) {
-			query.append(Fields.REQUEST_STATUS, status.name());
-		}
-		return query;
+	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
+	// TODO NOW allow including closed requests
+	@Override
+	public List<GroupRequest> getRequestsByGroupID(
+			final GroupID groupID)
+			throws GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name())
+				.append(Fields.REQUEST_TYPE, new Document("$in", Arrays.asList(
+						//TODO WORKSPACE add type where admins must approve workspace addition
+						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name())));
+		return findRequests(query);
 	}
 
 	private List<GroupRequest> findRequests(final Document query)
 			throws GroupsStorageException {
 		final List<GroupRequest> ret = new LinkedList<>();
 		try {
-			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query);
+			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query)
+					// allow other sorts? can't think of any particularly useful ones
+					// maybe allow reverse sort. Default should be oldest first for
+					// open requests & newest first for closed (e.g. what happened most recently)
+					.sort(new Document(Fields.REQUEST_MODIFICATION, 1));
 			for (final Document rdoc: gdocs) {
 				ret.add(toRequest(rdoc));
 			}
@@ -586,17 +613,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 					"Connection to database failed: " + e.getMessage(), e);
 		}
 		return ret;
-	}
-	
-	@Override
-	public List<GroupRequest> getRequestsByGroupID(
-			final GroupID groupID,
-			final GroupRequestStatusType status)
-			throws GroupsStorageException {
-		checkNotNull(groupID, "groupID");
-		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
-				.append(Fields.REQUEST_TARGET, null);
-		return findRequests(withStatus(query, status));
 	}
 	
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {

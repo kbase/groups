@@ -14,7 +14,6 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
-import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -44,22 +43,19 @@ public interface GroupsStorage {
 			throws NoSuchRequestException, GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	// pass null for any status
+	//TODO NOW allow getting closed requests
 	List<GroupRequest> getRequestsByRequester(
-			UserName requester,
-			GroupRequestStatusType status) throws GroupsStorageException;
+			UserName requester) throws GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	// pass null for any status
+	//TODO NOW allow getting closed requests
 	List<GroupRequest> getRequestsByTarget(
-			UserName target,
-			GroupRequestStatusType status) throws GroupsStorageException;
+			UserName target) throws GroupsStorageException;
 
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	// maybe also specify optional target user? YAGNI for now
 	// only returns requests for that group specifically, e.g. no target user
-	// pass null for any status
-	List<GroupRequest> getRequestsByGroupID(GroupID groupID, GroupRequestStatusType status)
+	//TODO NOW allow getting closed requests
+	List<GroupRequest> getRequestsByGroupID(GroupID groupID)
 			throws GroupsStorageException;
 	
 	void closeRequest(

@@ -767,4 +767,254 @@ public class MongoGroupsStorageOpsTest {
 		}
 	}
 	
+	@Test
+	public void getRequestsByRequesterOpenState() throws Exception {
+		// as of writing this test, only the open state is supported
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		final GroupRequest first = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(50000), forever)
+							.withModificationTime(Instant.ofEpochMilli(120000))
+							.build())
+				.build();
+		final GroupRequest second = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo2"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
+							.withModificationTime(Instant.ofEpochMilli(130000))
+							.build())
+				.withInviteToGroup(new UserName("whee"))
+				.build();
+		final GroupRequest third = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
+							.withModificationTime(Instant.ofEpochMilli(140000))
+							.build())
+				.build();
+		final GroupRequest fourth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo4"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(150000))
+							.build())
+				.build();
+		final GroupRequest target = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("targ"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withInviteToGroup(new UserName("bar"))
+				.build();
+		final GroupRequest otheruser = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.build();
+		final GroupRequest closed = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		manager.storage.storeRequest(fourth);
+		manager.storage.storeRequest(target);
+		manager.storage.storeRequest(otheruser);
+		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(closed);
+		manager.storage.storeRequest(third);
+		manager.storage.storeRequest(second);
+
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("bar")), is(
+						Arrays.asList(first, second, third, fourth)));
+		
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("baz")), is(
+						Arrays.asList(otheruser)));
+		
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("bat")), is(
+						Collections.emptyList()));
+	}
+	
+	@Test
+	public void failGetRequestsByRequester() {
+		try {
+			manager.storage.getRequestsByRequester(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("requester"));
+		}
+	}
+	
+	@Test
+	public void getRequestsByTargetOpenState() throws Exception {
+		// as of writing this test, only the open state is supported
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		final GroupRequest first = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(50000), forever)
+							.withModificationTime(Instant.ofEpochMilli(120000))
+							.build())
+				.withInviteToGroup(new UserName("bar"))
+				.build();
+		final GroupRequest second = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo2"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
+							.withModificationTime(Instant.ofEpochMilli(130000))
+							.build())
+				.withInviteToGroup(new UserName("bar"))
+				.build();
+		final GroupRequest third = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
+							.withModificationTime(Instant.ofEpochMilli(140000))
+							.build())
+				.withInviteToGroup(new UserName("bar"))
+				.build();
+		final GroupRequest fourth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo4"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(150000))
+							.build())
+				.withInviteToGroup(new UserName("bar"))
+				.build();
+		final GroupRequest user = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("use"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.build();
+		final GroupRequest othertarget = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+							.build())
+				.withInviteToGroup(new UserName("bat"))
+				.build();
+		final GroupRequest closed = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withInviteToGroup(new UserName("bar"))
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		manager.storage.storeRequest(fourth);
+		manager.storage.storeRequest(user);
+		manager.storage.storeRequest(othertarget);
+		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(closed);
+		manager.storage.storeRequest(third);
+		manager.storage.storeRequest(second);
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar")), is(
+						Arrays.asList(first, second, third, fourth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bat")), is(
+						Arrays.asList(othertarget)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("baz")), is(
+						Collections.emptyList()));
+	}
+	
+	@Test
+	public void failGetRequestsByTarget() {
+		try {
+			manager.storage.getRequestsByTarget(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("target"));
+		}
+	}
+	
+	@Test
+	public void getRequestsByGroupOpenState() throws Exception {
+		// as of writing this test, only the open state is supported
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		final GroupRequest first = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar1"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(50000), forever)
+							.withModificationTime(Instant.ofEpochMilli(120000))
+							.build())
+				.build();
+		final GroupRequest second = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar2"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
+							.withModificationTime(Instant.ofEpochMilli(130000))
+							.build())
+				.build();
+		final GroupRequest third = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar3"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
+							.withModificationTime(Instant.ofEpochMilli(140000))
+							.build())
+				.build();
+		final GroupRequest fourth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar4"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(150000))
+							.build())
+				.build();
+		// any request with a target is excluded
+		final GroupRequest target = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withInviteToGroup(new UserName("foo"))
+				.build();
+		final GroupRequest othergroup = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("other"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.build();
+		final GroupRequest closed = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("closed"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		manager.storage.storeRequest(fourth);
+		manager.storage.storeRequest(target);
+		manager.storage.storeRequest(othergroup);
+		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(closed);
+		manager.storage.storeRequest(third);
+		manager.storage.storeRequest(second);
+
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroupID(new GroupID("foo")), is(
+						Arrays.asList(first, second, third, fourth)));
+		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroupID(new GroupID("other")), is(
+						Arrays.asList(othergroup)));
+		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroupID(new GroupID("baz")), is(
+						Collections.emptyList()));
+	}
+	
+	@Test
+	public void failGetRequestsByGroup() {
+		try {
+			manager.storage.getRequestsByGroupID(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+	
 }

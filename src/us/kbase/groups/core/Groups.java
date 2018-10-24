@@ -222,26 +222,26 @@ public class Groups {
 		}
 	}
 	
-	//TODO CODE allow getting closed requests
+	//TODO NOW allow getting closed requests
 	public List<GroupRequest> getRequestsForRequester(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByRequester(user, GroupRequestStatusType.OPEN);
+		return storage.getRequestsByRequester(user);
 	}
 	
-	//TODO CODE allow getting closed requests
+	//TODO NOW allow getting closed requests
 	public List<GroupRequest> getRequestsForTarget(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByTarget(user, GroupRequestStatusType.OPEN);
+		return storage.getRequestsByTarget(user);
 	}
-	
+
+	//TODO NOW allow getting closed requests
 	public List<GroupRequest> getRequestsForGroupID(final Token userToken, final GroupID groupID)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
-		// TODO NOW specify request types in search - just excluding target in mongo storage class won't work.
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
@@ -249,7 +249,7 @@ public class Groups {
 					"User %s cannot view requests for group %s",
 					user.getName(), groupID.getName()));
 		}
-		return storage.getRequestsByGroupID(groupID, GroupRequestStatusType.OPEN);
+		return storage.getRequestsByGroupID(groupID);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
