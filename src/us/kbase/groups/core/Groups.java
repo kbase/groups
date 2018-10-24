@@ -163,6 +163,7 @@ public class Groups {
 				RequestExistsException, NoSuchUserException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
+		checkNotNull(newMember, "newMember");
 		final UserName user = userHandler.getUser(userToken);
 		if (!userHandler.isValidUser(newMember)) {
 			throw new NoSuchUserException(newMember.getName());
@@ -342,7 +343,7 @@ public class Groups {
 	}
 
 	// assumes group exists
-	// TODO CODE this and the accept membership request code is similar - DRY up a bit?
+	// this and the accept membership request code is similar - DRY up a bit?
 	private void processAcceptGroupInviteRequest(
 			final GroupRequest request,
 			final Group group)
