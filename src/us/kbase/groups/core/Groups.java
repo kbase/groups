@@ -126,8 +126,8 @@ public class Groups {
 	// obviously if the number of groups gets > ~100k something will have to change
 	public List<Group> getGroups()
 			throws GroupsStorageException {
-		final List<Group> groups = storage.getGroups();
-		return groups.stream().map(g -> g.withoutPrivateFields()).collect(Collectors.toList());
+		return storage.getGroups().stream().map(g -> g.withoutPrivateFields())
+				.collect(Collectors.toList());
 	}
 	
 	public GroupRequest requestGroupMembership(final Token userToken, final GroupID groupID)

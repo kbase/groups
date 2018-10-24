@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Constructor;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Test;
 
@@ -27,6 +29,8 @@ import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.WorkspaceHandler;
+import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
@@ -41,7 +45,7 @@ public class GroupsTest {
 			PARAMS = GroupCreationParams.getBuilder(
 					new GroupID("i"), new GroupName("n")).build();
 		} catch (Exception e) {
-			throw new RuntimeException("Fix yer tests newb");
+			throw new RuntimeException("Fix yer tests newb", e);
 		}
 	}
 
@@ -238,6 +242,149 @@ public class GroupsTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void getGroupNoToken() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("desc")
+				.withType(GroupType.TEAM)
+				.withMember(new UserName("baz"))
+				.build());
+		
+		final Group g = mocks.groups.getGroup(null, new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("desc")
+				.withType(GroupType.TEAM)
+				.build()));
+	}
+	
+	@Test
+	public void getGroupNonMemberToken() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withMember(new UserName("baz"))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
+		
+		final Group g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.build()));
+	}
+	
+	@Test
+	public void getGroupMemberToken() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("other desc")
+				.withType(GroupType.PROJECT)
+				.withMember(new UserName("baz"))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
+		
+		final Group g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("other desc")
+				.withType(GroupType.PROJECT)
+				.withMember(new UserName("baz"))
+				.build()));
+	}
+	
+	@Test
+	public void getGroupFailNoSuchGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar")))
+				.thenThrow(new NoSuchGroupException("bar"));
+		
+		failGetGroup(mocks.groups, null, new GroupID("bar"), new NoSuchGroupException("bar"));
+	}
+	
+	@Test
+	public void getGroupFailAuthException() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token")))
+				.thenThrow(new AuthenticationException(
+						ErrorType.AUTHENTICATION_FAILED, "oh hecky darn"));
+		
+		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"),
+				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "oh hecky darn"));
+	}
+	
+	private void failGetGroup(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final Exception expected) {
+		try {
+			g.getGroup(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getGroupsEmpty() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroups()).thenReturn(Collections.emptyList());
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(), is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroups()).thenReturn(Arrays.asList(
+				Group.getBuilder(new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						.build(),
+				Group.getBuilder(new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.withDescription("desc")
+						.withType(GroupType.PROJECT)
+						.withMember(new UserName("whee"))
+						.build()
+				));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(), is(Arrays.asList(
+				Group.getBuilder(new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						.build(),
+				Group.getBuilder(new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.withDescription("desc")
+						.withType(GroupType.PROJECT)
+						.build()
+				)));
 	}
 	
 }
