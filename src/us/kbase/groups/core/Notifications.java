@@ -13,8 +13,8 @@ public interface Notifications {
 
 	void cancel(RequestID requestID);
 
-	void deny(Set<UserName> targets, GroupRequest request, UserName deniedBy);
+	void deny(Set<UserName> targets, GroupRequest request);
 
-	void accept(Set<UserName> targets, GroupRequest request, UserName acceptedBy);
+	void accept(Set<UserName> targets, GroupRequest request);
 	
 }

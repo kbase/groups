@@ -52,6 +52,9 @@ import us.kbase.test.groups.TestCommon;
 
 public class GroupsTest {
 	
+	// probably some of these tests could be DRYed up a bit. This is left as an exercise for
+	// the reader.
+	
 	private static final GroupCreationParams PARAMS;
 	static {
 		try {
@@ -1519,8 +1522,7 @@ public class GroupsTest {
 								.build())
 						.withRequestGroupMembership()
 						.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
-						.build(),
-				new UserName("own"));
+						.build());
 		
 		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("user"),
@@ -1553,7 +1555,7 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withInviteToGroup(new UserName("target"))
-						.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
+						.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
@@ -1578,10 +1580,9 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
-				.withInviteToGroup(new UserName("target"))
-						.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
-						.build(),
-				new UserName("target"));
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
+						.build());
 		
 		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("user"),
@@ -1590,7 +1591,7 @@ public class GroupsTest {
 						.withModificationTime(Instant.ofEpochMilli(15000))
 						.build())
 				.withInviteToGroup(new UserName("target"))
-				.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
+				.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 				.build()));
 	}
 	
@@ -1680,6 +1681,254 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.denyRequest(t, i, null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void acceptRequestAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestGroupMembership()
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withRequestGroupMembership()
+						.withStatus(GroupRequestStatus.accepted(new UserName("own")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		final GroupRequest req = mocks.groups.acceptRequest(
+				new Token("token"), new RequestID(id));
+		
+		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("user"));
+		verify(mocks.storage).closeRequest(
+				new RequestID(id),
+				GroupRequestStatus.accepted(new UserName("own")),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).accept(
+				set(new UserName("user")), //TODO ADMIN when admins available, some notifications will happen
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withRequestGroupMembership()
+						.withStatus(GroupRequestStatus.accepted(new UserName("own")))
+						.build());
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withRequestGroupMembership()
+				.withStatus(GroupRequestStatus.accepted(new UserName("own")))
+				.build()));
+	}
+	
+	@Test
+	public void acceptRequestTarget() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		final GroupRequest req = mocks.groups.acceptRequest(
+				new Token("token"), new RequestID(id));
+		
+		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"));
+		verify(mocks.storage).closeRequest(
+				new RequestID(id),
+				GroupRequestStatus.accepted(new UserName("target")),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).accept(
+				set(new UserName("own")), //TODO ADMIN when admins available, some notifications will happen
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+						.build());
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+				.build()));
+	}
+	
+	@Test
+	public void acceptRequestFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		
+		failAcceptRequest(g, null, new RequestID(UUID.randomUUID()),
+				new NullPointerException("userToken"));
+		failAcceptRequest(g, new Token("t"), null, new NullPointerException("requestID"));
+	}
+
+	@Test
+	public void acceptRequestFailNotTarget() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("nottarget"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User nottarget may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestGroupMembership()
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User notadmin may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailUserIsMember() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestGroupMembership()
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		doThrow(new UserIsMemberException("you silly")).when(mocks.storage)
+				.addMember(new GroupID("gid"), new UserName("user"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UserIsMemberException("you silly"));
+	}
+	
+	@Test
+	public void acceptRequestFailNoSuchGroupOnAdd() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
+				.addMember(new GroupID("gid"), new UserName("target"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(
+						"Group gid unexpectedly doesn't exist: 50000 No such group: gid"));
+	}
+	
+	private void failAcceptRequest(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final Exception expected) {
+		try {
+			g.acceptRequest(t, i);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

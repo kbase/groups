@@ -326,7 +326,7 @@ public class Groups {
 		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
 		final GroupRequest r = storage.getRequest(requestID);
 		//TODO NOW who should get notified?
-		notifications.deny(new HashSet<>(), r, user);
+		notifications.deny(new HashSet<>(), r);
 		return r;
 	}
 	
@@ -342,18 +342,18 @@ public class Groups {
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureCanAcceptOrDeny(request, group, user, true);
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-			processAcceptGroupMembershipRequest(request, user, group);
+			return processAcceptGroupMembershipRequest(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-			processAcceptGroupInviteRequest(request, group);
+			return processAcceptGroupInviteRequest(request, group);
 		} else {
+			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
 		}
-		return storage.getRequest(requestID);
 	}
 
 	// assumes group exists
 	// this and the accept membership request code is similar - DRY up a bit?
-	private void processAcceptGroupInviteRequest(
+	private GroupRequest processAcceptGroupInviteRequest(
 			final GroupRequest request,
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
@@ -361,12 +361,13 @@ public class Groups {
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
 		storage.closeRequest(
 				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
-		notifications.accept(
-				new HashSet<>(group.getAdministratorsAndOwner()), request, acceptedBy);
+		final GroupRequest r = storage.getRequest(request.getID());
+		notifications.accept(new HashSet<>(group.getAdministratorsAndOwner()), r);
+		return r;
 	}
 
 	// assumes group exists
-	private void processAcceptGroupMembershipRequest(
+	private GroupRequest processAcceptGroupMembershipRequest(
 			final GroupRequest request,
 			final UserName acceptedBy,
 			final Group group)
@@ -377,7 +378,9 @@ public class Groups {
 		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
 		targets.add(request.getRequester());
 		targets.remove(acceptedBy);
-		notifications.accept(targets, request, acceptedBy);
+		final GroupRequest r = storage.getRequest(request.getID());
+		notifications.accept(targets, r);
+		return r;
 	}
 	
 	private void ensureCanAcceptOrDeny(
