@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -288,8 +289,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 				Fields.GROUP_ID, group.getGroupID().getName())
 				.append(Fields.GROUP_NAME, group.getGroupName().getName())
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
-				.append(Fields.GROUP_MEMBERS, group.getMembers().stream().map(m -> m.getName())
-						.collect(Collectors.toList()))
+				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
+				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_TYPE, group.getType().name())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
@@ -308,6 +309,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throw new GroupsStorageException("Connection to database failed: " +
 					e.getMessage(), e);
 		}
+	}
+
+	private List<String> toStringList(final Set<UserName> users) {
+		return users.stream().map(m -> m.getName())
+				.collect(Collectors.toList());
 	}
 	
 	@Override
@@ -352,6 +358,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
 			addMembers(b, grp);
+			addAdmins(b, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
 				IllegalArgumentException e) {
@@ -370,15 +377,27 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
+	// could probably combine with above with a lambda, but eh
+	private void addAdmins(final Group.Builder builder, final Document groupDoc)
+			throws MissingParameterException, IllegalParameterException {
+		// can't be null
+		@SuppressWarnings("unchecked")
+		final List<String> members = (List<String>) groupDoc.get(Fields.GROUP_ADMINS);
+		for (final String m: members) {
+			builder.withAdministrator(new UserName(m));
+		}
+	}
+	
 	@Override
 	public void addMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(member, "member");
 		
+		final Document notEqualToMember = new Document("$ne", member.getName());
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				// TODO ADMIN handle case where user is admin when admin support added
-				.append(Fields.GROUP_OWNER, new Document("$ne", member.getName()));
+				.append(Fields.GROUP_OWNER, notEqualToMember)
+				.append(Fields.GROUP_ADMINS, notEqualToMember);
 			
 		final Document addToSet = new Document("$addToSet",
 				new Document(Fields.GROUP_MEMBERS, member.getName()));
@@ -386,24 +405,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
 			if (res.getMatchedCount() != 1) {
-				final Group g = getGroup(groupID); // will throw no such group
-				if (g.getOwner().equals(member)) {
-					throw new UserIsMemberException(String.format(
-							"User %s is the owner of group %s",
-							member.getName(), groupID.getName()));
-				} else {
-					/* this *could* be caused by a race condition if owner/admins change or group
-					 * deletions are implemented. However, it should be extremely rare and the
-					 * user add can just be retried so it's not worth special handling beyond
-					 * throwing an exception.
-					 * If this prediction is wrong, just retry X (5?) times.
-					 * 
-					 * This is also really hard to test.
-					 */
-					throw new RuntimeException(String.format("Unexpected result: No group " +
-							"matched addmember query for group id %s and member %s.",
-							groupID.getName(), member.getName()));
-				}
+				handleNoMatchOnUserAdd(groupID, member);
 			}
 			if (res.getModifiedCount() != 1) {
 				throw new UserIsMemberException(String.format(
@@ -413,6 +415,33 @@ public class MongoGroupsStorage implements GroupsStorage {
 		} catch (MongoException e) {
 			throw new GroupsStorageException("Connection to database failed: " +
 					e.getMessage(), e);
+		}
+	}
+
+
+	private void handleNoMatchOnUserAdd(final GroupID groupID, final UserName member)
+			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
+		final Group g = getGroup(groupID); // will throw no such group
+		if (g.getOwner().equals(member)) {
+			throw new UserIsMemberException(String.format(
+					"User %s is the owner of group %s",
+					member.getName(), groupID.getName()));
+		} else if (g.getAdministrators().contains(member)) {
+			throw new UserIsMemberException(String.format(
+					"User %s is an administator of group %s",
+					member.getName(), groupID.getName()));
+		} else {
+			/* this *could* be caused by a race condition if owner/admins change or group
+			 * deletions are implemented. However, it should be extremely rare and the
+			 * user add can just be retried so it's not worth special handling beyond
+			 * throwing an exception.
+			 * If this prediction is wrong, just retry X (5?) times.
+			 * 
+			 * This is also really hard to test.
+			 */
+			throw new RuntimeException(String.format("Unexpected result: No group " +
+					"matched addmember query for group id %s and member %s.",
+					groupID.getName(), member.getName()));
 		}
 	}
 	

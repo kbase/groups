@@ -99,6 +99,8 @@ public class MongoGroupsStorageOpsTest {
 				.withDescription("desc")
 				.withMember(new UserName("foo"))
 				.withMember(new UserName("bar"))
+				.withAdministrator(new UserName("a1"))
+				.withAdministrator(new UserName("a3"))
 				.build());
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
@@ -110,6 +112,8 @@ public class MongoGroupsStorageOpsTest {
 						.withDescription("desc")
 						.withMember(new UserName("foo"))
 						.withMember(new UserName("bar"))
+						.withAdministrator(new UserName("a1"))
+						.withAdministrator(new UserName("a3"))
 						.build()));
 	}
 	
@@ -201,6 +205,7 @@ public class MongoGroupsStorageOpsTest {
 				.withDescription("desc1")
 				.withMember(new UserName("foo1"))
 				.withMember(new UserName("bar1"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		
 		manager.storage.createGroup(Group.getBuilder(
@@ -220,6 +225,7 @@ public class MongoGroupsStorageOpsTest {
 						.withDescription("desc1")
 						.withMember(new UserName("foo1"))
 						.withMember(new UserName("bar1"))
+						.withAdministrator(new UserName("admin"))
 						.build(),
 				Group.getBuilder(
 						new GroupID("fid"), new GroupName("name2"), new UserName("uname2"),
@@ -281,7 +287,6 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void addMemberFailExists() throws Exception {
-		// add test for admin fail when admins are supported
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
@@ -294,7 +299,6 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void addMemberFailOwner() throws Exception {
-		// add test for admin fail when admins are supported
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
@@ -302,7 +306,18 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddMember(new GroupID("gid"), new UserName("uname3"),
 				new UserIsMemberException("User uname3 is the owner of group gid"));
+	}
+	
+	@Test
+	public void addMemberFailAdmin() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(new UserName("admin"))
+				.build());
 		
+		failAddMember(new GroupID("gid"), new UserName("admin"),
+				new UserIsMemberException("User admin is an administator of group gid"));
 	}
 	
 	private void failAddMember(
