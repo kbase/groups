@@ -50,23 +50,19 @@ public class SLF4JNotifier implements Notifications {
 	}
 	
 	@Override
-	public void deny(
-			final Set<UserName> targets,
-			final GroupRequest request,
-			final UserName deniedBy) {
+	public void deny(final Set<UserName> targets, final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s denied request %s, targets: %s",
-				deniedBy.getName(), request.getID().getID(), userNamesToStrings(targets)));
+				request.getClosedBy().get().getName(), request.getID().getID(),
+				userNamesToStrings(targets)));
 	}
 
 	@Override
-	public void accept(
-			final Set<UserName> targets,
-			final GroupRequest request,
-			final UserName acceptedBy) {
+	public void accept(final Set<UserName> targets, final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s accepted request %s, targets: %s",
-				acceptedBy.getName(), request.getID().getID(), userNamesToStrings(targets)));
+				request.getClosedBy().get().getName(), request.getID().getID(),
+				userNamesToStrings(targets)));
 	}
 
 }
