@@ -1934,4 +1934,91 @@ public class GroupsTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void removeMemberSelf() throws Exception {
+		removeMember(new UserName("user"));
+	}
+	
+	@Test
+	public void removeMemberAdmin() throws Exception {
+		removeMember(new UserName("own"));
+	}
+
+	private void removeMember(final UserName user) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(user);
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("user"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		mocks.groups.removeMember(new Token("token"), new GroupID("gid"), new UserName("user"));
+		
+		verify(mocks.storage).removeMember(new GroupID("gid"), new UserName("user"));
+	}
+	
+	@Test
+	public void removeMemberFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("g");
+		final UserName u = new UserName("u");
+		
+		failRemoveMember(g, null, i, u, new NullPointerException("userToken"));
+		failRemoveMember(g, t, null, u, new NullPointerException("groupID"));
+		failRemoveMember(g, t, i, null, new NullPointerException("member"));
+	}
+	
+	@Test
+	public void removeMemberFailUnauthed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("user"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failRemoveMember(mocks.groups, new Token("token"), new GroupID("gid"), new UserName("own"),
+				new UnauthorizedException("User someuser may not administrate group gid"));
+	}
+	
+	@Test
+	public void removeMemberFailNotInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("user"))
+				.withMember(new UserName("u3"))
+				.build());
+		doThrow(new NoSuchUserException("Nope.")).when(mocks.storage)
+				.removeMember(new GroupID("gid"), new UserName("user"));
+		
+		failRemoveMember(mocks.groups, new Token("token"), new GroupID("gid"),
+				new UserName("user"), new NoSuchUserException("Nope."));
+	}
+	
+	private void failRemoveMember(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final UserName u,
+			final Exception expected) {
+		try {
+			g.removeMember(t, i, u);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }
