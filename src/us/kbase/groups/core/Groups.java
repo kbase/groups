@@ -39,8 +39,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 
-	//TODO JAVADOC
-	//TODO TEST
 	//TODO LOGGING for all actions
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
@@ -55,6 +53,8 @@ public class Groups {
 	/** Create a new {@link Groups} class.
 	 * @param storage the storage system to be used by the class.
 	 * @param userHandler the user handler by which users shall be handled.
+	 * @param wsHandler the workspace handler by which information from the workspace service
+	 * will be retrieved.
 	 * @param notifications where notification should be sent.
 	 */
 	public Groups(
@@ -86,6 +86,15 @@ public class Groups {
 		this.clock = clock;
 	}
 	
+	/** Create a new group.
+	 * @param userToken the token of the user that will be creating the group.
+	 * @param createParams the paramaters describing how the group will be created.
+	 * @return the new group.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupExistsException if the group already exists.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
 	public Group createGroup(
 			final Token userToken,
 			final GroupCreationParams createParams)
@@ -105,6 +114,16 @@ public class Groups {
 		}
 	}
 	
+	/** Get a group. If a token is provided and the user is a member of the group, the member
+	 * list will be populated. Otherwise, it will be empty.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to get.
+	 * @return the group.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
 	public Group getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException {
@@ -122,12 +141,27 @@ public class Groups {
 	
 	// this assumes the number of groups is small enough that listing them all is OK.
 	// obviously if the number of groups gets > ~100k something will have to change
+	/** Get all the groups in the system.
+	 * @return all the groups.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
 	public List<Group> getGroups()
 			throws GroupsStorageException {
 		return storage.getGroups().stream().map(g -> g.withoutPrivateFields())
 				.collect(Collectors.toList());
 	}
 	
+	/** Request membership in a group.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group for which membership is desired.
+	 * @return a new request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UserIsMemberException if the user is already a member of the group.
+	 * @throws RequestExistsException if there's already an equivalent request in the system.
+	 */
 	public GroupRequest requestGroupMembership(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
 				NoSuchGroupException, UserIsMemberException, RequestExistsException {
@@ -152,6 +186,20 @@ public class Groups {
 		return request;
 	}
 	
+	/** Invite a user to a group. The user must be a group administrator.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to which the invitation will apply.
+	 * @param newMember the user to invite to the group.
+	 * @return a new request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws UnauthorizedException if the user is not a group administrator.
+	 * @throws UserIsMemberException if the user is already a member of the group.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws RequestExistsException if an equivalent request already exists in the system.
+	 * @throws NoSuchUserException if the user name is invalid.
+	 */
 	public GroupRequest inviteUserToGroup(
 			final Token userToken,
 			final GroupID groupID,
@@ -190,6 +238,18 @@ public class Groups {
 	
 	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
 	
+	/** Get a request. A request can be viewed if the user created the request, is the target
+	 * user of the request, or is an administrator of the group that is the target of the
+	 * request.
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request.
+	 * @return the request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user may not view the request.
+	 */
 	public GroupRequestWithActions getRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
@@ -240,6 +300,13 @@ public class Groups {
 	}
 	
 	//TODO NOW allow getting closed requests
+	/** Get requests that were created by the user.
+	 * @param userToken the user's token.
+	 * @return the requests.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
 	public List<GroupRequest> getRequestsForRequester(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
@@ -248,6 +315,13 @@ public class Groups {
 	}
 	
 	//TODO NOW allow getting closed requests
+	/** Get requests where the user is the target of the request.
+	 * @param userToken the user's token.
+	 * @return the requests.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
 	public List<GroupRequest> getRequestsForTarget(final Token userToken)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
@@ -256,7 +330,16 @@ public class Groups {
 	}
 
 	//TODO NOW allow getting closed requests
-	// only returns requests where the group is the target
+	/** Get requests where the group is the target of the request.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group for which requests will be returned.
+	 * @return the requests.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws UnauthorizedException if the user is not a group admin.
+	 * @throws NoSuchGroupException if the group does not exist.
+	 */
 	public List<GroupRequest> getRequestsForGroup(final Token userToken, final GroupID groupID)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
@@ -294,6 +377,16 @@ public class Groups {
 		}
 	}
 	
+	/** Cancel a request.
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request to cancel.
+	 * @return the updated request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user is not the creator of the request.
+	 */
 	public GroupRequest cancelRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException {
@@ -310,6 +403,18 @@ public class Groups {
 		return storage.getRequest(requestID);
 	}
 	
+	/** Deny a request.
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request to deny.
+	 * @param reason the optional reason the request was denied.
+	 * @return the updated request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user is not the target of the request or an
+	 * administrator of the group targeted in the request, if a group is targeted.
+	 */
 	public GroupRequest denyRequest(
 			final Token userToken,
 			final RequestID requestID,
@@ -330,6 +435,19 @@ public class Groups {
 		return r;
 	}
 	
+	/** Accept a request.
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request to accept.
+	 * @return the updated request.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user is not the target of the request or an
+	 * administrator of the group targeted in the request, if a group is targeted.
+	 * @throws UserIsMemberException if the user to be added to a group is already a member of
+	 * the group.
+	 */
 	public GroupRequest acceptRequest(
 			final Token userToken,
 			final RequestID requestID)
@@ -401,6 +519,18 @@ public class Groups {
 		}
 	}
 	
+	/** Remove a user from a group.
+	 * @param userToken the token of the user performing the remove operation.
+	 * @param groupID the ID of the group from which the user will be removed.
+	 * @param member the member to remove from the group.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 * @throws UnauthorizedException if the user to be removed is not the user from the token, or
+	 * if the user from the token is not a group administrator.
+	 */
 	public void removeMember(final Token userToken, final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, NoSuchUserException, UnauthorizedException {

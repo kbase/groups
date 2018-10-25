@@ -57,7 +57,7 @@ public class CreateModAndExpireTimes extends CreateAndModTimes {
 	/** Get a builder for a {@link CreateModAndExpireTimes}.
 	 * @param creationTime the creation time.
 	 * @param expirationTime the expiration time.
-	 * @return
+	 * @return a new builder.
 	 */
 	public static Builder getBuilder(final Instant creationTime, final Instant expirationTime) {
 		return new Builder(creationTime, expirationTime);
