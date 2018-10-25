@@ -35,14 +35,14 @@ public class CreateAndModTimes {
 	}
 
 	/** Get the creation time.
-	 * @return
+	 * @return the creation time.
 	 */
 	public Instant getCreationTime() {
 		return creationTime;
 	}
 
 	/** Get the modification time.
-	 * @return
+	 * @return the modification time.
 	 */
 	public Instant getModificationTime() {
 		return modificationTime;
