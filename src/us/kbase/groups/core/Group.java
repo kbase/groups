@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +24,7 @@ public class Group {
 	private final GroupName groupName;
 	private final UserName owner;
 	private final Set<UserName> members;
+	private final Set<UserName> admins;
 	private final GroupType type;
 	private final Instant creationDate;
 	private final Instant modificationDate;
@@ -35,6 +35,7 @@ public class Group {
 			final GroupName groupName,
 			final UserName owner,
 			final Set<UserName> members,
+			final Set<UserName> admins,
 			final GroupType type,
 			final CreateAndModTimes times,
 			final Optional<String> description) {
@@ -42,6 +43,7 @@ public class Group {
 		this.groupName = groupName;
 		this.owner = owner;
 		this.members = Collections.unmodifiableSet(members);
+		this.admins = Collections.unmodifiableSet(admins);
 		this.type = type;
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
@@ -74,6 +76,14 @@ public class Group {
 	 */
 	public Set<UserName> getMembers() {
 		return members;
+	}
+	
+	/** Get the administrators of the group. The owner is not included in this list, although
+	 * the owner is included as an administrator in {@link #isAdministrator(UserName)}.
+	 * @return the administrators.
+	 */
+	public Set<UserName> getAdministrators() {
+		return admins;
 	}
 
 	/** Get the type of the group.
@@ -110,16 +120,16 @@ public class Group {
 	 */
 	public boolean isAdministrator(final UserName user) {
 		checkNotNull(user, "user");
-		//TODO NOW deal with group admins
-		return owner.equals(user);
+		return owner.equals(user) || admins.contains(user);
 	}
 	
 	/** Get the administrators, including the owner, of the group.
 	 * @return the administrators.
 	 */
 	public Set<UserName> getAdministratorsAndOwner() {
-		//TODO NOW deal with group admins
-		return new HashSet<>(Arrays.asList(owner));
+		final HashSet<UserName> admins = new HashSet<>(this.admins);
+		admins.add(owner);
+		return admins;
 	}
 	
 	/** Check if a user is a member of the group. 'Member' includes the group owner and
@@ -129,8 +139,7 @@ public class Group {
 	 */
 	public boolean isMember(final UserName user) {
 		checkNotNull(user, "user");
-		// TODO NOW check admins
-		return owner.equals(user) || members.contains(user);
+		return owner.equals(user) || members.contains(user) || admins.contains(user);
 	}
 	
 	/** Return a copy of the group with any private fields removed. This currently is only
@@ -150,6 +159,7 @@ public class Group {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
@@ -173,6 +183,13 @@ public class Group {
 			return false;
 		}
 		Group other = (Group) obj;
+		if (admins == null) {
+			if (other.admins != null) {
+				return false;
+			}
+		} else if (!admins.equals(other.admins)) {
+			return false;
+		}
 		if (creationDate == null) {
 			if (other.creationDate != null) {
 				return false;
@@ -254,6 +271,7 @@ public class Group {
 		private final UserName owner;
 		private final CreateAndModTimes times;
 		private final Set<UserName> members = new HashSet<>();
+		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
 		private Optional<String> description = Optional.absent();
 		
@@ -305,10 +323,32 @@ public class Group {
 		/** Add a member to the builder.
 		 * @param member the member.
 		 * @return this builder.
+		 * @throws IllegalArgumentException if the member is already the owner of the group
+		 * or an administrator.
 		 */
 		public Builder withMember(final UserName member) {
 			checkNotNull(member, "member");
+			if (owner.equals(member) || admins.contains(member)) {
+				throw new IllegalArgumentException(
+						"Group already contains member as owner or admin");
+			}
 			this.members.add(member);
+			return this;
+		}
+		
+		/** Add an admin to the builder.
+		 * @param admin the administrator.
+		 * @return this builder.
+		 * @throws IllegalArgumentException if the admin is already the owner of the group
+		 * or an member.
+		 */
+		public Builder withAdministrator(final UserName admin) {
+			checkNotNull(admin, "admin");
+			if (owner.equals(admin) || members.contains(admin)) {
+				throw new IllegalArgumentException(
+						"Group already contains member as owner or member");
+			}
+			this.admins.add(admin);
 			return this;
 		}
 		
@@ -316,7 +356,7 @@ public class Group {
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, members, type, times, description);
+			return new Group(groupID, groupName, owner, members, admins, type, times, description);
 		}
 	}
 	
