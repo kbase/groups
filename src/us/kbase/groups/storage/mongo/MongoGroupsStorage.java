@@ -312,8 +312,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 
 	private List<String> toStringList(final Set<UserName> users) {
-		return users.stream().map(m -> m.getName())
-				.collect(Collectors.toList());
+		return users.stream().map(m -> m.getName()).collect(Collectors.toList());
 	}
 	
 	@Override
@@ -391,6 +390,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void addMember(final GroupID groupID, final UserName member)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
+		addUser(groupID, member, false);
+	}
+	
+	@Override
+	public void addAdmin(final GroupID groupID, final UserName admin)
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
+		checkNotNull(admin, "admin");
+		addUser(groupID, admin, true);
+	}
+
+	private void addUser(final GroupID groupID, final UserName member, final boolean asAdmin)
+			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(member, "member");
 		
@@ -399,15 +410,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_OWNER, notEqualToMember)
 				.append(Fields.GROUP_ADMINS, notEqualToMember);
 			
-		final Document addToSet = new Document("$addToSet",
-				new Document(Fields.GROUP_MEMBERS, member.getName()));
+		final Document modification = new Document("$addToSet",
+				new Document(asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS,
+						member.getName()));
+		if (asAdmin) {
+			modification.append("$pull", new Document(Fields.GROUP_MEMBERS, member.getName()));
+		}
 		
 		try {
-			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, addToSet);
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, modification);
 			if (res.getMatchedCount() != 1) {
-				handleNoMatchOnUserAdd(groupID, member);
+				handleNoMatchOnUserAdd(groupID, member, asAdmin);
 			}
 			if (res.getModifiedCount() != 1) {
+				// this can't happen if asAdmin is true
 				throw new UserIsMemberException(String.format(
 						"User %s is already a member of group %s",
 						member.getName(), groupID.getName()));
@@ -417,9 +433,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 					e.getMessage(), e);
 		}
 	}
-
-
-	private void handleNoMatchOnUserAdd(final GroupID groupID, final UserName member)
+	
+	private void handleNoMatchOnUserAdd(
+			final GroupID groupID,
+			final UserName member,
+			final boolean asAdmin)
 			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
 		final Group g = getGroup(groupID); // will throw no such group
 		if (g.getOwner().equals(member)) {
@@ -428,8 +446,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 					member.getName(), groupID.getName()));
 		} else if (g.getAdministrators().contains(member)) {
 			throw new UserIsMemberException(String.format(
-					"User %s is an administator of group %s",
-					member.getName(), groupID.getName()));
+					"User %s is %san administrator of group %s",
+					member.getName(), asAdmin ? "already " : "", groupID.getName()));
 		} else {
 			/* this *could* be caused by a race condition if owner/admins change or group
 			 * deletions are implemented. However, it should be extremely rare and the
@@ -440,8 +458,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 			 * This is also really hard to test.
 			 */
 			throw new RuntimeException(String.format("Unexpected result: No group " +
-					"matched addmember query for group id %s and member %s.",
-					groupID.getName(), member.getName()));
+					"matched %saddmember query for group id %s and member %s.",
+					asAdmin ? "admin " : "", groupID.getName(), member.getName()));
 		}
 	}
 	
@@ -464,7 +482,33 @@ public class MongoGroupsStorage implements GroupsStorage {
 				throw new NoSuchUserException(String.format("No member %s in group %s",
 						member.getName(), groupID.getName()));
 			}
-			// if add = true && not modified, just means user was already in the list
+		} catch (MongoException e) {
+			throw new GroupsStorageException("Connection to database failed: " +
+					e.getMessage(), e);
+		}
+	}
+	
+	@Override
+	public void demoteAdmin(final GroupID groupID, final UserName admin)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		checkNotNull(groupID, "groupID");
+		checkNotNull(admin, "admin");
+		
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(Fields.GROUP_ADMINS, admin.getName());
+		
+		final Document mod = new Document("$pull",
+					new Document(Fields.GROUP_ADMINS, admin.getName()))
+				.append("$addToSet", new Document(Fields.GROUP_MEMBERS, admin.getName()));
+		
+		try {
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, mod);
+			if (res.getMatchedCount() != 1) {
+				getGroup(groupID); // will throw no such group
+				throw new NoSuchUserException(String.format("No administrator %s in group %s",
+						admin.getName(), groupID.getName()));
+			}
+			// if there's a match, the document must be modified, so we don't check
 		} catch (MongoException e) {
 			throw new GroupsStorageException("Connection to database failed: " +
 					e.getMessage(), e);

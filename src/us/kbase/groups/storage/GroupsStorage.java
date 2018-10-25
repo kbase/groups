@@ -71,6 +71,27 @@ public interface GroupsStorage {
 	void removeMember(GroupID groupID, UserName member)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 
+	/** Add an administrator to a group. This will remove the user from the member list if present.
+	 * @param groupID the ID of the group.
+	 * @param admin the new admin.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws UserIsMemberException if the user is the owner or already an administrator
+	 * of the group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void addAdmin(GroupID groupID, UserName admin)
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException;
+	
+	/** Demote an admin to a member of a group.
+	 * @param groupID the ID of the group.
+	 * @param member the admin to demote.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws NoSuchUserException if the user is not an admin.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void demoteAdmin(GroupID groupID, UserName member)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
+	
 	/** Store a new request. The request ID must not already be present in the system.
 	 * @param request the new request.
 	 * @throws IllegalArgumentException if the request ID already exists.
