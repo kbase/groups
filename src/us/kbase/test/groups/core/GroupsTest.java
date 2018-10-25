@@ -293,6 +293,7 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withMember(new UserName("baz"))
+				.withAdministrator(new UserName("whoo"))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 		
@@ -509,6 +510,23 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void requestGroupMembershipFailUserIsAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failRequestGroupMembership(mocks.groups, new Token("token"), new GroupID("bar"),
+				new UserIsMemberException("User admin is already a member of group bar"));
+	}
+	
+	@Test
 	public void requestGroupMembershipFailUserIsMember() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
@@ -542,13 +560,14 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
 		when(mocks.userHandler.isValidUser(new UserName("foo"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -557,7 +576,7 @@ public class GroupsTest {
 				new Token("token"), new GroupID("bar"), new UserName("foo"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("bar"), new UserName("own"),
+				new RequestID(id), new GroupID("bar"), new UserName("admin"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 						.build())
@@ -571,9 +590,10 @@ public class GroupsTest {
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 						.withMember(new UserName("u1"))
 						.withMember(new UserName("u3"))
+						.withAdministrator(new UserName("admin"))
 						.build(),
 				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("bar"), new UserName("own"),
+						new RequestID(id), new GroupID("bar"), new UserName("admin"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 								.build())
@@ -582,7 +602,7 @@ public class GroupsTest {
 				);
 		
 		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("bar"), new UserName("own"),
+				new RequestID(id), new GroupID("bar"), new UserName("admin"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 						.build())
@@ -649,6 +669,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		
 		failInviteUserToGroup(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -822,7 +843,7 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("user"),
 				CreateModAndExpireTimes.getBuilder(
@@ -835,6 +856,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		
 		final GroupRequestWithActions req = mocks.groups.getRequest(
@@ -1347,6 +1369,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("u2"))
 				.build());
 		
 		failGetRequestsForGroup(mocks.groups, new Token("token"), new GroupID("gid"),
@@ -1463,24 +1486,24 @@ public class GroupsTest {
 	
 	@Test
 	public void denyRequestAdmin() throws Exception {
-		denyRequestAdmin(null);
+		denyRequestAdmin(null, "own");
 	}
 	
 	@Test
 	public void denyRequestAdminWhitespaceReason() throws Exception {
-		denyRequestAdmin("    \t    ");
+		denyRequestAdmin("    \t    ", "admin");
 	}
 	
 	@Test
 	public void denyRequestAdminReason() throws Exception {
-		denyRequestAdmin(" reason  ");
+		denyRequestAdmin(" reason  ", "admin");
 	}
 
-	private void denyRequestAdmin(final String reason) throws Exception {
+	private void denyRequestAdmin(final String reason, final String admin) throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName(admin));
 		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
@@ -1495,13 +1518,14 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withRequestGroupMembership()
-						.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+						.withStatus(GroupRequestStatus.denied(new UserName(admin), reason))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -1510,7 +1534,7 @@ public class GroupsTest {
 		
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
-				GroupRequestStatus.denied(new UserName("own"), reason),
+				GroupRequestStatus.denied(new UserName(admin), reason),
 				Instant.ofEpochMilli(15000));
 		verify(mocks.notifs).deny(
 				set(),
@@ -1521,7 +1545,7 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withRequestGroupMembership()
-						.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+						.withStatus(GroupRequestStatus.denied(new UserName(admin), reason))
 						.build());
 		
 		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
@@ -1531,7 +1555,7 @@ public class GroupsTest {
 						.withModificationTime(Instant.ofEpochMilli(15000))
 						.build())
 				.withRequestGroupMembership()
-				.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+				.withStatus(GroupRequestStatus.denied(new UserName(admin), reason))
 				.build()));
 	}
 	
@@ -1668,6 +1692,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1941,8 +1966,13 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void removeMemberAdmin() throws Exception {
+	public void removeMemberOwner() throws Exception {
 		removeMember(new UserName("own"));
+	}
+	
+	@Test
+	public void removeMemberAdmin() throws Exception {
+		removeMember(new UserName("admin"));
 	}
 
 	private void removeMember(final UserName user) throws Exception {
@@ -1954,6 +1984,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("user"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
 				.build());
 		
 		mocks.groups.removeMember(new Token("token"), new GroupID("gid"), new UserName("user"));
@@ -2016,6 +2047,185 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.removeMember(t, i, u);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void promoteMember() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		mocks.groups.promoteMember(new Token("t"), new GroupID("gid"), new UserName("u3"));
+		
+		verify(mocks.storage).addAdmin(new GroupID("gid"), new UserName("u3"));
+	}
+	
+	@Test
+	public void promoteMembersFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final UserName u = new UserName("u");
+		
+		failPromoteMember(g, null, i, u, new NullPointerException("userToken"));
+		failPromoteMember(g, t, null, u, new NullPointerException("groupID"));
+		failPromoteMember(g, t, i, null, new NullPointerException("member"));
+	}
+	
+	@Test
+	public void promoteMemberFailNotOwner() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
+				new UnauthorizedException("Only the group owner can promote administrators"));
+	}
+	
+	@Test
+	public void promoteMemberFailNotMember() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u2"),
+				new NoSuchUserException("User u2 is not a standard member of group gid"));
+	}
+	
+	@Test
+	public void promoteMemberFailUserExists() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		doThrow(new UserIsMemberException("boop")).when(mocks.storage)
+				.addAdmin(new GroupID("gid"), new UserName("u3"));
+		
+		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
+				new UserIsMemberException("boop"));
+	}
+	
+	private void failPromoteMember(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final UserName u,
+			final Exception expected) {
+		try {
+			g.promoteMember(t, i, u);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void demoteAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withAdministrator(new UserName("u3"))
+				.build());
+		
+		mocks.groups.demoteAdmin(new Token("t"), new GroupID("gid"), new UserName("u3"));
+		
+		verify(mocks.storage).demoteAdmin(new GroupID("gid"), new UserName("u3"));
+	}
+	
+	@Test
+	public void demoteAdminFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final UserName u = new UserName("u");
+		
+		failDemoteAdmin(g, null, i, u, new NullPointerException("userToken"));
+		failDemoteAdmin(g, t, null, u, new NullPointerException("groupID"));
+		failDemoteAdmin(g, t, i, null, new NullPointerException("admin"));
+	}
+	
+	@Test
+	public void demoteAdminFailNotOwner() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failDemoteAdmin(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
+				new UnauthorizedException("Only the group owner can demote administrators"));
+	}
+	
+	@Test
+	public void demoteAdminFailNoSuchUser() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		doThrow(new NoSuchUserException("boop")).when(mocks.storage)
+				.demoteAdmin(new GroupID("gid"), new UserName("u3"));
+		
+		failDemoteAdmin(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
+				new NoSuchUserException("boop"));
+	}
+	
+	private void failDemoteAdmin(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final UserName u,
+			final Exception expected) {
+		try {
+			g.demoteAdmin(t, i, u);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -547,4 +547,70 @@ public class Groups {
 					user.getName(), groupID.getName()));
 		}
 	}
+	
+	/** Promote a standard member to an administrator.
+	 * @param userToken the token of the user performing the promotion.
+	 * @param groupID the group to modify.
+	 * @param member the user to be promoted.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UnauthorizedException if the user represented by the token is not the group owner.
+	 * @throws NoSuchUserException if the user is not a standard group member.
+	 * @throws UserIsMemberException if the user is the group owner or an adminstrator.
+	 */
+	public void promoteMember(final Token userToken, final GroupID groupID, final UserName member)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException, NoSuchUserException,
+				UserIsMemberException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(member, "member");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		if (!user.equals(group.getOwner())) {
+			throw new UnauthorizedException(
+					"Only the group owner can promote administrators");
+		}
+		if (!group.getMembers().contains(member)) {
+			throw new NoSuchUserException(String.format(
+					"User %s is not a standard member of group %s",
+					member.getName(), groupID.getName()));
+		}
+		// possibility of a race condition here if the user if removed now, but not
+		// a big deal
+		// this method will check that the user is not already an admin or the owner per the
+		// docs
+		storage.addAdmin(groupID, member);
+		// may want to notify here
+	}
+	
+	/** Demote an administrator to a standard member.
+	 * @param userToken the token of the user performing the demotion.
+	 * @param groupID the group to modify.
+	 * @param admin the admin to demote.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UnauthorizedException if the user represented by the token is not the group owner.
+	 * @throws NoSuchUserException if the user is not an admin.
+	 */
+	public void demoteAdmin(final Token userToken, final GroupID groupID, final UserName admin)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+			GroupsStorageException, UnauthorizedException, NoSuchUserException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(admin, "admin");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		if (!user.equals(group.getOwner())) {
+			throw new UnauthorizedException(
+					"Only the group owner can demote administrators");
+		}
+		// this method will throw an error if the user is not an admin.
+		storage.demoteAdmin(groupID, admin);
+		// notify? I'm thinking not
+	}
 }
