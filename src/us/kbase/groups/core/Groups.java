@@ -324,10 +324,10 @@ public class Groups {
 		ensureCanAcceptOrDeny(request, group, user, false);
 		
 		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
+		final GroupRequest r = storage.getRequest(requestID);
 		//TODO NOW who should get notified?
-		notifications.deny(new HashSet<>(), request, user);
-		
-		return storage.getRequest(requestID);
+		notifications.deny(new HashSet<>(), r, user);
+		return r;
 	}
 	
 	public GroupRequest acceptRequest(

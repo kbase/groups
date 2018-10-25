@@ -1394,14 +1394,14 @@ public class GroupsTest {
 		verify(mocks.notifs).cancel(new RequestID(id));
 		
 		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withInviteToGroup(new UserName("invite"))
-						.withStatus(GroupRequestStatus.canceled())
-						.build()));
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withInviteToGroup(new UserName("invite"))
+				.withStatus(GroupRequestStatus.canceled())
+				.build()));
 	}
 	
 	@Test
@@ -1452,6 +1452,234 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.cancelRequest(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void denyRequestAdmin() throws Exception {
+		denyRequestAdmin(null);
+	}
+	
+	@Test
+	public void denyRequestAdminWhitespaceReason() throws Exception {
+		denyRequestAdmin("    \t    ");
+	}
+	
+	@Test
+	public void denyRequestAdminReason() throws Exception {
+		denyRequestAdmin(" reason  ");
+	}
+
+	private void denyRequestAdmin(final String reason) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestGroupMembership()
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withRequestGroupMembership()
+						.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		final GroupRequest req = mocks.groups.denyRequest(
+				new Token("token"), new RequestID(id), reason);
+		
+		verify(mocks.storage).closeRequest(
+				new RequestID(id),
+				GroupRequestStatus.denied(new UserName("own"), reason),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).deny(
+				set(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withRequestGroupMembership()
+						.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+						.build(),
+				new UserName("own"));
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withRequestGroupMembership()
+				.withStatus(GroupRequestStatus.denied(new UserName("own"), reason))
+				.build()));
+	}
+	
+	@Test
+	public void denyRequestTarget() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		final GroupRequest req = mocks.groups.denyRequest(
+				new Token("token"), new RequestID(id), "reason");
+		
+		verify(mocks.storage).closeRequest(
+				new RequestID(id),
+				GroupRequestStatus.denied(new UserName("target"), "reason"),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).deny(
+				set(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+				.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
+						.build(),
+				new UserName("target"));
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withInviteToGroup(new UserName("target"))
+				.withStatus(GroupRequestStatus.denied(new UserName("own"), "reason"))
+				.build()));
+	}
+	
+	@Test
+	public void denyRequestFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		
+		failDenyRequest(g, null, new RequestID(UUID.randomUUID()),
+				new NullPointerException("userToken"));
+		failDenyRequest(g, new Token("t"), null, new NullPointerException("requestID"));
+	}
+	
+	@Test
+	public void denyRequestFailNoGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("invite"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteToGroup(new UserName("invite"))
+				.withStatus(GroupRequestStatus.expired())
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid")))
+				.thenThrow(new NoSuchGroupException("gid"));
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Request %s's group doesn't exist: 50000 No such group: gid", id)));
+	}
+	
+	@Test
+	public void denyRequestFailNotTarget() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("nottarget"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User nottarget may not deny request " + id));
+	}
+	
+	@Test
+	public void denyRequestFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestGroupMembership()
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User notadmin may not deny request " + id));
+	}
+	
+	private void failDenyRequest(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final Exception expected) {
+		try {
+			g.denyRequest(t, i, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
