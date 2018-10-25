@@ -29,6 +29,8 @@ public class ServicePaths {
 	/** The location to remove a user from a group. */
 	public static final String GROUP_USER_ID = GROUP_ID + SEP + "user" + SEP + "{" +
 			Fields.GROUP_MEMBER + "}";
+	/** The location to promote or demote an administrator. */
+	public static final String GROUP_USER_ID_ADMIN = GROUP_USER_ID + SEP + "admin";
 	
 	/* Request endpoints */
 	

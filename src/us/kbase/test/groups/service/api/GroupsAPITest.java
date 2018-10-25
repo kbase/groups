@@ -540,4 +540,106 @@ public class GroupsAPITest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void promoteMember() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).promoteMember("t", "i", "foo");
+		
+		verify(g).promoteMember(new Token("t"), new GroupID("i"), new UserName("foo"));
+	}
+	
+	@Test
+	public void promoteMemberFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failPromoteMember(g, null, "i", "u",
+				new NoTokenProvidedException("No token provided"));
+		failPromoteMember(g, "    \t    ", "i", "u",
+				new NoTokenProvidedException("No token provided"));
+		failPromoteMember(g, "t", null, "u",
+				new MissingParameterException("group id"));
+		failPromoteMember(g, "t", "   \t   ", "u",
+				new MissingParameterException("group id"));
+		failPromoteMember(g, "t", "i", null,
+				new MissingParameterException("user name"));
+		failPromoteMember(g, "t", "i", "  \t    ",
+				new MissingParameterException("user name"));
+	}
+	
+	@Test
+	public void promoteMemberNoSuchUser() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchUserException("foo")).when(g)
+				.promoteMember(new Token("t"), new GroupID("i"), new UserName("foo"));
+		
+		failPromoteMember(g, "t", "i", "foo", new NoSuchUserException("foo"));
+	}
+	
+	private void failPromoteMember(
+			final Groups g,
+			final String token,
+			final String groupid,
+			final String user,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).promoteMember(token, groupid, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void demoteAdmin() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).demoteAdmin("t", "i", "foo");
+		
+		verify(g).demoteAdmin(new Token("t"), new GroupID("i"), new UserName("foo"));
+	}
+	
+	@Test
+	public void demoteAdminFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failDemoteAdmin(g, null, "i", "u",
+				new NoTokenProvidedException("No token provided"));
+		failDemoteAdmin(g, "    \t    ", "i", "u",
+				new NoTokenProvidedException("No token provided"));
+		failDemoteAdmin(g, "t", null, "u",
+				new MissingParameterException("group id"));
+		failDemoteAdmin(g, "t", "   \t   ", "u",
+				new MissingParameterException("group id"));
+		failDemoteAdmin(g, "t", "i", null,
+				new MissingParameterException("user name"));
+		failDemoteAdmin(g, "t", "i", "  \t    ",
+				new MissingParameterException("user name"));
+	}
+	
+	@Test
+	public void demoteAdminNoSuchUser() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchUserException("foo")).when(g)
+				.demoteAdmin(new Token("t"), new GroupID("i"), new UserName("foo"));
+		
+		failDemoteAdmin(g, "t", "i", "foo", new NoSuchUserException("foo"));
+	}
+	
+	private void failDemoteAdmin(
+			final Groups g,
+			final String token,
+			final String groupid,
+			final String user,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).demoteAdmin(token, groupid, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }

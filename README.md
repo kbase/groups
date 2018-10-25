@@ -22,6 +22,7 @@ Represents a group of users and associated data.
     "id": <the group ID>,
     "name": <the group name>,
     "owner": <the username of the group owner>,
+    "admins": <an array of usernames of admins of the group>,
     "members": <an array of usernames of members of the group>,
     "type": <the type of the group, e.g. Team, Project, etc.>,
     "description": <a description of the group>,
@@ -187,7 +188,7 @@ RETURNS: A Request.
 
 The user must be a group administrator.
 
-### Remove a user from a group
+### Remove a member from a group
 
 ```
 AUTHORIZATION REQUIRED
@@ -195,6 +196,25 @@ DELETE /group/<group id>/user/<user name>
 ```
 
 The user must be a group administrator or the user to be removed.
+
+### Promote an existing member to an administrator
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/user/<user name>/admin
+```
+
+The user must be the group owner.
+
+### Demote an administrator to a member
+
+```
+AUTHORIZATION REQUIRED
+DELETE /group/<group id>/user/<user name>/admin
+
+```
+
+The user must be the group owner.
 
 ### Get the list of requests for a group
 

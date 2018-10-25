@@ -188,6 +188,31 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
 		return ret;
 	}
+	
+	@PUT
+	@Path(ServicePaths.GROUP_USER_ID_ADMIN)
+	public void promoteMember(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String member)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				UserIsMemberException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException {
+		groups.promoteMember(getToken(token, true), new GroupID(groupID), new UserName(member));
+	}
+	
+	@DELETE
+	@Path(ServicePaths.GROUP_USER_ID_ADMIN)
+	public void demoteAdmin(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String member)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				MissingParameterException, IllegalParameterException, GroupsStorageException {
+		groups.demoteAdmin(getToken(token, true), new GroupID(groupID), new UserName(member));
+	}
 
 	private List<String> toSortedStringList(final Set<UserName> users) {
 		return new TreeSet<>(users).stream().map(n -> n.getName())
