@@ -61,6 +61,8 @@ public class GroupsAPITest {
 					.withDescription("desc")
 					.withMember(new UserName("foo"))
 					.withMember(new UserName("bar"))
+					.withAdministrator(new UserName("whee"))
+					.withAdministrator(new UserName("whoo"))
 					.withType(GroupType.PROJECT)
 					.build();
 		} catch (MissingParameterException | IllegalParameterException e) {
@@ -77,6 +79,7 @@ public class GroupsAPITest {
 			.with("type", "Organization")
 			.with("description", null)
 			.with("members", Collections.emptyList())
+			.with("admins", Collections.emptyList())
 			.build();
 	
 	private static final Map<Object, Object> GROUP_MAX_JSON = MapBuilder.newHashMap()
@@ -88,6 +91,7 @@ public class GroupsAPITest {
 			.with("type", "Project")
 			.with("description", "desc")
 			.with("members", Arrays.asList("bar", "foo"))
+			.with("admins", Arrays.asList("whee", "whoo"))
 			.build();
 	
 	@Test
