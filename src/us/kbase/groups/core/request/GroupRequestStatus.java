@@ -87,6 +87,7 @@ public class GroupRequestStatus {
 		return new GroupRequestStatus(ACCEPTED, Optional.of(acceptedBy), OPTREASON);
 	}
 	
+	//TODO NOW max reason size
 	/** Get a denied status. If the reason is null or whitespace only, it is ignored.
 	 * @param deniedBy the user that closed the request.
 	 * @param reason the reason the request was denied.
