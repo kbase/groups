@@ -42,6 +42,7 @@ public class GroupTest {
 		assertThat("incorrect desc", g.getDescription(), is(Optional.absent()));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(), is(set()));
+		assertThat("incorrect member", g.getAdministrators(), is(set()));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.ORGANIZATION));
@@ -55,17 +56,21 @@ public class GroupTest {
 				.withDescription("    \tmy desc     ")
 				.withMember(new UserName("bar"))
 				.withMember(new UserName("baz"))
+				.withAdministrator(new UserName("whee"))
+				.withAdministrator(new UserName("whoo"))
 				.withType(GroupType.PROJECT)
 				.build();
 		
 		assertThat("incorrect id", g.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
-				is(set(new UserName("foo"))));
+				is(set(new UserName("foo"), new UserName("whee"), new UserName("whoo"))));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect desc", g.getDescription(), is(Optional.of("my desc")));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(),
 				is(set(new UserName("bar"), new UserName("baz"))));
+		assertThat("incorrect admin", g.getAdministrators(),
+				is(set(new UserName("whee"), new UserName("whoo"))));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
@@ -97,6 +102,13 @@ public class GroupTest {
 		
 		try {
 			g.getMembers().add(new UserName("baz"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		try {
+			g.getAdministrators().add(new UserName("baz"));
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passed
@@ -134,13 +146,45 @@ public class GroupTest {
 	public void withMemberFail() throws Exception {
 		final Builder b = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withAdministrator(new UserName("admin"));
 		
+		failWithMember(b, null, new NullPointerException("member"));
+		failWithMember(b, new UserName("foo"), new IllegalArgumentException(
+				"Group already contains member as owner or admin"));
+		failWithMember(b, new UserName("admin"), new IllegalArgumentException(
+				"Group already contains member as owner or admin"));
+	}
+	
+	private void failWithMember(final Builder b, final UserName member, final Exception expected) {
 		try {
-			b.withMember(null);
+			b.withMember(member);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("member"));
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void withAdminFail() throws Exception {
+		final Builder b = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("member"));
+		
+		failWithAdmin(b, null, new NullPointerException("admin"));
+		failWithAdmin(b, new UserName("foo"), new IllegalArgumentException(
+				"Group already contains member as owner or member"));
+		failWithAdmin(b, new UserName("member"), new IllegalArgumentException(
+				"Group already contains member as owner or member"));
+	}
+	
+	private void failWithAdmin(final Builder b, final UserName admin, final Exception expected) {
+		try {
+			b.withAdministrator(admin);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -185,14 +229,20 @@ public class GroupTest {
 	
 	@Test
 	public void isAdministator() throws Exception {
-		//TODO ADMINS update when admins are implemented
 		final Group g = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("member"))
+				.withAdministrator(new UserName("admin1"))
+				.withAdministrator(new UserName("admin3"))
 				.build();
 		
 		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("bar")), is(false));
+		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("member")), is(false));
+		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("admin2")), is(false));
 		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("foo")), is(true));
+		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("admin1")), is(true));
+		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("admin3")), is(true));
 	}
 	
 	@Test
@@ -211,18 +261,22 @@ public class GroupTest {
 	
 	@Test
 	public void isMember() throws Exception {
-		//TODO ADMINS update when admins are implemented
 		final Group g = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("bar"))
 				.withMember(new UserName("baz"))
+				.withAdministrator(new UserName("admin1"))
+				.withAdministrator(new UserName("admin3"))
 				.build();
 				
 		assertThat("incorrect isMember", g.isMember(new UserName("bat")), is(false));
+		assertThat("incorrect isMember", g.isMember(new UserName("admin2")), is(false));
 		assertThat("incorrect isMember", g.isMember(new UserName("foo")), is(true));
 		assertThat("incorrect isMember", g.isMember(new UserName("bar")), is(true));
 		assertThat("incorrect isMember", g.isMember(new UserName("baz")), is(true));
+		assertThat("incorrect isMember", g.isMember(new UserName("admin1")), is(true));
+		assertThat("incorrect isMember", g.isMember(new UserName("admin3")), is(true));
 	}
 	
 	
