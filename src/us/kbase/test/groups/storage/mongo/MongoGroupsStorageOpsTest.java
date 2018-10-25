@@ -317,7 +317,7 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		failAddMember(new GroupID("gid"), new UserName("admin"),
-				new UserIsMemberException("User admin is an administator of group gid"));
+				new UserIsMemberException("User admin is an administrator of group gid"));
 	}
 	
 	private void failAddMember(
@@ -326,6 +326,81 @@ public class MongoGroupsStorageOpsTest {
 			final Exception expected) {
 		try {
 			manager.storage.addMember(gid, member);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addAdmin() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withMember(new UserName("user"))
+				.withMember(new UserName("bar"))
+				.build());
+		
+		manager.storage.addAdmin(new GroupID("gid"), new UserName("foo"));
+		// test that adding an admin that is already a member removes from member list
+		manager.storage.addAdmin(new GroupID("gid"), new UserName("bar"));
+		
+		assertThat("incorrect add admin result", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(50000)))
+						.withMember(new UserName("user"))
+						.withAdministrator(new UserName("foo"))
+						.withAdministrator(new UserName("bar"))
+						.build()));
+	}
+	
+	@Test
+	public void addAdminFailNulls() throws Exception {
+		failAddAdmin(null, new UserName("f"), new NullPointerException("groupID"));
+		failAddAdmin(new GroupID("g"), null, new NullPointerException("admin"));
+	}
+	
+	@Test
+	public void addAdminFailNoSuchGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failAddAdmin(new GroupID("gid1"), new UserName("foo"), new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void addAdminFailOwner() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failAddAdmin(new GroupID("gid"), new UserName("uname3"),
+				new UserIsMemberException("User uname3 is the owner of group gid"));
+	}
+	
+	@Test
+	public void addAdminFailAdmin() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failAddAdmin(new GroupID("gid"), new UserName("admin"),
+				new UserIsMemberException("User admin is already an administrator of group gid"));
+	}
+	
+	private void failAddAdmin(
+			final GroupID gid,
+			final UserName admin,
+			final Exception expected) {
+		try {
+			manager.storage.addAdmin(gid, admin);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -365,6 +440,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withMember(new UserName("foo"))
 				.build());
 		
 		failRemoveMember(new GroupID("gid1"), new UserName("foo"),
@@ -377,6 +453,7 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.withMember(new UserName("foo"))
+				.withAdministrator(new UserName("bar"))
 				.build());
 		
 		failRemoveMember(new GroupID("gid"), new UserName("bar"), new NoSuchUserException(
@@ -389,6 +466,75 @@ public class MongoGroupsStorageOpsTest {
 			final Exception expected) {
 		try {
 			manager.storage.removeMember(gid, member);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void demoteAdmin() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withMember(new UserName("foo"))
+				.withAdministrator(new UserName("bar"))
+				.withAdministrator(new UserName("baz"))
+				.withAdministrator(new UserName("bat"))
+				.build());
+		
+		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bar"));
+		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bat"));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(50000)))
+						.withMember(new UserName("foo"))
+						.withMember(new UserName("bar"))
+						.withMember(new UserName("bat"))
+						.withAdministrator(new UserName("baz"))
+						.build()));
+	}
+	
+	@Test
+	public void demoteAdminFailNulls() throws Exception {
+		failDemoteAdmin(null, new UserName("f"), new NullPointerException("groupID"));
+		failDemoteAdmin(new GroupID("g"), null, new NullPointerException("admin"));
+	}
+	
+	@Test
+	public void demoteAdminFailNoSuchGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(new UserName("foo"))
+				.build());
+		
+		failDemoteAdmin(new GroupID("gid1"), new UserName("foo"),
+				new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void demoteAdminFailNoSuchAdmin() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(new UserName("foo"))
+				.withMember(new UserName("bar"))
+				.build());
+		
+		failDemoteAdmin(new GroupID("gid"), new UserName("bar"), new NoSuchUserException(
+				"No administrator bar in group gid"));
+	}
+	
+	private void failDemoteAdmin(
+			final GroupID gid,
+			final UserName member,
+			final Exception expected) {
+		try {
+			manager.storage.demoteAdmin(gid, member);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
