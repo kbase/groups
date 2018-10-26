@@ -19,6 +19,8 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.WorkspaceID;
+import us.kbase.groups.core.WorkspaceIDSet;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupTest {
@@ -43,6 +45,7 @@ public class GroupTest {
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(), is(set()));
 		assertThat("incorrect member", g.getAdministrators(), is(set()));
+		assertThat("incorrec wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set())));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.ORGANIZATION));
@@ -58,6 +61,8 @@ public class GroupTest {
 				.withMember(new UserName("baz"))
 				.withAdministrator(new UserName("whee"))
 				.withAdministrator(new UserName("whoo"))
+				.withWorkspace(new WorkspaceID(1))
+				.withWorkspace(new WorkspaceID(3))
 				.withType(GroupType.PROJECT)
 				.build();
 		
@@ -71,6 +76,7 @@ public class GroupTest {
 				is(set(new UserName("bar"), new UserName("baz"))));
 		assertThat("incorrect admin", g.getAdministrators(),
 				is(set(new UserName("whee"), new UserName("whoo"))));
+		assertThat("incorrec wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set(1, 3))));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
@@ -185,6 +191,20 @@ public class GroupTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void withWorkspaceFail() throws Exception {
+		final Builder b = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
+		
+		try {
+			b.withWorkspace(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("wsid"));
 		}
 	}
 	
@@ -305,6 +325,8 @@ public class GroupTest {
 				.withMember(new UserName("baz"))
 				.withAdministrator(new UserName("admin1"))
 				.withAdministrator(new UserName("admin3"))
+				.withWorkspace(new WorkspaceID(42))
+				.withWorkspace(new WorkspaceID(2000000))
 				.withType(GroupType.PROJECT)
 				.build();
 		

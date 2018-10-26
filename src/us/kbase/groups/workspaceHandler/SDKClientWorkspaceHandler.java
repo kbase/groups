@@ -64,7 +64,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 				"Error contacting workspace at %s", client.getURL()), e);
 	}
 	
-	final TypeReference<Map<String, List<Map<String, String>>>> TR_GET_PERMS =
+	private final TypeReference<Map<String, List<Map<String, String>>>> TR_GET_PERMS =
 			new TypeReference<Map<String, List<Map<String, String>>>>() {};
 	
 	@Override
