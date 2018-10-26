@@ -594,7 +594,8 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no such group.
-	 * @throws UnauthorizedException if the user represented by the token is not the group owner.
+	 * @throws UnauthorizedException if the user represented by the token is not the group owner
+	 * and not the admin to be demoted.
 	 * @throws NoSuchUserException if the user is not an admin.
 	 */
 	public void demoteAdmin(final Token userToken, final GroupID groupID, final UserName admin)
@@ -605,7 +606,7 @@ public class Groups {
 		checkNotNull(admin, "admin");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
-		if (!user.equals(group.getOwner())) {
+		if (!user.equals(group.getOwner()) && !user.equals(admin)) {
 			throw new UnauthorizedException(
 					"Only the group owner can demote administrators");
 		}

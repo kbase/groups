@@ -151,7 +151,9 @@ public class Group {
 				new CreateAndModTimes(creationDate, modificationDate))
 				.withDescription(description.orNull())
 				.withType(type);
-		// may need to do other stuff here.
+		for (final UserName n: admins) {
+			b.withAdministrator(n);
+		}
 		return b.build();
 	}
 

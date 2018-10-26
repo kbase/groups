@@ -303,6 +303,8 @@ public class GroupTest {
 				.withDescription("    \tmy desc     ")
 				.withMember(new UserName("bar"))
 				.withMember(new UserName("baz"))
+				.withAdministrator(new UserName("admin1"))
+				.withAdministrator(new UserName("admin3"))
 				.withType(GroupType.PROJECT)
 				.build();
 		
@@ -310,6 +312,8 @@ public class GroupTest {
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withDescription("    \tmy desc     ")
+				.withAdministrator(new UserName("admin1"))
+				.withAdministrator(new UserName("admin3"))
 				.withType(GroupType.PROJECT)
 				.build();
 		
