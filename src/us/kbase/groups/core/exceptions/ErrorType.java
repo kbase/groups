@@ -24,16 +24,20 @@ public enum ErrorType {
 	ILLEGAL_GROUP_ID		(30020, "Illegal group ID"),
 	/** The group could not be created because it already exists. */
 	GROUP_ALREADY_EXISTS	(40000, "Group already exists"),
-	/** The user is already a member of the group. */
-	USER_IS_MEMBER			(40010, "User already group member"),
 	/** The request could not be created because it already exists. */
-	REQUEST_ALREADY_EXISTS	(40020, "Request already exists"),
+	REQUEST_ALREADY_EXISTS	(40010, "Request already exists"),
+	/** The user is already a member of the group. */
+	USER_IS_MEMBER			(40020, "User already group member"),
+	/** The workspace is already a member of the group. */
+	WORKSPACE_IN_GROUP		(40030, "Workspace already in group"),
 	/** The requested group does not exist. */
 	NO_SUCH_GROUP			(50000, "No such group"),
 	/** The requested request does not exist. */
 	NO_SUCH_REQUEST			(50010, "No such request"),
 	/** The requested user does not exist. */
 	NO_SUCH_USER			(50020, "No such user"),
+	/** The workspace does not exist. */
+	NO_SUCH_WORKSPACE		(50030, "No such workspace"),
 	/** The requested operation is not supported. */
 	UNSUPPORTED_OP			(60000, "Unsupported operation");
 	

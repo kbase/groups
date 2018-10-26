@@ -29,9 +29,9 @@ public class WorkspaceID {
 	}
 
 	/** Get the ID.
-	 * @return
+	 * @return the ID.
 	 */
-	public int getId() {
+	public int getID() {
 		return id;
 	}
 

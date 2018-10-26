@@ -14,4 +14,8 @@ public class NoDataException extends GroupsException {
 	public NoDataException(final ErrorType err, final String message) {
 		super(err, message);
 	}
+
+	public NoDataException(final ErrorType err, final String message, final Throwable cause) {
+		super(err, message, cause);
+	}
 }

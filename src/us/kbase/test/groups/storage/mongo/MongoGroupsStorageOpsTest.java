@@ -32,8 +32,10 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -542,6 +544,128 @@ public class MongoGroupsStorageOpsTest {
 			final Exception expected) {
 		try {
 			manager.storage.demoteAdmin(gid, member);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addWorkspace() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withWorkspace(new WorkspaceID(24))
+				.build());
+		
+		manager.storage.addWorkspace(new GroupID("gid"), new WorkspaceID(42));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(50000)))
+						.withWorkspace(new WorkspaceID(24))
+						.withWorkspace(new WorkspaceID(42))
+						.build()));
+	}
+	
+	@Test
+	public void addWorkspaceFailNulls() throws Exception {
+		failAddWorkspace(null, new WorkspaceID(1), new NullPointerException("groupID"));
+		failAddWorkspace(new GroupID("g"), null, new NullPointerException("wsid"));
+	}
+	
+	@Test
+	public void addWorkspaceFailNoGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failAddWorkspace(new GroupID("gid1"), new WorkspaceID(1),
+				new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void addWorkspaceFailWorkspaceExists() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withWorkspace(new WorkspaceID(70))
+				.build());
+		
+		failAddWorkspace(new GroupID("gid"), new WorkspaceID(70),
+				new WorkspaceExistsException("70"));
+	}
+	
+	private void failAddWorkspace(
+			final GroupID g,
+			final WorkspaceID ws,
+			final Exception expected) {
+		try {
+			manager.storage.addWorkspace(g, ws);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeWorkspace() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withWorkspace(new WorkspaceID(24))
+				.withWorkspace(new WorkspaceID(42))
+				.build());
+		
+		manager.storage.removeWorkspace(new GroupID("gid"), new WorkspaceID(42));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(50000)))
+						.withWorkspace(new WorkspaceID(24))
+						.build()));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNulls() throws Exception {
+		failRemoveWorkspace(null, new WorkspaceID(1), new NullPointerException("groupID"));
+		failRemoveWorkspace(new GroupID("g"), null, new NullPointerException("wsid"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNoGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failRemoveWorkspace(new GroupID("gid1"), new WorkspaceID(1),
+				new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNoWorkspace() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withWorkspace(new WorkspaceID(70))
+				.build());
+		
+		failRemoveWorkspace(new GroupID("gid"), new WorkspaceID(71),
+				new NoSuchWorkspaceException("Group gid does not include workspace 71"));
+	}
+	
+	private void failRemoveWorkspace(
+			final GroupID g,
+			final WorkspaceID ws,
+			final Exception expected) {
+		try {
+			manager.storage.removeWorkspace(g, ws);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
