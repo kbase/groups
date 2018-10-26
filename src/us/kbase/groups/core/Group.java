@@ -26,6 +26,7 @@ public class Group {
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
 	private final GroupType type;
+	private final WorkspaceIDSet workspaceIDs;
 	private final Instant creationDate;
 	private final Instant modificationDate;
 	private final Optional<String> description;
@@ -37,6 +38,7 @@ public class Group {
 			final Set<UserName> members,
 			final Set<UserName> admins,
 			final GroupType type,
+			final Set<Integer> workspaceIDs,
 			final CreateAndModTimes times,
 			final Optional<String> description) {
 		this.groupID = groupID;
@@ -45,6 +47,7 @@ public class Group {
 		this.members = Collections.unmodifiableSet(members);
 		this.admins = Collections.unmodifiableSet(admins);
 		this.type = type;
+		this.workspaceIDs = WorkspaceIDSet.fromInts(workspaceIDs);
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
 		this.description = description;
@@ -91,6 +94,13 @@ public class Group {
 	 */
 	public GroupType getType() {
 		return type;
+	}
+	
+	/** Get the workspace IDs associated with the group.
+	 * @return
+	 */
+	public WorkspaceIDSet getWorkspaceIDs() {
+		return workspaceIDs;
 	}
 
 	/** Get the date the group was created.
@@ -142,8 +152,7 @@ public class Group {
 		return owner.equals(user) || members.contains(user) || admins.contains(user);
 	}
 	
-	/** Return a copy of the group with any private fields removed. This currently is only
-	 * the members field.
+	/** Return a copy of the group with any private fields (e.g. members and workspaces) removed.
 	 * @return a group copy without private fields.
 	 */
 	public Group withoutPrivateFields() {
@@ -170,6 +179,7 @@ public class Group {
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		result = prime * result + ((workspaceIDs == null) ? 0 : workspaceIDs.hashCode());
 		return result;
 	}
 
@@ -244,6 +254,13 @@ public class Group {
 		if (type != other.type) {
 			return false;
 		}
+		if (workspaceIDs == null) {
+			if (other.workspaceIDs != null) {
+				return false;
+			}
+		} else if (!workspaceIDs.equals(other.workspaceIDs)) {
+			return false;
+		}
 		return true;
 	}
 
@@ -275,6 +292,7 @@ public class Group {
 		private final Set<UserName> members = new HashSet<>();
 		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
+		private final Set<Integer> workspaceIDs = new HashSet<>();
 		private Optional<String> description = Optional.absent();
 		
 		private Builder(
@@ -354,11 +372,18 @@ public class Group {
 			return this;
 		}
 		
+		public Builder withWorkspace(final WorkspaceID wsid) {
+			checkNotNull(wsid, "wsid");
+			workspaceIDs.add(wsid.getId());
+			return this;
+		}
+		
 		/** Build the {@link Group}.
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, members, admins, type, times, description);
+			return new Group(groupID, groupName, owner, members, admins, type, workspaceIDs, times,
+					description);
 		}
 	}
 	
