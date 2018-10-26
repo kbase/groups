@@ -535,29 +535,26 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid)
 			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException {
-		try {
-			alterWorkspaceInGroup(groupID, wsid, true);
-		} catch (NoSuchWorkspaceException e) {
-			throw new RuntimeException("this is impossible", e);
+		if (!alterWorkspaceInGroup(groupID, wsid, true)) {
+			throw new WorkspaceExistsException(wsid.getID() + "");
 		}
 	}
 	
 	@Override
 	public void removeWorkspace(final GroupID groupID, final WorkspaceID wsid)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException {
-		try {
-			alterWorkspaceInGroup(groupID, wsid, false);
-		} catch (WorkspaceExistsException e) {
-			throw new RuntimeException("this is impossible", e);
+		if (!alterWorkspaceInGroup(groupID, wsid, false)) {
+			throw new NoSuchWorkspaceException(String.format(
+					"Group %s does not include workspace %s", groupID.getName(), wsid.getID()));
 		}
 	}
 		
-	private void alterWorkspaceInGroup(
+	// true if modified, false otherwise.
+	private boolean alterWorkspaceInGroup(
 			final GroupID groupID,
 			final WorkspaceID wsid,
 			final boolean add)
-			throws NoSuchGroupException, WorkspaceExistsException, NoSuchWorkspaceException,
-				GroupsStorageException {
+			throws NoSuchGroupException, GroupsStorageException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(wsid, "wsid");
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
@@ -568,15 +565,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			if (res.getMatchedCount() != 1) {
 				throw new NoSuchGroupException(groupID.getName());
 			}
-			if (res.getModifiedCount() != 1) {
-				if (add) {
-					throw new WorkspaceExistsException(wsid.getID() + "");
-				} else {
-					throw new NoSuchWorkspaceException(String.format(
-							"Group %s does not include workspace %s",
-							groupID.getName(), wsid.getID()));
-				}
-			}
+			return res.getModifiedCount() == 1;
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
