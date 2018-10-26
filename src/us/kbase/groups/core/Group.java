@@ -97,7 +97,7 @@ public class Group {
 	}
 	
 	/** Get the workspace IDs associated with the group.
-	 * @return
+	 * @return the IDs.
 	 */
 	public WorkspaceIDSet getWorkspaceIDs() {
 		return workspaceIDs;

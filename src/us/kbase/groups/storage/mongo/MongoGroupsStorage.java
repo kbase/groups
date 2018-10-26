@@ -37,6 +37,7 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -98,6 +99,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
 		// find by owner
 		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
+		// find by wsid
+		groups.put(Arrays.asList(Fields.GROUP_WORKSPACES), null);
 		INDEXES.put(COL_GROUPS, groups);
 		
 		// requests indexes
@@ -292,6 +295,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_TYPE, group.getType().name())
+				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIds())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
 				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orNull());
@@ -358,6 +362,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
 			addMembers(b, grp);
 			addAdmins(b, grp);
+			addWorkspaces(b, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
 				IllegalArgumentException e) {
@@ -366,6 +371,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
+	// could probably combine the next 3 methods with lambdas, but eh
 	private void addMembers(final Group.Builder builder, final Document groupDoc)
 			throws MissingParameterException, IllegalParameterException {
 		// can't be null
@@ -376,14 +382,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
-	// could probably combine with above with a lambda, but eh
 	private void addAdmins(final Group.Builder builder, final Document groupDoc)
 			throws MissingParameterException, IllegalParameterException {
 		// can't be null
 		@SuppressWarnings("unchecked")
-		final List<String> members = (List<String>) groupDoc.get(Fields.GROUP_ADMINS);
-		for (final String m: members) {
-			builder.withAdministrator(new UserName(m));
+		final List<String> admins = (List<String>) groupDoc.get(Fields.GROUP_ADMINS);
+		for (final String a: admins) {
+			builder.withAdministrator(new UserName(a));
+		}
+	}
+	
+	private void addWorkspaces(final Group.Builder builder, final Document groupDoc)
+			throws MissingParameterException, IllegalParameterException {
+		// can't be null
+		@SuppressWarnings("unchecked")
+		final List<Integer> wsids = (List<Integer>) groupDoc.get(Fields.GROUP_WORKSPACES);
+		for (final int w: wsids) {
+			builder.withWorkspace(new WorkspaceID(w));
 		}
 	}
 	
