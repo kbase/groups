@@ -211,7 +211,6 @@ The user must be the group owner.
 ```
 AUTHORIZATION REQUIRED
 DELETE /group/<group id>/user/<user name>/admin
-
 ```
 
 The user must be the group owner.

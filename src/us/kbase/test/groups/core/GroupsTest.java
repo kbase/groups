@@ -302,6 +302,7 @@ public class GroupsTest {
 		assertThat("incorrect group", g, is(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withAdministrator(new UserName("whoo"))
 				.build()));
 	}
 	
@@ -391,6 +392,7 @@ public class GroupsTest {
 						.withDescription("desc")
 						.withType(GroupType.PROJECT)
 						.withMember(new UserName("whee"))
+						.withAdministrator(new UserName("whoo"))
 						.build()
 				));
 		
@@ -403,6 +405,7 @@ public class GroupsTest {
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 						.withDescription("desc")
 						.withType(GroupType.PROJECT)
+						.withAdministrator(new UserName("whoo"))
 						.build()
 				)));
 	}
@@ -2153,9 +2156,18 @@ public class GroupsTest {
 	
 	@Test
 	public void demoteAdmin() throws Exception {
+		demoteAdmin("own");
+	}
+	
+	@Test
+	public void demoteAdminSelf() throws Exception {
+		demoteAdmin("u3");
+	}
+
+	private void demoteAdmin(final String user) throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName(user));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -2182,7 +2194,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void demoteAdminFailNotOwner() throws Exception {
+	public void demoteAdminFailUnauthed() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -2190,7 +2202,7 @@ public class GroupsTest {
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
 		

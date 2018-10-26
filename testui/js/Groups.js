@@ -289,8 +289,10 @@ export default class {
                   const c = new Date(json.createdate).toLocaleString();
                   const m = new Date(json.moddate).toLocaleString();
                   const s = this.sanitize;
-                  let members = json.members;
-                  const priv = !members.includes(this.user) && json.owner != this.user;
+                  const members = json.members;
+                  const admins = json.admins;
+                  const priv = !members.includes(this.user) && !admins.includes(this.user) &&
+                      json.owner != this.user;
                   let g =
                       `
                       <table class="table">
@@ -310,14 +312,31 @@ export default class {
                   } else {
                       g += `<div>Members</div><table class="table"><tbody>`;
                       for (const m of members) {
-                          g += `<tr><td>${s(m)}</td><td>
+                          g += `<tr><td>${s(m)}</td>
+                                  <td>
                                     <button id="remove_${s(m)}" class="btn btn-primary">Remove
-                                        </button></td><tr>`
+                                        </button>
+                                  </td>
+                                  <td>
+                                    <button id="promote_${s(m)}" class="btn btn-primary">Promote
+                                        </button>
+                                  </td>
+                                </tr>`
                       }
-                      g += '</tbody></table>';
+                      g += `</tbody></table>`;
+                  }
+                  g += `<div>Administrators</div><table class="table"<tbody>`;
+                  for (const a of admins) {
+                      g += `<tr><td>${s(a)}</td>
+                              <td>
+                                <button id="demote_${s(a)}" class="btn btn-primary">Humiliate
+                                    </button>
+                              </td>
+                            </tr>`
                   }
                   g +=
                       `
+                      </tbody></table>
                       <button id="requestgroupmembership" class="btn btn-primary">
                         Request group membership</button>
                       <button id="grouprequests" class="btn btn-primary">
@@ -344,7 +363,15 @@ export default class {
                           $(`#remove_${s(m)}`).on('click', () => {
                               this.removeMember(groupid, m);
                           });
+                          $(`#promote_${s(m)}`).on('click', () => {
+                              this.promoteMember(groupid, m);
+                          });
                       }
+                  }
+                  for (const a of admins) {
+                      $(`#demote_${s(a)}`).on('click', () => {
+                          this.demoteAdmin(groupid, a);
+                      });
                   }
               }).catch( (err) => {
                   this.handleError(err);
@@ -385,9 +412,21 @@ export default class {
   }
   
   removeMember(groupid, member) {
+      this.alterMember(groupid, member, "DELETE", "")
+  }
+  
+  promoteMember(groupid, member) {
+      this.alterMember(groupid, member, "PUT", "/admin")
+  }
+  
+  demoteAdmin(groupid, admin) {
+      this.alterMember(groupid, admin, "DELETE", "/admin")
+  }
+  
+  alterMember(groupid, member, method, urlsuffix) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid + "/user/" + member,
-              {"method": "DELETE",
+      fetch(this.serviceUrl + "group/" + groupid + "/user/" + member + urlsuffix,
+              {"method": method,
                "headers": this.getHeaders()})
         .then( (response) => {
           if (response.ok) {
