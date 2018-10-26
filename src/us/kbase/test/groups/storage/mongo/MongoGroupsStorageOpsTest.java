@@ -27,6 +27,7 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
@@ -101,6 +102,8 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("bar"))
 				.withAdministrator(new UserName("a1"))
 				.withAdministrator(new UserName("a3"))
+				.withWorkspace(new WorkspaceID(31415))
+				.withWorkspace(new WorkspaceID(602))
 				.build());
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
@@ -114,6 +117,8 @@ public class MongoGroupsStorageOpsTest {
 						.withMember(new UserName("bar"))
 						.withAdministrator(new UserName("a1"))
 						.withAdministrator(new UserName("a3"))
+						.withWorkspace(new WorkspaceID(31415))
+						.withWorkspace(new WorkspaceID(602))
 						.build()));
 	}
 	
@@ -206,6 +211,7 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("foo1"))
 				.withMember(new UserName("bar1"))
 				.withAdministrator(new UserName("admin"))
+				.withWorkspace(new WorkspaceID(42))
 				.build());
 		
 		manager.storage.createGroup(Group.getBuilder(
@@ -226,6 +232,7 @@ public class MongoGroupsStorageOpsTest {
 						.withMember(new UserName("foo1"))
 						.withMember(new UserName("bar1"))
 						.withAdministrator(new UserName("admin"))
+						.withWorkspace(new WorkspaceID(42))
 						.build(),
 				Group.getBuilder(
 						new GroupID("fid"), new GroupName("name2"), new UserName("uname2"),

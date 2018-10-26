@@ -29,6 +29,8 @@ public class Fields {
 	public static final String GROUP_ADMINS = "admin";
 	/** The group members. */
 	public static final String GROUP_MEMBERS = "memb";
+	/** The IDs of the workspaces associated with the group. */
+	public static final String GROUP_WORKSPACES = "ws";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "create";
 	/** The group modification date. */
