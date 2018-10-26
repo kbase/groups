@@ -38,6 +38,8 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  *
  */
 public class Groups {
+	
+	//TODO WS deal with deleted workspaces on lookup
 
 	//TODO LOGGING for all actions
 	

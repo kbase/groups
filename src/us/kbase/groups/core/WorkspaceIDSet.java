@@ -35,7 +35,7 @@ public class WorkspaceIDSet {
 	 */
 	public static WorkspaceIDSet fromIDs(final Collection<WorkspaceID> ids) {
 		checkNoNullsInCollection(ids, "ids");
-		return new WorkspaceIDSet(ids.stream().map(i -> i.getId())
+		return new WorkspaceIDSet(ids.stream().map(i -> i.getID())
 				.collect(Collectors.toSet()));
 	}
 	

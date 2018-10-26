@@ -7,12 +7,15 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -91,6 +94,26 @@ public interface GroupsStorage {
 	 */
 	void demoteAdmin(GroupID groupID, UserName member)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
+	
+	/** Add a workspace to a group.
+	 * @param groupID the group ID.
+	 * @param wsid the workspace ID.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws WorkspaceExistsException if the workspace already exists in the group.
+	 */
+	void addWorkspace(GroupID groupID, WorkspaceID wsid)
+			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException;
+	
+	/** Remove a workspace from a group.
+	 * @param groupID the group ID.
+	 * @param wsid the workspace ID.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchWorkspaceException if the group does not contain the workspace.
+	 */
+	void removeWorkspace(GroupID groupID, WorkspaceID wsid)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException;
 	
 	/** Store a new request. The request ID must not already be present in the system.
 	 * @param request the new request.

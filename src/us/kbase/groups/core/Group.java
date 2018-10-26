@@ -374,7 +374,7 @@ public class Group {
 		
 		public Builder withWorkspace(final WorkspaceID wsid) {
 			checkNotNull(wsid, "wsid");
-			workspaceIDs.add(wsid.getId());
+			workspaceIDs.add(wsid.getID());
 			return this;
 		}
 		

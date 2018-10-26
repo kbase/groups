@@ -44,8 +44,10 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -310,11 +312,15 @@ public class MongoGroupsStorage implements GroupsStorage {
 				throw new GroupsStorageException("Database write failed", mwe);
 			}
 		} catch (MongoException e) {
-			throw new GroupsStorageException("Connection to database failed: " +
-					e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 
+	private GroupsStorageException wrapMongoException(MongoException e) {
+		return new GroupsStorageException("Connection to database failed: " +
+				e.getMessage(), e);
+	}
+	
 	private List<String> toStringList(final Set<UserName> users) {
 		return users.stream().map(m -> m.getName()).collect(Collectors.toList());
 	}
@@ -343,8 +349,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				ret.add(toGroup(gdoc));
 			}
 		} catch (MongoException e) {
-			throw new GroupsStorageException(
-					"Connection to database failed: " + e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 		return ret;
 	}
@@ -444,8 +449,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 						member.getName(), groupID.getName()));
 			}
 		} catch (MongoException e) {
-			throw new GroupsStorageException("Connection to database failed: " +
-					e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 	
@@ -498,8 +502,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 						member.getName(), groupID.getName()));
 			}
 		} catch (MongoException e) {
-			throw new GroupsStorageException("Connection to database failed: " +
-					e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 	
@@ -525,11 +528,49 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 			// if there's a match, the document must be modified, so we don't check
 		} catch (MongoException e) {
-			throw new GroupsStorageException("Connection to database failed: " +
-					e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 	
+	@Override
+	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid)
+			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException {
+		if (!alterWorkspaceInGroup(groupID, wsid, true)) {
+			throw new WorkspaceExistsException(wsid.getID() + "");
+		}
+	}
+	
+	@Override
+	public void removeWorkspace(final GroupID groupID, final WorkspaceID wsid)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException {
+		if (!alterWorkspaceInGroup(groupID, wsid, false)) {
+			throw new NoSuchWorkspaceException(String.format(
+					"Group %s does not include workspace %s", groupID.getName(), wsid.getID()));
+		}
+	}
+		
+	// true if modified, false otherwise.
+	private boolean alterWorkspaceInGroup(
+			final GroupID groupID,
+			final WorkspaceID wsid,
+			final boolean add)
+			throws NoSuchGroupException, GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		checkNotNull(wsid, "wsid");
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
+		final Document update = new Document(add ? "$addToSet" : "$pull",
+				new Document(Fields.GROUP_WORKSPACES, wsid.getID()));
+		try {
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
+			if (res.getMatchedCount() != 1) {
+				throw new NoSuchGroupException(groupID.getName());
+			}
+			return res.getModifiedCount() == 1;
+		} catch (MongoException e) {
+			throw wrapMongoException(e);
+		}
+	}
+
 	@Override
 	public void storeRequest(final GroupRequest request)
 			throws RequestExistsException, GroupsStorageException {
@@ -573,8 +614,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 			throw new GroupsStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
-			throw new GroupsStorageException("Connection to database failed: " +
-					e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 	
@@ -698,8 +738,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				ret.add(toRequest(rdoc));
 			}
 		} catch (MongoException e) {
-			throw new GroupsStorageException(
-					"Connection to database failed: " + e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 		return ret;
 	}
@@ -767,8 +806,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 			// has to be modified, so no need to check
 		} catch (MongoException e) {
-			throw new GroupsStorageException(
-					"Connection to database failed: " + e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 
@@ -793,8 +831,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		try {
 			return db.getCollection(collection).find(query).projection(projection).first();
 		} catch (MongoException e) {
-			throw new GroupsStorageException(
-					"Connection to database failed: " + e.getMessage(), e);
+			throw wrapMongoException(e);
 		}
 	}
 }

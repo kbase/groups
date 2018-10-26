@@ -14,10 +14,12 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth.AuthToken;
 import us.kbase.common.service.JsonClientException;
+import us.kbase.common.service.ServerException;
 import us.kbase.common.service.UObject;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.WorkspaceHandler;
 import us.kbase.groups.core.WorkspaceID;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.workspace.GetPermissionsMassParams;
 import us.kbase.workspace.WorkspaceClient;
@@ -69,7 +71,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	
 	@Override
 	public boolean isAdmin(final WorkspaceID wsid, final UserName user)
-			throws WorkspaceHandlerException {
+			throws WorkspaceHandlerException, NoSuchWorkspaceException {
 		checkNotNull(wsid, "wsid");
 		checkNotNull(user, "user");
 		final Map<String, String> perms;
@@ -77,8 +79,14 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			perms = client.administer(new UObject(ImmutableMap.of(
 					"command", "getPermissionsMass",
 					"params", new GetPermissionsMassParams().withWorkspaces(
-							Arrays.asList(new WorkspaceIdentity().withId((long) wsid.getId()))))))
+							Arrays.asList(new WorkspaceIdentity().withId((long) wsid.getID()))))))
 					.asClassInstance(TR_GET_PERMS).get("perms").get(0);
+		} catch (ServerException e) {
+			if (e.getMessage().contains("is deleted")) {
+				throw new NoSuchWorkspaceException(wsid.getID() + "", e);
+			} else {
+				throw getGeneralWSException(e);
+			}
 		} catch (IOException | JsonClientException | IllegalStateException e) {
 			throw getGeneralWSException(e);
 		}
@@ -96,6 +104,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		
 		System.out.println(sws.isAdmin(new WorkspaceID(20554), new UserName("gaprice")));
 		System.out.println(sws.isAdmin(new WorkspaceID(20554), new UserName("msneddon")));
+		
+		sws.isAdmin(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
 	}
 
 }
