@@ -15,17 +15,22 @@ import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth.AuthToken;
+import us.kbase.common.service.UnauthorizedException;
 import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
+import us.kbase.groups.core.WorkspaceHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.notifications.SLF4JNotifier;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.groups.userhandler.KBaseUserHandler;
-import us.kbase.groups.workspaceHandler.DefaultWorkspaceHandler;
+import us.kbase.groups.workspaceHandler.SDKClientWorkspaceHandler;
+import us.kbase.workspace.WorkspaceClient;
 
 /** A class for building a {@link Groups} instance given a {@link GroupsConfig}
  * configuration instance.
@@ -93,6 +98,8 @@ public class GroupsBuilder {
 	private Groups buildGroups(final GroupsConfig c, final GroupsStorage storage)
 			throws StorageInitException, GroupsConfigurationException {
 		final UserHandler uh;
+		final WorkspaceHandler wh;
+		// these may need changes if we want to allow alternate implementations. YAGNI for now.
 		try {
 			uh = new KBaseUserHandler(
 					c.getAuthURL(), c.getWorkspaceAdminToken(), c.isAllowInsecureURLs());
@@ -100,8 +107,19 @@ public class GroupsBuilder {
 			throw new GroupsConfigurationException(
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
+		
+		try {
+			final WorkspaceClient client = new WorkspaceClient(
+					c.getWorkspaceURL(),
+					new AuthToken(c.getWorkspaceAdminToken().getToken(), "<fake>"));
+			client.setIsInsecureHttpConnectionAllowed(c.isAllowInsecureURLs());
+			wh = new SDKClientWorkspaceHandler(client);
+		} catch (IOException | UnauthorizedException | WorkspaceHandlerException e) {
+			throw new GroupsConfigurationException(
+					"Failed to create workspace handler: " + e.getMessage(), e);
+		}
 		// TODO NOTIFICATIONS replace with actual implementation
-		return new Groups(storage, uh, new DefaultWorkspaceHandler(), new SLF4JNotifier());
+		return new Groups(storage, uh, wh, new SLF4JNotifier());
 	}
 
 	private GroupsStorage buildStorage(
