@@ -108,7 +108,7 @@ public class ServiceIntegrationTest {
 				TestCommon.getJarsDir(),
 				"localhost:" + MANAGER.mongo.getServerPort(),
 				"GroupsServiceIntegTestWSDB",
-				"fakeadmin",
+				"user2",
 				authURL,
 				TEMP_DIR);
 		WSDB = MANAGER.mc.getDatabase("GroupsServiceIntegTestWSDB");
