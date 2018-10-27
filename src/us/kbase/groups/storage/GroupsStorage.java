@@ -7,7 +7,6 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
@@ -20,6 +19,7 @@ import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 /** A storage interface for the {@link Groups} application.

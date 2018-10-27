@@ -35,6 +35,8 @@ import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceHandler;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 

@@ -1,4 +1,4 @@
-package us.kbase.groups.core;
+package us.kbase.groups.core.workspace;
 
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 

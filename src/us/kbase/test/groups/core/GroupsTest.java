@@ -33,8 +33,6 @@ import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.WorkspaceHandler;
-import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -53,6 +51,8 @@ import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceHandler;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 
