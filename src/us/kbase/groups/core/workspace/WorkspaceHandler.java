@@ -15,4 +15,11 @@ public interface WorkspaceHandler {
 	WorkspaceInfoSet getWorkspaceInformation(WorkspaceIDSet ids, UserName user)
 			throws WorkspaceHandlerException;
 
+	// always returns public workspaces regardless of bool
+	WorkspaceInfoSet getWorkspaceInformation(
+			WorkspaceIDSet ids,
+			UserName user,
+			boolean administratedWorkspacesOnly)
+			throws WorkspaceHandlerException;
+
 }

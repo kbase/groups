@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,12 +18,15 @@ public class WorkspaceInfoSet {
 	private final UserName user;
 	// might need to think about sorting here. YAGNI for now.
 	private final Map<WorkspaceInformation, Boolean> isAdmin;
+	private final Set<Integer> nonexistent;
 	
 	private WorkspaceInfoSet(
 			final UserName user,
-			final Map<WorkspaceInformation, Boolean> isAdmin) {
+			final Map<WorkspaceInformation, Boolean> isAdmin,
+			final Set<Integer> nonexistent) {
 		this.user = user;
 		this.isAdmin = Collections.unmodifiableMap(isAdmin);
+		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
 	public UserName getUser() {
@@ -41,12 +45,17 @@ public class WorkspaceInfoSet {
 			return isAdmin.get(wsInfo);
 		}
 	}
+	
+	public Set<Integer> getNonexistentWorkspaces() {
+		return nonexistent;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((isAdmin == null) ? 0 : isAdmin.hashCode());
+		result = prime * result + ((nonexistent == null) ? 0 : nonexistent.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;
 	}
@@ -70,6 +79,13 @@ public class WorkspaceInfoSet {
 		} else if (!isAdmin.equals(other.isAdmin)) {
 			return false;
 		}
+		if (nonexistent == null) {
+			if (other.nonexistent != null) {
+				return false;
+			}
+		} else if (!nonexistent.equals(other.nonexistent)) {
+			return false;
+		}
 		if (user == null) {
 			if (other.user != null) {
 				return false;
@@ -87,6 +103,8 @@ public class WorkspaceInfoSet {
 		builder2.append(user);
 		builder2.append(", isAdmin=");
 		builder2.append(isAdmin);
+		builder2.append(", nonexistant=");
+		builder2.append(nonexistent);
 		builder2.append("]");
 		return builder2.toString();
 	}
@@ -100,6 +118,7 @@ public class WorkspaceInfoSet {
 		private final UserName user;
 		// might need to think about sorting here. YAGNI for now.
 		private final Map<WorkspaceInformation, Boolean> isAdmin = new HashMap<>();
+		private final Set<Integer> nonexistent = new HashSet<>();
 		
 		public Builder(final UserName user) {
 			checkNotNull(user, "user");
@@ -114,8 +133,13 @@ public class WorkspaceInfoSet {
 			return this;
 		}
 		
+		public Builder withNonexistentWorkspace(final int wsid) {
+			nonexistent.add(wsid);
+			return this;
+		}
+		
 		public WorkspaceInfoSet build() {
-			return new WorkspaceInfoSet(user, isAdmin);
+			return new WorkspaceInfoSet(user, isAdmin, nonexistent);
 		}
 	}
 }
