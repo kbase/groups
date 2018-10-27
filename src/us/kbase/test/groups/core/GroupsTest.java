@@ -18,6 +18,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.Group;
@@ -32,6 +34,7 @@ import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.WorkspaceHandler;
+import us.kbase.groups.core.WorkspaceID;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -39,9 +42,11 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
@@ -698,7 +703,24 @@ public class GroupsTest {
 						"User u1 is already a member of group bar"));
 	}
 	
-	//TODO TEST add test for admin trying to add themselves
+	@Test
+	public void inviteUserToGroupFailIsAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
+		when(mocks.userHandler.isValidUser(new UserName("admin"))).thenReturn(true);
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failInviteUserToGroup(mocks.groups, new Token("token"), new GroupID("bar"),
+				new UserName("admin"), new UserIsMemberException(
+						"User admin is already a member of group bar"));
+	}
 	
 	@Test
 	public void inviteUserToGroupFailRequestExists() throws Exception {
@@ -1742,6 +1764,8 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("a1"))
+				.withAdministrator(new UserName("a3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -1754,7 +1778,7 @@ public class GroupsTest {
 				GroupRequestStatus.accepted(new UserName("own")),
 				Instant.ofEpochMilli(15000));
 		verify(mocks.notifs).accept(
-				set(new UserName("user")), //TODO ADMIN when admins available, some notifications will happen
+				set(new UserName("user"), new UserName("a1"), new UserName("a3")),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
@@ -1803,6 +1827,8 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("a1"))
+				.withAdministrator(new UserName("a3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -1815,7 +1841,7 @@ public class GroupsTest {
 				GroupRequestStatus.accepted(new UserName("target")),
 				Instant.ofEpochMilli(15000));
 		verify(mocks.notifs).accept(
-				set(new UserName("own")), //TODO ADMIN when admins available, some notifications will happen
+				set(new UserName("own"), new UserName("a1"), new UserName("a3")),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
@@ -2238,6 +2264,226 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.demoteAdmin(t, i, u);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addWorkspace() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenReturn(true);
+		
+		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
+				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		
+		assertThat("incorrect request", ret, is(Optional.absent()));
+	}
+	
+	@Test
+	public void addWorkspaceFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final WorkspaceID w = new WorkspaceID(1);
+		
+		failAddWorkspace(g, null, i, w, new NullPointerException("userToken"));
+		failAddWorkspace(g, t, null, w, new NullPointerException("groupID"));
+		failAddWorkspace(g, t, i, null, new NullPointerException("wsid"));
+	}
+	
+	@Test
+	public void addWorkspaceFailNoSuchWorkspace() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenThrow(new NoSuchWorkspaceException("34"));
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new NoSuchWorkspaceException("34"));
+	}
+	
+	@Test
+	public void addWorkspaceFailNotGroupAdmin() throws Exception {
+		// this will need changes once requests work
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenReturn(true);
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new UnauthorizedException(
+						"User u1 is not an admin for group gid or workspace 34"));
+	}
+	
+	@Test
+	public void addWorkspaceFailNotWSAdmin() throws Exception {
+		// this will need changes once requests work
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenReturn(false);
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new UnauthorizedException(
+						"User admin is not an admin for group gid or workspace 34"));
+	}
+	
+	private void failAddWorkspace(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final WorkspaceID w,
+			final Exception expected) {
+		try {
+			g.addWorkspace(t, i, w);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeWorkspaceGroupAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenReturn(false);
+		
+		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		
+		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+	}
+	
+	//TODO WS find groups where you're an admin & remove ws
+	//TODO WS should always be able to view ws in groups where you're an admin of the ws
+	@Test
+	public void removeWorkspaceWSAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
+				.thenReturn(true);
+		
+		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		
+		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final WorkspaceID w = new WorkspaceID(1);
+		
+		failRemoveWorkspace(g, null, i, w, new NullPointerException("userToken"));
+		failRemoveWorkspace(g, t, null, w, new NullPointerException("groupID"));
+		failRemoveWorkspace(g, t, i, null, new NullPointerException("wsid"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailCommError() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("notadmin")))
+				.thenThrow(new WorkspaceHandlerException("bork"));
+		
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new WorkspaceHandlerException("bork"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNotEitherAdmin() throws Exception {
+		// this will need changes once requests work
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("notadmin")))
+				.thenReturn(false);
+		
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new UnauthorizedException(
+						"User notadmin is not an admin for group gid or workspace 34"));
+	}
+	
+	private void failRemoveWorkspace(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final WorkspaceID w,
+			final Exception expected) {
+		try {
+			g.removeWorkspace(t, i, w);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
