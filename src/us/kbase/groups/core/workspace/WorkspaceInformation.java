@@ -14,14 +14,17 @@ public class WorkspaceInformation {
 	private final int id;
 	private final String name;
 	private final Optional<String> narrativeName;
+	private final boolean isPublic;
 	
 	private WorkspaceInformation(
 			final int id,
 			final String name,
-			final Optional<String> narrativeName) {
+			final Optional<String> narrativeName,
+			final boolean isPublic) {
 		this.id = id;
 		this.name = name;
 		this.narrativeName = narrativeName;
+		this.isPublic = isPublic;
 	}
 
 	public int getId() {
@@ -35,12 +38,17 @@ public class WorkspaceInformation {
 	public Optional<String> getNarrativeName() {
 		return narrativeName;
 	}
+	
+	public boolean isPublic() {
+		return isPublic;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + id;
+		result = prime * result + (isPublic ? 1231 : 1237);
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((narrativeName == null) ? 0 : narrativeName.hashCode());
 		return result;
@@ -59,6 +67,9 @@ public class WorkspaceInformation {
 		}
 		WorkspaceInformation other = (WorkspaceInformation) obj;
 		if (id != other.id) {
+			return false;
+		}
+		if (isPublic != other.isPublic) {
 			return false;
 		}
 		if (name == null) {
@@ -87,6 +98,8 @@ public class WorkspaceInformation {
 		builder2.append(name);
 		builder2.append(", narrativeName=");
 		builder2.append(narrativeName);
+		builder2.append(", isPublic=");
+		builder2.append(isPublic);
 		builder2.append("]");
 		return builder2.toString();
 	}
@@ -100,6 +113,7 @@ public class WorkspaceInformation {
 		private final int id;
 		private final String name;
 		private Optional<String> narrativeName = Optional.absent();
+		private boolean isPublic = false;
 
 		private Builder(final int wsid, final String name) {
 			if (wsid < 1) {
@@ -119,8 +133,13 @@ public class WorkspaceInformation {
 			return this;
 		}
 		
+		public Builder withIsPublic(final boolean isPublic) {
+			this.isPublic = isPublic;
+			return this;
+		}
+		
 		public WorkspaceInformation build() {
-			return new WorkspaceInformation(id, name, narrativeName);
+			return new WorkspaceInformation(id, name, narrativeName, isPublic);
 		}
 	}
 

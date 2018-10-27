@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -81,18 +79,41 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			throws WorkspaceHandlerException, NoSuchWorkspaceException {
 		checkNotNull(wsid, "wsid");
 		checkNotNull(user, "user");
-		final List<Map<String, String>> perms = getPermissions(Arrays.asList(wsid.getID()));
-		return isAdmin(user, perms.get(0));
-	}
-	
-	private boolean isAdmin(final UserName user, final Map<String, String> perms) {
-		return "a".equals(perms.get(user.getName()));
+		final Perms perms = getPermissions(Arrays.asList(wsid.getID()), true);
+		return new Perm(user, perms.perms.get(0)).isAdmin;
 	}
 	
 	private final TypeReference<Map<String, List<Map<String, String>>>> TR_GET_PERMS =
 			new TypeReference<Map<String, List<Map<String, String>>>>() {};
 
-	private List<Map<String, String>> getPermissions(final List<Integer> ids)
+	private static class Perm {
+		
+		private final boolean isAdmin;
+		private final boolean isPublic;
+		
+		private Perm(final UserName user, final Map<String, String> perms) {
+			this.isAdmin = "a".equals(perms.get(user.getName()));
+			this.isPublic = "r".equals(perms.get("*"));
+		}
+	}
+
+	private static class Perms {
+		@SuppressWarnings("unused")
+		private final Integer errorWSID;
+		private final List<Map<String, String>> perms;
+		
+		private Perms(final int errorWSID) {
+			this.errorWSID = errorWSID;
+			this.perms = null;
+		}
+		
+		private Perms(final List<Map<String, String>> perms) {
+			this.errorWSID = null;
+			this.perms = perms;
+		}
+	}
+			
+	private Perms getPermissions(final List<Integer> ids, final boolean throwNoWorkspaceException)
 			throws NoSuchWorkspaceException, WorkspaceHandlerException {
 		final List<Map<String, String>> perms;
 		try {
@@ -105,14 +126,18 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		} catch (ServerException e) {
 			final Integer errorid = getWorkspaceID(e);
 			if (errorid != null) {
-				throw new NoSuchWorkspaceException(errorid + "", e);
+				if (throwNoWorkspaceException) {
+					throw new NoSuchWorkspaceException(errorid + "", e);
+				} else {
+					return new Perms(errorid);
+				}
 			} else {
 				throw getGeneralWSException(e);
 			}
 		} catch (IOException | JsonClientException | IllegalStateException e) {
 			throw getGeneralWSException(e);
 		}
-		return perms;
+		return new Perms(perms);
 	}
 	
 	private static final Pattern WSERR = Pattern.compile(
@@ -135,34 +160,41 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	@Override
 	public WorkspaceInfoSet getWorkspaceInformation(final WorkspaceIDSet ids, final UserName user)
 			throws WorkspaceHandlerException {
+		return getWorkspaceInformation(ids, user, false);
+	}
+	
+	@Override
+	public WorkspaceInfoSet getWorkspaceInformation(
+			final WorkspaceIDSet ids,
+			final UserName user,
+			final boolean administratedWorkspacesOnly)
+			throws WorkspaceHandlerException {
 		checkNotNull(ids, "ids");
 		checkNotNull(user, "user");
-		//TODO WS make a bulk ws method for this that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
-		final List<WorkspaceInformation> infos = new LinkedList<>();
-		for (final Integer wsid: ids.getIds()) {
-			final WorkspaceInformation wi = getWSInfo(wsid);
-			if (wi != null) {
-				infos.add(wi);
-			}
-		}
-		// here we'll assume no workspaces are deleted between the previous calls and this call.
-		// that's not a great assumption, but makes things simple. A second call will fix the
-		// issue if it occurs since we recheck the workspaces in getWSInfo.
-		// ideally, alter the workspace so that it doesn't throw an error on missing/deleted
-		// workspaces and returns an error code per workspace instead.
-		//TODO NOW batch by 1000, that's the limit
-		final List<Map<String, String>> perms;
-		try {
-			perms = getPermissions(infos.stream().map(i -> i.getId())
-					.collect(Collectors.toList()));
-		} catch (NoSuchWorkspaceException e) {
-			throw new RuntimeException("If this happens a lot make the method smarter", e);
-		}
+		//TODO WS make a bulk ws method for getwsinfo that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
+		//TODO WS for get perms mass make ignore error option that returns error state (DELETED, MISSING, INACCESSIBLE etc.) and use here instead of going one at a time
 		final WorkspaceInfoSet.Builder b = WorkspaceInfoSet.getBuilder(user);
-		final Iterator<Map<String, String>> iter = perms.iterator();
-		for (final WorkspaceInformation info: infos) {
-			final Map<String, String> p = iter.next();
-			b.withWorkspaceInformation(info, isAdmin(user, p));
+		for (final Integer wsid: ids.getIds()) {
+			final Perms perms;
+			try {
+				perms = getPermissions(Arrays.asList(wsid), false);
+			} catch (NoSuchWorkspaceException e) {
+				throw new RuntimeException("This should be impossible", e);
+			}
+			if (perms.perms == null) {
+				b.withNonexistentWorkspace(wsid);
+			} else {
+				final Perm perm = new Perm(user, perms.perms.get(0));
+				if (!administratedWorkspacesOnly || perm.isAdmin || perm.isPublic) {
+					final WorkspaceInformation wi = getWSInfo(wsid);
+					if (wi == null) {
+						// should almost never happen since we checked for inaccessible ws above
+						b.withNonexistentWorkspace(wsid);
+					} else {
+						b.withWorkspaceInformation(wi, perm.isAdmin);
+					}
+				}
+			}
 		}
 		return b.build();
 	}
@@ -191,7 +223,9 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			throw getGeneralWSException(e);
 		}
 		return WorkspaceInformation.getBuilder(Math.toIntExact(wsinfo.getE1()), wsinfo.getE2())
-				.withNullableNarrativeName(getNarrativeName(wsinfo.getE9())).build();
+				.withNullableNarrativeName(getNarrativeName(wsinfo.getE9()))
+				.withIsPublic("r".equals(wsinfo.getE7()))
+				.build();
 	}
 
 	private String getNarrativeName(final Map<String, String> meta) {
@@ -216,10 +250,18 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("gaprice")));
 		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("msneddon")));
 		
+		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("gaprice")));
+		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("msneddon")));
+		
 		System.out.println(sws.getWorkspaceInformation(
 				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37266, 100000, 37267, 35854))),
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
 				new UserName("gaprice")));
+		System.out.println(sws.getWorkspaceInformation(
+				WorkspaceIDSet.fromInts(new HashSet<>(
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+				new UserName("gaprice"),
+				true));
 		
 		try {
 			sws.isAdministrator(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
