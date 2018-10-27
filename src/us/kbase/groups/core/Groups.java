@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Optional;
+
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -20,9 +22,12 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
+import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -615,5 +620,80 @@ public class Groups {
 		// this method will throw an error if the user is not an admin.
 		storage.demoteAdmin(groupID, admin);
 		// notify? I'm thinking not
+	}
+	
+	/** Add a workspace to a group. The workspace is added immediately if the user is an
+	 * administrator of both the group and the workspace. Otherwise, a {@link GroupRequest} is
+	 * added to the system and returned.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to be modified.
+	 * @param wsid the workspace ID.
+	 * @return A request if required or {@link Optional#absent()} if the operation is already
+	 * complete.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws NoSuchWorkspaceException if the workspace does not exist or is deleted.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws WorkspaceExistsException if the workspace is already part of the group.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * workspace.
+	 */
+	public Optional<GroupRequest> addWorkspace(
+			final Token userToken,
+			final GroupID groupID,
+			final WorkspaceID wsid)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, NoSuchWorkspaceException, WorkspaceHandlerException,
+				WorkspaceExistsException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(wsid, "wsid");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		final boolean isWSAdmin = wsHandler.isAdministrator(wsid, user);
+		if (group.isAdministrator(user) && isWSAdmin) {
+			storage.addWorkspace(groupID, wsid);
+			return Optional.absent();
+		}
+		//TODO WS handle requests here - one req type for approval needed from group admin, 1 for ws admin
+		throw new UnauthorizedException(String.format(
+				"User %s is not an admin for group %s or workspace %s",
+				user.getName(), groupID.getName(), wsid.getID()));
+	}
+	/** Remove a workspace from a group.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to be modified.
+	 * @param wsid the workspace ID.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws NoSuchWorkspaceException if the workspace does not exist, is deleted, or is
+	 * not included in the group.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * workspace.
+	 */
+	public void removeWorkspace(
+			final Token userToken,
+			final GroupID groupID,
+			final WorkspaceID wsid)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException, NoSuchWorkspaceException,
+				WorkspaceHandlerException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(wsid, "wsid");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		if (group.isAdministrator(user) || wsHandler.isAdministrator(wsid, user)) {
+			storage.removeWorkspace(groupID, wsid);
+			return;
+		}
+		throw new UnauthorizedException(String.format(
+				"User %s is not an admin for group %s or workspace %s",
+				user.getName(), groupID.getName(), wsid.getID()));
 	}
 }

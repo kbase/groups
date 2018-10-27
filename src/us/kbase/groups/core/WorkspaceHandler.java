@@ -7,7 +7,7 @@ public interface WorkspaceHandler {
 
 	//TODO NOW JAVADOC
 
-	boolean isAdmin(WorkspaceID wsid, UserName user)
+	boolean isAdministrator(WorkspaceID wsid, UserName user)
 			throws WorkspaceHandlerException, NoSuchWorkspaceException;
 
 	

@@ -70,7 +70,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			new TypeReference<Map<String, List<Map<String, String>>>>() {};
 	
 	@Override
-	public boolean isAdmin(final WorkspaceID wsid, final UserName user)
+	public boolean isAdministrator(final WorkspaceID wsid, final UserName user)
 			throws WorkspaceHandlerException, NoSuchWorkspaceException {
 		checkNotNull(wsid, "wsid");
 		checkNotNull(user, "user");
@@ -82,7 +82,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 							Arrays.asList(new WorkspaceIdentity().withId((long) wsid.getID()))))))
 					.asClassInstance(TR_GET_PERMS).get("perms").get(0);
 		} catch (ServerException e) {
-			if (e.getMessage().contains("is deleted")) {
+			final String m = e.getMessage();
+			if (m.contains("is deleted") || m.contains("No workspace with id")) {
 				throw new NoSuchWorkspaceException(wsid.getID() + "", e);
 			} else {
 				throw getGeneralWSException(e);
@@ -99,13 +100,18 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 				new AuthToken(args[0], "<fake>"));
 		
 		final SDKClientWorkspaceHandler sws = new SDKClientWorkspaceHandler(ws);
-		System.out.println(sws.isAdmin(new WorkspaceID(36967), new UserName("gaprice")));
-		System.out.println(sws.isAdmin(new WorkspaceID(36967), new UserName("msneddon")));
+		System.out.println(sws.isAdministrator(new WorkspaceID(36967), new UserName("gaprice")));
+		System.out.println(sws.isAdministrator(new WorkspaceID(36967), new UserName("msneddon")));
 		
-		System.out.println(sws.isAdmin(new WorkspaceID(20554), new UserName("gaprice")));
-		System.out.println(sws.isAdmin(new WorkspaceID(20554), new UserName("msneddon")));
+		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("gaprice")));
+		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("msneddon")));
+		try {
+			sws.isAdministrator(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
+		} catch (NoSuchWorkspaceException e) {
+			e.printStackTrace();
+		}
+		sws.isAdministrator(new WorkspaceID(10000000), new UserName("doesntmatterdeleted"));
 		
-		sws.isAdmin(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
 	}
 
 }
