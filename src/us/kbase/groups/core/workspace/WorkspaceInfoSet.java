@@ -134,7 +134,6 @@ public class WorkspaceInfoSet {
 		}
 		
 		public Builder withNonexistentWorkspace(final int wsid) {
-			checkNotNull(wsid, "wsid");
 			nonexistent.add(wsid);
 			return this;
 		}

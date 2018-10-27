@@ -15,7 +15,6 @@ public interface WorkspaceHandler {
 	WorkspaceInfoSet getWorkspaceInformation(WorkspaceIDSet ids, UserName user)
 			throws WorkspaceHandlerException;
 
-	// missing or deleted ws ids are not included in the returned set.
 	// always returns public workspaces regardless of bool
 	WorkspaceInfoSet getWorkspaceInformation(
 			WorkspaceIDSet ids,
