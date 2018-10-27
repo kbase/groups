@@ -46,6 +46,7 @@ import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
@@ -2367,6 +2368,28 @@ public class GroupsTest {
 						"User admin is not an admin for group gid or workspace 34"));
 	}
 	
+	@Test
+	public void addWorkspaceFailWorkspaceInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+				.thenReturn(true);
+		
+		doThrow(new WorkspaceExistsException("34")).when(mocks.storage)
+				.addWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new WorkspaceExistsException("34"));
+	}
+	
 	private void failAddWorkspace(
 			final Groups g,
 			final Token t,
@@ -2474,6 +2497,28 @@ public class GroupsTest {
 		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
 				new UnauthorizedException(
 						"User notadmin is not an admin for group gid or workspace 34"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailWSNotInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
+				.thenReturn(true);
+		
+		doThrow(new NoSuchWorkspaceException("34 not in group")).when(mocks.storage)
+				.removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new NoSuchWorkspaceException("34 not in group"));
 	}
 	
 	private void failRemoveWorkspace(
