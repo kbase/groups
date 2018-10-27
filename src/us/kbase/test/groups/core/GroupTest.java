@@ -15,12 +15,12 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.WorkspaceID;
-import us.kbase.groups.core.WorkspaceIDSet;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupTest {

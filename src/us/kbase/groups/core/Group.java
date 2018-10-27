@@ -10,6 +10,9 @@ import java.util.Set;
 
 import com.google.common.base.Optional;
 
+import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
+
 /** Represents a group consisting primarily of a set of users and set of workspaces associated
  * with those users.
  * 

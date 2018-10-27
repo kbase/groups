@@ -1,5 +1,6 @@
-package us.kbase.groups.core;
+package us.kbase.groups.core.workspace;
 
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 
