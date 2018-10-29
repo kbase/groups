@@ -13,6 +13,20 @@ Endpoints that require authorization are noted below. To authorize a request, in
 
 ### Data structures
 
+#### WorkspaceInformation
+
+Represents information about a workspace.
+
+```
+{
+    "id": <the workspace ID>,
+    "name": <the workspace name>,
+    "narrname": <the name of the narrative contained in the workspace or null>
+    "public": <true if the workspace is public, false otherwise>
+    "admin": <true if the user is an admin of the workspace, false otherwise>
+}
+```
+
 #### Group
 
 Represents a group of users and associated data.
@@ -28,6 +42,7 @@ Represents a group of users and associated data.
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
+    "workspaces": <a list of WorkspaceInformation>
 }
 ```
 
@@ -163,8 +178,15 @@ GET /group/<group id>
 RETURNS: A Group.
 ```
 
-If authorization is provided and the user is a member of the group, the members list is populated.
-Otherwise it is empty.
+If no authorization is provided, the members list is empty and only public workspaces associated
+with the group are returned.
+
+If authorization is provided and the user is not a member of the group, the members list is
+empty and only group-associated public workspaces and workspaces the user administrates are
+returned.
+
+If authorization is provided and the user is a member of the group, the members list is populated
+and all group-associated workspaces are returned.
 
 ### Request membership to a group
 

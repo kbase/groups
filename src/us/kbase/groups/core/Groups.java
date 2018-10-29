@@ -163,8 +163,7 @@ public class Groups {
 				// storage system is illegal we've got bigger problems
 			}
 		}
-		final ViewType viewType = g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER;
-		return new GroupView(g, wis, viewType);
+		return new GroupView(g, wis, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
 	// this assumes the number of groups is small enough that listing them all is OK.

@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,6 +46,7 @@ import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
+import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -80,7 +82,8 @@ public class GroupsAPITest {
 		}
 	}
 	
-	private static final Map<Object, Object> GROUP_MIN_JSON_STD = MapBuilder.newHashMap()
+	private static final Map<String, Object> GROUP_MIN_JSON_STD = MapBuilder
+			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("name", "name")
 			.with("owner", "u")
@@ -90,16 +93,19 @@ public class GroupsAPITest {
 			.with("description", null)
 			.with("members", Collections.emptyList())
 			.with("admins", Collections.emptyList())
+			.with("workspaces", Collections.emptyList())
 			.build();
 	
-	private static final Map<Object, Object> GROUP_MIN_JSON_MIN = MapBuilder.newHashMap()
+	private static final Map<String, Object> GROUP_MIN_JSON_MIN = MapBuilder
+			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("name", "name")
 			.with("owner", "u")
 			.with("type", "Organization")
 			.build();
 	
-	private static final Map<Object, Object> GROUP_MAX_JSON_STD = MapBuilder.newHashMap()
+	private static final Map<String, Object> GROUP_MAX_JSON_STD = MapBuilder
+			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
 			.with("owner", "u2")
@@ -109,9 +115,11 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Arrays.asList("bar", "foo"))
 			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("workspaces", Collections.emptyList())
 			.build();
 	
-	private static final Map<Object, Object> GROUP_MAX_JSON_NON = MapBuilder.newHashMap()
+	private static final Map<String, Object> GROUP_MAX_JSON_NON = MapBuilder
+			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
 			.with("owner", "u2")
@@ -121,9 +129,11 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("workspaces", Collections.emptyList())
 			.build();
 	
-	private static final Map<Object, Object> GROUP_MAX_JSON_MIN = MapBuilder.newHashMap()
+	private static final Map<String, Object> GROUP_MAX_JSON_MIN = MapBuilder
+			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
 			.with("owner", "u2")
@@ -281,6 +291,44 @@ public class GroupsAPITest {
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
 		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_NON));
+	}
+	
+	@Test
+	public void getGroupWithWorkspaces() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id")))
+				.thenReturn(new GroupView(GROUP_MAX, WorkspaceInfoSet.getBuilder(new UserName("u"))
+						.withWorkspaceInformation(
+								WorkspaceInformation.getBuilder(82, "name82")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narrname")
+								.build(), true)
+						.withWorkspaceInformation(
+								WorkspaceInformation.getBuilder(45, "name45").build(), false)
+						.build(), MEMBER));
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		final Map<String, Object> expected = new HashMap<>();
+		expected.putAll(GROUP_MAX_JSON_STD);
+		expected.put("workspaces", Arrays.asList(
+				MapBuilder.newHashMap()
+						.with("id", 45)
+						.with("name", "name45")
+						.with("narrname", null)
+						.with("public", false)
+						.with("admin", false)
+						.build(),
+				MapBuilder.newHashMap()
+						.with("id", 82)
+						.with("name", "name82")
+						.with("narrname", "narrname")
+						.with("public", true)
+						.with("admin", true)
+						.build()
+				));
+		
+		assertThat("incorrect group", ret, is(expected));
 	}
 	
 	@Test

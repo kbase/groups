@@ -4,7 +4,10 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +49,7 @@ import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -189,11 +193,27 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
 			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
+			final List<Map<String, Object>> wslist = new LinkedList<>();
+			ret.put(Fields.GROUP_WORKSPACES, wslist);
+			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
+				final Map<String, Object> ws = new HashMap<>();
+				wslist.add(ws);
+				ws.put(Fields.GROUP_WS_ID, wsi.getID());
+				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
+				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
+				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
+				ws.put(Fields.GROUP_WS_IS_ADMIN, g.isAdministrator(wsi));
+			}
 		}
-		//TODO NOW with workspaces
 		return ret;
 	}
 	
+	private List<WorkspaceInformation> sorted(final Set<WorkspaceInformation> wsi) {
+		final List<WorkspaceInformation> ret = new ArrayList<>(wsi);
+		Collections.sort(ret, (wsi1, wsi2) -> wsi1.getID() - wsi2.getID());
+		return ret;
+	}
+
 	@PUT
 	@Path(ServicePaths.GROUP_USER_ID_ADMIN)
 	public void promoteMember(

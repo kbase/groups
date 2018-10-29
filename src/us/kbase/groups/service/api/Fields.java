@@ -7,7 +7,7 @@ public class Fields {
 	 * ***********************
 	 */
 	
-	/** The group id. */
+	/** The group ID. */
 	public static final String GROUP_ID = "id";
 	/** The group name. */
 	public static final String GROUP_NAME = "name";
@@ -27,6 +27,20 @@ public class Fields {
 	public static final String GROUP_MODIFICATION = "moddate";
 	/** The group description. */
 	public static final String GROUP_DESCRIPTION = "description";
+	
+	// workspace fields
+	/** The list of workspaces. */
+	public static final String GROUP_WORKSPACES = "workspaces";
+	/** The workspace ID. */
+	public static final String GROUP_WS_ID = "id";
+	/** The workspace name. */
+	public static final String GROUP_WS_NAME = "name";
+	/** The narrative name. */
+	public static final String GROUP_WS_NARRATIVE_NAME = "narrname";
+	/** The public state of the workspace. */
+	public static final String GROUP_WS_IS_PUBLIC = "public";
+	/** Whether the user administrates the workspace. */
+	public static final String GROUP_WS_IS_ADMIN = "admin";
 
 	/* ***********************
 	 * request fields
