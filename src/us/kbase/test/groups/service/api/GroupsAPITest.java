@@ -320,14 +320,14 @@ public class GroupsAPITest {
 		expected.putAll(GROUP_MAX_JSON_STD);
 		expected.put("workspaces", Arrays.asList(
 				MapBuilder.newHashMap()
-						.with("id", 45)
+						.with("wsid", 45)
 						.with("name", "name45")
 						.with("narrname", null)
 						.with("public", false)
 						.with("admin", false)
 						.build(),
 				MapBuilder.newHashMap()
-						.with("id", 82)
+						.with("wsid", 82)
 						.with("name", "name82")
 						.with("narrname", "narrname")
 						.with("public", true)

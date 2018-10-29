@@ -19,7 +19,7 @@ Represents information about a workspace.
 
 ```
 {
-    "id": <the workspace ID>,
+    "wsid": <the workspace ID>,
     "name": <the workspace name>,
     "narrname": <the name of the narrative contained in the workspace or null>
     "public": <true if the workspace is public, false otherwise>
@@ -241,7 +241,7 @@ The user must be the group owner.
 
 ```
 AUTHORIZATION REQUIRED
-PUT /group/<group id>/workspace/<workspace id>
+POST /group/<group id>/workspace/<workspace id>
 RETURNS: Either {"complete": true} or a Request with the additional field "complete"
 with a value of false.
 ```

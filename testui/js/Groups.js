@@ -286,6 +286,7 @@ export default class {
         .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
+                  // TODO NOW break up this monstrosity
                   const c = new Date(json.createdate).toLocaleString();
                   const m = new Date(json.moddate).toLocaleString();
                   const s = this.sanitize;
@@ -325,7 +326,7 @@ export default class {
                       }
                       g += `</tbody></table>`;
                   }
-                  g += `<div>Administrators</div><table class="table"<tbody>`;
+                  g += `<div>Administrators</div><table class="table"><tbody>`;
                   for (const a of admins) {
                       g += `<tr><td>${s(a)}</td>
                               <td>
@@ -333,6 +334,33 @@ export default class {
                                     </button>
                               </td>
                             </tr>`
+                  }
+                  g += `</tbody></table>
+                        <div>Workspaces</div>
+                        <table class="table">
+                        <thead>
+                          <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Narrative Name</th>
+                            <th scope="col">Public</th>
+                            <th scope="col">Administrator</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                       `;
+                  for (const ws of json.workspaces) {
+                      g += `<tr>
+                              <th>${s(ws.wsid)}</th>
+                              <td>${s(ws.name)}</td>
+                              <td>${s(ws.narrname)}</td>
+                              <td>${s(ws.public)}</td>
+                              <td>${s(ws.admin)}</td>
+                              <td>
+                                <button id="removews_${s(ws.wsid)}" class="btn btn-primary">Remove
+                                      </button>
+                              </td></tr>
+                           `
                   }
                   g +=
                       `
@@ -344,6 +372,11 @@ export default class {
                       <div>
                         <input id="addmember"/>
                         <button id="addmemberbtn" class="btn btn-primary">Add member</button>
+                      </div>
+                      <div>
+                        <input id="addws"/>
+                        <button id="addwsbtn" class="btn btn-primary" placeholder="Workspace ID">
+                            Add workspace</button>
                       </div>
                       `;
                   //TODO CODE inactivate button if group member
@@ -358,6 +391,10 @@ export default class {
                       const member = $('#addmember').val();
                       this.addMember(groupid, member);
                   });
+                  $('#addwsbtn').on('click', () => {
+                      const ws = $('#addws').val();
+                      this.addWorkspace(groupid, ws);
+                  });
                   if (!priv) {
                       for (const m of members) {
                           $(`#remove_${s(m)}`).on('click', () => {
@@ -371,6 +408,12 @@ export default class {
                   for (const a of admins) {
                       $(`#demote_${s(a)}`).on('click', () => {
                           this.demoteAdmin(groupid, a);
+                      });
+                  }
+                  for (const ws of json.workspaces) {
+                      $(`#removews_${s(ws.wsid)}`).on('click', () => {
+                          // TODO only activate button if ws admin or group admin
+                          this.removeWorkspace(groupid, ws.wsid);
                       });
                   }
               }).catch( (err) => {
@@ -464,6 +507,53 @@ export default class {
          }).catch( (err) => {
              this.handleError(err);
          });
+  }
+  
+  addWorkspace(groupid, ws) {
+      $('#error').text("");
+      if (!this.checkToken()) {
+          return;
+      }
+      fetch(this.serviceUrl + "group/" + groupid + '/workspace/' + ws,
+        {"method": "POST",
+         "headers": this.getHeaders()
+         }).then( (response) => {
+             if (response.ok) {
+                 response.json().then( (json) => {
+                     if (json.complete) {
+                         this.renderGroup(groupid)
+                     } else {
+                         this.renderRequest(json.id);
+                     }
+                 }).catch ( (err) => {
+                     this.handleError(err);
+                 });
+             } else {
+                 response.text().then( (err) => {
+                     this.handleError(err);
+                 });
+             }
+         }).catch( (err) => {
+             this.handleError(err);
+         });
+  }
+  
+  removeWorkspace(groupid, ws) {
+      $('#error').text("");
+      fetch(this.serviceUrl + "group/" + groupid + "/workspace/" + ws,
+              {"method": "DELETE",
+               "headers": this.getHeaders()})
+        .then( (response) => {
+          if (response.ok) {
+              this.renderGroup(groupid);
+          } else {
+              response.text().then( (err) => {
+                  this.handleError(err);
+              });
+          }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
   }
   
   renderGroupRequests(groupid) {
