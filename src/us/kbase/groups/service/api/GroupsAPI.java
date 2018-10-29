@@ -4,7 +4,6 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,12 +187,10 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
-			ret.put(Fields.GROUP_MEMBERS, Collections.emptyList());
+			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
 		}
-		if (g.getViewType().equals(ViewType.STANDARD_MEMBER))
-			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
-		//TODO NOW with workspaces.
+		//TODO NOW with workspaces
 		return ret;
 	}
 	

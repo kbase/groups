@@ -1,8 +1,8 @@
 package us.kbase.test.groups.core;
 
 import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
-import static us.kbase.groups.core.GroupView.ViewType.STANDARD_NON_MEMBER;
-import static us.kbase.groups.core.GroupView.ViewType.STANDARD_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -182,7 +182,7 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build(),
-				wsis(new UserName("foo")), STANDARD_MEMBER)));
+				wsis(new UserName("foo")), MEMBER)));
 	}
 	
 	@Test
@@ -217,7 +217,7 @@ public class GroupsTest {
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.build(),
-				wsis(new UserName("foo")), STANDARD_MEMBER)));
+				wsis(new UserName("foo")), MEMBER)));
 	}
 	
 	@Test
@@ -327,7 +327,7 @@ public class GroupsTest {
 								.build(),
 								false)
 						.build(),
-				STANDARD_NON_MEMBER)));
+				NON_MEMBER)));
 	}
 	
 	@Test
@@ -376,7 +376,7 @@ public class GroupsTest {
 								.build(),
 								true)
 						.build(),
-				STANDARD_NON_MEMBER)));
+				NON_MEMBER)));
 	}
 	
 	@Test
@@ -442,7 +442,7 @@ public class GroupsTest {
 							.build(),
 							true)
 					.build(),
-				STANDARD_MEMBER)));
+				MEMBER)));
 	}
 	
 	@Test

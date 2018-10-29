@@ -100,7 +100,7 @@ public class Groups {
 	/** Create a new group.
 	 * @param userToken the token of the user that will be creating the group.
 	 * @param createParams the paramaters describing how the group will be created.
-	 * @return a view of the new group where the view type is {@link ViewType#STANDARD_MEMBER}.
+	 * @return a view of the new group where the view type is {@link ViewType#MEMBER}.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupExistsException if the group already exists.
@@ -121,7 +121,7 @@ public class Groups {
 			return new GroupView(
 					storage.getGroup(createParams.getGroupID()),
 					WorkspaceInfoSet.getBuilder(owner).build(),
-					ViewType.STANDARD_MEMBER);
+					ViewType.MEMBER);
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
 					"Just created a group and it's already gone. Something's really broken", e);
@@ -129,10 +129,10 @@ public class Groups {
 	}
 	
 	/** Get a view of a group.
-	 * A null token or a non-member gets a {@link ViewType#STANDARD_NON_MEMBER} view.
+	 * A null token or a non-member gets a {@link ViewType#NON_MEMBER} view.
 	 * A null token will result in only public group workspaces being included in the view.
 	 * A non-member token will also include workspaces the user administrates.
-	 * A member will get a {@link ViewType#STANDARD_MEMBER} view and all group 
+	 * A member will get a {@link ViewType#MEMBER} view and all group 
 	 * workspaces will be included.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to get.
@@ -163,8 +163,7 @@ public class Groups {
 				// storage system is illegal we've got bigger problems
 			}
 		}
-		final ViewType viewType = g.isMember(user) ? ViewType.STANDARD_MEMBER :
-			ViewType.STANDARD_NON_MEMBER;
+		final ViewType viewType = g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER;
 		return new GroupView(g, wis.withoutNonexistentWorkspaces(), viewType);
 	}
 	

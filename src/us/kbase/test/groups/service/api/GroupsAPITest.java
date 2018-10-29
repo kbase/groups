@@ -1,8 +1,8 @@
 package us.kbase.test.groups.service.api;
 
 import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
-import static us.kbase.groups.core.GroupView.ViewType.STANDARD_NON_MEMBER;
-import static us.kbase.groups.core.GroupView.ViewType.STANDARD_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -158,7 +158,7 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateGroupJSON("name", noInput, noInput));
@@ -175,7 +175,7 @@ public class GroupsAPITest {
 				.withDescription("my desc")
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(new GroupView(GROUP_MIN, wsis(), STANDARD_MEMBER));
+				.thenReturn(new GroupView(GROUP_MIN, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateGroupJSON("name", "Team", "my desc"));
@@ -264,7 +264,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(expected, new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
@@ -276,7 +276,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_NON_MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), NON_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		

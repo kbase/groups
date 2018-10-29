@@ -17,8 +17,8 @@ public class GroupView {
 	
 	public static enum ViewType {
 		MINIMAL,
-		STANDARD_NON_MEMBER,
-		STANDARD_MEMBER;
+		NON_MEMBER,
+		MEMBER;
 	}
 	
 	// group fields
@@ -64,7 +64,7 @@ public class GroupView {
 			creationDate = Optional.of(group.getCreationDate());
 			modificationDate = Optional.of(group.getModificationDate());
 			description = group.getDescription();
-			if (viewType.equals(ViewType.STANDARD_NON_MEMBER)) {
+			if (viewType.equals(ViewType.NON_MEMBER)) {
 				members = getEmptyImmutableSet();
 			} else {
 				members = group.getMembers();
