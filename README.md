@@ -22,9 +22,9 @@ Represents a group of users and associated data.
     "id": <the group ID>,
     "name": <the group name>,
     "owner": <the username of the group owner>,
+    "type": <the type of the group, e.g. Team, Project, etc.>,
     "admins": <an array of usernames of admins of the group>,
     "members": <an array of usernames of members of the group>,
-    "type": <the type of the group, e.g. Team, Project, etc.>,
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
@@ -127,10 +127,8 @@ RETURNS:
 GET /group
 
 RETURNS:
-A list of Groups.
+A list of Groups. Only the id, name, owner, and type fields are included.
 ```
-
- The members list is always empty.
 
 ### Create a group
 

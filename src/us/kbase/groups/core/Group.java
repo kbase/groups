@@ -147,26 +147,11 @@ public class Group {
 	
 	/** Check if a user is a member of the group. 'Member' includes the group owner and
 	 * administrators.
-	 * @param user the user to check.
+	 * @param user the user to check. Pass null for anonymous users.
 	 * @return true if the user is a group member, false otherwise.
 	 */
 	public boolean isMember(final UserName user) {
-		checkNotNull(user, "user");
 		return owner.equals(user) || members.contains(user) || admins.contains(user);
-	}
-	
-	/** Return a copy of the group with any private fields (e.g. members and workspaces) removed.
-	 * @return a group copy without private fields.
-	 */
-	public Group withoutPrivateFields() {
-		final Builder b = getBuilder(groupID, groupName, owner,
-				new CreateAndModTimes(creationDate, modificationDate))
-				.withDescription(description.orNull())
-				.withType(type);
-		for (final UserName n: admins) {
-			b.withAdministrator(n);
-		}
-		return b.build();
 	}
 
 	@Override

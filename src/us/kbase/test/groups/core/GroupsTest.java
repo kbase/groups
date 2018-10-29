@@ -1,5 +1,9 @@
 package us.kbase.test.groups.core;
 
+import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
+import static us.kbase.groups.core.GroupView.ViewType.STANDARD_NON_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.STANDARD_MEMBER;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -27,6 +31,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Notifications;
 import us.kbase.groups.core.Token;
@@ -53,6 +58,9 @@ import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
+import us.kbase.groups.core.workspace.WorkspaceInfoSet;
+import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 
@@ -69,6 +77,14 @@ public class GroupsTest {
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
+	}
+	
+	private static WorkspaceInfoSet wsis() {
+		return wsis(null);
+	}
+
+	private static WorkspaceInfoSet wsis(final UserName user) {
+		return WorkspaceInfoSet.getBuilder(user).build();
 	}
 
 	private static TestMocks initTestMocks() throws Exception {
@@ -154,7 +170,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
-		final Group ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
+		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name")).build());
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
@@ -162,10 +178,11 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
-		assertThat("incorrect group", ret, is(Group.getBuilder(
+		assertThat("incorrect group", ret, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.build()));
+				.build(),
+				wsis(new UserName("foo")), STANDARD_MEMBER)));
 	}
 	
 	@Test
@@ -181,7 +198,7 @@ public class GroupsTest {
 				.withType(GroupType.TEAM)
 				.build());
 		
-		final Group ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
+		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
@@ -194,12 +211,13 @@ public class GroupsTest {
 				.withType(GroupType.TEAM)
 				.build());
 		
-		assertThat("incorrect group", ret, is(Group.getBuilder(
+		assertThat("incorrect group", ret, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build()));
+				.build(),
+				wsis(new UserName("foo")), STANDARD_MEMBER)));
 	}
 	
 	@Test
@@ -271,6 +289,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getGroupNoToken() throws Exception {
+		// can get public ws
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -279,20 +298,41 @@ public class GroupsTest {
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.withMember(new UserName("baz"))
+				.withWorkspace(new WorkspaceID(92))
+				.withWorkspace(new WorkspaceID(86))
 				.build());
+
+		when(mocks.wsHandler.getWorkspaceInformation(
+				null, WorkspaceIDSet.fromInts(set(92, 86)), true))
+				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narr")
+								.build(),
+								false)
+						.build());
 		
-		final Group g = mocks.groups.getGroup(null, new GroupID("bar"));
+		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(Group.getBuilder(
+		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build()));
+				.build(),
+				WorkspaceInfoSet.getBuilder(new UserName("baz"))
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narr")
+								.build(),
+								false)
+						.build(),
+				STANDARD_NON_MEMBER)));
 	}
 	
 	@Test
 	public void getGroupNonMemberToken() throws Exception {
+		// can get public and admin'd ws
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -300,20 +340,49 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withMember(new UserName("baz"))
 				.withAdministrator(new UserName("whoo"))
+				.withWorkspace(new WorkspaceID(92))
+				.withWorkspace(new WorkspaceID(57))
+				.withWorkspace(new WorkspaceID(86))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
+
+		when(mocks.wsHandler.getWorkspaceInformation(
+				new UserName("whee"), WorkspaceIDSet.fromInts(set(92, 57, 86)), true))
+				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narr")
+								.build(),
+								false)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
+								.build(),
+								true)
+						.build());
 		
-		final Group g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(Group.getBuilder(
+		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withAdministrator(new UserName("whoo"))
-				.build()));
+				.build(),
+				WorkspaceInfoSet.getBuilder(new UserName("baz"))
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narr")
+								.build(),
+								false)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
+								.build(),
+								true)
+						.build(),
+				STANDARD_NON_MEMBER)));
 	}
 	
 	@Test
-	public void getGroupMemberToken() throws Exception {
+	public void getGroupMemberTokenWithNonexistentWorkspaces() throws Exception {
+		// tests non existent workspace code
+		// can get all ws
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -322,18 +391,58 @@ public class GroupsTest {
 				.withDescription("other desc")
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
+				.withWorkspace(new WorkspaceID(92))
+				.withWorkspace(new WorkspaceID(6))
+				.withWorkspace(new WorkspaceID(57))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
+		when(mocks.wsHandler.getWorkspaceInformation(
+				new UserName("baz"), WorkspaceIDSet.fromInts(set(92, 6, 57)), false))
+				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+								.withIsPublic(true)
+								.withNullableNarrativeName("narr")
+								.build(),
+								false)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
+								.build(),
+								false)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
+								.build(),
+								true)
+						.withNonexistentWorkspace(34)
+						.withNonexistentWorkspace(86) // will throw error, should be ignored
+						.withNonexistentWorkspace(-112) // should be ignored
+						.build());
+		doThrow(new NoSuchWorkspaceException("86")).when(mocks.storage)
+				.removeWorkspace(new GroupID("bar"), new WorkspaceID(86));
 		
-		final Group g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(Group.getBuilder(
+		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		
+		verify(mocks.storage).removeWorkspace(new GroupID("bar"), new WorkspaceID(34));
+		
+		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
-				.build()));
+				.build(),
+				WorkspaceInfoSet.getBuilder(new UserName("baz"))
+					.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
+							.withIsPublic(true)
+							.withNullableNarrativeName("narr")
+							.build(),
+							false)
+					.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
+							.build(),
+							false)
+					.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
+							.build(),
+							true)
+					.build(),
+				STANDARD_MEMBER)));
 	}
 	
 	@Test
@@ -403,16 +512,20 @@ public class GroupsTest {
 				));
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(), is(Arrays.asList(
-				Group.getBuilder(new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+				new GroupView(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 						.build(),
-				Group.getBuilder(new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+						wsis(), MINIMAL),
+				new GroupView(Group.getBuilder(
+						new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 						.withDescription("desc")
 						.withType(GroupType.PROJECT)
 						.withAdministrator(new UserName("whoo"))
-						.build()
+						.build(),
+						wsis(), MINIMAL)
 				)));
 	}
 	

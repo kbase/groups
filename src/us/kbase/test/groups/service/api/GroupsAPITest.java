@@ -1,5 +1,9 @@
 package us.kbase.test.groups.service.api;
 
+import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
+import static us.kbase.groups.core.GroupView.ViewType.STANDARD_NON_MEMBER;
+import static us.kbase.groups.core.GroupView.ViewType.STANDARD_MEMBER;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -24,6 +28,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
@@ -39,6 +44,7 @@ import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -46,6 +52,10 @@ import us.kbase.test.groups.TestCommon;
 
 public class GroupsAPITest {
 
+	private static WorkspaceInfoSet wsis() {
+		return WorkspaceInfoSet.getBuilder(null).build();
+	}
+	
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
 	static {
@@ -70,7 +80,7 @@ public class GroupsAPITest {
 		}
 	}
 	
-	private static final Map<Object, Object> GROUP_MIN_JSON = MapBuilder.newHashMap()
+	private static final Map<Object, Object> GROUP_MIN_JSON_STD = MapBuilder.newHashMap()
 			.with("id", "id")
 			.with("name", "name")
 			.with("owner", "u")
@@ -82,7 +92,14 @@ public class GroupsAPITest {
 			.with("admins", Collections.emptyList())
 			.build();
 	
-	private static final Map<Object, Object> GROUP_MAX_JSON = MapBuilder.newHashMap()
+	private static final Map<Object, Object> GROUP_MIN_JSON_MIN = MapBuilder.newHashMap()
+			.with("id", "id")
+			.with("name", "name")
+			.with("owner", "u")
+			.with("type", "Organization")
+			.build();
+	
+	private static final Map<Object, Object> GROUP_MAX_JSON_STD = MapBuilder.newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
 			.with("owner", "u2")
@@ -94,13 +111,36 @@ public class GroupsAPITest {
 			.with("admins", Arrays.asList("whee", "whoo"))
 			.build();
 	
+	private static final Map<Object, Object> GROUP_MAX_JSON_NON = MapBuilder.newHashMap()
+			.with("id", "id2")
+			.with("name", "name2")
+			.with("owner", "u2")
+			.with("createdate", 20000L)
+			.with("moddate", 30000L)
+			.with("type", "Project")
+			.with("description", "desc")
+			.with("members", Collections.emptyList())
+			.with("admins", Arrays.asList("whee", "whoo"))
+			.build();
+	
+	private static final Map<Object, Object> GROUP_MAX_JSON_MIN = MapBuilder.newHashMap()
+			.with("id", "id2")
+			.with("name", "name2")
+			.with("owner", "u2")
+			.with("type", "Project")
+			.build();
+
+	
 	@Test
 	public void getGroups() throws Exception {
 		final Groups g = mock(Groups.class);
-		when(g.getGroups()).thenReturn(Arrays.asList(GROUP_MAX, GROUP_MIN));
+		when(g.getGroups()).thenReturn(Arrays.asList(
+				new GroupView(GROUP_MAX, wsis(), MINIMAL),
+				new GroupView(GROUP_MIN, wsis(), MINIMAL)));
 		final List<Map<String, Object>> ret = new GroupsAPI(g).getGroups("unused for now");
 		
-		assertThat("incorrect groups", ret, is(Arrays.asList(GROUP_MAX_JSON, GROUP_MIN_JSON)));
+		assertThat("incorrect groups", ret,
+				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
 	}
 	
 	@Test
@@ -118,12 +158,12 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(GROUP_MAX);
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateGroupJSON("name", noInput, noInput));
 		
-		assertThat("incorrect group", ret, is(GROUP_MAX_JSON));
+		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
 	}
 	
 	@Test
@@ -135,12 +175,12 @@ public class GroupsAPITest {
 				.withDescription("my desc")
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(GROUP_MIN);
+				.thenReturn(new GroupView(GROUP_MIN, wsis(), STANDARD_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateGroupJSON("name", "Team", "my desc"));
 		
-		assertThat("incorrect group", ret, is(GROUP_MIN_JSON));
+		assertThat("incorrect group", ret, is(GROUP_MIN_JSON_STD));
 	}
 	
 	@Test
@@ -223,11 +263,24 @@ public class GroupsAPITest {
 	private void getGroup(final String token, final Token expected) throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getGroup(expected, new GroupID("id"))).thenReturn(GROUP_MAX);
+		when(g.getGroup(expected, new GroupID("id")))
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
-		assertThat("incorrect group", ret, is(GROUP_MAX_JSON));
+		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
+	}
+	
+	@Test
+	public void getGroupNonMember() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id")))
+				.thenReturn(new GroupView(GROUP_MAX, wsis(), STANDARD_NON_MEMBER));
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		
+		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_NON));
 	}
 	
 	@Test
