@@ -25,12 +25,13 @@ import javax.ws.rs.core.MediaType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupCreationParams.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupView;
+import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -44,6 +45,7 @@ import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -115,7 +117,7 @@ public class GroupsAPI {
 			@PathParam(Fields.GROUP_ID) final String groupID)
 			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException {
+				GroupsStorageException, WorkspaceHandlerException {
 		return toGroupJSON(groups.getGroup(getToken(token, false), new GroupID(groupID)));
 	}
 	
@@ -175,17 +177,20 @@ public class GroupsAPI {
 		groups.removeMember(getToken(token, true), new GroupID(groupID), new UserName(member));
 	}
 
-	private Map<String, Object> toGroupJSON(final Group g) {
+	private Map<String, Object> toGroupJSON(final GroupView g) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
 		ret.put(Fields.GROUP_TYPE, g.getType().getRepresentation());
-		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
-		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
-		ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
-		ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
-		ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
+		if (!g.getViewType().equals(ViewType.MINIMAL)) {
+			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
+			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
+			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
+			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
+			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
+		}
+		//TODO NOW with workspaces
 		return ret;
 	}
 	

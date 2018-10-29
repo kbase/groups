@@ -158,12 +158,6 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	}
 
 	@Override
-	public WorkspaceInfoSet getWorkspaceInformation(final UserName user, final WorkspaceIDSet ids)
-			throws WorkspaceHandlerException {
-		return getWorkspaceInformation(user, ids, false);
-	}
-	
-	@Override
 	public WorkspaceInfoSet getWorkspaceInformation(
 			final UserName user,
 			final WorkspaceIDSet ids,
@@ -258,7 +252,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		final WorkspaceInfoSet wi1 = sws.getWorkspaceInformation(
 				new UserName("gaprice"),
 				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))));
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+				false);
 		System.out.println(wi1);
 		System.out.println(wi1.getWorkspaceInformation().size());
 		final WorkspaceInfoSet wi2 = sws.getWorkspaceInformation(

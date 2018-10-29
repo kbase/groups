@@ -16,8 +16,10 @@ import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 
 import us.kbase.common.exceptions.UnimplementedException;
+import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
@@ -37,6 +39,7 @@ import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -53,7 +56,6 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
-	@SuppressWarnings("unused")
 	private final WorkspaceHandler wsHandler;
 	private final Notifications notifications;
 	private final UUIDGenerator uuidGen;
@@ -98,13 +100,13 @@ public class Groups {
 	/** Create a new group.
 	 * @param userToken the token of the user that will be creating the group.
 	 * @param createParams the paramaters describing how the group will be created.
-	 * @return the new group.
+	 * @return a view of the new group where the view type is {@link ViewType#MEMBER}.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupExistsException if the group already exists.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	public Group createGroup(
+	public GroupView createGroup(
 			final Token userToken,
 			final GroupCreationParams createParams)
 			throws InvalidTokenException, AuthenticationException, GroupExistsException,
@@ -116,47 +118,67 @@ public class Groups {
 		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(now)));
 		
 		try {
-			return storage.getGroup(createParams.getGroupID());
+			return new GroupView(
+					storage.getGroup(createParams.getGroupID()),
+					WorkspaceInfoSet.getBuilder(owner).build(),
+					ViewType.MEMBER);
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
 					"Just created a group and it's already gone. Something's really broken", e);
 		}
 	}
 	
-	/** Get a group. If a token is provided and the user is a member of the group, the member
-	 * list will be populated. Otherwise, it will be empty.
+	/** Get a view of a group.
+	 * A null token or a non-member gets a {@link ViewType#NON_MEMBER} view.
+	 * A null token will result in only public group workspaces being included in the view.
+	 * A non-member token will also include workspaces the user administrates.
+	 * A member will get a {@link ViewType#MEMBER} view and all group 
+	 * workspaces will be included.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to get.
-	 * @return the group.
+	 * @return a view of the group.
 	 * @throws NoSuchGroupException if there is no such group.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws WorkspaceHandlerException if there was an error contacting the workspace.
 	 */
-	public Group getGroup(final Token userToken, final GroupID groupID)
+	public GroupView getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException {
-		Group g = storage.getGroup(groupID);
+				GroupsStorageException, WorkspaceHandlerException {
+		final Group g = storage.getGroup(groupID);
+		final UserName user;
 		if (userToken != null) {
-			final UserName user = userHandler.getUser(userToken);
-			if (!g.isMember(user)) {
-				g = g.withoutPrivateFields();
-			}
+			user = userHandler.getUser(userToken);
 		} else {
-			g = g.withoutPrivateFields();
+			user = null;
 		}
-		return g;
+		final WorkspaceInfoSet wis = wsHandler.getWorkspaceInformation(
+				user, g.getWorkspaceIDs(), !g.isMember(user));
+		for (final int wsid: wis.getNonexistentWorkspaces()) {
+			try {
+				storage.removeWorkspace(g.getGroupID(), new WorkspaceID(wsid));
+			} catch (NoSuchWorkspaceException | IllegalParameterException e) {
+				// do nothing, if the workspace isn't there fine. If the workspace ID stored in
+				// storage system is illegal we've got bigger problems
+			}
+		}
+		final ViewType viewType = g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER;
+		return new GroupView(g, wis.withoutNonexistentWorkspaces(), viewType);
 	}
 	
 	// this assumes the number of groups is small enough that listing them all is OK.
 	// obviously if the number of groups gets > ~100k something will have to change
-	/** Get all the groups in the system.
+	/** Get views of all the groups in the system, where the view type is
+	 * {@link ViewType#MINIMAL}.
 	 * @return all the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	public List<Group> getGroups()
+	public List<GroupView> getGroups()
 			throws GroupsStorageException {
-		return storage.getGroups().stream().map(g -> g.withoutPrivateFields())
+		return storage.getGroups().stream()
+				.map(g -> new GroupView(
+						g, WorkspaceInfoSet.getBuilder(null).build(), ViewType.MINIMAL))
 				.collect(Collectors.toList());
 	}
 	

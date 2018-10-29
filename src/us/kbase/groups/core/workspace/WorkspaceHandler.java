@@ -11,10 +11,6 @@ public interface WorkspaceHandler {
 	boolean isAdministrator(WorkspaceID wsid, UserName user)
 			throws WorkspaceHandlerException, NoSuchWorkspaceException;
 
-	// missing or deleted ws ids are not included in the returned set.
-	WorkspaceInfoSet getWorkspaceInformation(UserName user, WorkspaceIDSet ids)
-			throws WorkspaceHandlerException;
-
 	// always returns public workspaces regardless of bool
 	// pass null for user if anon user. In this case only public workspaces will be returned
 	WorkspaceInfoSet getWorkspaceInformation(

@@ -289,7 +289,8 @@ public class GroupTest {
 				.withAdministrator(new UserName("admin1"))
 				.withAdministrator(new UserName("admin3"))
 				.build();
-				
+		
+		assertThat("incorrect isMember", g.isMember(null), is(false));
 		assertThat("incorrect isMember", g.isMember(new UserName("bat")), is(false));
 		assertThat("incorrect isMember", g.isMember(new UserName("admin2")), is(false));
 		assertThat("incorrect isMember", g.isMember(new UserName("foo")), is(true));
@@ -297,48 +298,5 @@ public class GroupTest {
 		assertThat("incorrect isMember", g.isMember(new UserName("baz")), is(true));
 		assertThat("incorrect isMember", g.isMember(new UserName("admin1")), is(true));
 		assertThat("incorrect isMember", g.isMember(new UserName("admin3")), is(true));
-	}
-	
-	
-	@Test
-	public void failIsMember() throws Exception {
-		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.build();
-		try {
-			g.isMember(null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("user"));
-		}
-	}
-	
-	@Test
-	public void withoutPrivateFields() throws Exception {
-		//TODO WORKSPACE update when workspaces are implemented
-		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withDescription("    \tmy desc     ")
-				.withMember(new UserName("bar"))
-				.withMember(new UserName("baz"))
-				.withAdministrator(new UserName("admin1"))
-				.withAdministrator(new UserName("admin3"))
-				.withWorkspace(new WorkspaceID(42))
-				.withWorkspace(new WorkspaceID(2000000))
-				.withType(GroupType.PROJECT)
-				.build();
-		
-		final Group gprivate = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withDescription("    \tmy desc     ")
-				.withAdministrator(new UserName("admin1"))
-				.withAdministrator(new UserName("admin3"))
-				.withType(GroupType.PROJECT)
-				.build();
-		
-		assertThat("incorrect priv", g.withoutPrivateFields(), is(gprivate));
 	}
 }
