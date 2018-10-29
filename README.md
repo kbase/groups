@@ -13,6 +13,20 @@ Endpoints that require authorization are noted below. To authorize a request, in
 
 ### Data structures
 
+#### WorkspaceInformation
+
+Represents information about a workspace.
+
+```
+{
+    "id": <the workspace ID>,
+    "name": <the workspace name>,
+    "narrname": <the name of the narrative contained in the workspace or null>
+    "public": <true if the workspace is public, false otherwise>
+    "admin": <true if the user is an admin of the workspace, false otherwise>
+}
+```
+
 #### Group
 
 Represents a group of users and associated data.
@@ -28,6 +42,7 @@ Represents a group of users and associated data.
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
+    "workspaces": <a list of WorkspaceInformation>
 }
 ```
 
@@ -98,11 +113,13 @@ Current error types are:
 30001	Illegal input parameter
 30010	Illegal user name
 40000	Group already exists
-40010	User already group member
-40020	Request already exists
+40010	Request already exists
+40020	User already group member
+40030	Workspace already in group
 50000	No such group
 50010	No such request
 50020	No such user
+50030	No such workspace
 60000	Unsupported operation
 ```
 
@@ -163,8 +180,15 @@ GET /group/<group id>
 RETURNS: A Group.
 ```
 
-If authorization is provided and the user is a member of the group, the members list is populated.
-Otherwise it is empty.
+If no authorization is provided, the members list is empty and only public workspaces associated
+with the group are returned.
+
+If authorization is provided and the user is not a member of the group, the members list is
+empty and only group-associated public workspaces and workspaces the user administrates are
+returned.
+
+If authorization is provided and the user is a member of the group, the members list is populated
+and all group-associated workspaces are returned.
 
 ### Request membership to a group
 
@@ -212,6 +236,28 @@ DELETE /group/<group id>/user/<user name>/admin
 ```
 
 The user must be the group owner.
+
+### Add a workspace to a group
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/workspace/<workspace id>
+RETURNS: Either {"complete": true} or a Request with the additional field "complete"
+with a value of false.
+```
+
+The workspace is added immediately if the user is an administrator of both the group or
+the workspace. A request object is returned if the user is an administrator of at least one; if
+not an error is returned.
+
+### Remove a workspace from a group
+
+```
+AUTHORIZATION REQUIRED
+DELETE /group/<group id>/workspace/<workspace id>
+```
+
+The user must be an administrator of either the group or the workspace.
 
 ### Get the list of requests for a group
 

@@ -2538,7 +2538,6 @@ public class GroupsTest {
 	}
 	
 	//TODO WS find groups where you're an admin & remove ws
-	//TODO WS should always be able to view ws in groups where you're an admin of the ws
 	@Test
 	public void removeWorkspaceWSAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();

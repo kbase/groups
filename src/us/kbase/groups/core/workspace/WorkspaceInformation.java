@@ -27,7 +27,7 @@ public class WorkspaceInformation {
 		this.isPublic = isPublic;
 	}
 
-	public int getId() {
+	public int getID() {
 		return id;
 	}
 

@@ -4,7 +4,10 @@ import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +27,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupCreationParams.Builder;
@@ -41,11 +45,16 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -189,11 +198,27 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
 			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
+			final List<Map<String, Object>> wslist = new LinkedList<>();
+			ret.put(Fields.GROUP_WORKSPACES, wslist);
+			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
+				final Map<String, Object> ws = new HashMap<>();
+				wslist.add(ws);
+				ws.put(Fields.GROUP_WS_ID, wsi.getID());
+				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
+				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
+				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
+				ws.put(Fields.GROUP_WS_IS_ADMIN, g.isAdministrator(wsi));
+			}
 		}
-		//TODO NOW with workspaces
 		return ret;
 	}
 	
+	private List<WorkspaceInformation> sorted(final Set<WorkspaceInformation> wsi) {
+		final List<WorkspaceInformation> ret = new ArrayList<>(wsi);
+		Collections.sort(ret, (wsi1, wsi2) -> wsi1.getID() - wsi2.getID());
+		return ret;
+	}
+
 	@PUT
 	@Path(ServicePaths.GROUP_USER_ID_ADMIN)
 	public void promoteMember(
@@ -217,6 +242,44 @@ public class GroupsAPI {
 				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
 				MissingParameterException, IllegalParameterException, GroupsStorageException {
 		groups.demoteAdmin(getToken(token, true), new GroupID(groupID), new UserName(member));
+	}
+	
+	@PUT
+	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> addWorkspace(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
+				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
+				UnauthorizedException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException, WorkspaceHandlerException {
+		final Optional<GroupRequest> req = groups.addWorkspace(
+				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
+		final Map<String, Object> ret;
+		if (req.isPresent()) {
+			ret = APICommon.toGroupRequestJSON(req.get());
+		} else {
+			ret = new HashMap<>();
+		}
+		ret.put(Fields.GROUP_COMPLETE, !req.isPresent());
+		return ret;
+	}
+	
+	@DELETE
+	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void removeWorkspace(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				MissingParameterException, IllegalParameterException, GroupsStorageException,
+				WorkspaceHandlerException {
+		groups.removeWorkspace(
+				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
 	}
 
 	private List<String> toSortedStringList(final Set<UserName> users) {

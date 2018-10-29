@@ -58,6 +58,4 @@ public class Token {
 		}
 		return true;
 	}
-
-	
 }

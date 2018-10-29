@@ -49,8 +49,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
-	//TODO WS deal with deleted workspaces on lookup
-
 	//TODO LOGGING for all actions
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
@@ -163,8 +161,7 @@ public class Groups {
 				// storage system is illegal we've got bigger problems
 			}
 		}
-		final ViewType viewType = g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER;
-		return new GroupView(g, wis, viewType);
+		return new GroupView(g, wis, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
 	// this assumes the number of groups is small enough that listing them all is OK.

@@ -31,6 +31,9 @@ public class ServicePaths {
 			Fields.GROUP_MEMBER + "}";
 	/** The location to promote or demote an administrator. */
 	public static final String GROUP_USER_ID_ADMIN = GROUP_USER_ID + SEP + "admin";
+	/** The location to add or remove a workspace from a group. */
+	public static final String GROUP_WORKSPACE_ID = GROUP_ID + SEP + "workspace" + SEP + "{" +
+			Fields.GROUP_WS_ID + "}";
 	
 	/* Request endpoints */
 	
