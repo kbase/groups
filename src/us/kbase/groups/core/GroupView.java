@@ -4,11 +4,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Optional;
 
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
+import us.kbase.groups.core.workspace.WorkspaceInformation;
 
 public class GroupView {
 
@@ -32,8 +35,8 @@ public class GroupView {
 	private final Optional<Instant> modificationDate; // standard
 	private final Optional<String> description; // standard
 
-	// additional fields
-	private final WorkspaceInfoSet workspaceSet; // standard - contents should change based on user
+	// additional fields. standard - contents should change based on user
+	private final Map<WorkspaceInformation, Boolean> workspaceSet;
 	
 	// not part of the view, just describes the view
 	private final ViewType viewType;
@@ -46,7 +49,11 @@ public class GroupView {
 		checkNotNull(workspaceSet, "workspaceSet");
 		checkNotNull(viewType, "viewType");
 		this.viewType = viewType;
-		this.workspaceSet = workspaceSet;
+		final Map<WorkspaceInformation, Boolean> wsSet = new HashMap<>();
+		for (final WorkspaceInformation wsi: workspaceSet.getWorkspaceInformation()) {
+			wsSet.put(wsi, workspaceSet.isAdministrator(wsi));
+		}
+		this.workspaceSet = Collections.unmodifiableMap(wsSet);
 		
 		// group properties
 		this.groupID = group.getGroupID();
@@ -116,8 +123,17 @@ public class GroupView {
 		return description;
 	}
 
-	public WorkspaceInfoSet getWorkspaceSet() {
-		return workspaceSet;
+	public Set<WorkspaceInformation> getWorkspaceInformation() {
+		return workspaceSet.keySet();
+	}
+	
+	public boolean isAdministrator(final WorkspaceInformation wsInfo) {
+		checkNotNull(wsInfo, "wsInfo");
+		if (!workspaceSet.containsKey(wsInfo)) {
+			throw new IllegalArgumentException("Provided workspace info not included in view");
+		} else {
+			return workspaceSet.get(wsInfo);
+		}
 	}
 
 	@Override
