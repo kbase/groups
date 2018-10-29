@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import jersey.repackaged.com.google.common.base.Optional;
@@ -53,15 +52,6 @@ public class WorkspaceInfoSet {
 		return nonexistent;
 	}
 	
-	// TODO CODE not really a fan of this since it's being used to return to an API empty. Better just not to have the field, but that implies another view class.
-	public WorkspaceInfoSet withoutNonexistentWorkspaces() {
-		final Builder b = WorkspaceInfoSet.getBuilder(user.orNull());
-		for (final Entry<WorkspaceInformation, Boolean> e: isAdmin.entrySet()) {
-			b.withWorkspaceInformation(e.getKey(), e.getValue());
-		}
-		return b.build();
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;

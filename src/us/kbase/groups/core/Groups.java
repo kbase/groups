@@ -164,7 +164,7 @@ public class Groups {
 			}
 		}
 		final ViewType viewType = g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER;
-		return new GroupView(g, wis.withoutNonexistentWorkspaces(), viewType);
+		return new GroupView(g, wis, viewType);
 	}
 	
 	// this assumes the number of groups is small enough that listing them all is OK.
