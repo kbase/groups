@@ -244,13 +244,13 @@ public class GroupsAPI {
 		groups.demoteAdmin(getToken(token, true), new GroupID(groupID), new UserName(member));
 	}
 	
-	@PUT
+	@POST
 	@Path(ServicePaths.GROUP_WORKSPACE_ID)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> addWorkspace(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
 			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
 				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
 				UnauthorizedException, MissingParameterException, IllegalParameterException,
@@ -273,7 +273,7 @@ public class GroupsAPI {
 	public void removeWorkspace(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
 			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
 				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
 				MissingParameterException, IllegalParameterException, GroupsStorageException,

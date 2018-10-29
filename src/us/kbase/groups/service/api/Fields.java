@@ -32,7 +32,7 @@ public class Fields {
 	/** The list of workspaces. */
 	public static final String GROUP_WORKSPACES = "workspaces";
 	/** The workspace ID. */
-	public static final String GROUP_WS_ID = "id";
+	public static final String GROUP_WS_ID = "wsid";
 	/** The workspace name. */
 	public static final String GROUP_WS_NAME = "name";
 	/** The narrative name. */
