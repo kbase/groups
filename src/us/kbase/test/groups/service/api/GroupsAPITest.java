@@ -22,6 +22,9 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.Group;
@@ -33,11 +36,14 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
@@ -45,6 +51,7 @@ import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.service.api.GroupsAPI;
@@ -738,6 +745,133 @@ public class GroupsAPITest {
 			final Exception expected) {
 		try {
 			new GroupsAPI(g).demoteAdmin(token, groupid, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addWorkspaceNoRequest() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+				.thenReturn(Optional.absent());
+		
+		final Map<String, Object> ret = new GroupsAPI(g)
+				.addWorkspace("my token", "foo", "34");
+		
+		assertThat("incorrect ret", ret, is(ImmutableMap.of("complete", true)));
+	}
+	
+	@Test
+	public void addWorkspaceWithRequest() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+				.thenReturn(Optional.of(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("u"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+									.build())
+						.build()));
+		
+		final Map<String, Object> ret = new GroupsAPI(g)
+				.addWorkspace("my token", "foo", "34");
+		
+		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
+				.with("complete", false)
+				.with("id", id.toString())
+				.with("groupid", "foo")
+				.with("requester", "u")
+				.with("type", "Request group membership") //TODO WS change to appropriate request
+				.with("targetuser", null)
+				.with("status", "Open")
+				.with("createdate", 10000L)
+				.with("moddate", 10000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void addWorkspaceFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		failAddWorkspace(g, null, "id", "45", new NoTokenProvidedException("No token provided"));
+		failAddWorkspace(g, "  \t  ", "id", "45",
+				new NoTokenProvidedException("No token provided"));
+		failAddWorkspace(g, "t", "illegal*id", "45",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id illegal*id: *"));
+		failAddWorkspace(g, "t", "id", "4f",
+				new IllegalParameterException("Illegal workspace ID: 4f"));
+	}
+	
+	@Test
+	public void addWorkspaceFailNoSuchWorkspace() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.addWorkspace(new Token("t"), new GroupID("i"), new WorkspaceID(34)))
+				.thenThrow(new NoSuchWorkspaceException("34"));
+		
+		failAddWorkspace(g, "t", "i", "34", new NoSuchWorkspaceException("34"));
+	}
+	
+	private void failAddWorkspace(
+			final Groups g,
+			final String t,
+			final String i,
+			final String w,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).addWorkspace(t, i, w);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeWorkspace() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).removeWorkspace("t", "gid", "99");
+		
+		verify(g).removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(99));
+	}
+	
+	@Test
+	public void removeWorkspaceFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		failRemoveWorkspace(g, null, "id", "45", new NoTokenProvidedException("No token provided"));
+		failRemoveWorkspace(g, "  \t  ", "id", "45",
+				new NoTokenProvidedException("No token provided"));
+		failRemoveWorkspace(g, "t", "illegal*id", "45",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id illegal*id: *"));
+		failRemoveWorkspace(g, "t", "id", "4f",
+				new IllegalParameterException("Illegal workspace ID: 4f"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailNoSuchGroup() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchGroupException("i")).when(g)
+				.removeWorkspace(new Token("t"), new GroupID("i"), new WorkspaceID(34));
+		
+		failRemoveWorkspace(g, "t", "i", "34", new NoSuchGroupException("i"));
+	}
+	
+	private void failRemoveWorkspace(
+			final Groups g,
+			final String t,
+			final String i,
+			final String w,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).removeWorkspace(t, i, w);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

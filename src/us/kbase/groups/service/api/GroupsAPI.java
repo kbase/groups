@@ -27,6 +27,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupCreationParams.Builder;
@@ -44,11 +45,15 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -237,6 +242,44 @@ public class GroupsAPI {
 				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
 				MissingParameterException, IllegalParameterException, GroupsStorageException {
 		groups.demoteAdmin(getToken(token, true), new GroupID(groupID), new UserName(member));
+	}
+	
+	@PUT
+	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> addWorkspace(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
+				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
+				UnauthorizedException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException, WorkspaceHandlerException {
+		final Optional<GroupRequest> req = groups.addWorkspace(
+				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
+		final Map<String, Object> ret;
+		if (req.isPresent()) {
+			ret = APICommon.toGroupRequestJSON(req.get());
+		} else {
+			ret = new HashMap<>();
+		}
+		ret.put(Fields.GROUP_COMPLETE, !req.isPresent());
+		return ret;
+	}
+	
+	@DELETE
+	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void removeWorkspace(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String workspaceID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				MissingParameterException, IllegalParameterException, GroupsStorageException,
+				WorkspaceHandlerException {
+		groups.removeWorkspace(
+				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
 	}
 
 	private List<String> toSortedStringList(final Set<UserName> users) {

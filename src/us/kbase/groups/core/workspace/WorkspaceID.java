@@ -13,7 +13,7 @@ public class WorkspaceID {
 	 * ever get to 2 billion workspaces is zero unless someone starts abusing the system.
 	 */
 	
-	//TODO TEST
+	// TODO TEST
 	
 	private final int id;
 	
@@ -22,10 +22,27 @@ public class WorkspaceID {
 	 * @throws IllegalParameterException if the ID is < 1.
 	 */
 	public WorkspaceID(final int id) throws IllegalParameterException {
-		if (id < 1) {
+		this.id = id;
+		checkID();
+	}
+
+	private void checkID() throws IllegalParameterException {
+		if (this.id < 1) {
 			throw new IllegalParameterException("Workspace IDs are > 0");
 		}
-		this.id = id;
+	}
+
+	/** Construct the ID from a string.
+	 * @param id the id.
+	 * @throws IllegalParameterException if the ID is not an integer or is < 1.
+	 */
+	public WorkspaceID(final String workspaceID) throws IllegalParameterException {
+		try {
+			this.id = Integer.parseInt(workspaceID);
+		} catch (NumberFormatException e) {
+			throw new IllegalParameterException("Illegal workspace ID: " + workspaceID);
+		}
+		checkID();
 	}
 
 	/** Get the ID.
@@ -60,7 +77,4 @@ public class WorkspaceID {
 		}
 		return true;
 	}
-	
-	
-
 }

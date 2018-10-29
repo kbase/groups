@@ -49,8 +49,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
-	//TODO WS deal with deleted workspaces on lookup
-
 	//TODO LOGGING for all actions
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);

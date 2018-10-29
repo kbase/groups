@@ -41,6 +41,11 @@ public class Fields {
 	public static final String GROUP_WS_IS_PUBLIC = "public";
 	/** Whether the user administrates the workspace. */
 	public static final String GROUP_WS_IS_ADMIN = "admin";
+	
+	/** Whether an action is complete or not, ant therefore whether a request object is
+	 * included in the response.
+	 */
+	public static final String GROUP_COMPLETE = "complete";
 
 	/* ***********************
 	 * request fields

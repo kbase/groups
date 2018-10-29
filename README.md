@@ -113,11 +113,13 @@ Current error types are:
 30001	Illegal input parameter
 30010	Illegal user name
 40000	Group already exists
-40010	User already group member
-40020	Request already exists
+40010	Request already exists
+40020	User already group member
+40030	Workspace already in group
 50000	No such group
 50010	No such request
 50020	No such user
+50030	No such workspace
 60000	Unsupported operation
 ```
 
@@ -234,6 +236,28 @@ DELETE /group/<group id>/user/<user name>/admin
 ```
 
 The user must be the group owner.
+
+### Add a workspace to a group
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/workspace/<workspace id>
+RETURNS: Either {"complete": true} or a Request with the additional field "complete"
+with a value of false.
+```
+
+The workspace is added immediately if the user is an administrator of both the group or
+the workspace. A request object is returned if the user is an administrator of at least one; if
+not an error is returned.
+
+### Remove a workspace from a group
+
+```
+AUTHORIZATION REQUIRED
+DELETE /group/<group id>/workspace/<workspace id>
+```
+
+The user must be an administrator of either the group or the workspace.
 
 ### Get the list of requests for a group
 

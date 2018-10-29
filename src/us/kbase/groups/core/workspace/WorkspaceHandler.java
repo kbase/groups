@@ -6,7 +6,7 @@ import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 
 public interface WorkspaceHandler {
 
-	//TODO NOW JAVADOC
+	//TODO JAVADOC
 
 	boolean isAdministrator(WorkspaceID wsid, UserName user)
 			throws WorkspaceHandlerException, NoSuchWorkspaceException;
