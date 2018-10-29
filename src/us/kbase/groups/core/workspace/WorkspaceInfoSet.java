@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import jersey.repackaged.com.google.common.base.Optional;
 import us.kbase.groups.core.UserName;
 
 public class WorkspaceInfoSet {
@@ -15,13 +16,13 @@ public class WorkspaceInfoSet {
 	// TODO JAVADOC
 	// TODO TEST
 	
-	private final UserName user;
+	private final Optional<UserName> user;
 	// might need to think about sorting here. YAGNI for now.
 	private final Map<WorkspaceInformation, Boolean> isAdmin;
 	private final Set<Integer> nonexistent;
 	
 	private WorkspaceInfoSet(
-			final UserName user,
+			final Optional<UserName> user,
 			final Map<WorkspaceInformation, Boolean> isAdmin,
 			final Set<Integer> nonexistent) {
 		this.user = user;
@@ -29,7 +30,8 @@ public class WorkspaceInfoSet {
 		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
-	public UserName getUser() {
+	// absent if anon user
+	public Optional<UserName> getUser() {
 		return user;
 	}
 	
@@ -109,20 +111,20 @@ public class WorkspaceInfoSet {
 		return builder2.toString();
 	}
 
+	// pass null for an anonymous user.
 	public static Builder getBuilder(final UserName user) {
 		return new Builder(user);
 	}
 	
 	public static class Builder {
 
-		private final UserName user;
+		private final Optional<UserName> user;
 		// might need to think about sorting here. YAGNI for now.
 		private final Map<WorkspaceInformation, Boolean> isAdmin = new HashMap<>();
 		private final Set<Integer> nonexistent = new HashSet<>();
 		
 		public Builder(final UserName user) {
-			checkNotNull(user, "user");
-			this.user = user;
+			this.user = Optional.fromNullable(user);
 		}
 		
 		public Builder withWorkspaceInformation(

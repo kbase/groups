@@ -92,7 +92,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		private final boolean isPublic;
 		
 		private Perm(final UserName user, final Map<String, String> perms) {
-			this.isAdmin = "a".equals(perms.get(user.getName()));
+			this.isAdmin = "a".equals(perms.get(user == null ? null : user.getName()));
 			this.isPublic = "r".equals(perms.get("*"));
 		}
 	}
@@ -158,19 +158,21 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	}
 
 	@Override
-	public WorkspaceInfoSet getWorkspaceInformation(final WorkspaceIDSet ids, final UserName user)
+	public WorkspaceInfoSet getWorkspaceInformation(final UserName user, final WorkspaceIDSet ids)
 			throws WorkspaceHandlerException {
-		return getWorkspaceInformation(ids, user, false);
+		return getWorkspaceInformation(user, ids, false);
 	}
 	
 	@Override
 	public WorkspaceInfoSet getWorkspaceInformation(
-			final WorkspaceIDSet ids,
 			final UserName user,
-			final boolean administratedWorkspacesOnly)
+			final WorkspaceIDSet ids,
+			boolean administratedWorkspacesOnly)
 			throws WorkspaceHandlerException {
 		checkNotNull(ids, "ids");
-		checkNotNull(user, "user");
+		if (user == null) {
+			administratedWorkspacesOnly = true; // only return public workspaces
+		}
 		//TODO WS make a bulk ws method for getwsinfo that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
 		//TODO WS for get perms mass make ignore error option that returns error state (DELETED, MISSING, INACCESSIBLE etc.) and use here instead of going one at a time
 		final WorkspaceInfoSet.Builder b = WorkspaceInfoSet.getBuilder(user);
@@ -253,15 +255,33 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("gaprice")));
 		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("msneddon")));
 		
-		System.out.println(sws.getWorkspaceInformation(
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
-				new UserName("gaprice")));
-		System.out.println(sws.getWorkspaceInformation(
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+		final WorkspaceInfoSet wi1 = sws.getWorkspaceInformation(
 				new UserName("gaprice"),
-				true));
+				WorkspaceIDSet.fromInts(new HashSet<>(
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))));
+		System.out.println(wi1);
+		System.out.println(wi1.getWorkspaceInformation().size());
+		final WorkspaceInfoSet wi2 = sws.getWorkspaceInformation(
+				new UserName("gaprice"),
+				WorkspaceIDSet.fromInts(new HashSet<>(
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+				true);
+		System.out.println(wi2);
+		System.out.println(wi2.getWorkspaceInformation().size());
+		final WorkspaceInfoSet wi3 = sws.getWorkspaceInformation(
+				null,
+				WorkspaceIDSet.fromInts(new HashSet<>(
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+				false);
+		System.out.println(wi3);
+		System.out.println(wi3.getWorkspaceInformation().size());
+		final WorkspaceInfoSet wi4 = sws.getWorkspaceInformation(
+				null,
+				WorkspaceIDSet.fromInts(new HashSet<>(
+						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
+				true);
+		System.out.println(wi4);
+		System.out.println(wi4.getWorkspaceInformation().size());
 		
 		try {
 			sws.isAdministrator(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
