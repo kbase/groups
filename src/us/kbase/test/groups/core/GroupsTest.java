@@ -2536,7 +2536,7 @@ public class GroupsTest {
 		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
 	}
 	
-	//TODO WS find groups where you're an admin & remove ws
+	//TODO WS find groups where you're an admin
 	@Test
 	public void removeWorkspaceWSAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
