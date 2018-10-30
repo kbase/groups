@@ -412,7 +412,6 @@ public class GroupsTest {
 								true)
 						.withNonexistentWorkspace(34)
 						.withNonexistentWorkspace(86) // will throw error, should be ignored
-						.withNonexistentWorkspace(-112) // should be ignored
 						.build());
 		doThrow(new NoSuchWorkspaceException("86")).when(mocks.storage)
 				.removeWorkspace(new GroupID("bar"), new WorkspaceID(86));

@@ -157,8 +157,8 @@ public class Groups {
 			try {
 				storage.removeWorkspace(g.getGroupID(), new WorkspaceID(wsid));
 			} catch (NoSuchWorkspaceException | IllegalParameterException e) {
-				// do nothing, if the workspace isn't there fine. If the workspace ID stored in
-				// storage system is illegal we've got bigger problems
+				// do nothing, if the workspace isn't there fine.
+				// The IPE is impossible, the WIS won't allow it
 			}
 		}
 		return new GroupView(g, wis, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
