@@ -8,14 +8,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import jersey.repackaged.com.google.common.base.Optional;
+import com.google.common.base.Optional;
+
 import us.kbase.groups.core.UserName;
 
+/** A set of {@link WorkspaceInformation}.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class WorkspaceInfoSet {
 
-	// TODO JAVADOC
-	// TODO TEST
-	
 	private final Optional<UserName> user;
 	// might need to think about sorting here. YAGNI for now.
 	private final Map<WorkspaceInformation, Boolean> isAdmin;
@@ -30,17 +32,27 @@ public class WorkspaceInfoSet {
 		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
-	// absent if anon user
+	/** Get the user associated with the set. The the admin status returned by
+	 * {@link #isAdministrator(WorkspaceInformation)} refers to this user.
+	 * @return the user, or {@link Optional#absent()} if the user is anonymous.
+	 */
 	public Optional<UserName> getUser() {
 		return user;
 	}
 	
+	/** Get the {@link WorkspaceInformation} in this set.
+	 * @return
+	 */
 	public Set<WorkspaceInformation> getWorkspaceInformation() {
 		return isAdmin.keySet();
 	}
 	
+	/** Determine whether the user is an administrator of a particular workspace.
+	 * @param wsInfo the workspace to check.
+	 * @return true if the user is an administrator, false otherwise.
+	 */
 	public boolean isAdministrator(final WorkspaceInformation wsInfo) {
-		checkNotNull(wsInfo);
+		checkNotNull(wsInfo, "wsInfo");
 		if (!isAdmin.containsKey(wsInfo)) {
 			throw new IllegalArgumentException("Provided workspace info not included in set");
 		} else {
@@ -48,6 +60,10 @@ public class WorkspaceInfoSet {
 		}
 	}
 	
+	/** Get the workspace IDs of any workspaces that were found to be deleted or missing
+	 * altogether when building this set.
+	 * @return the workspace IDs.
+	 */
 	public Set<Integer> getNonexistentWorkspaces() {
 		return nonexistent;
 	}
@@ -97,25 +113,21 @@ public class WorkspaceInfoSet {
 		}
 		return true;
 	}
-	
-	@Override
-	public String toString() {
-		StringBuilder builder2 = new StringBuilder();
-		builder2.append("WorkspaceInfoSet [user=");
-		builder2.append(user);
-		builder2.append(", isAdmin=");
-		builder2.append(isAdmin);
-		builder2.append(", nonexistant=");
-		builder2.append(nonexistent);
-		builder2.append("]");
-		return builder2.toString();
-	}
 
-	// pass null for an anonymous user.
+	/** Get a builder for a {@link WorkspaceInfoSet}.
+	 * @param user the user associated with this set. The workspace admininstration information
+	 * passed to {@link Builder#withWorkspaceInformation(WorkspaceInformation, boolean)} must
+	 * be based on this user. Pass null for an anonymous user.
+	 * @return a new builder.
+	 */
 	public static Builder getBuilder(final UserName user) {
 		return new Builder(user);
 	}
 	
+	/** A builder for {@link WorkspaceInfoSet}.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder {
 
 		private final Optional<UserName> user;
@@ -123,10 +135,16 @@ public class WorkspaceInfoSet {
 		private final Map<WorkspaceInformation, Boolean> isAdmin = new HashMap<>();
 		private final Set<Integer> nonexistent = new HashSet<>();
 		
-		public Builder(final UserName user) {
+		private Builder(final UserName user) {
 			this.user = Optional.fromNullable(user);
 		}
 		
+		/** Add a workspace to the builder.
+		 * @param wsInfo the workspace information.
+		 * @param isAdmin whether the user provided in
+		 * {@link WorkspaceInfoSet#getBuilder(UserName)} is an administrator of the workspace.
+		 * @return this builder.
+		 */
 		public Builder withWorkspaceInformation(
 				final WorkspaceInformation wsInfo,
 				final boolean isAdmin) {
@@ -135,11 +153,22 @@ public class WorkspaceInfoSet {
 			return this;
 		}
 		
+		/** Add a workspace id that was found to be missing or deleted altogether when building
+		 * this set.
+		 * @param wsid the deleted or missing workspace ID.
+		 * @return this builder.
+		 */
 		public Builder withNonexistentWorkspace(final int wsid) {
+			if (wsid < 1) {
+				throw new IllegalArgumentException("Workspace IDs must be > 0");
+			}
 			nonexistent.add(wsid);
 			return this;
 		}
 		
+		/** Build the {@link WorkspaceInfoSet}.
+		 * @return the new set.
+		 */
 		public WorkspaceInfoSet build() {
 			return new WorkspaceInfoSet(user, isAdmin, nonexistent);
 		}

@@ -283,6 +283,7 @@
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceInformationTest"/>
+        <test name="us.kbase.test.groups.core.workspace.WorkspaceInfoSetTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
         <test name="us.kbase.test.groups.service.api.APICommonTest"/>
