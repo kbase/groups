@@ -374,9 +374,8 @@ export default class {
                         <button id="addmemberbtn" class="btn btn-primary">Add member</button>
                       </div>
                       <div>
-                        <input id="addws"/>
-                        <button id="addwsbtn" class="btn btn-primary" placeholder="Workspace ID">
-                            Add workspace</button>
+                        <input id="addws" placeholder="Workspace ID"/>
+                        <button id="addwsbtn" class="btn btn-primary">Add workspace</button>
                       </div>
                       `;
                   //TODO CODE inactivate button if group member
