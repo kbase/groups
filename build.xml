@@ -295,6 +295,7 @@
         <test name="us.kbase.test.groups.service.exceptions.ErrorMessageTest"/>
         <test name="us.kbase.test.groups.service.exceptions.ExceptionHandlerTest"/>
         <test name="us.kbase.test.groups.util.UtilTest"/>
+        <test name="us.kbase.test.groups.workspacehandler.SDKClientWorkspaceHandlerTest"/>
       </junit>
     </jacoco:coverage>
     <fail message="Test failure detected, check test results." if="test.failed" />

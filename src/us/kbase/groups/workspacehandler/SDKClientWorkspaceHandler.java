@@ -63,8 +63,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			throw getGeneralWSException(e);
 		}
 		
-		final Version v = Version.valueOf(ver);
-		if (v.lessThan(Version.forIntegers(0, 8))) {
+		if (Version.valueOf(ver).lessThan(Version.forIntegers(0, 8))) {
 			throw new WorkspaceHandlerException("Workspace version 0.8.0 or greater is required");
 		}
 	}
