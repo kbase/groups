@@ -13,14 +13,25 @@ import com.google.common.base.Optional;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 
+/** A view of a {@link Group}. A view consists of a subset of the full information in a
+ * {@link Group}.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GroupView {
 
-	// TODO JAVADOC
-	// TODO TEST
-	
+	/** The type of the view.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static enum ViewType {
+		/** A minimal view, consisting of the group ID, name, owner, and type. */
 		MINIMAL,
+		/** A view for a user that is not a member of the group. Includes all fields except
+		 * for the members list, which is empty.
+		 */
 		NON_MEMBER,
+		/** A full view for a member of the group. */
 		MEMBER;
 	}
 	
@@ -41,6 +52,11 @@ public class GroupView {
 	// not part of the view, just describes the view
 	private final ViewType viewType;
 	
+	/** Create a view.
+	 * @param group the group upon which the view will be based.
+	 * @param workspaceSet the workspaces that the user that requested the view can view.
+	 * @param viewType the type of the view.
+	 */
 	public GroupView(
 			final Group group,
 			final WorkspaceInfoSet workspaceSet,
@@ -83,50 +99,91 @@ public class GroupView {
 		return Collections.unmodifiableSet(Collections.emptySet());
 	}
 
+	/** Get the type of the view.
+	 * @return the view type.
+	 */
 	public ViewType getViewType() {
 		return viewType;
 	}
 
+	/** Get the group ID.
+	 * @return the ID.
+	 */
 	public GroupID getGroupID() {
 		return groupID;
 	}
 
+	/** Get the group name.
+	 * @return the name.
+	 */
 	public GroupName getGroupName() {
 		return groupName;
 	}
 
+	/** Get the owner of the group.
+	 * @return the owner.
+	 */
 	public UserName getOwner() {
 		return owner;
 	}
 
+	/** Get the members of the group. Empty for all views except {@link ViewType#MEMBER}.
+	 * @return the group members.
+	 */
 	public Set<UserName> getMembers() {
 		return members;
 	}
 
+	/** Get the administrators of the group. Empty for {@link ViewType#MINIMAL} views.
+	 * @return
+	 */
 	public Set<UserName> getAdministrators() {
 		return admins;
 	}
 
+	/** Get the type of the group.
+	 * @return the group type.
+	 */
 	public GroupType getType() {
 		return type;
 	}
 
+	/** Get the creation date of the group. {@link Optional#absent()} for {@link ViewType#MINIMAL}
+	 * views.
+	 * @return the creation date.
+	 */
 	public Optional<Instant> getCreationDate() {
 		return creationDate;
 	}
 
+	/** Get the modification date of the group. {@link Optional#absent()} for
+	 * {@link ViewType#MINIMAL} views.
+	 * @return the modification date.
+	 */
 	public Optional<Instant> getModificationDate() {
 		return modificationDate;
 	}
 
+	/** Get the optional description of the group. {@link Optional#absent()} if not provided
+	 * or the view is {@link ViewType#MINIMAL}.
+	 * @return the description.
+	 */
 	public Optional<String> getDescription() {
 		return description;
 	}
 
+	/** Get any workspaces included in the view.
+	 * @return the workspace information for the workspaces.
+	 */
 	public Set<WorkspaceInformation> getWorkspaceInformation() {
 		return workspaceSet.keySet();
 	}
 	
+	/** Determine if the user for whom this view was created is an administrator of a
+	 * workspace included in the view.
+	 * @param wsInfo the workspace.
+	 * @return true if the user is an administrator of the workspace.
+	 */
 	public boolean isAdministrator(final WorkspaceInformation wsInfo) {
 		checkNotNull(wsInfo, "wsInfo");
 		if (!workspaceSet.containsKey(wsInfo)) {
