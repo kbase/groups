@@ -29,7 +29,7 @@ import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.groups.userhandler.KBaseUserHandler;
-import us.kbase.groups.workspaceHandler.SDKClientWorkspaceHandler;
+import us.kbase.groups.workspacehandler.SDKClientWorkspaceHandler;
 import us.kbase.workspace.WorkspaceClient;
 
 /** A class for building a {@link Groups} instance given a {@link GroupsConfig}
