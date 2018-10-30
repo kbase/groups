@@ -1,4 +1,4 @@
-package us.kbase.groups.workspaceHandler;
+package us.kbase.groups.workspacehandler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
