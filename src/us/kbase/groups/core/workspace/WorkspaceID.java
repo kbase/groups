@@ -1,5 +1,7 @@
 package us.kbase.groups.core.workspace;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 
 /** The ID of a KBase workspace.
@@ -12,8 +14,6 @@ public class WorkspaceID {
 	/* Workspace IDs are represented as longs in the workspace service, but the chance we'll 
 	 * ever get to 2 billion workspaces is zero unless someone starts abusing the system.
 	 */
-	
-	// TODO TEST
 	
 	private final int id;
 	
@@ -37,8 +37,9 @@ public class WorkspaceID {
 	 * @throws IllegalParameterException if the ID is not an integer or is < 1.
 	 */
 	public WorkspaceID(final String workspaceID) throws IllegalParameterException {
+		checkNotNull(workspaceID, "workspaceID");
 		try {
-			this.id = Integer.parseInt(workspaceID);
+			this.id = Integer.parseInt(workspaceID.trim());
 		} catch (NumberFormatException e) {
 			throw new IllegalParameterException("Illegal workspace ID: " + workspaceID);
 		}

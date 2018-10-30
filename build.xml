@@ -280,6 +280,7 @@
         <test name="us.kbase.test.groups.core.request.GroupRequestUserActionTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestWithActionsTest"/>
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
+        <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
         <test name="us.kbase.test.groups.service.api.APICommonTest"/>
