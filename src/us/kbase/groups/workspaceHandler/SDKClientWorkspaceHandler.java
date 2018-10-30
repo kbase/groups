@@ -170,7 +170,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		//TODO WS make a bulk ws method for getwsinfo that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
 		//TODO WS for get perms mass make ignore error option that returns error state (DELETED, MISSING, INACCESSIBLE etc.) and use here instead of going one at a time
 		final WorkspaceInfoSet.Builder b = WorkspaceInfoSet.getBuilder(user);
-		for (final Integer wsid: ids.getIds()) {
+		for (final Integer wsid: ids.getIDs()) {
 			final Perms perms;
 			try {
 				perms = getPermissions(Arrays.asList(wsid), false);

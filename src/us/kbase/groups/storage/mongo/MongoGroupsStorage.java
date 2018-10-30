@@ -297,7 +297,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_TYPE, group.getType().name())
-				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIds())
+				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIDs())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
 				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orNull());

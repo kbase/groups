@@ -18,11 +18,8 @@ public class WorkspaceIDSet {
 	 * ever get to 2 billion workspaces is zero unless someone starts abusing the system.
 	 */
 	
-	//TODO TEST
-	//TODO TEST immutable
-	
-	// could probably save a bunch of memory by making this an array. Don't worry about it for
-	// now.
+	// could probably save a bunch of memory by making this an array. Would have to copy on get().
+	// Don't worry about it for now.
 	private final Set<Integer> ids;
 	
 	private WorkspaceIDSet(final Collection<Integer> ids) {
@@ -53,10 +50,10 @@ public class WorkspaceIDSet {
 		return new WorkspaceIDSet(ids);
 	}
 
-	/** Get the workspace IDs as longs.
+	/** Get the workspace IDs as ints.
 	 * @return the IDs.
 	 */
-	public Set<Integer> getIds() {
+	public Set<Integer> getIDs() {
 		return ids;
 	}
 
