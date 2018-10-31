@@ -27,6 +27,8 @@ import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.workspace.GetPermissionsMassParams;
+import us.kbase.workspace.ListWorkspaceIDsParams;
+import us.kbase.workspace.ListWorkspaceIDsResults;
 import us.kbase.workspace.WorkspaceClient;
 import us.kbase.workspace.WorkspaceIdentity;
 
@@ -39,6 +41,9 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	
 	// TODO CACHE may help to cache all or some of the results. YAGNI for now.
 
+	private static final String PERM_ADMIN = "a";
+	private static final String PERM_READ = "r";
+	
 	private final WorkspaceClient client;
 	
 	/** Create the handler.
@@ -87,8 +92,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		private final boolean isPublic;
 		
 		private Perm(final UserName user, final Map<String, String> perms) {
-			this.isAdmin = "a".equals(perms.get(user == null ? null : user.getName()));
-			this.isPublic = "r".equals(perms.get("*"));
+			this.isAdmin = PERM_ADMIN.equals(perms.get(user == null ? null : user.getName()));
+			this.isPublic = PERM_READ.equals(perms.get("*"));
 		}
 	}
 
@@ -215,7 +220,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		}
 		return WorkspaceInformation.getBuilder(Math.toIntExact(wsinfo.getE1()), wsinfo.getE2())
 				.withNullableNarrativeName(getNarrativeName(wsinfo.getE9()))
-				.withIsPublic("r".equals(wsinfo.getE7()))
+				.withIsPublic(PERM_READ.equals(wsinfo.getE7()))
 				.build();
 	}
 
@@ -226,5 +231,25 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		} else {
 			return null;
 		}
+	}
+	
+	@Override
+	public WorkspaceIDSet getAdministratedWorkspaces(final UserName user)
+			throws WorkspaceHandlerException {
+		checkNotNull(user, "user");
+		final List<Long> ids;
+		try {
+			ids = client.administer(new UObject(ImmutableMap.of(
+					"command", "listWorkspaceIDs",
+					"user", user.getName(),
+					"params", new ListWorkspaceIDsParams().withPerm(PERM_ADMIN))))
+					.asClassInstance(ListWorkspaceIDsResults.class)
+					.getWorkspaces();
+		} catch (IOException | JsonClientException e) {
+			throw getGeneralWSException(e);
+		}
+		
+		return WorkspaceIDSet.fromInts(ids.stream().map(i -> Math.toIntExact(i))
+				.collect(Collectors.toSet()));
 	}
 }

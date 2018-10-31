@@ -518,4 +518,79 @@ public class SDKClientWorkspaceHandlerTest {
 		}
 	}
 	
+	@Test
+	public void getAdministratedWorkspaces() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getListWorkspaceIDsCommandMatcher("user"))))
+				.thenReturn(new UObject(ImmutableMap.of("workspaces", Arrays.asList(
+						4L, 6L, 8L, 42L, 86L))));
+
+		assertThat("incorrect ids", h.getAdministratedWorkspaces(new UserName("user")),
+				is(WorkspaceIDSet.fromInts(set(4, 6, 8, 42, 86))));
+	}
+	
+	@Test
+	public void getAdministratedWorkspacesFailNull() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		failGetAdministratedWorkspaces(h, null, new NullPointerException("user"));
+	}
+	
+	@Test
+	public void getAdministratedWorkspacesFailIOException() throws Exception {
+		getAdministratedWorkspacesFail(new IOException("oh dookybutts"),
+				new WorkspaceHandlerException(
+						"Error contacting workspace at http://nudewombats.com"));
+	}
+
+	@Test
+	public void getAdministratedWorkspacesFailJSONClientException() throws Exception {
+		getAdministratedWorkspacesFail(new JsonClientException("oh dookybutts"),
+				new WorkspaceHandlerException(
+						"Error contacting workspace at http://nudewombats.com"));
+	}
+
+	private void getAdministratedWorkspacesFail(final Exception thrown, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		when(c.getURL()).thenReturn(new URL("http://nudewombats.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getListWorkspaceIDsCommandMatcher("user"))))
+				.thenThrow(thrown);
+
+		failGetAdministratedWorkspaces(h, new UserName("user"), expected);
+	}
+	
+	private void failGetAdministratedWorkspaces(
+			final SDKClientWorkspaceHandler h,
+			final UserName user,
+			final Exception expected) {
+		try {
+			h.getAdministratedWorkspaces(user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+
+	private UObjectArgumentMatcher getListWorkspaceIDsCommandMatcher(final String user) {
+		return new UObjectArgumentMatcher(ImmutableMap.of(
+				"command", "listWorkspaceIDs",
+				"user", user,
+				"params", ImmutableMap.of("perm", "a")));
+	}
+	
 }

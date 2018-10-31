@@ -36,4 +36,12 @@ public interface WorkspaceHandler {
 			boolean administratedWorkspacesOnly)
 			throws WorkspaceHandlerException;
 
+	/** Get the IDs of the workspaces a user administrates.
+	 * @param user the user.
+	 * @return the IDs.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 */
+	WorkspaceIDSet getAdministratedWorkspaces(UserName user)
+		throws WorkspaceHandlerException;
+	
 }
