@@ -1308,6 +1308,7 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
 							.withModificationTime(Instant.ofEpochMilli(130000))
 							.build())
+				.withRequestAddWorkspace(new WorkspaceID(45))
 				.build();
 		final GroupRequest third = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar3"),
@@ -1320,14 +1321,23 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(150000))
 							.build())
+				.withRequestAddWorkspace(new WorkspaceID(42))
 				.build();
-		// any request with a target is excluded
+		// any request with a target user is excluded
 		final GroupRequest target = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
 				.withInviteToGroup(new UserName("foo"))
+				.build();
+		// same for invite workspace requests
+		final GroupRequest targetws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withInviteWorkspace(new WorkspaceID(86))
 				.build();
 		final GroupRequest othergroup = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("other"),
@@ -1347,6 +1357,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.storeRequest(target);
 		manager.storage.storeRequest(othergroup);
 		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(targetws);
 		manager.storage.storeRequest(closed);
 		manager.storage.storeRequest(third);
 		manager.storage.storeRequest(second);
