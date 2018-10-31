@@ -58,6 +58,8 @@ public class Fields {
 	public static final String REQUEST_GROUP_ID = "groupid";
 	/** The user the request targets, if any. */
 	public static final String REQUEST_TARGET = "targetuser";
+	/** The workspace the request targets, if any. */
+	public static final String REQUEST_TARGET_WORKSPACE = "targetws";
 	/** The user that made the request. */
 	public static final String REQUEST_REQUESTER = "requester";
 	/** The type of the request. */

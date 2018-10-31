@@ -20,6 +20,7 @@ import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.service.api.APICommon;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
@@ -42,6 +43,7 @@ public class APICommonTest {
 				.with("groupid", "gid")
 				.with("requester", "n")
 				.with("targetuser", null)
+				.with("targetws", null)
 				.with("type", "Request group membership")
 				.with("status", "Open")
 				.with("createdate", 10000L)
@@ -68,8 +70,36 @@ public class APICommonTest {
 				.with("groupid", "gid")
 				.with("requester", "n")
 				.with("targetuser", "inv")
+				.with("targetws", null)
 				.with("type", "Invite to group")
 				.with("status", "Denied")
+				.with("createdate", 10000L)
+				.with("moddate", 25000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void toGroupRequestJSONWithWSTarget() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final GroupRequest r = GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("n"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(25000))
+						.build())
+				.withInviteWorkspace(new WorkspaceID(42))
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		assertThat("incorrect request", APICommon.toGroupRequestJSON(r), is(MapBuilder.newHashMap()
+				.with("id", id.toString())
+				.with("groupid", "gid")
+				.with("requester", "n")
+				.with("targetuser", null)
+				.with("targetws", 42)
+				.with("type", "Invite workspace to group")
+				.with("status", "Canceled")
 				.with("createdate", 10000L)
 				.with("moddate", 25000L)
 				.with("expiredate", 20000L)
@@ -108,13 +138,25 @@ public class APICommonTest {
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
-		assertThat("incorrect request", APICommon.toGroupRequestJSON(Arrays.asList(r2, r1)),
+		final UUID id3 = UUID.randomUUID();
+		final GroupRequest r3 = GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("gid3"), new UserName("n3"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(12000), Instant.ofEpochMilli(22000))
+						.withModificationTime(Instant.ofEpochMilli(27000))
+						.build())
+				.withRequestAddWorkspace(new WorkspaceID(42))
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		assertThat("incorrect request", APICommon.toGroupRequestJSON(Arrays.asList(r2, r1, r3)),
 				is(Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("id", id2.toString())
 								.with("groupid", "gid2")
 								.with("requester", "n2")
 								.with("targetuser", "inv")
+								.with("targetws", null)
 								.with("type", "Invite to group")
 								.with("status", "Denied")
 								.with("createdate", 11000L)
@@ -126,11 +168,24 @@ public class APICommonTest {
 								.with("groupid", "gid1")
 								.with("requester", "n1")
 								.with("targetuser", null)
+								.with("targetws", null)
 								.with("type", "Request group membership")
 								.with("status", "Open")
 								.with("createdate", 10000L)
 								.with("moddate", 10000L)
 								.with("expiredate", 20000L)
+								.build(),
+						MapBuilder.newHashMap()
+								.with("id", id3.toString())
+								.with("groupid", "gid3")
+								.with("requester", "n3")
+								.with("targetuser", null)
+								.with("targetws", 42)
+								.with("type", "Request add workspace to group")
+								.with("status", "Canceled")
+								.with("createdate", 12000L)
+								.with("moddate", 27000L)
+								.with("expiredate", 22000L)
 								.build()
 						)));
 	}

@@ -29,6 +29,8 @@ public class APICommon {
 		ret.put(Fields.REQUEST_REQUESTER, request.getRequester().getName());
 		ret.put(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
 				request.getTarget().get().getName() : null);
+		ret.put(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget().isPresent() ?
+				request.getWorkspaceTarget().get().getID() : null);
 		ret.put(Fields.REQUEST_TYPE, request.getType().getRepresentation());
 		ret.put(Fields.REQUEST_STATUS, request.getStatusType().getRepresentation());
 		ret.put(Fields.REQUEST_CREATION, request.getCreationDate().toEpochMilli());

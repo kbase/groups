@@ -58,6 +58,7 @@ Represents a request to modify a group in some way.
     "type": <the type of the request>,
     "status": <the status of the request>,
     "targetuser": <the user at which the request is targeted, if any>,
+    "targetws": <the workspace at which the request is targeted, if any>,
     "createdate": <the request creation date in epoch ms>,
     "expiredate": <the date the request expires in epoch ms>,
     "moddate": <the last modification date of the request in epoch ms>
@@ -73,6 +74,12 @@ type.
 
 `Invite to group` - If accepted by the target user, the target user will be added to the
 group membership.
+
+`Invite workspace to group` - If accepted by a workspace administrator, the target workspace
+will be added to the group.
+
+`Request add workspace to group` - If accepted by a group administrator, the target workspace
+will be added to the group.
 
 The request status is one of `Open`, `Canceled`, `Expired`, `Accepted`, or `Denied`.
 
@@ -246,7 +253,7 @@ RETURNS: Either {"complete": true} or a Request with the additional field "compl
 with a value of false.
 ```
 
-The workspace is added immediately if the user is an administrator of both the group or
+The workspace is added immediately if the user is an administrator of both the group and
 the workspace. A request object is returned if the user is an administrator of at least one; if
 not an error is returned.
 
@@ -303,7 +310,8 @@ GET /request/targeted
 RETURNS: A list of Requests.
 ```
 
-Returns requests where the user is the target of the request.
+Returns requests where the user is a target (including an administrator of the workspace at
+which the request is targeted) of the request.
 
 ### Cancel a request
 
@@ -325,7 +333,8 @@ PUT /request/id/<request id>/accept
 RETURNS: A Request.
 ```
 
-The user must be the target of the request or an administrator of the group at which the
+The user must be the target of the request (including an administrator of the workspace at
+which the request is targeted) or an administrator of the group at which the
 request is targeted.
 
 ### Deny a request
@@ -340,7 +349,8 @@ PUT /request/id/<request id>/deny
 RETURNS: A Request.
 ```
 
-The user must be the target of the request or an administrator of the group at which the
+The user must be the target of the request (including an administrator of the workspace at
+which the request is targeted) or an administrator of the group at which the
 request is targeted.
 
 ## Requirements
