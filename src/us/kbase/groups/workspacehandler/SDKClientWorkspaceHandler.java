@@ -3,9 +3,7 @@ package us.kbase.groups.workspacehandler;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -16,7 +14,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.zafarkhaja.semver.Version;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.auth.AuthToken;
 import us.kbase.common.service.JsonClientException;
 import us.kbase.common.service.ServerException;
 import us.kbase.common.service.Tuple9;
@@ -40,7 +37,6 @@ import us.kbase.workspace.WorkspaceIdentity;
  */
 public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	
-	// TODO TEST
 	// TODO CACHE may help to cache all or some of the results. YAGNI for now.
 
 	private final WorkspaceClient client;
@@ -224,66 +220,11 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	}
 
 	private String getNarrativeName(final Map<String, String> meta) {
-		if ("true".equals(meta.get("is_temporary"))) {
-			return null;
-		} else if (meta.get("narrative_nice_name") != null) {
+		if ("false".equals(meta.get("is_temporary"))) {
+			// if nice name is null will return null, obviously
 			return meta.get("narrative_nice_name");
 		} else {
 			return null;
 		}
 	}
-
-	public static void main(final String[] args) throws Exception {
-		final WorkspaceClient ws = new WorkspaceClient(
-				new URL("https://ci.kbase.us/services/ws/"),
-				new AuthToken(args[0], "<fake>"));
-		
-		final SDKClientWorkspaceHandler sws = new SDKClientWorkspaceHandler(ws);
-		System.out.println(sws.isAdministrator(new WorkspaceID(36967), new UserName("gaprice")));
-		System.out.println(sws.isAdministrator(new WorkspaceID(36967), new UserName("msneddon")));
-		
-		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("gaprice")));
-		System.out.println(sws.isAdministrator(new WorkspaceID(20554), new UserName("msneddon")));
-		
-		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("gaprice")));
-		System.out.println(sws.isAdministrator(new WorkspaceID(37268), new UserName("msneddon")));
-		
-		final WorkspaceInfoSet wi1 = sws.getWorkspaceInformation(
-				new UserName("gaprice"),
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
-				false);
-		System.out.println(wi1);
-		System.out.println(wi1.getWorkspaceInformation().size());
-		final WorkspaceInfoSet wi2 = sws.getWorkspaceInformation(
-				new UserName("gaprice"),
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
-				true);
-		System.out.println(wi2);
-		System.out.println(wi2.getWorkspaceInformation().size());
-		final WorkspaceInfoSet wi3 = sws.getWorkspaceInformation(
-				null,
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
-				false);
-		System.out.println(wi3);
-		System.out.println(wi3.getWorkspaceInformation().size());
-		final WorkspaceInfoSet wi4 = sws.getWorkspaceInformation(
-				null,
-				WorkspaceIDSet.fromInts(new HashSet<>(
-						Arrays.asList(36967, 20554, 37268, 37266, 100000, 37267, 35854))),
-				true);
-		System.out.println(wi4);
-		System.out.println(wi4.getWorkspaceInformation().size());
-		
-		try {
-			sws.isAdministrator(new WorkspaceID(37266), new UserName("doesntmatterdeleted"));
-		} catch (NoSuchWorkspaceException e) {
-			e.printStackTrace();
-		}
-		sws.isAdministrator(new WorkspaceID(10000000), new UserName("doesntmatterdeleted"));
-		
-	}
-
 }
