@@ -4,8 +4,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -19,6 +21,8 @@ import us.kbase.common.service.ServerException;
 import us.kbase.common.service.Tuple9;
 import us.kbase.common.service.UObject;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
@@ -251,5 +255,26 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		
 		return WorkspaceIDSet.fromInts(ids.stream().map(i -> Math.toIntExact(i))
 				.collect(Collectors.toSet()));
+	}
+	
+	@Override
+	public Set<UserName> getAdministrators(final WorkspaceID wsid)
+			throws NoSuchWorkspaceException, WorkspaceHandlerException {
+		checkNotNull(wsid, "wsid");
+		final Map<String, String> perms = getPermissions(Arrays.asList(wsid.getID()), true)
+				.perms.get(0);
+		final Set<UserName> ret = new HashSet<>();
+		for (final String user: perms.keySet()) {
+			if (PERM_ADMIN.equals(perms.get(user))) {
+				try {
+					ret.add(new UserName(user));
+				} catch (MissingParameterException | IllegalParameterException e) {
+					throw new RuntimeException(
+							"Unexpected illegal user name returned from workspace: " +
+							e.getMessage(), e);
+				}
+			}
+		}
+		return ret;
 	}
 }
