@@ -584,6 +584,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_TYPE, request.getType().name())
 				.append(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
 						request.getTarget().get().getName() : null)
+				.append(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget().isPresent() ?
+						request.getWorkspaceTarget().get().getID() : null)
 				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy().isPresent() ?
 						request.getClosedBy().get().getName() : null)
 				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orNull())
@@ -634,7 +636,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 
 
-	//TODO WORKSPACE will also need to include ws id
 	/** Get a string that is arbitrary in structure but represents the characteristics of a
 	 * request that differentiate it from other requests. This string can be used to find
 	 * requests that are effectively identical but not {@link GroupRequest#equals(Object)}.
@@ -655,6 +656,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		builder.append(request.getRequester().getName());
 		builder.append(request.getType().name());
 		builder.append(request.getTarget().isPresent() ? request.getTarget().get().getName() : "");
+		builder.append(request.getWorkspaceTarget().isPresent() ?
+				request.getWorkspaceTarget().get().getID() : "");
 		final MessageDigest digester;
 		try {
 			digester = MessageDigest.getInstance("MD5");
@@ -746,6 +749,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {
 		try {
 			final String target = req.getString(Fields.REQUEST_TARGET);
+			final Integer wsTarget = req.getInteger(Fields.REQUEST_TARGET_WORKSPACE);
 			final String closedBy = req.getString(Fields.REQUEST_CLOSED_BY);
 			return GroupRequest.getBuilder(
 					new RequestID(req.getString(Fields.REQUEST_ID)),
@@ -760,7 +764,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.withType(
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target),
-							null)  //TODO WS NOW add workspace target
+							wsTarget == null ? null : new WorkspaceID(wsTarget))
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),

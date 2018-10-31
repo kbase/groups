@@ -23,6 +23,8 @@ public class WorkspaceIDTest {
 		final WorkspaceID i = new WorkspaceID(1);
 		
 		assertThat("incorrect id", i.getID(), is(1));
+		
+		assertThat("incorrect toString", i.toString(), is("WorkspaceID [id=1]"));
 	}
 	
 	@Test
@@ -30,6 +32,8 @@ public class WorkspaceIDTest {
 		final WorkspaceID i = new WorkspaceID("  1   ");
 		
 		assertThat("incorrect id", i.getID(), is(1));
+		
+		assertThat("incorrect toString", i.toString(), is("WorkspaceID [id=1]"));
 	}
 	
 	@Test

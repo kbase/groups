@@ -713,7 +713,49 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void storeAndGetRequestMaximal() throws Exception {
+	public void storeAndGetRequestMinimalWithRequestWS() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withRequestAddWorkspace(new WorkspaceID(82))
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
+				is(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+								.build())
+						.withRequestAddWorkspace(new WorkspaceID(82))
+						.build()));
+	}
+	
+	@Test
+	public void storeAndGetRequestMinimalWithInviteWS() throws Exception {
+		final UUID id = UUID.randomUUID();
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withInviteWorkspace(new WorkspaceID(82))
+				.build());
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
+				is(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+								.build())
+						.withInviteWorkspace(new WorkspaceID(82))
+						.build()));
+	}
+	
+	@Test
+	public void storeAndGetRequestMaximalWithTarget() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("foobar"), new UserName("barfoo"),
@@ -738,57 +780,40 @@ public class MongoGroupsStorageOpsTest {
 					.build()));
 	}
 	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicString() throws Exception {
-		// tests that storage with identical characteristic strings works as long as
-		// there's only one open request
-		final UUID id1 = UUID.randomUUID();
-		final UUID id2 = UUID.randomUUID();
-		final UUID id3 = UUID.randomUUID();
-		final UUID id4 = UUID.randomUUID();
-		final UUID id5 = UUID.randomUUID();
-		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
-				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-				.build();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.canceled()).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.expired()).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build());
+	private interface FuncExcept<T, R> {
 		
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-				.build()));
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.canceled()).build()));
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.expired()).build()));
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
-				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
+		R apply(T t) throws Exception;
 	}
 	
 	@Test
-	public void storeRequestWithIdenticalCharacteristicStringAndTarget() throws Exception {
+	public void storeRequestWithIdenticalCharacteristicString() throws Exception {
+		// default type, request user
+		storeRequestWithIdenticalCharacteristicString(b -> b);
+	}
+	
+	@Test
+	public void storeRequestWithIdenticalCharacteristicStringWithTarget() throws Exception {
+		storeRequestWithIdenticalCharacteristicString(
+				b -> b.withInviteToGroup(new UserName("target")));
+	}
+	
+	@Test
+	public void storeRequestWithIdenticalCharacteristicStringWithRequestWorkspace()
+			throws Exception {
+		storeRequestWithIdenticalCharacteristicString(
+				b -> b.withRequestAddWorkspace(new WorkspaceID(56)));
+	}
+	
+	@Test
+	public void storeRequestWithIdenticalCharacteristicStringWithInviteWorkspace()
+			throws Exception {
+		storeRequestWithIdenticalCharacteristicString(
+				b -> b.withInviteWorkspace(new WorkspaceID(65)));
+	}
+	
+	private void storeRequestWithIdenticalCharacteristicString(
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn)
+			throws Exception {
 		// tests that storage with identical characteristic strings works as long as
 		// there's only one open request
 		final UUID id1 = UUID.randomUUID();
@@ -799,51 +824,40 @@ public class MongoGroupsStorageOpsTest {
 		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
 				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 				.build();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
-				.build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)).build());
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.canceled()).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.expired()).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build());
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build());
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times))
 				.build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.canceled()).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.expired()).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times))
 				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
 	}
 	
@@ -856,6 +870,10 @@ public class MongoGroupsStorageOpsTest {
 		final UUID id3 = UUID.randomUUID();
 		final UUID id4 = UUID.randomUUID();
 		final UUID id5 = UUID.randomUUID();
+		final UUID id6 = UUID.randomUUID();
+		final UUID id7 = UUID.randomUUID();
+		final UUID id8 = UUID.randomUUID();
+		final UUID id9 = UUID.randomUUID();
 		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
 				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 				.build();
@@ -887,34 +905,83 @@ public class MongoGroupsStorageOpsTest {
 				.withInviteToGroup(new UserName("target"))
 				.build());
 		
+		// with request workspace target - implies different type
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id6), new GroupID("foo"), new UserName("bar"), times)
+				.withRequestAddWorkspace(new WorkspaceID(42))
+				.build());
+
+		// with different request workspace target
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id7), new GroupID("foo"), new UserName("bar"), times)
+				.withRequestAddWorkspace(new WorkspaceID(43))
+				.build());
+		
+		// with invite workspace target - implies different type
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id8), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteWorkspace(new WorkspaceID(42))
+				.build());
+		
+		// with different invite workspace target
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id9), new GroupID("foo"), new UserName("bar"), times)
+				.withInviteWorkspace(new WorkspaceID(43))
+				.build());
+		
+		// check results
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
-				.build()));
+						.withInviteToGroup(new UserName("target"))
+						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
-				.build()));
+						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("tarjeh"))
-				.build()));
+					.withInviteToGroup(new UserName("tarjeh"))
+					.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id4), new GroupID("fooo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
-				.build()));
+						.withInviteToGroup(new UserName("target"))
+						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id5), new GroupID("foo"), new UserName("barr"), times)
-				.withInviteToGroup(new UserName("target"))
-				.build()));
+						.withInviteToGroup(new UserName("target"))
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id6)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id6), new GroupID("foo"), new UserName("bar"), times)
+						.withRequestAddWorkspace(new WorkspaceID(42))
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id7)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id7), new GroupID("foo"), new UserName("bar"), times)
+						.withRequestAddWorkspace(new WorkspaceID(43))
+						.build()));
+
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id8)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id8), new GroupID("foo"), new UserName("bar"), times)
+						.withInviteWorkspace(new WorkspaceID(42))
+						.build()));
+
+		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id9)), is(
+				GroupRequest.getBuilder(
+						new RequestID(id9), new GroupID("foo"), new UserName("bar"), times)
+						.withInviteWorkspace(new WorkspaceID(43))
+						.build()));
 	}
 	
 	@Test
@@ -947,42 +1014,40 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void storeRequestFailEquivalentRequestNoTarget() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-					.build())
-				.build());
-		
-		final GroupRequest request = GroupRequest.getBuilder(
-				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
-				.build())
-			.build();
-		
-		failStoreRequest(request, new RequestExistsException(String.format(
-				"Request exists with ID: %s", id.toString())));
+		storeRequestFailEquivalentRequest(b -> b);
 	}
 	
 	@Test
 	public void storeRequestFailEquivalentRequestWithTarget() throws Exception {
+		storeRequestFailEquivalentRequest(b -> b.withInviteToGroup(new UserName("baz1")));
+	}
+	
+	@Test
+	public void storeRequestFailEquivalentRequestWithRequestWorkspace() throws Exception {
+		storeRequestFailEquivalentRequest(b -> b.withRequestAddWorkspace(new WorkspaceID(34)));
+	}
+	
+	@Test
+	public void storeRequestFailEquivalentRequestWithInviteWorkspace() throws Exception {
+		storeRequestFailEquivalentRequest(b -> b.withInviteWorkspace(new WorkspaceID(43)));
+	}
+	
+	private void storeRequestFailEquivalentRequest(
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn)
+			throws Exception {
 		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
+		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("foo1"), new UserName("bar1"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-					.build())
-				.withInviteToGroup(new UserName("baz1"))
+					.build()))
 				.build());
 		
-		final GroupRequest request = GroupRequest.getBuilder(
+		final GroupRequest request = builderFn.apply(GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("bar1"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
-				.build())
-				.withInviteToGroup(new UserName("baz1"))
+				.build()))
 			.build();
 		
 		failStoreRequest(request, new RequestExistsException(String.format(

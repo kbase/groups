@@ -54,6 +54,15 @@ public class WorkspaceID {
 	}
 
 	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("WorkspaceID [id=");
+		builder.append(id);
+		builder.append("]");
+		return builder.toString();
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
