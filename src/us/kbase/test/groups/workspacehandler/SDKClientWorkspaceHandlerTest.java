@@ -593,4 +593,123 @@ public class SDKClientWorkspaceHandlerTest {
 				"params", ImmutableMap.of("perm", "a")));
 	}
 	
+	@Test
+	public void getAdministrators() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(24))))
+				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
+						"user1", "a", "user2", "w", "user3", "r", "user4", "a", "*", "r")))));
+		
+		assertThat("incorrect admins", h.getAdministrators(new WorkspaceID(24)), is(
+				set(new UserName("user1"), new UserName("user4"))));
+	}
+	
+	@Test
+	public void getAdministratorsFailNulls() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		failGetAdministrators(h, null, new NullPointerException("wsid"));
+	}
+	
+	@Test
+	public void getAdministratorsFailDeletedWS() throws Exception {
+		failGetAdministrators(new ServerException("Workspace 24 is deleted", -1, "n"),
+				new NoSuchWorkspaceException("24"));
+	}
+	
+	@Test
+	public void getAdministratorsFailMissingWS() throws Exception {
+		failGetAdministrators(new ServerException("No workspace with id 24 exists", -1, "n"),
+				new NoSuchWorkspaceException("24"));
+	}
+	
+	@Test
+	public void getAdministratorsFailOtherServerException() throws Exception {
+		failGetAdministrators(new ServerException("You pootied real bad I can smell it", -1, "n"),
+				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void getAdministratorsFailJsonClientException() throws Exception {
+		failGetAdministrators(new JsonClientException("You pootied real bad I can smell it"),
+				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void getAdministratorsFailIOException() throws Exception {
+		failGetAdministrators(new IOException("You pootied real bad I can smell it"),
+				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void getAdministratorsFailIllegalStateException() throws Exception {
+		failGetAdministrators(new IllegalStateException("You pootied real bad I can smell it"),
+				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void getAdministratorsFailMissingUser() throws Exception {
+		// can't be null, since JSON doesn't allow null keys
+		getAdministratorsFailIllegalUser("   \t   ", new RuntimeException(
+				"Unexpected illegal user name returned from workspace: " +
+				"30000 Missing input parameter: user name"));
+	}
+	
+	@Test
+	public void getAdministratorsFailIllegalUser() throws Exception {
+		getAdministratorsFailIllegalUser("illegal*user", new RuntimeException(
+				"Unexpected illegal user name returned from workspace: " +
+				"30010 Illegal user name: Illegal character in user name illegal*user: *"));
+	}
+
+	private void getAdministratorsFailIllegalUser(final String user, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(24))))
+				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
+						user, "a", "user2", "w", "user3", "r", "user4", "a", "*", "r")))));
+		
+		failGetAdministrators(h, new WorkspaceID(24), expected);
+	}
+	
+	private void failGetAdministrators(final Exception exception, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		when(c.getURL()).thenReturn(new URL("http://foo.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(exception);
+		
+		failGetAdministrators(h, new WorkspaceID(24), expected);
+	}
+	
+	private void failGetAdministrators(
+			final SDKClientWorkspaceHandler h,
+			final WorkspaceID id,
+			final Exception expected) {
+		try {
+			h.getAdministrators(id);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 }

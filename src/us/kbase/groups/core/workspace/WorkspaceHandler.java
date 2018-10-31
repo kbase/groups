@@ -1,5 +1,7 @@
 package us.kbase.groups.core.workspace;
 
+import java.util.Set;
+
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
@@ -43,5 +45,15 @@ public interface WorkspaceHandler {
 	 */
 	WorkspaceIDSet getAdministratedWorkspaces(UserName user)
 		throws WorkspaceHandlerException;
+
+	/** Get the set of users that administrate a workspace.
+	 * @param wsid the workspace to query.
+	 * @return the set of administrators.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws NoSuchWorkspaceException if the workspace is deleted or there is no workspace
+	 * with the given ID.
+	 */
+	Set<UserName> getAdministrators(WorkspaceID wsid)
+			throws NoSuchWorkspaceException, WorkspaceHandlerException;
 	
 }
