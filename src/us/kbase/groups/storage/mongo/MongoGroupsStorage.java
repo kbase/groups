@@ -759,7 +759,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 							.build())
 					.withType(
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
-							target == null ? null : new UserName(target))
+							target == null ? null : new UserName(target),
+							null)  //TODO WS NOW add workspace target
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),

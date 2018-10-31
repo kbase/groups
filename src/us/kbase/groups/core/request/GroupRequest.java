@@ -9,6 +9,7 @@ import com.google.common.base.Optional;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.Group;
 
 /** Represents a request to modify a {@link Group} in some way.
@@ -22,6 +23,7 @@ public class GroupRequest {
 	private final RequestID id;
 	private final GroupID groupID;
 	private final Optional<UserName> target;
+	private final Optional<WorkspaceID> wsTarget;
 	private final UserName requester;
 	private final GroupRequestType type;
 	private final GroupRequestStatusType statusType;
@@ -35,6 +37,7 @@ public class GroupRequest {
 			final RequestID id,
 			final GroupID groupID,
 			final Optional<UserName> target,
+			final Optional<WorkspaceID> wsTarget,
 			final UserName requester,
 			final GroupRequestType type,
 			final GroupRequestStatusType status,
@@ -44,6 +47,7 @@ public class GroupRequest {
 		this.id = id;
 		this.groupID = groupID;
 		this.target = target;
+		this.wsTarget = wsTarget;
 		this.requester = requester;
 		this.type = type;
 		this.statusType = status;
@@ -75,6 +79,16 @@ public class GroupRequest {
 	 */
 	public Optional<UserName> getTarget() {
 		return target;
+	}
+	
+	/** Get the workspace targeted by the request, if any. The target is present when the
+	 * request type is {@link GroupRequestType#INVITE_WORKSPACE} or
+	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}. In this case the workspace is added to the
+	 * group if the request is accepted.
+	 * @return
+	 */
+	public Optional<WorkspaceID> getWorkspaceTarget() {
+		return wsTarget;
 	}
 
 	/** Get the user that created the request. If the request type is
@@ -152,6 +166,7 @@ public class GroupRequest {
 		result = prime * result + ((statusType == null) ? 0 : statusType.hashCode());
 		result = prime * result + ((target == null) ? 0 : target.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		result = prime * result + ((wsTarget == null) ? 0 : wsTarget.hashCode());
 		return result;
 	}
 
@@ -236,6 +251,13 @@ public class GroupRequest {
 		if (type != other.type) {
 			return false;
 		}
+		if (wsTarget == null) {
+			if (other.wsTarget != null) {
+				return false;
+			}
+		} else if (!wsTarget.equals(other.wsTarget)) {
+			return false;
+		}
 		return true;
 	}
 
@@ -267,6 +289,7 @@ public class GroupRequest {
 		private final UserName requester;
 		private final CreateModAndExpireTimes times;
 		private Optional<UserName> target = Optional.absent();
+		private Optional<WorkspaceID> wsTarget = Optional.absent();
 		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 		private GroupRequestStatusType status = GroupRequestStatusType.OPEN;
 		private Optional<UserName> closedBy = Optional.absent();
@@ -287,36 +310,73 @@ public class GroupRequest {
 			this.times = times;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName)}
-		 * with {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} as the type and a null user.
+		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		 * with {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} as the type and null user and
+		 * workspace ID.
 		 * @return this builder.
 		 */
 		public Builder withRequestGroupMembership() {
 			this.target = Optional.absent();
+			this.wsTarget = Optional.absent();
 			this.type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 			return this;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName)}
-		 * with {@link GroupRequestType#INVITE_TO_GROUP} as the type and a non-null user.
+		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		 * with {@link GroupRequestType#INVITE_TO_GROUP} as the type and a non-null user and
+		 * null workspace ID.
 		 * @param target the user to invite to the group.
 		 * @return this builder.
 		 */
 		public Builder withInviteToGroup(final UserName target) {
 			checkNotNull(target, "target");
 			this.target = Optional.of(target);
+			this.wsTarget = Optional.absent();
 			this.type = GroupRequestType.INVITE_TO_GROUP;
 			return this;
 		}
 		
-		// this'll need a workspace ID in the future
-		/** Set the type of this request. A user is required for
-		 * {@link GroupRequestType#INVITE_TO_GROUP} requests.
-		 * @param type the type of the request.
-		 * @param nullableUser an optional user.
+		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		 * with {@link GroupRequestType#REQUEST_ADD_WORKSPACE} as the type and a non-null
+		 * workspace ID and a null user.
+		 * @param wsid the workspace ID that is the subject of the request.
 		 * @return this builder.
 		 */
-		public Builder withType(final GroupRequestType type, final UserName nullableUser) {
+		public Builder withRequestAddWorkspace(final WorkspaceID wsid) {
+			return setWorkspaceType(wsid, GroupRequestType.REQUEST_ADD_WORKSPACE);
+		}
+
+		private Builder setWorkspaceType(final WorkspaceID wsid, final GroupRequestType type) {
+			checkNotNull(wsid, "wsid");
+			this.target = Optional.absent();
+			this.wsTarget = Optional.of(wsid);
+			this.type = type;
+			return this;
+		}
+		
+		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		 * with {@link GroupRequestType#INVITE_WORKSPACE} as the type and a non-null
+		 * workspace ID and a null user.
+		 * @param wsid the workspace ID that is to be invited to the group.
+		 * @return this builder.
+		 */
+		public Builder withInviteWorkspace(final WorkspaceID wsid) {
+			return setWorkspaceType(wsid, GroupRequestType.INVITE_WORKSPACE);
+		}
+		
+		/** Set the type of this request. A user is required for
+		 * {@link GroupRequestType#INVITE_TO_GROUP} requests. A workspace ID is required for
+		 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE} and
+		 * {@link GroupRequestType#INVITE_WORKSPACE} requests.
+		 * @param type the type of the request.
+		 * @param nullableUser an optional user.
+		 * @param nullableWorkspaceID an optional workspace ID.
+		 * @return this builder.
+		 */
+		public Builder withType(
+				final GroupRequestType type,
+				final UserName nullableUser,
+				final WorkspaceID nullableWorkspaceID) {
 			checkNotNull(type, "type");
 			if (type.equals(GroupRequestType.INVITE_TO_GROUP)) {
 				if (nullableUser == null) {
@@ -325,13 +385,25 @@ public class GroupRequest {
 				return withInviteToGroup(nullableUser);
 			} else if (type.equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 				return withRequestGroupMembership();
+			} else if (type.equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) {
+				checkWSID(nullableWorkspaceID);
+				return withRequestAddWorkspace(nullableWorkspaceID);
+			} else if (type.equals(GroupRequestType.INVITE_WORKSPACE)) {
+				checkWSID(nullableWorkspaceID);
+				return withInviteWorkspace(nullableWorkspaceID);
 			} else {
 				// since type is an enum, this is impossible to test unless we're missing a case
 				throw new RuntimeException("Unknown type: " + type);
 			}
 		}
 		
-		
+		private void checkWSID(final WorkspaceID wsid) {
+			if (wsid == null) {
+				throw new IllegalArgumentException(
+						"Workspace requests and invites must have a target workspace");
+			}
+		}
+
 		/** Set the status of the request. The default status is {@link GroupRequestStatus#open()}.
 		 * @param status the status.
 		 * @return this builder.
@@ -348,8 +420,8 @@ public class GroupRequest {
 		 * @return the new instance.
 		 */
 		public GroupRequest build() {
-			return new GroupRequest(
-					id, groupID, target, requester, type, status, closedBy, closedReason, times);
+			return new GroupRequest(id, groupID, target, wsTarget, requester, type, status,
+					closedBy, closedReason, times);
 		}
 	}
 }
