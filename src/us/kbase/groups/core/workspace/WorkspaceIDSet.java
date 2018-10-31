@@ -1,5 +1,6 @@
 package us.kbase.groups.core.workspace;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.util.Collection;
@@ -55,6 +56,11 @@ public class WorkspaceIDSet {
 	 */
 	public Set<Integer> getIDs() {
 		return ids;
+	}
+
+	public boolean contains(final WorkspaceID wsid) {
+		checkNotNull(wsid, "wsid");
+		return ids.contains(wsid.getID());
 	}
 
 	@Override
