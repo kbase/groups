@@ -723,8 +723,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
 				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name())
 				.append(Fields.REQUEST_TYPE, new Document("$in", Arrays.asList(
-						//TODO WORKSPACE add type where admins must approve workspace addition
-						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name())));
+						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name(),
+						GroupRequestType.REQUEST_ADD_WORKSPACE.name())));
 		return findRequests(query);
 	}
 
