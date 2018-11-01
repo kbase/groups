@@ -1596,19 +1596,19 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void denyRequestAdmin() throws Exception {
+	public void denyRequestAdminRequestMembership() throws Exception {
 		denyRequestAdmin(null, "own", b -> b.withRequestGroupMembership());
 	}
 	
 	@Test
-	public void denyRequestAdminWhitespaceReason() throws Exception {
+	public void denyRequestAdminWhitespaceReasonRequestWS() throws Exception {
 		denyRequestAdmin("    \t    ", "admin",
 				b -> b.withRequestAddWorkspace(new WorkspaceID(86)));
 	}
 	
 	@Test
-	public void denyRequestAdminReason() throws Exception {
-		denyRequestAdmin(" reason  ", "admin", b -> b.withRequestGroupMembership());
+	public void denyRequestAdminReasonInviteWS() throws Exception {
+		denyRequestAdmin(" reason  ", "wsadmin", b -> b.withInviteWorkspace(new WorkspaceID(86)));
 	}
 
 	private void denyRequestAdmin(
@@ -1642,6 +1642,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(86), new UserName("wsadmin")))
+				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
 		final GroupRequest req = mocks.groups.denyRequest(
@@ -1793,8 +1795,13 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void denyRequestFailNotAdminWS() throws Exception {
+	public void denyRequestFailNotAdminRequestWS() throws Exception {
 		denyRequestFailNotAdmin(b -> b.withRequestAddWorkspace(new WorkspaceID(56)));
+	}
+	
+	@Test
+	public void denyRequestFailNotAdminInviteWS() throws Exception {
+		denyRequestFailNotAdmin(b -> b.withInviteWorkspace(new WorkspaceID(56)));
 	}
 	
 	private void denyRequestFailNotAdmin(
@@ -1817,6 +1824,35 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
+				.thenReturn(false);
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User notadmin may not deny request " + id));
+	}
+	
+	@Test
+	public void denyRequestFailNoSuchWorkspace() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteWorkspace(new WorkspaceID(56))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
+				.thenThrow(new NoSuchWorkspaceException("foo"));
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not deny request " + id));
@@ -2071,6 +2107,11 @@ public class GroupsTest {
 		acceptRequestFailNotAdmin(b -> b.withRequestAddWorkspace(new WorkspaceID(34)));
 	}
 	
+	@Test
+	public void acceptRequestWSFailNotWSAdmin() throws Exception {
+		acceptRequestFailNotAdmin(b -> b.withInviteWorkspace(new WorkspaceID(55)));
+	}
+	
 	private void acceptRequestFailNotAdmin(
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn)
 			throws Exception {
@@ -2091,6 +2132,8 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(55), new UserName("notadmin")))
+			.thenReturn(false);
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not accept request " + id));
@@ -2152,7 +2195,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void acceptRequestFailNoSuchWorkspace() throws Exception {
+	public void acceptRequestFailNoSuchWorkspaceOnRequest() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -2173,14 +2216,42 @@ public class GroupsTest {
 				.withAdministrator(new UserName("a3"))
 				.build());
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenThrow(
-				new NoSuchWorkspaceException("34"));
+				new NoSuchWorkspaceException("56"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
-				new NoSuchWorkspaceException("34"));
+				new NoSuchWorkspaceException("56"));
 	}
 	
 	@Test
-	public void acceptRequestFailNoSuchGroupOnAddWorkspaceOnAdd() throws Exception {
+	public void acceptRequestFailNoSuchWorkspaceOnInvite() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteWorkspace(new WorkspaceID(56))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("wsadmin")))
+				.thenThrow(new NoSuchWorkspaceException("foo"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User wsadmin may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailNoSuchGroupOnAddWorkspace() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
