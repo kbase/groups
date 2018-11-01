@@ -7,10 +7,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
@@ -204,16 +206,8 @@ public class Groups {
 					"User %s is already a member of group %s", user.getName(),
 					g.getGroupID().getName()));
 		}
-		final Instant now = clock.instant();
-		final GroupRequest request = GroupRequest.getBuilder(
-				new RequestID(uuidGen.randomUUID()), groupID, user,
-				CreateModAndExpireTimes.getBuilder(
-						now, now.plus(REQUEST_EXPIRE_TIME)).build())
-				.withRequestGroupMembership()
-				.build();
-		storage.storeRequest(request);
-		notifications.notify(g.getAdministratorsAndOwner(), g, request);
-		return request;
+		return createRequestStoreAndNotify(g, user, b -> b.withRequestGroupMembership(),
+				g.getAdministratorsAndOwner());
 	}
 	
 	/** Invite a user to a group. The user must be a group administrator.
@@ -254,19 +248,34 @@ public class Groups {
 					"User %s is already a member of group %s", newMember.getName(),
 					g.getGroupID().getName()));
 		}
+		return createRequestStoreAndNotify(g, user, b -> b.withInviteToGroup(newMember),
+				Arrays.asList(newMember));
+	}
+	
+	private GroupRequest createRequestStoreAndNotify(
+			final Group group,
+			final UserName creator,
+			final Function<GroupRequest.Builder, GroupRequest.Builder> builderFunction,
+			final Collection<UserName> notifyTargets)
+			throws RequestExistsException, GroupsStorageException {
 		final Instant now = clock.instant();
-		final GroupRequest request = GroupRequest.getBuilder(
-				new RequestID(uuidGen.randomUUID()), groupID, user,
+		final GroupRequest request = builderFunction.apply(GroupRequest.getBuilder(
+				new RequestID(uuidGen.randomUUID()), group.getGroupID(), creator,
 				CreateModAndExpireTimes.getBuilder(
-						now, now.plus(REQUEST_EXPIRE_TIME)).build())
-				.withInviteToGroup(newMember)
+						now, now.plus(REQUEST_EXPIRE_TIME)).build()))
 				.build();
 		storage.storeRequest(request);
-		notifications.notify(new HashSet<>(Arrays.asList(newMember)), g, request);
+		notifications.notify(notifyTargets, group, request);
 		return request;
 	}
 	
 	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
+	
+	private final Set<GroupRequestUserAction> CREATOR_ACTIONS = new HashSet<>(Arrays.asList(
+			GroupRequestUserAction.CANCEL));
+	private final Set<GroupRequestUserAction> TARGET_ACTIONS = new HashSet<>(Arrays.asList(
+			GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+	private final Set<GroupRequestUserAction> NO_ACTIONS = Collections.emptySet();
 	
 	/** Get a request. A request can be viewed if the user created the request, is the target
 	 * user of the request, or is an administrator of the group that is the target of the
@@ -290,20 +299,6 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(request);
 		//TODO PRIVATE may want to censor accepter/denier and deny reason here and in other methods that return a closed request
-		return getAuthorizedActions(user, request, g.isAdministrator(user));
-	}
-	
-	private final Set<GroupRequestUserAction> CREATOR_ACTIONS = new HashSet<>(Arrays.asList(
-			GroupRequestUserAction.CANCEL));
-	private final Set<GroupRequestUserAction> TARGET_ACTIONS = new HashSet<>(Arrays.asList(
-			GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
-	private final Set<GroupRequestUserAction> NO_ACTIONS = Collections.emptySet();
-
-	private GroupRequestWithActions getAuthorizedActions(
-			final UserName user,
-			final GroupRequest request,
-			final boolean isAdmin)
-			throws UnauthorizedException, WorkspaceHandlerException {
 		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
 		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
 		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
@@ -317,10 +312,10 @@ public class Groups {
 			 * Still though, maybe some admin endpoint or this one should just return any request.
 			 * Or maybe admins should be able to view and cancel each other's requests.
 			 */
-			ensureIsRequestTarget(request, isAdmin, user, "access");
+			ensureIsRequestTarget(request, g.isAdministrator(user), user, "access");
 			return new GroupRequestWithActions(request, target);
 		}
-	}	
+	}
 	
 	//TODO NOW allow getting closed requests
 	/** Get requests that were created by the user.
@@ -520,7 +515,7 @@ public class Groups {
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		final UserName acceptedBy = request.getTarget().get();
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
-		return acceptUpdateRequestAndNotify(
+		return acceptRequestUpdateAndNotify(
 				request, acceptedBy, group.getAdministratorsAndOwner());
 	}
 
@@ -534,7 +529,7 @@ public class Groups {
 		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
 		targets.add(request.getRequester());
 		targets.remove(acceptedBy);
-		return acceptUpdateRequestAndNotify(request, acceptedBy, targets);
+		return acceptRequestUpdateAndNotify(request, acceptedBy, targets);
 	}
 
 	// assumes group exists
@@ -548,11 +543,11 @@ public class Groups {
 		// do this first in case the ws has been deleted
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
 		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-		return acceptUpdateRequestAndNotify(request, acceptedBy, wsadmins);
+		return acceptRequestUpdateAndNotify(request, acceptedBy, wsadmins);
 	}
 	
 	// returns updated request
-	private GroupRequest acceptUpdateRequestAndNotify(
+	private GroupRequest acceptRequestUpdateAndNotify(
 			final GroupRequest request,
 			final UserName acceptedBy,
 			final Set<UserName> targets)
@@ -732,34 +727,16 @@ public class Groups {
 			return Optional.absent();
 		}
 		if (isWSAdmin) {
-			return createWorkspaceAdditionRequest(g, user, wsid, g.getAdministratorsAndOwner(),
-					GroupRequestType.REQUEST_ADD_WORKSPACE);
+			return Optional.of(createRequestStoreAndNotify(
+					g, user, b -> b.withRequestAddWorkspace(wsid), g.getAdministratorsAndOwner()));
 		}
 		if (g.isAdministrator(user)) {
-			return createWorkspaceAdditionRequest(g, user, wsid, wsadmins,
-					GroupRequestType.INVITE_WORKSPACE);
+			return Optional.of(createRequestStoreAndNotify(
+					g, user, b -> b.withInviteWorkspace(wsid), wsadmins));
 		}
 		throw new UnauthorizedException(String.format(
 				"User %s is not an admin for group %s or workspace %s",
 				user.getName(), groupID.getName(), wsid.getID()));
-	}
-	
-	private Optional<GroupRequest> createWorkspaceAdditionRequest(
-			final Group g,
-			final UserName user,
-			final WorkspaceID wsid,
-			final Set<UserName> notifytargets,
-			final GroupRequestType type)
-			throws RequestExistsException, GroupsStorageException {
-		final Instant now = clock.instant();
-		final GroupRequest request = GroupRequest.getBuilder(
-				new RequestID(uuidGen.randomUUID()), g.getGroupID(), user,
-				CreateModAndExpireTimes.getBuilder(now, now.plus(REQUEST_EXPIRE_TIME)).build())
-				.withType(type, null, wsid)
-				.build();
-		storage.storeRequest(request);
-		notifications.notify(notifytargets, g, request);
-		return Optional.of(request);
 	}
 	
 	/** Remove a workspace from a group.
