@@ -2296,6 +2296,64 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void addWorkspaceWSAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
+				.thenReturn(true);
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		when(mocks.uuidGen.randomUUID()).thenReturn(id);
+		
+		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
+				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		
+		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+						.build())
+				.withRequestAddWorkspace(new WorkspaceID(34))
+				.build());
+		
+		verify(mocks.notifs).notify(
+				set(new UserName("own"), new UserName("admin")),
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name"), new UserName("own"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.withMember(new UserName("u1"))
+						.withMember(new UserName("u3"))
+						.withAdministrator(new UserName("admin"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withRequestAddWorkspace(new WorkspaceID(34))
+						.build()
+				);
+		
+		assertThat("incorrect request", ret, is(Optional.of(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withRequestAddWorkspace(new WorkspaceID(34))
+						.build())));
+	}
+	
+	@Test
 	public void addWorkspaceFailNulls() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final Groups g = mocks.groups;
@@ -2328,8 +2386,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void addWorkspaceFailNotGroupAdmin() throws Exception {
-		// this will need changes once requests work
+	public void addWorkspaceFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
@@ -2340,8 +2397,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
-				.thenReturn(true);
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("u1")))
+				.thenReturn(false);
 		
 		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
 				new UnauthorizedException(
@@ -2371,6 +2428,24 @@ public class GroupsTest {
 	
 	@Test
 	public void addWorkspaceFailWorkspaceInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withWorkspace(new WorkspaceID(34))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+				new WorkspaceExistsException("34"));
+	}
+	
+	@Test
+	public void addWorkspaceFailWorkspaceInGroupAtStorage() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));

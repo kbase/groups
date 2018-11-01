@@ -663,6 +663,7 @@ public class Groups {
 	 * @throws WorkspaceExistsException if the workspace is already part of the group.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * workspace.
+	 * @throws RequestExistsException if there's already an equivalent request in the system.
 	 */
 	public Optional<GroupRequest> addWorkspace(
 			final Token userToken,
@@ -670,21 +671,43 @@ public class Groups {
 			final WorkspaceID wsid)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, NoSuchWorkspaceException, WorkspaceHandlerException,
-				WorkspaceExistsException, UnauthorizedException {
+				WorkspaceExistsException, UnauthorizedException, RequestExistsException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		checkNotNull(wsid, "wsid");
 		final UserName user = userHandler.getUser(userToken);
-		final Group group = storage.getGroup(groupID);
+		final Group g = storage.getGroup(groupID);
+		if (g.getWorkspaceIDs().contains(wsid)) {
+			throw new WorkspaceExistsException(wsid.getID() + "");
+		}
 		final boolean isWSAdmin = wsHandler.isAdministrator(wsid, user);
-		if (group.isAdministrator(user) && isWSAdmin) {
+		if (g.isAdministrator(user) && isWSAdmin) {
 			storage.addWorkspace(groupID, wsid);
 			return Optional.absent();
+		}
+		if (isWSAdmin) {
+			return requestAddWorkspace(g, user, wsid);
 		}
 		//TODO WS handle requests here - one req type for approval needed from group admin, 1 for ws admin
 		throw new UnauthorizedException(String.format(
 				"User %s is not an admin for group %s or workspace %s",
 				user.getName(), groupID.getName(), wsid.getID()));
+	}
+
+	private Optional<GroupRequest> requestAddWorkspace(
+			final Group g,
+			final UserName user,
+			final WorkspaceID wsid)
+			throws RequestExistsException, GroupsStorageException {
+		final Instant now = clock.instant();
+		final GroupRequest request = GroupRequest.getBuilder(
+				new RequestID(uuidGen.randomUUID()), g.getGroupID(), user,
+				CreateModAndExpireTimes.getBuilder(now, now.plus(REQUEST_EXPIRE_TIME)).build())
+				.withRequestAddWorkspace(wsid)
+				.build();
+		storage.storeRequest(request);
+		notifications.notify(g.getAdministratorsAndOwner(), g, request);
+		return Optional.of(request);
 	}
 	/** Remove a workspace from a group.
 	 * @param userToken the user's token.
