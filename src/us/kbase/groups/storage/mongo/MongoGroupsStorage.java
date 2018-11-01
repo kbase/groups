@@ -53,6 +53,7 @@ import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -125,6 +126,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// find by target and state and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS,
 				Fields.REQUEST_MODIFICATION), null);
+		// find requests targeted towards ws or group admins and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE,
+				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
+		// find requests targeted towards ws or group admins with a particular state and
+		// sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE, Fields.REQUEST_STATUS,
+				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
 		// sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_MODIFICATION), null);
 		// find by state and sort/filter by modification time.
@@ -691,25 +699,25 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public List<GroupRequest> getRequestsByRequester(
 			final UserName requester) throws GroupsStorageException {
-		return getRequestsByUser(requester, Fields.REQUEST_REQUESTER, "requester");
+		checkNotNull(requester, "requester");
+		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name()));
 	}
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
 	// TODO NOW allow including closed requests
 	@Override
 	public List<GroupRequest> getRequestsByTarget(
-			final UserName target)
+			final UserName target,
+			final WorkspaceIDSet wsids)
 			throws GroupsStorageException {
-		return getRequestsByUser(target, Fields.REQUEST_TARGET, "target");
-	}
-
-	private List<GroupRequest> getRequestsByUser(
-			final UserName requester,
-			final String field,
-			final String fieldType)
-			throws GroupsStorageException {
-		checkNotNull(requester, fieldType);
-		return findRequests(new Document(field, requester.getName())
+		checkNotNull(target, "target");
+		checkNotNull(wsids, "wsids");
+		return findRequests(new Document("$or", Arrays.asList(
+				new Document(Fields.REQUEST_TARGET, target.getName()),
+				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
+						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
+								"$in", wsids.getIDs()))))
 				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name()));
 	}
 

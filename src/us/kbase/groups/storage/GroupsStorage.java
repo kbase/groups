@@ -20,6 +20,7 @@ import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 /** A storage interface for the {@link Groups} application.
@@ -147,13 +148,15 @@ public interface GroupsStorage {
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	//TODO NOW allow getting closed requests
-	/** Get the open requests that target a user, sorted by the modification time of the request.
+	/** Get the open requests that target a user or the workspaces a user administrates,
+	 * sorted by the modification time of the request.
 	 * @param target the targeted user.
+	 * @param wsids the targeted workspaces for that user.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	List<GroupRequest> getRequestsByTarget(
-			UserName target) throws GroupsStorageException;
+			UserName target, WorkspaceIDSet wsids) throws GroupsStorageException;
 
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	// only returns requests for that group specifically, e.g. no target user

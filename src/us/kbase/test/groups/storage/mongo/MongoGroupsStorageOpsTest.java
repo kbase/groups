@@ -3,6 +3,7 @@ package us.kbase.test.groups.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.groups.TestCommon.set;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
@@ -1237,6 +1239,13 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(150000))
 							.build())
+				.withInviteWorkspace(new WorkspaceID(1))
+				.build();
+		final GroupRequest fifth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo5"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(160000))
+							.build())
 				.withInviteToGroup(new UserName("bar"))
 				.build();
 		final GroupRequest user = GroupRequest.getBuilder(
@@ -1245,12 +1254,27 @@ public class MongoGroupsStorageOpsTest {
 							Instant.ofEpochMilli(20000), forever)
 					.build())
 				.build();
+		final GroupRequest requestws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("reqws"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withRequestAddWorkspace(new WorkspaceID(1))
+				.build();
 		final GroupRequest othertarget = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 							.build())
 				.withInviteToGroup(new UserName("bat"))
+				.build();
+		final GroupRequest otherws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("otherws"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(125000))
+							.build())
+				.withInviteWorkspace(new WorkspaceID(2))
 				.build();
 		final GroupRequest closed = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
@@ -1260,35 +1284,75 @@ public class MongoGroupsStorageOpsTest {
 				.withInviteToGroup(new UserName("bar"))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
+		final GroupRequest closedws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withInviteWorkspace(new WorkspaceID(1))
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
 		
 		manager.storage.storeRequest(fourth);
 		manager.storage.storeRequest(user);
+		manager.storage.storeRequest(closedws);
 		manager.storage.storeRequest(othertarget);
 		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(fifth);
+		manager.storage.storeRequest(requestws);
 		manager.storage.storeRequest(closed);
+		manager.storage.storeRequest(otherws);
 		manager.storage.storeRequest(third);
 		manager.storage.storeRequest(second);
 
-		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bar")), is(
-						Arrays.asList(first, second, third, fourth)));
+		final WorkspaceIDSet mt = WorkspaceIDSet.fromIDs(set());
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bat")), is(
+				manager.storage.getRequestsByTarget(new UserName("bar"), mt), is(
+						Arrays.asList(first, second, third, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1))), is(
+						Arrays.asList(first, second, third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1, 2))), is(
+						Arrays.asList(first, otherws, second, third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bat"), mt), is(
 						Arrays.asList(othertarget)));
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("baz")), is(
+				manager.storage.getRequestsByTarget(new UserName("bat"),
+						WorkspaceIDSet.fromInts(set(2))), is(
+						Arrays.asList(othertarget, otherws)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("baz"),
+						WorkspaceIDSet.fromInts(set(3))), is(
 						Collections.emptyList()));
 	}
 	
 	@Test
-	public void failGetRequestsByTarget() {
+	public void getRequestsByTargetFailNulls() throws Exception {
+		failGetRequestsByTarget(null, WorkspaceIDSet.fromIDs(set()),
+				new NullPointerException("target"));
+		failGetRequestsByTarget(new UserName("u"), null,
+				new NullPointerException("wsids"));
+	}
+	
+	private void failGetRequestsByTarget(
+			final UserName target,
+			final WorkspaceIDSet wsids,
+			final Exception expected) {
 		try {
-			manager.storage.getRequestsByTarget(null);
+			manager.storage.getRequestsByTarget(target, wsids);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("target"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	

@@ -267,6 +267,19 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "target_1_status_1_mod_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
+						.append("key", new Document("wstarg", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "wstarg_1_type_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("wstarg", 1)
+								.append("status", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "wstarg_1_status_1_type_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
 						.append("key", new Document("mod", 1))
 						.append("name", "mod_1")
 						.append("ns", col),
