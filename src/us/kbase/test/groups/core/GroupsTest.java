@@ -1958,7 +1958,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void acceptRequestAdminWS() throws Exception {
+	public void acceptRequestGroupAdminForRequestWS() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -2021,6 +2021,75 @@ public class GroupsTest {
 						.build())
 				.withRequestAddWorkspace(new WorkspaceID(56))
 				.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+				.build()));
+	}
+	
+	@Test
+	public void acceptRequestWSAdminForInviteWS() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteWorkspace(new WorkspaceID(44))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteWorkspace(new WorkspaceID(44))
+						.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(44), new UserName("wsadmin")))
+				.thenReturn(true);
+		when(mocks.wsHandler.getAdministrators(new WorkspaceID(44))).thenReturn(
+				set(new UserName("wsadmin"), new UserName("u2")));
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		
+		
+		final GroupRequest req = mocks.groups.acceptRequest(
+				new Token("token"), new RequestID(id));
+		
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44));
+		verify(mocks.storage).closeRequest(
+				new RequestID(id),
+				GroupRequestStatus.accepted(new UserName("wsadmin")),
+				Instant.ofEpochMilli(15000));
+		verify(mocks.notifs).accept(
+				set(new UserName("admin"), new UserName("u2"), new UserName("own"),
+						new UserName("a3")),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.withModificationTime(Instant.ofEpochMilli(15000))
+								.build())
+						.withInviteWorkspace(new WorkspaceID(44))
+						.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+						.build());
+		
+		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(15000))
+						.build())
+				.withInviteWorkspace(new WorkspaceID(44))
+				.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
 				.build()));
 	}
 	
