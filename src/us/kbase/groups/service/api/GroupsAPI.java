@@ -254,7 +254,7 @@ public class GroupsAPI {
 			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
 				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
 				UnauthorizedException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException, WorkspaceHandlerException {
+				GroupsStorageException, WorkspaceHandlerException, RequestExistsException {
 		final Optional<GroupRequest> req = groups.addWorkspace(
 				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
 		final Map<String, Object> ret;

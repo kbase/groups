@@ -27,8 +27,11 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.exceptions.WorkspaceExistsException;
+import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -108,7 +111,8 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, UserIsMemberException {
+				IllegalParameterException, UserIsMemberException, NoSuchWorkspaceException,
+				WorkspaceExistsException, WorkspaceHandlerException {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return toGroupRequestJSON(groups.acceptRequest(
 				getToken(token, true), new RequestID(requestID)));

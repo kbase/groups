@@ -391,6 +391,7 @@ public class GroupsAPITest {
 				.with("requester", "foo")
 				.with("type", "Request group membership")
 				.with("targetuser", null)
+				.with("targetws", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -458,6 +459,7 @@ public class GroupsAPITest {
 				.with("requester", "foo")
 				.with("type", "Invite to group")
 				.with("targetuser", "bar")
+				.with("targetws", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -541,6 +543,7 @@ public class GroupsAPITest {
 						.with("requester", "foo")
 						.with("type", "Request group membership")
 						.with("targetuser", null)
+						.with("targetws", null)
 						.with("status", "Open")
 						.with("createdate", 10000L)
 						.with("moddate", 10000L)
@@ -552,6 +555,7 @@ public class GroupsAPITest {
 						.with("requester", "bar")
 						.with("type", "Invite to group")
 						.with("targetuser", "baz")
+						.with("targetws", null)
 						.with("status", "Canceled")
 						.with("createdate", 20000L)
 						.with("moddate", 25000L)
@@ -776,6 +780,7 @@ public class GroupsAPITest {
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
+						.withRequestAddWorkspace(new WorkspaceID(42))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -786,8 +791,42 @@ public class GroupsAPITest {
 				.with("id", id.toString())
 				.with("groupid", "foo")
 				.with("requester", "u")
-				.with("type", "Request group membership") //TODO WS change to appropriate request
+				.with("type", "Request add workspace to group")
 				.with("targetuser", null)
+				.with("targetws", 42)
+				.with("status", "Open")
+				.with("createdate", 10000L)
+				.with("moddate", 10000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void addWorkspaceWithRequestInvite() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+				.thenReturn(Optional.of(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("u"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+									.build())
+						.withInviteWorkspace(new WorkspaceID(42))
+						.build()));
+		
+		final Map<String, Object> ret = new GroupsAPI(g)
+				.addWorkspace("my token", "foo", "34");
+		
+		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
+				.with("complete", false)
+				.with("id", id.toString())
+				.with("groupid", "foo")
+				.with("requester", "u")
+				.with("type", "Invite workspace to group")
+				.with("targetuser", null)
+				.with("targetws", 42)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)

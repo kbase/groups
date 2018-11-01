@@ -82,4 +82,25 @@ public class WorkspaceIDSetTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void contains() throws Exception {
+		final WorkspaceIDSet wsids = WorkspaceIDSet.fromInts(set(1, 23));
+		
+		assertThat("incorrect contains", wsids.contains(new WorkspaceID(1)), is(true));
+		assertThat("incorrect contains", wsids.contains(new WorkspaceID(23)), is(true));
+		assertThat("incorrect contains", wsids.contains(new WorkspaceID(2)), is(false));
+		assertThat("incorrect contains", wsids.contains(new WorkspaceID(22)), is(false));
+		assertThat("incorrect contains", wsids.contains(new WorkspaceID(24)), is(false));
+	}
+	
+	@Test
+	public void containsFail() {
+		try {
+			WorkspaceIDSet.fromInts(set()).contains(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("wsid"));
+		}
+	}
 }
