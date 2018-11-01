@@ -304,37 +304,22 @@ public class Groups {
 			final GroupRequest request,
 			final boolean isAdmin)
 			throws UnauthorizedException, WorkspaceHandlerException {
-		// could possibly simplify by attaching an authorizer instance for each type that handles
-		// this and other stuff. Authorizer would be specified by an interface.
 		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
 		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
 		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
 		if (user.equals(request.getRequester())) {
 			return new GroupRequestWithActions(request, creator);
-		}
-		if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
-				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
-				isAdmin) {
+		} else {
+			/* For the invite types, this code means that admins can't see the request unless they
+			 * created it (same deal for the list fns). I think that's ok - the request is between
+			 * a particular admin and a user or workspace. The other admins will get a notification
+			 * if it's accepted and then can remove the user / ws.
+			 * Still though, maybe some admin endpoint or this one should just return any request.
+			 * Or maybe admins should be able to view and cancel each other's requests.
+			 */
+			ensureIsRequestTarget(request, isAdmin, user, "access");
 			return new GroupRequestWithActions(request, target);
 		}
-		/* For the next two types, this code means that admins can't see the request unless they
-		 * created it (same deal for the list fns). I think that's ok - the request is between
-		 * a particular admin and a user or workspace. The other admins will get a notification
-		 * if it's accepted and then can remove the user / ws.
-		 * Still though, maybe some admin endpoint or this one should just return any request.
-		 * Or maybe admins should be able to view and cancel each other's requests.
-		 */
-		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-			if (user.equals(request.getTarget().orNull())) {
-				return new GroupRequestWithActions(request, target);
-			} // else fail
-		}
-		if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
-				isAdministrator(user, request.getWorkspaceTarget().get())) {
-			return new GroupRequestWithActions(request, target);
-		}
-		throw new UnauthorizedException(String.format("User %s cannot access request %s",
-				user.getName(), request.getID().getID()));
 	}	
 	
 	//TODO NOW allow getting closed requests
@@ -478,7 +463,7 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
-		ensureCanAcceptOrDeny(request, group, user, false);
+		ensureIsRequestTarget(request, group.isAdministrator(user), user, "deny");
 		
 		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
 		final GroupRequest r = storage.getRequest(requestID);
@@ -515,7 +500,7 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
-		ensureCanAcceptOrDeny(request, group, user, true);
+		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 			return processAcceptGroupMembershipRequest(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
@@ -579,29 +564,29 @@ public class Groups {
 		return r;
 	}
 	
-	private void ensureCanAcceptOrDeny(
+	private void ensureIsRequestTarget(
 			final GroupRequest request,
-			final Group group,
+			final boolean isGroupAdmin,
 			final UserName user,
-			final boolean accept)
+			final String actionVerb)
 			throws UnauthorizedException, WorkspaceHandlerException {
 		if (user.equals(request.getTarget().orNull())) {
 			return;
 		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
-				group.isAdministrator(user)) {
+				isGroupAdmin) {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
-				isAdministrator(user, request.getWorkspaceTarget().get())) {
+				isWSAdministrator(user, request.getWorkspaceTarget().get())) {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
-					user.getName(), accept ? "accept" : "deny", request.getID().getID()));
+					user.getName(), actionVerb, request.getID().getID()));
 		}
 	}
 	
 	// returns false if ws is missing / deleted
-	private boolean isAdministrator(final UserName user, final WorkspaceID wsid)
+	private boolean isWSAdministrator(final UserName user, final WorkspaceID wsid)
 			throws WorkspaceHandlerException {
 		try {
 			return wsHandler.isAdministrator(wsid, user);
