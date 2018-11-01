@@ -496,77 +496,38 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
+		final Collection<UserName> toNotify;
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-			return processAcceptRequestGroupMembership(request, user, group);
+			addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
+			toNotify = Arrays.asList(request.getRequester());
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-			return processAcceptInviteToGroup(request, group);
+			addMemberToKnownGoodGroup(group.getGroupID(), user);
+			toNotify = Collections.emptySet();
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) {
-			return processAcceptRequestAddWorkspace(request, user, group);
+			final WorkspaceID wsid = request.getWorkspaceTarget().get();
+			// do this first in case the ws has been deleted
+			toNotify = wsHandler.getAdministrators(wsid);
+			addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
 //		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
-//			return processAcceptInviteWorkspace(request, user, group);
+//			final WorkspaceID wsid = request.getWorkspaceTarget().get();
+//			// do this first in case the ws has been deleted
+//			toNotify = wsHandler.getAdministrators(wsid);
+//			addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
 		}
+		return acceptRequestUpdateAndNotify(group, request, user, toNotify);
 	}
-
-	// assumes group exists
-	private GroupRequest processAcceptInviteToGroup(
-			final GroupRequest request,
-			final Group group)
-			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
-		final UserName acceptedBy = request.getTarget().get();
-		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
-		return acceptRequestUpdateAndNotify(
-				group, request, acceptedBy, Collections.emptySet());
-	}
-
-	// assumes group exists
-	private GroupRequest processAcceptRequestGroupMembership(
-			final GroupRequest request,
-			final UserName acceptedBy,
-			final Group group)
-			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
-		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
-		return acceptRequestUpdateAndNotify(group, request, acceptedBy,
-				Arrays.asList(request.getRequester()));
-	}
-
-	// assumes group exists
-	private GroupRequest processAcceptRequestAddWorkspace(
-			final GroupRequest request,
-			final UserName acceptedBy,
-			final Group group)
-			throws  WorkspaceExistsException, GroupsStorageException, NoSuchRequestException,
-				NoSuchWorkspaceException, WorkspaceHandlerException {
-		final WorkspaceID wsid = request.getWorkspaceTarget().get();
-		// do this first in case the ws has been deleted
-		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
-		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-		return acceptRequestUpdateAndNotify(group, request, acceptedBy, wsadmins);
-	}
-	
-//	private GroupRequest processAcceptInviteWorkspace(
-//			final GroupRequest request,
-//			final UserName acceptedBy,
-//			final Group group)
-//			throws WorkspaceExistsException, GroupsStorageException, NoSuchRequestException,
-//				NoSuchWorkspaceException, WorkspaceHandlerException {
-//		final WorkspaceID wsid = request.getWorkspaceTarget().get();
-//		// do this first in case the ws has been deleted
-//		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
-//		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-//		return acceptRequestUpdateAndNotify(group, request, acceptedBy, wsadmins);
-//	}
 
 	// returns updated request
 	private GroupRequest acceptRequestUpdateAndNotify(
 			final Group group,
 			final GroupRequest request,
 			final UserName acceptedBy,
-			final Collection<UserName> targets)
+			final Collection<UserName> toNotify)
 			throws NoSuchRequestException, GroupsStorageException {
-		final Set<UserName> notifyTargets = new HashSet<>(targets);
+		final Set<UserName> notifyTargets = new HashSet<>(toNotify);
 		notifyTargets.addAll(group.getAdministratorsAndOwner());
 		notifyTargets.remove(acceptedBy);
 		storage.closeRequest(
