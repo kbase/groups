@@ -407,6 +407,16 @@ public class Groups {
 		}
 	}
 	
+	private void addWorkspaceToKnownGoodGroup(final GroupID groupID, final WorkspaceID wsid)
+			throws GroupsStorageException, WorkspaceExistsException {
+		try {
+			storage.addWorkspace(groupID, wsid);
+		} catch (NoSuchGroupException e) {
+			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
+					groupID.getName(), e.getMessage()), e);
+		}
+	}
+	
 	/** Cancel a request.
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request to cancel.
@@ -477,12 +487,17 @@ public class Groups {
 	 * administrator of the group targeted in the request, if a group is targeted.
 	 * @throws UserIsMemberException if the user to be added to a group is already a member of
 	 * the group.
-	 */
+	 * @throws WorkspaceExistsException if the workspace to be added to a group is already part
+	 * of the group.
+	 * @throws WorkspaceHandlerException if there is an error contacting the workspace service.
+	 * @throws NoSuchWorkspaceException if the workspace to be added to a group does not exist.
+	 */ 
 	public GroupRequest acceptRequest(
 			final Token userToken,
 			final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException, UserIsMemberException {
+				GroupsStorageException, UnauthorizedException, UserIsMemberException,
+				WorkspaceExistsException, NoSuchWorkspaceException, WorkspaceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -493,6 +508,8 @@ public class Groups {
 			return processAcceptGroupMembershipRequest(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			return processAcceptGroupInviteRequest(request, group);
+		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) {
+			return processAcceptRequestAddWorkspace(request, user, group);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
@@ -500,18 +517,14 @@ public class Groups {
 	}
 
 	// assumes group exists
-	// these accept methods are very similar - DRY up a bit?
 	private GroupRequest processAcceptGroupInviteRequest(
 			final GroupRequest request,
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		final UserName acceptedBy = request.getTarget().get();
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
-		storage.closeRequest(
-				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
-		final GroupRequest r = storage.getRequest(request.getID());
-		notifications.accept(new HashSet<>(group.getAdministratorsAndOwner()), r);
-		return r;
+		acceptRequest(request, acceptedBy);
+		return updateRequestAndNotifyAccept(request, group.getAdministratorsAndOwner());
 	}
 
 	// assumes group exists
@@ -521,16 +534,43 @@ public class Groups {
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
-		storage.closeRequest(
-				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
+		acceptRequest(request, acceptedBy);
 		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
 		targets.add(request.getRequester());
 		targets.remove(acceptedBy);
+		return updateRequestAndNotifyAccept(request, targets);
+	}
+
+	// assumes group exists
+	private GroupRequest processAcceptRequestAddWorkspace(
+			final GroupRequest request,
+			final UserName acceptedBy,
+			final Group group)
+			throws  WorkspaceExistsException, GroupsStorageException, NoSuchRequestException,
+				NoSuchWorkspaceException, WorkspaceHandlerException {
+		final WorkspaceID wsid = request.getWorkspaceTarget().get();
+		// do this first in case the ws has been deleted
+		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
+		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
+		acceptRequest(request, acceptedBy);
+		return updateRequestAndNotifyAccept(request, wsadmins);
+	}
+	
+	private GroupRequest updateRequestAndNotifyAccept(
+			final GroupRequest request,
+			final Set<UserName> targets)
+			throws NoSuchRequestException, GroupsStorageException {
 		final GroupRequest r = storage.getRequest(request.getID());
 		notifications.accept(targets, r);
 		return r;
 	}
-	
+
+	private void acceptRequest(final GroupRequest request, final UserName acceptedBy)
+			throws NoSuchRequestException, GroupsStorageException {
+		storage.closeRequest(
+				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
+	}
+
 	private void ensureCanAcceptOrDeny(
 			final GroupRequest request,
 			final Group group,
