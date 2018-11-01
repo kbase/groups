@@ -523,8 +523,8 @@ public class Groups {
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		final UserName acceptedBy = request.getTarget().get();
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
-		acceptRequest(request, acceptedBy);
-		return updateRequestAndNotifyAccept(request, group.getAdministratorsAndOwner());
+		return acceptUpdateRequestAndNotify(
+				request, acceptedBy, group.getAdministratorsAndOwner());
 	}
 
 	// assumes group exists
@@ -534,11 +534,10 @@ public class Groups {
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
-		acceptRequest(request, acceptedBy);
 		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
 		targets.add(request.getRequester());
 		targets.remove(acceptedBy);
-		return updateRequestAndNotifyAccept(request, targets);
+		return acceptUpdateRequestAndNotify(request, acceptedBy, targets);
 	}
 
 	// assumes group exists
@@ -552,25 +551,22 @@ public class Groups {
 		// do this first in case the ws has been deleted
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
 		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-		acceptRequest(request, acceptedBy);
-		return updateRequestAndNotifyAccept(request, wsadmins);
+		return acceptUpdateRequestAndNotify(request, acceptedBy, wsadmins);
 	}
 	
-	private GroupRequest updateRequestAndNotifyAccept(
+	// returns updated request
+	private GroupRequest acceptUpdateRequestAndNotify(
 			final GroupRequest request,
+			final UserName acceptedBy,
 			final Set<UserName> targets)
 			throws NoSuchRequestException, GroupsStorageException {
+		storage.closeRequest(
+				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
 		final GroupRequest r = storage.getRequest(request.getID());
 		notifications.accept(targets, r);
 		return r;
 	}
-
-	private void acceptRequest(final GroupRequest request, final UserName acceptedBy)
-			throws NoSuchRequestException, GroupsStorageException {
-		storage.closeRequest(
-				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
-	}
-
+	
 	private void ensureCanAcceptOrDeny(
 			final GroupRequest request,
 			final Group group,
