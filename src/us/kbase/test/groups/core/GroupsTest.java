@@ -881,7 +881,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestMembershipCreatorOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withRequestGroupMembership(),
 				set(GroupRequestUserAction.CANCEL));
@@ -889,7 +889,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestMembershipCreatorClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withRequestGroupMembership().withStatus(GroupRequestStatus.canceled()),
 				set());
@@ -897,7 +897,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestMembershipAdminOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("own"),
 				b -> b.withRequestGroupMembership(),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
@@ -905,7 +905,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestMembershipAdminClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("admin"),
 				b -> b.withRequestGroupMembership().withStatus(GroupRequestStatus.expired()),
 				set());
@@ -913,7 +913,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestWSCreatorOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withRequestAddWorkspace(new WorkspaceID(78)),
 				set(GroupRequestUserAction.CANCEL));
@@ -921,7 +921,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestWSCreatorClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withRequestAddWorkspace(new WorkspaceID(78))
 						.withStatus(GroupRequestStatus.canceled()),
@@ -930,7 +930,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestWSAdminOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("own"),
 				b -> b.withRequestAddWorkspace(new WorkspaceID(78)),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
@@ -938,7 +938,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestWSAdminClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("admin"),
 				b -> b.withRequestAddWorkspace(new WorkspaceID(78))
 						.withStatus(GroupRequestStatus.expired()),
@@ -947,7 +947,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestInviteCreatorOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withInviteToGroup(new UserName("invite")),
 				set(GroupRequestUserAction.CANCEL));
@@ -955,7 +955,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestInviteCreatorClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("user"),
 				b -> b.withInviteToGroup(new UserName("invite"))
 						.withStatus(GroupRequestStatus.canceled()),
@@ -964,7 +964,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestInviteTargetOpen() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("invite"),
 				b -> b.withInviteToGroup(new UserName("invite")),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
@@ -972,14 +972,48 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestInviteTargetClosed() throws Exception {
-		getRequestMembership(
+		getRequest(
 				new UserName("invite"),
 				b -> b.withInviteToGroup(new UserName("invite"))
 						.withStatus(GroupRequestStatus.expired()),
 				set());
 	}
 	
-	private void getRequestMembership(
+	@Test
+	public void getRequestInviteWSCreatorOpen() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withInviteWorkspace(new WorkspaceID(87)),
+				set(GroupRequestUserAction.CANCEL));
+	}
+	
+	@Test
+	public void getRequestInviteWSCreatorClosed() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withInviteWorkspace(new WorkspaceID(87))
+						.withStatus(GroupRequestStatus.canceled()),
+				set());
+	}
+	
+	@Test
+	public void getRequestInviteWSTargetOpen() throws Exception {
+		getRequest(
+				new UserName("wsadmin"),
+				b -> b.withInviteWorkspace(new WorkspaceID(87)),
+				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+	}
+	
+	@Test
+	public void getRequestInviteWSTargetClosed() throws Exception {
+		getRequest(
+				new UserName("wsadmin"),
+				b -> b.withInviteWorkspace(new WorkspaceID(87))
+						.withStatus(GroupRequestStatus.expired()),
+				set());
+	}
+	
+	private void getRequest(
 			final UserName user,
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn,
 			final Set<GroupRequestUserAction> expectedActions)
@@ -1002,6 +1036,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(87), new UserName("wsadmin")))
+				.thenReturn(true);
 		
 		final GroupRequestWithActions req = mocks.groups.getRequest(
 				new Token("token"), new RequestID(id));
@@ -1114,6 +1150,58 @@ public class GroupsTest {
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User own cannot access request " + id));
+	}
+	
+	@Test
+	public void getRequestFailInviteWSNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteWorkspace(new WorkspaceID(96))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(96), new UserName("someuser")))
+				.thenReturn(false);
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User someuser cannot access request " + id));
+	}
+	
+	@Test
+	public void getRequestFailInviteWSNoSuchWorkspace() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteWorkspace(new WorkspaceID(96))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(96), new UserName("someuser")))
+				.thenThrow(new NoSuchWorkspaceException("foo"));
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User someuser cannot access request " + id));
 	}
 	
 	private void failGetRequest(

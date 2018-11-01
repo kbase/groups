@@ -279,10 +279,11 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user may not view the request.
+	 * @throws WorkspaceHandlerException if the workspace could not be contacted.
 	 */
 	public GroupRequestWithActions getRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException {
+				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -302,7 +303,9 @@ public class Groups {
 			final UserName user,
 			final GroupRequest request,
 			final boolean isAdmin)
-			throws UnauthorizedException {
+			throws UnauthorizedException, WorkspaceHandlerException {
+		// could possibly simplify by attaching an authorizer instance for each type that handles
+		// this and other stuff. Authorizer would be specified by an interface.
 		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
 		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
 		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
@@ -314,22 +317,32 @@ public class Groups {
 				isAdmin) {
 			return new GroupRequestWithActions(request, target);
 		}
+		/* For the next two types, this code means that admins can't see the request unless they
+		 * created it (same deal for the list fns). I think that's ok - the request is between
+		 * a particular admin and a user or workspace. The other admins will get a notification
+		 * if it's accepted and then can remove the user / ws.
+		 * Still though, maybe some admin endpoint or this one should just return any request.
+		 * Or maybe admins should be able to view and cancel each other's requests.
+		 */
 		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			if (user.equals(request.getTarget().orNull())) {
 				return new GroupRequestWithActions(request, target);
-			}
-			/* this means that admins can't see this request unless they created it (same deal
-			 * for the list fns). I think that's ok - the request is between a particular admin
-			 * and a user. The othe admins will get a notification if it's accepted and then can
-			 * remove the user.
-			 * Still though, maybe some admin endpoint or this one should just return any request.
-			 * Or maybe admins should be able to view and cancel each other's requests.
-			 */
+			} // else fail
 		}
-		//TODO NOW handle case where user is workspace admin for request against workspace
+		if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
+			try {
+				if (wsHandler.isAdministrator(request.getWorkspaceTarget().get(), user)) {
+					return new GroupRequestWithActions(request, target);
+				}
+			} catch (NoSuchWorkspaceException e) {
+				// the workspace has been deleted in the time since the request was created,
+				// so deny access to the request until it's undeleted. If it's deleted it
+				// shouldn't be listed anyway.
+			} // else fail
+		}
 		throw new UnauthorizedException(String.format("User %s cannot access request %s",
 				user.getName(), request.getID().getID()));
-	}
+	}	
 	
 	//TODO NOW allow getting closed requests
 	/** Get requests that were created by the user.
