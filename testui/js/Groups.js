@@ -587,7 +587,8 @@ export default class {
                                 <th scope="col">Status</th>
                                 <th scope="col">Type</th>
                                 <th scope="col">Group ID</th>
-                                <th scope="col">Target</th>
+                                <th scope="col">Target User</th>
+                                <th scope="col">Target Workspace</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -602,6 +603,7 @@ export default class {
                                 <td>${s(r.type)}</td>
                                 <td>${s(r.groupid)}</td>
                                 <td>${s(r.targetuser)}</td>
+                                <td>${s(r.targetws)}</td>
                               </tr>
                               `
                       }
@@ -647,6 +649,7 @@ export default class {
                           <tr><th>Group ID</th><td>${s(json.groupid)}</td></tr>
                           <tr><th>Requester</th><td>${s(json.requester)}</td></tr>
                           <tr><th>Target user</th><td>${s(json.targetuser)}</td></tr>
+                          <tr><th>Target workspace</th><td>${s(json.targetws)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Status</th><td>${s(json.status)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
