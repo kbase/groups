@@ -497,11 +497,13 @@ public class Groups {
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-			return processAcceptGroupMembershipRequest(request, user, group);
+			return processAcceptRequestGroupMembership(request, user, group);
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-			return processAcceptGroupInviteRequest(request, group);
+			return processAcceptInviteToGroup(request, group);
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) {
 			return processAcceptRequestAddWorkspace(request, user, group);
+//		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
+//			return processAcceptInviteWorkspace(request, user, group);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
@@ -509,27 +511,25 @@ public class Groups {
 	}
 
 	// assumes group exists
-	private GroupRequest processAcceptGroupInviteRequest(
+	private GroupRequest processAcceptInviteToGroup(
 			final GroupRequest request,
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		final UserName acceptedBy = request.getTarget().get();
 		addMemberToKnownGoodGroup(group.getGroupID(), acceptedBy);
 		return acceptRequestUpdateAndNotify(
-				request, acceptedBy, group.getAdministratorsAndOwner());
+				group, request, acceptedBy, Collections.emptySet());
 	}
 
 	// assumes group exists
-	private GroupRequest processAcceptGroupMembershipRequest(
+	private GroupRequest processAcceptRequestGroupMembership(
 			final GroupRequest request,
 			final UserName acceptedBy,
 			final Group group)
 			throws GroupsStorageException, NoSuchRequestException, UserIsMemberException {
 		addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
-		final Set<UserName> targets = new HashSet<>(group.getAdministratorsAndOwner());
-		targets.add(request.getRequester());
-		targets.remove(acceptedBy);
-		return acceptRequestUpdateAndNotify(request, acceptedBy, targets);
+		return acceptRequestUpdateAndNotify(group, request, acceptedBy,
+				Arrays.asList(request.getRequester()));
 	}
 
 	// assumes group exists
@@ -543,19 +543,36 @@ public class Groups {
 		// do this first in case the ws has been deleted
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
 		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-		return acceptRequestUpdateAndNotify(request, acceptedBy, wsadmins);
+		return acceptRequestUpdateAndNotify(group, request, acceptedBy, wsadmins);
 	}
 	
+//	private GroupRequest processAcceptInviteWorkspace(
+//			final GroupRequest request,
+//			final UserName acceptedBy,
+//			final Group group)
+//			throws WorkspaceExistsException, GroupsStorageException, NoSuchRequestException,
+//				NoSuchWorkspaceException, WorkspaceHandlerException {
+//		final WorkspaceID wsid = request.getWorkspaceTarget().get();
+//		// do this first in case the ws has been deleted
+//		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
+//		addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
+//		return acceptRequestUpdateAndNotify(group, request, acceptedBy, wsadmins);
+//	}
+
 	// returns updated request
 	private GroupRequest acceptRequestUpdateAndNotify(
+			final Group group,
 			final GroupRequest request,
 			final UserName acceptedBy,
-			final Set<UserName> targets)
+			final Collection<UserName> targets)
 			throws NoSuchRequestException, GroupsStorageException {
+		final Set<UserName> notifyTargets = new HashSet<>(targets);
+		notifyTargets.addAll(group.getAdministratorsAndOwner());
+		notifyTargets.remove(acceptedBy);
 		storage.closeRequest(
 				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
 		final GroupRequest r = storage.getRequest(request.getID());
-		notifications.accept(targets, r);
+		notifications.accept(notifyTargets, r);
 		return r;
 	}
 	
