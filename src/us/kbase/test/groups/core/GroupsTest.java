@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import java.lang.reflect.Constructor;
 import java.time.Clock;
@@ -1924,12 +1925,12 @@ public class GroupsTest {
 				.withAdministrator(new UserName("a1"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
 		
 		final GroupRequest req = mocks.groups.acceptRequest(
 				new Token("token"), new RequestID(id));
 		
-		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("user"));
+		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("user"), inst(12000));
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
 				GroupRequestStatus.accepted(new UserName("own")),
@@ -2123,12 +2124,12 @@ public class GroupsTest {
 				.withAdministrator(new UserName("a1"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		when(mocks.clock.instant()).thenReturn(inst(13000), inst(15000));
 		
 		final GroupRequest req = mocks.groups.acceptRequest(
 				new Token("token"), new RequestID(id));
 		
-		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"));
+		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"), inst(13000));
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
 				GroupRequestStatus.accepted(new UserName("target")),
@@ -2251,9 +2252,10 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
 		doThrow(new UserIsMemberException("you silly")).when(mocks.storage)
-				.addMember(new GroupID("gid"), new UserName("user"));
+				.addMember(new GroupID("gid"), new UserName("user"), inst(14000));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UserIsMemberException("you silly"));
@@ -2278,9 +2280,10 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
-				.addMember(new GroupID("gid"), new UserName("target"));
+				.addMember(new GroupID("gid"), new UserName("target"), inst(14000));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new RuntimeException(
@@ -2491,10 +2494,11 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
 		mocks.groups.promoteMember(new Token("t"), new GroupID("gid"), new UserName("u3"));
 		
-		verify(mocks.storage).addAdmin(new GroupID("gid"), new UserName("u3"));
+		verify(mocks.storage).addAdmin(new GroupID("gid"), new UserName("u3"), inst(14000));
 	}
 	
 	@Test
@@ -2556,9 +2560,10 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
 		doThrow(new UserIsMemberException("boop")).when(mocks.storage)
-				.addAdmin(new GroupID("gid"), new UserName("u3"));
+				.addAdmin(new GroupID("gid"), new UserName("u3"), inst(14000));
 		
 		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
 				new UserIsMemberException("boop"));

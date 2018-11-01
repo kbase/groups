@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -267,14 +268,14 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		manager.storage.addMember(new GroupID("gid"), new UserName("foo"));
-		manager.storage.addMember(new GroupID("gid"), new UserName("bar"));
+		manager.storage.addMember(new GroupID("gid"), new UserName("foo"), inst(70000));
+		manager.storage.addMember(new GroupID("gid"), new UserName("bar"), inst(80000));
 		
 		assertThat("incorrect add member result", manager.storage.getGroup(new GroupID("gid")),
 				is(Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(80000)))
 						.withMember(new UserName("foo"))
 						.withMember(new UserName("bar"))
 						.build()));
@@ -282,8 +283,10 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void addMemberFailNulls() throws Exception {
-		failAddMember(null, new UserName("f"), new NullPointerException("groupID"));
-		failAddMember(new GroupID("g"), null, new NullPointerException("member"));
+		failAddMember(null, new UserName("f"), inst(1), new NullPointerException("groupID"));
+		failAddMember(new GroupID("g"), null, inst(1), new NullPointerException("member"));
+		failAddMember(new GroupID("g"), new UserName("f"), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -293,7 +296,8 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddMember(new GroupID("gid1"), new UserName("foo"), new NoSuchGroupException("gid1"));
+		failAddMember(new GroupID("gid1"), new UserName("foo"), inst(1),
+				new NoSuchGroupException("gid1"));
 	}
 	
 	@Test
@@ -304,7 +308,7 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("foo"))
 				.build());
 		
-		failAddMember(new GroupID("gid"), new UserName("foo"),
+		failAddMember(new GroupID("gid"), new UserName("foo"), inst(1),
 				new UserIsMemberException("User foo is already a member of group gid"));
 	}
 	
@@ -315,7 +319,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddMember(new GroupID("gid"), new UserName("uname3"),
+		failAddMember(new GroupID("gid"), new UserName("uname3"), inst(1),
 				new UserIsMemberException("User uname3 is the owner of group gid"));
 	}
 	
@@ -327,16 +331,17 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failAddMember(new GroupID("gid"), new UserName("admin"),
+		failAddMember(new GroupID("gid"), new UserName("admin"), inst(1),
 				new UserIsMemberException("User admin is an administrator of group gid"));
 	}
 	
 	private void failAddMember(
 			final GroupID gid,
 			final UserName member,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.addMember(gid, member);
+			manager.storage.addMember(gid, member, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -352,15 +357,15 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("bar"))
 				.build());
 		
-		manager.storage.addAdmin(new GroupID("gid"), new UserName("foo"));
+		manager.storage.addAdmin(new GroupID("gid"), new UserName("foo"), inst(75000));
 		// test that adding an admin that is already a member removes from member list
-		manager.storage.addAdmin(new GroupID("gid"), new UserName("bar"));
+		manager.storage.addAdmin(new GroupID("gid"), new UserName("bar"), inst(85000));
 		
 		assertThat("incorrect add admin result", manager.storage.getGroup(new GroupID("gid")),
 				is(Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(85000)))
 						.withMember(new UserName("user"))
 						.withAdministrator(new UserName("foo"))
 						.withAdministrator(new UserName("bar"))
@@ -369,8 +374,10 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void addAdminFailNulls() throws Exception {
-		failAddAdmin(null, new UserName("f"), new NullPointerException("groupID"));
-		failAddAdmin(new GroupID("g"), null, new NullPointerException("admin"));
+		failAddAdmin(null, new UserName("f"), inst(1), new NullPointerException("groupID"));
+		failAddAdmin(new GroupID("g"), null, inst(1), new NullPointerException("admin"));
+		failAddAdmin(new GroupID("g"), new UserName("f"), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -380,7 +387,8 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddAdmin(new GroupID("gid1"), new UserName("foo"), new NoSuchGroupException("gid1"));
+		failAddAdmin(new GroupID("gid1"), new UserName("foo"), inst(1),
+				new NoSuchGroupException("gid1"));
 	}
 	
 	@Test
@@ -390,7 +398,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddAdmin(new GroupID("gid"), new UserName("uname3"),
+		failAddAdmin(new GroupID("gid"), new UserName("uname3"), inst(1),
 				new UserIsMemberException("User uname3 is the owner of group gid"));
 	}
 	
@@ -402,16 +410,17 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failAddAdmin(new GroupID("gid"), new UserName("admin"),
+		failAddAdmin(new GroupID("gid"), new UserName("admin"), inst(1),
 				new UserIsMemberException("User admin is already an administrator of group gid"));
 	}
 	
 	private void failAddAdmin(
 			final GroupID gid,
 			final UserName admin,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.addAdmin(gid, admin);
+			manager.storage.addAdmin(gid, admin, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

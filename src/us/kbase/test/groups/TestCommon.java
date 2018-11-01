@@ -155,6 +155,10 @@ public class TestCommon {
 		return new HashSet<T>(Arrays.asList(objects));
 	}
 	
+	public static Instant inst(final long epochMilli) {
+		return Instant.ofEpochMilli(epochMilli);
+	}
+	
 	public static void assertClear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			if (bytes[i] != 0) {
