@@ -301,14 +301,15 @@ public class Groups {
 			final GroupRequest request,
 			final boolean isAdmin)
 			throws UnauthorizedException {
-		//TODO NOW handle case where user is workspace admin for request against workspace
 		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
 		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
 		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
 		if (user.equals(request.getRequester())) {
 			return new GroupRequestWithActions(request, creator);
 		}
-		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) && isAdmin) {
+		if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
+				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
+				isAdmin) {
 			return new GroupRequestWithActions(request, target);
 		}
 		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
@@ -323,6 +324,7 @@ public class Groups {
 			 * Or maybe admins should be able to view and cancel each other's requests.
 			 */
 		}
+		//TODO NOW handle case where user is workspace admin for request against workspace
 		throw new UnauthorizedException(String.format("User %s cannot access request %s",
 				user.getName(), request.getID().getID()));
 	}
@@ -498,7 +500,7 @@ public class Groups {
 	}
 
 	// assumes group exists
-	// this and the accept membership request code is similar - DRY up a bit?
+	// these accept methods are very similar - DRY up a bit?
 	private GroupRequest processAcceptGroupInviteRequest(
 			final GroupRequest request,
 			final Group group)
@@ -538,7 +540,8 @@ public class Groups {
 		//TODO WORKSPACE will need to handle workspace based auth for requests aimed at workspaces
 		if (user.equals(request.getTarget().orNull())) {
 			return;
-		} else if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) &&
+		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
+				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
 				group.isAdministrator(user)) {
 			return;
 		} else {
