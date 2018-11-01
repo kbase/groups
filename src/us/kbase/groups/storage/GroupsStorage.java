@@ -68,12 +68,13 @@ public interface GroupsStorage {
 	/** Remove a member from a group.
 	 * @param groupID the ID of the group.
 	 * @param member the member to remove.
+	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws NoSuchUserException if the group does not include the member, not counting
 	 * the owner or administrators.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	void removeMember(GroupID groupID, UserName member)
+	void removeMember(GroupID groupID, UserName member, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 
 	/** Add an administrator to a group. This will remove the user from the member list if present.
@@ -91,11 +92,12 @@ public interface GroupsStorage {
 	/** Demote an admin to a member of a group.
 	 * @param groupID the ID of the group.
 	 * @param member the admin to demote.
+	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws NoSuchUserException if the user is not an admin.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	void demoteAdmin(GroupID groupID, UserName member)
+	void demoteAdmin(GroupID groupID, UserName member, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	
 	/** Add a workspace to a group.

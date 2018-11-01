@@ -2416,10 +2416,11 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(12000));
 		
 		mocks.groups.removeMember(new Token("token"), new GroupID("gid"), new UserName("user"));
 		
-		verify(mocks.storage).removeMember(new GroupID("gid"), new UserName("user"));
+		verify(mocks.storage).removeMember(new GroupID("gid"), new UserName("user"), inst(12000));
 	}
 	
 	@Test
@@ -2462,8 +2463,9 @@ public class GroupsTest {
 				.withMember(new UserName("user"))
 				.withMember(new UserName("u3"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchUserException("Nope.")).when(mocks.storage)
-				.removeMember(new GroupID("gid"), new UserName("user"));
+				.removeMember(new GroupID("gid"), new UserName("user"), inst(5600));
 		
 		failRemoveMember(mocks.groups, new Token("token"), new GroupID("gid"),
 				new UserName("user"), new NoSuchUserException("Nope."));
@@ -2603,10 +2605,11 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withAdministrator(new UserName("u3"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(45000));
 		
 		mocks.groups.demoteAdmin(new Token("t"), new GroupID("gid"), new UserName("u3"));
 		
-		verify(mocks.storage).demoteAdmin(new GroupID("gid"), new UserName("u3"));
+		verify(mocks.storage).demoteAdmin(new GroupID("gid"), new UserName("u3"), inst(45000));
 	}
 	
 	@Test
@@ -2651,9 +2654,10 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.clock.instant()).thenReturn(inst(3));
 		
 		doThrow(new NoSuchUserException("boop")).when(mocks.storage)
-				.demoteAdmin(new GroupID("gid"), new UserName("u3"));
+				.demoteAdmin(new GroupID("gid"), new UserName("u3"), inst(3));
 		
 		failDemoteAdmin(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
 				new NoSuchUserException("boop"));
