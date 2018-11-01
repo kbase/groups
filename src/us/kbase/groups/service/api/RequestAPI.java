@@ -57,7 +57,7 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException {
+				IllegalParameterException, WorkspaceHandlerException {
 		final GroupRequestWithActions actions = groups.getRequest(
 							getToken(token, true), new RequestID(requestID));
 		final Map<String, Object> json = toGroupRequestJSON(actions.getRequest());
