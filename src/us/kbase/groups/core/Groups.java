@@ -39,6 +39,7 @@ import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -352,12 +353,15 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 */
 	public List<GroupRequest> getRequestsForTarget(final Token userToken)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+				WorkspaceHandlerException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByTarget(user);
+		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
+		return storage.getRequestsByTarget(user, ws);
 	}
 
 	//TODO NOW allow getting closed requests

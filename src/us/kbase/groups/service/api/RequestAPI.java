@@ -83,7 +83,8 @@ public class RequestAPI {
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getTargetedRequests(
 			@HeaderParam(HEADER_TOKEN) final String token)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+				WorkspaceHandlerException {
 		//TODO NOW allow getting all vs just open requests
 		//TODO NOW sort by created date, up or down
 		//TODO NOW allow date ranges and set limit

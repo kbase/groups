@@ -1203,7 +1203,10 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
-		when(mocks.storage.getRequestsByTarget(new UserName("user")))
+		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
+			.thenReturn(WorkspaceIDSet.fromInts(set(96)));
+		when(mocks.storage.getRequestsByTarget(
+				new UserName("user"), WorkspaceIDSet.fromInts(set(96))))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(new Token("token")),
@@ -1217,23 +1220,28 @@ public class GroupsTest {
 		final UUID id2 = UUID.randomUUID();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
-		when(mocks.storage.getRequestsByTarget(new UserName("target"))).thenReturn(Arrays.asList(
-				GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withInviteToGroup(new UserName("target"))
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id2), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.withModificationTime(Instant.ofEpochMilli(25000))
-								.build())
-						.withInviteToGroup(new UserName("target"))
-						.withStatus(GroupRequestStatus.accepted(new UserName("target")))
-						.build()
-				));
+		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
+				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
+		when(mocks.storage.getRequestsByTarget(
+				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24))))
+				.thenReturn(Arrays.asList(
+					GroupRequest.getBuilder(
+							new RequestID(id1), new GroupID("gid"), new UserName("user"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+							.build())
+							.withInviteToGroup(new UserName("target"))
+							.build(),
+					GroupRequest.getBuilder(
+							new RequestID(id2), new GroupID("gid"), new UserName("user"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+									.withModificationTime(Instant.ofEpochMilli(25000))
+									.build())
+							.withInviteWorkspace(new WorkspaceID(24))
+							.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+							.build()
+					));
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(new Token("token")),
 				is(Arrays.asList(
@@ -1250,8 +1258,8 @@ public class GroupsTest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
-								.withInviteToGroup(new UserName("target"))
-								.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+								.withInviteWorkspace(new WorkspaceID(24))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
 								.build()
 						)));
 	}
