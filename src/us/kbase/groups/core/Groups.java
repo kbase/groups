@@ -329,16 +329,9 @@ public class Groups {
 				return new GroupRequestWithActions(request, target);
 			} // else fail
 		}
-		if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
-			try {
-				if (wsHandler.isAdministrator(request.getWorkspaceTarget().get(), user)) {
-					return new GroupRequestWithActions(request, target);
-				}
-			} catch (NoSuchWorkspaceException e) {
-				// the workspace has been deleted in the time since the request was created,
-				// so deny access to the request until it's undeleted. If it's deleted it
-				// shouldn't be listed anyway.
-			} // else fail
+		if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
+				isAdministrator(user, request.getWorkspaceTarget().get())) {
+			return new GroupRequestWithActions(request, target);
 		}
 		throw new UnauthorizedException(String.format("User %s cannot access request %s",
 				user.getName(), request.getID().getID()));
@@ -472,13 +465,14 @@ public class Groups {
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user is not the target of the request or an
 	 * administrator of the group targeted in the request, if a group is targeted.
+	 * @throws WorkspaceHandlerException if the workspace service could not be contacted.
 	 */
 	public GroupRequest denyRequest(
 			final Token userToken,
 			final RequestID requestID,
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException {
+				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -590,13 +584,15 @@ public class Groups {
 			final Group group,
 			final UserName user,
 			final boolean accept)
-			throws UnauthorizedException {
-		//TODO WORKSPACE will need to handle workspace based auth for requests aimed at workspaces
+			throws UnauthorizedException, WorkspaceHandlerException {
 		if (user.equals(request.getTarget().orNull())) {
 			return;
 		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
 				group.isAdministrator(user)) {
+			return;
+		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
+				isAdministrator(user, request.getWorkspaceTarget().get())) {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
@@ -604,6 +600,16 @@ public class Groups {
 		}
 	}
 	
+	// returns false if ws is missing / deleted
+	private boolean isAdministrator(final UserName user, final WorkspaceID wsid)
+			throws WorkspaceHandlerException {
+		try {
+			return wsHandler.isAdministrator(wsid, user);
+		} catch (NoSuchWorkspaceException e) {
+			return false;
+		}
+	}
+
 	/** Remove a user from a group.
 	 * @param userToken the token of the user performing the remove operation.
 	 * @param groupID the ID of the group from which the user will be removed.

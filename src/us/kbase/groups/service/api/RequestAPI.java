@@ -139,7 +139,7 @@ public class RequestAPI {
 			final DenyRequestJSON denyJSON)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException {
+				IllegalParameterException, WorkspaceHandlerException {
 		final String reason;
 		if (denyJSON == null) {
 			reason = null;
