@@ -706,7 +706,7 @@ public class GroupsTest {
 				.build());
 		
 		verify(mocks.notifs).notify(
-				set(new UserName("foo")),
+				Arrays.asList(new UserName("foo")),
 				Group.getBuilder(
 						new GroupID("bar"), new GroupName("name"), new UserName("own"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))

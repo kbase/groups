@@ -2,7 +2,6 @@ package us.kbase.groups.notifications;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -25,7 +24,7 @@ public class SLF4JNotifier implements Notifications {
 	
 	@Override
 	public void notify(
-			final Set<UserName> targets,
+			final Collection<UserName> targets,
 			final Group group,
 			final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
@@ -50,7 +49,7 @@ public class SLF4JNotifier implements Notifications {
 	}
 	
 	@Override
-	public void deny(final Set<UserName> targets, final GroupRequest request) {
+	public void deny(final Collection<UserName> targets, final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s denied request %s, targets: %s",
 				request.getClosedBy().get().getName(), request.getID().getID(),
@@ -58,7 +57,7 @@ public class SLF4JNotifier implements Notifications {
 	}
 
 	@Override
-	public void accept(final Set<UserName> targets, final GroupRequest request) {
+	public void accept(final Collection<UserName> targets, final GroupRequest request) {
 		LoggerFactory.getLogger(getClass()).info(String.format(
 				"User %s accepted request %s, targets: %s",
 				request.getClosedBy().get().getName(), request.getID().getID(),
