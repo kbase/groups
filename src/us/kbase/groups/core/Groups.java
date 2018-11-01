@@ -497,22 +497,19 @@ public class Groups {
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
 		final Collection<UserName> toNotify;
+		// TODO NOW refactor into method & merge acceptupdatenotify
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 			addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
 			toNotify = Arrays.asList(request.getRequester());
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			addMemberToKnownGoodGroup(group.getGroupID(), user);
 			toNotify = Collections.emptySet();
-		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) {
+		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
+				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
 			// do this first in case the ws has been deleted
 			toNotify = wsHandler.getAdministrators(wsid);
 			addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
-//		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
-//			final WorkspaceID wsid = request.getWorkspaceTarget().get();
-//			// do this first in case the ws has been deleted
-//			toNotify = wsHandler.getAdministrators(wsid);
-//			addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
