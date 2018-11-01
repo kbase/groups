@@ -2001,7 +2001,8 @@ public class GroupsTest {
 				GroupRequestStatus.accepted(new UserName("admin")),
 				Instant.ofEpochMilli(15000));
 		verify(mocks.notifs).accept(
-				set(new UserName("u1"), new UserName("u2")),
+				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
+						new UserName("a3")),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
