@@ -54,6 +54,7 @@ public class Groups {
 	
 	//TODO WS needs a ws view for a request - or grant read to anyone who views a REQUST_ADD_WS request
 	//TODO LOGGING for all actions
+	//TODO NOW mod dates for group actions
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -390,7 +391,7 @@ public class Groups {
 	private void addMemberToKnownGoodGroup(final GroupID groupID, final UserName newMember)
 			throws GroupsStorageException, UserIsMemberException {
 		try {
-			storage.addMember(groupID, newMember);
+			storage.addMember(groupID, newMember, clock.instant());
 		} catch (NoSuchGroupException e) {
 			// shouldn't happen
 			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
@@ -625,7 +626,7 @@ public class Groups {
 		// a big deal
 		// this method will check that the user is not already an admin or the owner per the
 		// docs
-		storage.addAdmin(groupID, member);
+		storage.addAdmin(groupID, member, clock.instant());
 		// may want to notify here
 	}
 	

@@ -416,31 +416,41 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public void addMember(final GroupID groupID, final UserName member)
+	public void addMember(final GroupID groupID, final UserName member, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
-		addUser(groupID, member, false);
+		addUser(groupID, member, modDate, false);
 	}
 	
 	@Override
-	public void addAdmin(final GroupID groupID, final UserName admin)
+	public void addAdmin(final GroupID groupID, final UserName admin, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
 		checkNotNull(admin, "admin");
-		addUser(groupID, admin, true);
+		addUser(groupID, admin, modDate, true);
 	}
 
-	private void addUser(final GroupID groupID, final UserName member, final boolean asAdmin)
+	private void addUser(
+			final GroupID groupID,
+			final UserName member,
+			final Instant modDate,
+			final boolean asAdmin)
 			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(member, "member");
+		checkNotNull(modDate, "modDate");
 		
 		final Document notEqualToMember = new Document("$ne", member.getName());
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
 				.append(Fields.GROUP_OWNER, notEqualToMember)
 				.append(Fields.GROUP_ADMINS, notEqualToMember);
+		if (!asAdmin) {
+			query.append(Fields.GROUP_MEMBERS, notEqualToMember);
+		}
 			
-		final Document modification = new Document("$addToSet",
-				new Document(asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS,
-						member.getName()));
+		final Document modification =
+				new Document("$addToSet", new Document(
+						asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS, member.getName()))
+				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
+		
 		if (asAdmin) {
 			modification.append("$pull", new Document(Fields.GROUP_MEMBERS, member.getName()));
 		}
@@ -450,12 +460,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			if (res.getMatchedCount() != 1) {
 				handleNoMatchOnUserAdd(groupID, member, asAdmin);
 			}
-			if (res.getModifiedCount() != 1) {
-				// this can't happen if asAdmin is true
-				throw new UserIsMemberException(String.format(
-						"User %s is already a member of group %s",
-						member.getName(), groupID.getName()));
-			}
+			// if it matches, it gets modified, so we don't check
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
@@ -475,8 +480,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throw new UserIsMemberException(String.format(
 					"User %s is %san administrator of group %s",
 					member.getName(), asAdmin ? "already " : "", groupID.getName()));
+		} else if (g.getMembers().contains(member) && !asAdmin) {
+			throw new UserIsMemberException(String.format(
+					"User %s is already a member of group %s",
+					member.getName(), groupID.getName()));
 		} else {
-			/* this *could* be caused by a race condition if owner/admins change or group
+			/* this *could* be caused by a race condition if owner/admins/members change or group
 			 * deletions are implemented. However, it should be extremely rare and the
 			 * user add can just be retried so it's not worth special handling beyond
 			 * throwing an exception.
