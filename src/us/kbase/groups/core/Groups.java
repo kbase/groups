@@ -496,44 +496,41 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
+		final Set<UserName> notifyTargets = processRequest(group.getGroupID(), request);
+		notifyTargets.addAll(group.getAdministratorsAndOwner());
+		notifyTargets.remove(user);
+		storage.closeRequest(request.getID(), GroupRequestStatus.accepted(user), clock.instant());
+		final GroupRequest r = storage.getRequest(request.getID());
+		notifications.accept(notifyTargets, r);
+		return r;
+	}
+
+	// returns any users other than the group administrators that should be notified
+	private Set<UserName> processRequest(
+			final GroupID groupID,
+			final GroupRequest request)
+			throws GroupsStorageException, UserIsMemberException, NoSuchWorkspaceException,
+				WorkspaceHandlerException, WorkspaceExistsException {
 		final Collection<UserName> toNotify;
-		// TODO NOW refactor into method & merge acceptupdatenotify
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-			addMemberToKnownGoodGroup(group.getGroupID(), request.getRequester());
+			addMemberToKnownGoodGroup(groupID, request.getRequester());
 			toNotify = Arrays.asList(request.getRequester());
 		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-			addMemberToKnownGoodGroup(group.getGroupID(), user);
+			addMemberToKnownGoodGroup(groupID, request.getTarget().get());
 			toNotify = Collections.emptySet();
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
 				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
 			// do this first in case the ws has been deleted
 			toNotify = wsHandler.getAdministrators(wsid);
-			addWorkspaceToKnownGoodGroup(group.getGroupID(), wsid);
+			addWorkspaceToKnownGoodGroup(groupID, wsid);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
 		}
-		return acceptRequestUpdateAndNotify(group, request, user, toNotify);
+		return new HashSet<>(toNotify);
 	}
 
-	// returns updated request
-	private GroupRequest acceptRequestUpdateAndNotify(
-			final Group group,
-			final GroupRequest request,
-			final UserName acceptedBy,
-			final Collection<UserName> toNotify)
-			throws NoSuchRequestException, GroupsStorageException {
-		final Set<UserName> notifyTargets = new HashSet<>(toNotify);
-		notifyTargets.addAll(group.getAdministratorsAndOwner());
-		notifyTargets.remove(acceptedBy);
-		storage.closeRequest(
-				request.getID(), GroupRequestStatus.accepted(acceptedBy), clock.instant());
-		final GroupRequest r = storage.getRequest(request.getID());
-		notifications.accept(notifyTargets, r);
-		return r;
-	}
-	
 	private void ensureIsRequestTarget(
 			final GroupRequest request,
 			final boolean isGroupAdmin,
