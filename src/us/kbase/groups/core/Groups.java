@@ -717,35 +717,43 @@ public class Groups {
 		if (g.getWorkspaceIDs().contains(wsid)) {
 			throw new WorkspaceExistsException(wsid.getID() + "");
 		}
-		final boolean isWSAdmin = wsHandler.isAdministrator(wsid, user);
+		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
+		final boolean isWSAdmin = wsadmins.contains(user);
 		if (g.isAdministrator(user) && isWSAdmin) {
 			storage.addWorkspace(groupID, wsid);
 			return Optional.absent();
 		}
 		if (isWSAdmin) {
-			return requestAddWorkspace(g, user, wsid);
+			return createWorkspaceAdditionRequest(g, user, wsid, g.getAdministratorsAndOwner(),
+					GroupRequestType.REQUEST_ADD_WORKSPACE);
 		}
-		//TODO WS handle requests here - one req type for approval needed from group admin, 1 for ws admin
+		if (g.isAdministrator(user)) {
+			return createWorkspaceAdditionRequest(g, user, wsid, wsadmins,
+					GroupRequestType.INVITE_WORKSPACE);
+		}
 		throw new UnauthorizedException(String.format(
 				"User %s is not an admin for group %s or workspace %s",
 				user.getName(), groupID.getName(), wsid.getID()));
 	}
-
-	private Optional<GroupRequest> requestAddWorkspace(
+	
+	private Optional<GroupRequest> createWorkspaceAdditionRequest(
 			final Group g,
 			final UserName user,
-			final WorkspaceID wsid)
+			final WorkspaceID wsid,
+			final Set<UserName> notifytargets,
+			final GroupRequestType type)
 			throws RequestExistsException, GroupsStorageException {
 		final Instant now = clock.instant();
 		final GroupRequest request = GroupRequest.getBuilder(
 				new RequestID(uuidGen.randomUUID()), g.getGroupID(), user,
 				CreateModAndExpireTimes.getBuilder(now, now.plus(REQUEST_EXPIRE_TIME)).build())
-				.withRequestAddWorkspace(wsid)
+				.withType(type, null, wsid)
 				.build();
 		storage.storeRequest(request);
-		notifications.notify(g.getAdministratorsAndOwner(), g, request);
+		notifications.notify(notifytargets, g, request);
 		return Optional.of(request);
 	}
+	
 	/** Remove a workspace from a group.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
