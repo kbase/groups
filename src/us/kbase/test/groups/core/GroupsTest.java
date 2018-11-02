@@ -415,13 +415,14 @@ public class GroupsTest {
 						.withNonexistentWorkspace(34)
 						.withNonexistentWorkspace(86) // will throw error, should be ignored
 						.build());
+		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchWorkspaceException("86")).when(mocks.storage)
-				.removeWorkspace(new GroupID("bar"), new WorkspaceID(86));
+				.removeWorkspace(new GroupID("bar"), new WorkspaceID(86), inst(5600));
 		
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("bar"), new WorkspaceID(34));
+		verify(mocks.storage).removeWorkspace(new GroupID("bar"), new WorkspaceID(34), inst(5600));
 		
 		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
@@ -1990,13 +1991,13 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
 				set(new UserName("u1"), new UserName("u2")));
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
 		
 		
 		final GroupRequest req = mocks.groups.acceptRequest(
 				new Token("token"), new RequestID(id));
 		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(56));
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(12000));
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
 				GroupRequestStatus.accepted(new UserName("admin")),
@@ -2059,13 +2060,13 @@ public class GroupsTest {
 				.thenReturn(true);
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(44))).thenReturn(
 				set(new UserName("wsadmin"), new UserName("u2")));
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
+		when(mocks.clock.instant()).thenReturn(inst(11000), inst(15000));
 		
 		
 		final GroupRequest req = mocks.groups.acceptRequest(
 				new Token("token"), new RequestID(id));
 		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44));
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44), inst(11000));
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
 				GroupRequestStatus.accepted(new UserName("wsadmin")),
@@ -2369,8 +2370,9 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
 				set(new UserName("u1"), new UserName("u2")));
+		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
-				.addWorkspace(new GroupID("gid"), new WorkspaceID(56));
+				.addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(4400));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new RuntimeException(
@@ -2691,11 +2693,12 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
+		when(mocks.clock.instant()).thenReturn(inst(3400));
 		
 		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
 				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
 		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(3400));
 		
 		assertThat("incorrect request", ret, is(Optional.absent()));
 	}
@@ -2900,9 +2903,10 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
+		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
 		doThrow(new WorkspaceExistsException("34")).when(mocks.storage)
-				.addWorkspace(new GroupID("gid"), new WorkspaceID(34));
+				.addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
 		
 		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
 				new WorkspaceExistsException("34"));
@@ -2936,10 +2940,11 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
 				.thenReturn(false);
+		when(mocks.clock.instant()).thenReturn(inst(7100));
 		
 		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7100));
 	}
 	
 	//TODO WS find groups where you're an admin or a member
@@ -2957,10 +2962,11 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
 				.thenReturn(true);
+		when(mocks.clock.instant()).thenReturn(inst(7500));
 		
 		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7500));
 	}
 	
 	@Test
@@ -3030,9 +3036,10 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
 				.thenReturn(true);
+		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
 		doThrow(new NoSuchWorkspaceException("34 not in group")).when(mocks.storage)
-				.removeWorkspace(new GroupID("gid"), new WorkspaceID(34));
+				.removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
 		
 		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
 				new NoSuchWorkspaceException("34 not in group"));

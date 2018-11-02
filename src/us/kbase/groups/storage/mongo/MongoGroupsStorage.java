@@ -547,17 +547,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid)
+	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException {
-		if (!alterWorkspaceInGroup(groupID, wsid, true)) {
+		if (!alterWorkspaceInGroup(groupID, wsid, modDate, true)) {
 			throw new WorkspaceExistsException(wsid.getID() + "");
 		}
 	}
 	
 	@Override
-	public void removeWorkspace(final GroupID groupID, final WorkspaceID wsid)
+	public void removeWorkspace(
+			final GroupID groupID,
+			final WorkspaceID wsid,
+			final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException {
-		if (!alterWorkspaceInGroup(groupID, wsid, false)) {
+		if (!alterWorkspaceInGroup(groupID, wsid, modDate, false)) {
 			throw new NoSuchWorkspaceException(String.format(
 					"Group %s does not include workspace %s", groupID.getName(), wsid.getID()));
 		}
@@ -567,19 +570,27 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private boolean alterWorkspaceInGroup(
 			final GroupID groupID,
 			final WorkspaceID wsid,
+			final Instant modDate,
 			final boolean add)
 			throws NoSuchGroupException, GroupsStorageException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(wsid, "wsid");
-		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
+		checkNotNull(modDate, "modDate");
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(Fields.GROUP_WORKSPACES,
+						add ? new Document("$ne", wsid.getID()) : wsid.getID());
 		final Document update = new Document(add ? "$addToSet" : "$pull",
-				new Document(Fields.GROUP_WORKSPACES, wsid.getID()));
+				new Document(Fields.GROUP_WORKSPACES, wsid.getID()))
+				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
 			if (res.getMatchedCount() != 1) {
-				throw new NoSuchGroupException(groupID.getName());
+				getGroup(groupID); // throws no such group exception
+				return false; // no match, throw appropriate exception in calling method
+			} else {
+				return true;
 			}
-			return res.getModifiedCount() == 1;
+			// if it matched, the doc was updated, so no need to check for modification
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}

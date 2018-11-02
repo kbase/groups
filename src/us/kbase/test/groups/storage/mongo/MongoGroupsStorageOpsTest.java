@@ -603,13 +603,13 @@ public class MongoGroupsStorageOpsTest {
 				.withWorkspace(new WorkspaceID(24))
 				.build());
 		
-		manager.storage.addWorkspace(new GroupID("gid"), new WorkspaceID(42));
+		manager.storage.addWorkspace(new GroupID("gid"), new WorkspaceID(42), inst(65000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
 				Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(65000)))
 						.withWorkspace(new WorkspaceID(24))
 						.withWorkspace(new WorkspaceID(42))
 						.build()));
@@ -617,8 +617,10 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void addWorkspaceFailNulls() throws Exception {
-		failAddWorkspace(null, new WorkspaceID(1), new NullPointerException("groupID"));
-		failAddWorkspace(new GroupID("g"), null, new NullPointerException("wsid"));
+		failAddWorkspace(null, new WorkspaceID(1), inst(1), new NullPointerException("groupID"));
+		failAddWorkspace(new GroupID("g"), null, inst(1), new NullPointerException("wsid"));
+		failAddWorkspace(new GroupID("g"), new WorkspaceID(1), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -628,8 +630,10 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddWorkspace(new GroupID("gid1"), new WorkspaceID(1),
+		failAddWorkspace(new GroupID("gid1"), new WorkspaceID(1), inst(60000),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -640,16 +644,19 @@ public class MongoGroupsStorageOpsTest {
 				.withWorkspace(new WorkspaceID(70))
 				.build());
 		
-		failAddWorkspace(new GroupID("gid"), new WorkspaceID(70),
+		failAddWorkspace(new GroupID("gid"), new WorkspaceID(70), inst(32),
 				new WorkspaceExistsException("70"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failAddWorkspace(
 			final GroupID g,
 			final WorkspaceID ws,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.addWorkspace(g, ws);
+			manager.storage.addWorkspace(g, ws, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -665,21 +672,24 @@ public class MongoGroupsStorageOpsTest {
 				.withWorkspace(new WorkspaceID(42))
 				.build());
 		
-		manager.storage.removeWorkspace(new GroupID("gid"), new WorkspaceID(42));
+		manager.storage.removeWorkspace(new GroupID("gid"), new WorkspaceID(42), inst(109200));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
 				Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(109200)))
 						.withWorkspace(new WorkspaceID(24))
 						.build()));
 	}
 	
 	@Test
 	public void removeWorkspaceFailNulls() throws Exception {
-		failRemoveWorkspace(null, new WorkspaceID(1), new NullPointerException("groupID"));
-		failRemoveWorkspace(new GroupID("g"), null, new NullPointerException("wsid"));
+		failRemoveWorkspace(null, new WorkspaceID(1), inst(1),
+				new NullPointerException("groupID"));
+		failRemoveWorkspace(new GroupID("g"), null, inst(1), new NullPointerException("wsid"));
+		failRemoveWorkspace(new GroupID("g"), new WorkspaceID(1), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -689,8 +699,10 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failRemoveWorkspace(new GroupID("gid1"), new WorkspaceID(1),
+		failRemoveWorkspace(new GroupID("gid1"), new WorkspaceID(1), inst(1),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -701,16 +713,19 @@ public class MongoGroupsStorageOpsTest {
 				.withWorkspace(new WorkspaceID(70))
 				.build());
 		
-		failRemoveWorkspace(new GroupID("gid"), new WorkspaceID(71),
+		failRemoveWorkspace(new GroupID("gid"), new WorkspaceID(71), inst(1),
 				new NoSuchWorkspaceException("Group gid does not include workspace 71"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failRemoveWorkspace(
 			final GroupID g,
 			final WorkspaceID ws,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.removeWorkspace(g, ws);
+			manager.storage.removeWorkspace(g, ws, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
