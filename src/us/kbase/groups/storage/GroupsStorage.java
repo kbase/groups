@@ -24,6 +24,11 @@ import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 /** A storage interface for the {@link Groups} application.
+ * 
+ * Warning: for the methods that allow specifing the group modification time, no checking is done
+ * to ensure the modification time is after the group creation time. If the modification time
+ * is set incorrectly, this may result in groups that cannot be retrieved from the database
+ * because they violate the group constraint that mod time > creation time.
  * @author gaprice@lbl.gov
  *
  */
@@ -103,21 +108,23 @@ public interface GroupsStorage {
 	/** Add a workspace to a group.
 	 * @param groupID the group ID.
 	 * @param wsid the workspace ID.
+	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws WorkspaceExistsException if the workspace already exists in the group.
 	 */
-	void addWorkspace(GroupID groupID, WorkspaceID wsid)
+	void addWorkspace(GroupID groupID, WorkspaceID wsid, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException;
 	
 	/** Remove a workspace from a group.
 	 * @param groupID the group ID.
 	 * @param wsid the workspace ID.
+	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchWorkspaceException if the group does not contain the workspace.
 	 */
-	void removeWorkspace(GroupID groupID, WorkspaceID wsid)
+	void removeWorkspace(GroupID groupID, WorkspaceID wsid, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException;
 	
 	/** Store a new request. The request ID must not already be present in the system.

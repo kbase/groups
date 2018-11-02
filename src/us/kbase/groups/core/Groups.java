@@ -168,7 +168,7 @@ public class Groups {
 				user, g.getWorkspaceIDs(), !g.isMember(user));
 		for (final int wsid: wis.getNonexistentWorkspaces()) {
 			try {
-				storage.removeWorkspace(g.getGroupID(), new WorkspaceID(wsid));
+				storage.removeWorkspace(g.getGroupID(), new WorkspaceID(wsid), clock.instant());
 			} catch (NoSuchWorkspaceException | IllegalParameterException e) {
 				// do nothing, if the workspace isn't there fine.
 				// The IPE is impossible, the WIS won't allow it
@@ -410,7 +410,7 @@ public class Groups {
 	private void addWorkspaceToKnownGoodGroup(final GroupID groupID, final WorkspaceID wsid)
 			throws GroupsStorageException, WorkspaceExistsException {
 		try {
-			storage.addWorkspace(groupID, wsid);
+			storage.addWorkspace(groupID, wsid, clock.instant());
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
 					groupID.getName(), e.getMessage()), e);
@@ -704,7 +704,7 @@ public class Groups {
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
 		final boolean isWSAdmin = wsadmins.contains(user);
 		if (g.isAdministrator(user) && isWSAdmin) {
-			storage.addWorkspace(groupID, wsid);
+			storage.addWorkspace(groupID, wsid, clock.instant());
 			return Optional.absent();
 		}
 		if (isWSAdmin) {
@@ -747,7 +747,7 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
 		if (group.isAdministrator(user) || wsHandler.isAdministrator(wsid, user)) {
-			storage.removeWorkspace(groupID, wsid);
+			storage.removeWorkspace(groupID, wsid, clock.instant());
 			return;
 		}
 		throw new UnauthorizedException(String.format(
