@@ -54,7 +54,7 @@ public class Groups {
 	
 	//TODO WS needs a ws view for a request - or grant read to anyone who views a REQUST_ADD_WS request
 	//TODO LOGGING for all actions
-	//TODO NOW mod dates for group actions
+	//TODO NOW mod dates for add / remove ws
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -584,7 +584,7 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
 		if (member.equals(user) || group.isAdministrator(user)) {
-			storage.removeMember(groupID, member);
+			storage.removeMember(groupID, member, clock.instant());
 			//any notification here? I don't think so
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not administrate group %s",
@@ -655,7 +655,7 @@ public class Groups {
 					"Only the group owner can demote administrators");
 		}
 		// this method will throw an error if the user is not an admin.
-		storage.demoteAdmin(groupID, admin);
+		storage.demoteAdmin(groupID, admin, clock.instant());
 		// notify? I'm thinking not
 	}
 	

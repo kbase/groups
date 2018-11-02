@@ -500,53 +500,50 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public void removeMember(final GroupID groupID, final UserName member)
+	public void removeMember(final GroupID groupID, final UserName member, final Instant modDate)
 			throws NoSuchGroupException, NoSuchUserException, GroupsStorageException {
-		checkNotNull(groupID, "groupID");
 		checkNotNull(member, "member");
+		demoteMember(groupID, member, modDate, false);
+	}
+	
+	private void demoteMember(
+			final GroupID groupID,
+			final UserName member,
+			final Instant modDate,
+			final boolean asAdmin)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		checkNotNull(groupID, "groupID");
+		checkNotNull(modDate, "modDate");
+		final String field = asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS;
 		
-		final Document query = new Document(Fields.GROUP_ID, groupID.getName());
-		final Document pull = new Document("$pull",
-				new Document(Fields.GROUP_MEMBERS, member.getName()));
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(field, member.getName());
+	
+		final Document mod = new Document("$pull", new Document(field, member.getName()))
+				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
+		if (asAdmin) {
+			mod.append("$addToSet", new Document(Fields.GROUP_MEMBERS, member.getName()));
+		}
 		
 		try {
-			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, pull);
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, mod);
 			if (res.getMatchedCount() != 1) {
-				throw new NoSuchGroupException(groupID.getName());
-			}
-			if (res.getModifiedCount() != 1) {
-				throw new NoSuchUserException(String.format("No member %s in group %s",
+				getGroup(groupID); // will throw no such group
+				throw new NoSuchUserException(String.format("No %s %s in group %s",
+						asAdmin ? "administrator" : "member",
 						member.getName(), groupID.getName()));
 			}
+			// if it matched it got modified, so don't check
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
 	}
 	
 	@Override
-	public void demoteAdmin(final GroupID groupID, final UserName admin)
+	public void demoteAdmin(final GroupID groupID, final UserName admin, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
-		checkNotNull(groupID, "groupID");
 		checkNotNull(admin, "admin");
-		
-		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				.append(Fields.GROUP_ADMINS, admin.getName());
-		
-		final Document mod = new Document("$pull",
-					new Document(Fields.GROUP_ADMINS, admin.getName()))
-				.append("$addToSet", new Document(Fields.GROUP_MEMBERS, admin.getName()));
-		
-		try {
-			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, mod);
-			if (res.getMatchedCount() != 1) {
-				getGroup(groupID); // will throw no such group
-				throw new NoSuchUserException(String.format("No administrator %s in group %s",
-						admin.getName(), groupID.getName()));
-			}
-			// if there's a match, the document must be modified, so we don't check
-		} catch (MongoException e) {
-			throw wrapMongoException(e);
-		}
+		demoteMember(groupID, admin, modDate, true);
 	}
 	
 	@Override

@@ -437,22 +437,24 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("baz"))
 				.build());
 		
-		manager.storage.removeMember(new GroupID("gid"), new UserName("foo"));
-		manager.storage.removeMember(new GroupID("gid"), new UserName("baz"));
+		manager.storage.removeMember(new GroupID("gid"), new UserName("foo"), inst(76000));
+		manager.storage.removeMember(new GroupID("gid"), new UserName("baz"), inst(82000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
 				Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(82000)))
 						.withMember(new UserName("bar"))
 						.build()));
 	}
 	
 	@Test
 	public void removeMemberFailNulls() throws Exception {
-		failRemoveMember(null, new UserName("f"), new NullPointerException("groupID"));
-		failRemoveMember(new GroupID("g"), null, new NullPointerException("member"));
+		failRemoveMember(null, new UserName("f"), inst(1), new NullPointerException("groupID"));
+		failRemoveMember(new GroupID("g"), null, inst(1), new NullPointerException("member"));
+		failRemoveMember(new GroupID("g"), new UserName("u"), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -463,7 +465,7 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("foo"))
 				.build());
 		
-		failRemoveMember(new GroupID("gid1"), new UserName("foo"),
+		failRemoveMember(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
 	}
 	
@@ -476,16 +478,17 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("bar"))
 				.build());
 		
-		failRemoveMember(new GroupID("gid"), new UserName("bar"), new NoSuchUserException(
+		failRemoveMember(new GroupID("gid"), new UserName("bar"), inst(1), new NoSuchUserException(
 				"No member bar in group gid"));
 	}
 	
 	private void failRemoveMember(
 			final GroupID gid,
 			final UserName member,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.removeMember(gid, member);
+			manager.storage.removeMember(gid, member, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -503,14 +506,14 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("bat"))
 				.build());
 		
-		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bar"));
-		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bat"));
+		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bar"), inst(90000));
+		manager.storage.demoteAdmin(new GroupID("gid"), new UserName("bat"), inst(80000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
 				Group.getBuilder(
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
+								Instant.ofEpochMilli(80000)))
 						.withMember(new UserName("foo"))
 						.withMember(new UserName("bar"))
 						.withMember(new UserName("bat"))
@@ -520,8 +523,10 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void demoteAdminFailNulls() throws Exception {
-		failDemoteAdmin(null, new UserName("f"), new NullPointerException("groupID"));
-		failDemoteAdmin(new GroupID("g"), null, new NullPointerException("admin"));
+		failDemoteAdmin(null, new UserName("f"), inst(1), new NullPointerException("groupID"));
+		failDemoteAdmin(new GroupID("g"), null, inst(1), new NullPointerException("admin"));
+		failDemoteAdmin(new GroupID("g"), new UserName("u"), null,
+				new NullPointerException("modDate"));
 	}
 	
 	@Test
@@ -532,7 +537,7 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("foo"))
 				.build());
 		
-		failDemoteAdmin(new GroupID("gid1"), new UserName("foo"),
+		failDemoteAdmin(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
 	}
 	
@@ -545,16 +550,17 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("bar"))
 				.build());
 		
-		failDemoteAdmin(new GroupID("gid"), new UserName("bar"), new NoSuchUserException(
+		failDemoteAdmin(new GroupID("gid"), new UserName("bar"), inst(1), new NoSuchUserException(
 				"No administrator bar in group gid"));
 	}
 	
 	private void failDemoteAdmin(
 			final GroupID gid,
 			final UserName member,
+			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.demoteAdmin(gid, member);
+			manager.storage.demoteAdmin(gid, member, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
