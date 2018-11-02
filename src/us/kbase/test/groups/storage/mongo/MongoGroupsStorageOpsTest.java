@@ -298,8 +298,16 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddMember(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
+	private void assertModificationTimeIs(final GroupID groupID, final Instant modDate)
+			throws Exception {
+		assertThat("incorrect mod time", manager.storage.getGroup(groupID).getModificationDate(),
+				is(modDate));
+	}
+
 	@Test
 	public void addMemberFailExists() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
@@ -310,17 +318,21 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddMember(new GroupID("gid"), new UserName("foo"), inst(1),
 				new UserIsMemberException("User foo is already a member of group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
 	public void addMemberFailOwner() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000)))
 				.build());
 		
 		failAddMember(new GroupID("gid"), new UserName("uname3"), inst(1),
 				new UserIsMemberException("User uname3 is the owner of group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(60000));
 	}
 	
 	@Test
@@ -333,6 +345,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddMember(new GroupID("gid"), new UserName("admin"), inst(1),
 				new UserIsMemberException("User admin is an administrator of group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failAddMember(
@@ -389,6 +403,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddAdmin(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -400,6 +416,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddAdmin(new GroupID("gid"), new UserName("uname3"), inst(1),
 				new UserIsMemberException("User uname3 is the owner of group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -412,6 +430,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failAddAdmin(new GroupID("gid"), new UserName("admin"), inst(1),
 				new UserIsMemberException("User admin is already an administrator of group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failAddAdmin(
@@ -467,6 +487,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failRemoveMember(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -480,6 +502,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failRemoveMember(new GroupID("gid"), new UserName("bar"), inst(1), new NoSuchUserException(
 				"No member bar in group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failRemoveMember(
@@ -539,6 +563,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failDemoteAdmin(new GroupID("gid1"), new UserName("foo"), inst(1),
 				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
@@ -552,6 +578,8 @@ public class MongoGroupsStorageOpsTest {
 		
 		failDemoteAdmin(new GroupID("gid"), new UserName("bar"), inst(1), new NoSuchUserException(
 				"No administrator bar in group gid"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	private void failDemoteAdmin(

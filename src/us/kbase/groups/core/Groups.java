@@ -56,6 +56,14 @@ public class Groups {
 	//TODO LOGGING for all actions
 	//TODO NOW mod dates for add / remove ws
 	
+	/* could probably abstract the workspace handling (and upcoming apps handling) in a
+	 * general resource handling system, where resources and handlers for those resources
+	 * could be specified in a configuration file. Then you could add new resources w/o major
+	 * code changes.
+	 * 
+	 * That being said, it's probably only ever going to be workspaces and apps so YAGNI.
+	 */
+	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
