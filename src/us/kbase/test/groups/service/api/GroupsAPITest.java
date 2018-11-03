@@ -18,11 +18,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.CreateAndModTimes;
@@ -763,7 +763,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
 				.addWorkspace("my token", "foo", "34");

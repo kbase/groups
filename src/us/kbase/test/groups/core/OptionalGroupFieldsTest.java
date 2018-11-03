@@ -25,6 +25,7 @@ public class OptionalGroupFieldsTest {
 		final OptionalGroupFields ofg = OptionalGroupFields.getDefault();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
+		assertThat("incorrect update", ofg.hasUpdate(), is(false));
 	}
 	
 	@Test
@@ -32,6 +33,7 @@ public class OptionalGroupFieldsTest {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder().build();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
+		assertThat("incorrect update", ofg.hasUpdate(), is(false));
 	}
 	
 	@Test
@@ -41,6 +43,7 @@ public class OptionalGroupFieldsTest {
 				.build();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.from("foo")));
+		assertThat("incorrect update", ofg.hasUpdate(), is(true));
 	}
 	
 	@Test
@@ -50,6 +53,7 @@ public class OptionalGroupFieldsTest {
 				.build();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.remove()));
+		assertThat("incorrect update", ofg.hasUpdate(), is(true));
 	}
 	
 	@Test

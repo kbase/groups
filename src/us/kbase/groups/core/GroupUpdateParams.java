@@ -58,6 +58,13 @@ public class GroupUpdateParams {
 		return opfields;
 	}
 
+	/** True if the name or type is present or if {@link OptionalGroupFields#hasUpdate()} is true.
+	 * @return whether the update params contains update data.
+	 */
+	public boolean hasUpdate() {
+		return groupName.isPresent() || type.isPresent() || opfields.hasUpdate();
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

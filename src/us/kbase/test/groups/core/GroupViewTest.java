@@ -7,10 +7,9 @@ import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
@@ -74,11 +73,11 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
-		assertThat("incorrect create", gv.getCreationDate(), is(Optional.absent()));
-		assertThat("incorrect desc", gv.getDescription(), is(Optional.absent()));
+		assertThat("incorrect create", gv.getCreationDate(), is(Optional.empty()));
+		assertThat("incorrect desc", gv.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
-		assertThat("incorrect mod", gv.getModificationDate(), is(Optional.absent()));
+		assertThat("incorrect mod", gv.getModificationDate(), is(Optional.empty()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));

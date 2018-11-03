@@ -6,9 +6,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.base.Optional;
 
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
@@ -79,9 +78,9 @@ public class GroupView {
 		if (viewType.equals(ViewType.MINIMAL)) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
-			creationDate = Optional.absent();
-			modificationDate = Optional.absent();
-			description = Optional.absent();
+			creationDate = Optional.empty();
+			modificationDate = Optional.empty();
+			description = Optional.empty();
 		} else {
 			admins = group.getAdministrators();
 			creationDate = Optional.of(group.getCreationDate());
@@ -148,7 +147,7 @@ public class GroupView {
 		return type;
 	}
 
-	/** Get the creation date of the group. {@link Optional#absent()} for {@link ViewType#MINIMAL}
+	/** Get the creation date of the group. {@link Optional#empty()} for {@link ViewType#MINIMAL}
 	 * views.
 	 * @return the creation date.
 	 */
@@ -156,7 +155,7 @@ public class GroupView {
 		return creationDate;
 	}
 
-	/** Get the modification date of the group. {@link Optional#absent()} for
+	/** Get the modification date of the group. {@link Optional#empty()} for
 	 * {@link ViewType#MINIMAL} views.
 	 * @return the modification date.
 	 */
@@ -164,7 +163,7 @@ public class GroupView {
 		return modificationDate;
 	}
 
-	/** Get the optional description of the group. {@link Optional#absent()} if not provided
+	/** Get the optional description of the group. {@link Optional#empty()} if not provided
 	 * or the view is {@link ViewType#MINIMAL}.
 	 * @return the description.
 	 */

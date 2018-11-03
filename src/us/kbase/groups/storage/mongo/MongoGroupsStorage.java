@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,7 +20,6 @@ import java.util.stream.Collectors;
 
 import org.bson.Document;
 
-import com.google.common.base.Optional;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -263,12 +263,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 				if (keyMatcher.find()) {
 					key = Optional.of(keyMatcher.group(1));
 				} else { // some errors include the dup key, some don't
-					key = Optional.absent();
+					key = Optional.empty();
 				}
 			} else {
-				collection = Optional.absent();
-				index = Optional.absent();
-				key = Optional.absent();
+				collection = Optional.empty();
+				index = Optional.empty();
+				key = Optional.empty();
 			}
 		}
 		
@@ -308,7 +308,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIDs())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
-				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orNull());
+				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null));
 		try {
 			db.getCollection(COL_GROUPS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -607,13 +607,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
 				.append(Fields.REQUEST_STATUS, request.getStatusType().name())
 				.append(Fields.REQUEST_TYPE, request.getType().name())
-				.append(Fields.REQUEST_TARGET, request.getTarget().isPresent() ?
-						request.getTarget().get().getName() : null)
-				.append(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget().isPresent() ?
-						request.getWorkspaceTarget().get().getID() : null)
-				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy().isPresent() ?
-						request.getClosedBy().get().getName() : null)
-				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orNull())
+				.append(Fields.REQUEST_TARGET, request.getTarget()
+						.map(t -> t.getName()).orElse(null))
+				.append(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget()
+						.map(wt -> wt.getID()).orElse(null))
+				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy()
+						.map(cb -> cb.getName()).orElse(null))
+				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orElse(null))
 				.append(Fields.REQUEST_CREATION, Date.from(request.getCreationDate()))
 				.append(Fields.REQUEST_MODIFICATION, Date.from(request.getModificationDate()))
 				.append(Fields.REQUEST_EXPIRATION, Date.from(request.getExpirationDate()));

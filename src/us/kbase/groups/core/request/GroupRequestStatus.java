@@ -8,7 +8,7 @@ import static us.kbase.groups.core.request.GroupRequestStatusType.EXPIRED;
 import static us.kbase.groups.core.request.GroupRequestStatusType.OPEN;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.groups.core.UserName;
 
@@ -54,31 +54,31 @@ public class GroupRequestStatus {
 		return closedReason;
 	}
 
-	private static final Optional<UserName> OPTUSER = Optional.absent();
-	private static final Optional<String> OPTREASON = Optional.absent();
+	private static final Optional<UserName> OPTUSER = Optional.empty();
+	private static final Optional<String> OPTREASON = Optional.empty();
 	
-	/** Get an open status. In this case, the closed by and closed reason fields are absent.
+	/** Get an open status. In this case, the closed by and closed reason fields are empty.
 	 * @return the new status.
 	 */
 	public static GroupRequestStatus open() {
 		return new GroupRequestStatus(OPEN, OPTUSER, OPTREASON);
 	}
 	
-	/** Get a canceled status. In this case, the closed by and closed reason fields are absent.
+	/** Get a canceled status. In this case, the closed by and closed reason fields are empty.
 	 * @return the new status.
 	 */
 	public static GroupRequestStatus canceled() {
 		return new GroupRequestStatus(CANCELED, OPTUSER, OPTREASON);
 	}
 	
-	/** Get an expired status. In this case, the closed by and closed reason fields are absent.
+	/** Get an expired status. In this case, the closed by and closed reason fields are empty.
 	 * @return the new status.
 	 */
 	public static GroupRequestStatus expired() {
 		return new GroupRequestStatus(EXPIRED, OPTUSER, OPTREASON);
 	}
 	
-	/** Get an accepted status. In this case, the closed reason field is absent.
+	/** Get an accepted status. In this case, the closed reason field is empty.
 	 * @param acceptedBy the user that closed the request.
 	 * @return the new status.
 	 */
@@ -101,7 +101,7 @@ public class GroupRequestStatus {
 			reason = reason.trim();
 		}
 		return new GroupRequestStatus(
-				DENIED, Optional.of(deniedBy), Optional.fromNullable(reason));
+				DENIED, Optional.of(deniedBy), Optional.ofNullable(reason));
 	}
 	
 	/** Construct a request status freeform. The closed by and reason fields are processed as
