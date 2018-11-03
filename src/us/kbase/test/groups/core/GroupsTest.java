@@ -36,10 +36,12 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Notifications;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -202,7 +204,8 @@ public class GroupsTest {
 		
 		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
-				.withDescription("desc")
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("desc")).build())
 				.withType(GroupType.TEAM)
 				.build());
 		

@@ -8,8 +8,6 @@ import java.time.Instant;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
@@ -18,11 +16,14 @@ import us.kbase.groups.core.GroupCreationParams.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupCreationParamsTest {
+	
+	private static final OptionalGroupFields DEF_OPTS = OptionalGroupFields.getDefault();
 
 	@Test
 	public void equals() throws Exception {
@@ -37,7 +38,7 @@ public class GroupCreationParamsTest {
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(new GroupName("name")));
-		assertThat("incorrect desc", p.getDescription(), is(Optional.absent()));
+		assertThat("incorrect opts", p.getOptionalFields(), is(DEF_OPTS));
 		assertThat("incorrect type", p.getType(), is(GroupType.ORGANIZATION));
 	}
 	
@@ -45,31 +46,18 @@ public class GroupCreationParamsTest {
 	public void buildMaximal() throws Exception {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
-				.withDescription("    my desc   ")
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.fromNullable("    my desc    ")).build())
 				.withType(GroupType.TEAM)
 				.build();
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(new GroupName("name")));
-		assertThat("incorrect desc", p.getDescription(), is(Optional.of("my desc")));
+		assertThat("incorrect desc", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
+				.withDescription(StringField.from("my desc")).build()));
 		assertThat("incorrect type", p.getType(), is(GroupType.TEAM));
 	}
 
-	@Test
-	public void buildWithEmptyDescription() throws Exception {
-		buildWithEmptyDescription(null);
-		buildWithEmptyDescription("   \t     ");
-	}
-	
-	private void buildWithEmptyDescription(final String description) throws Exception {
-		final GroupCreationParams g = GroupCreationParams.getBuilder(
-				new GroupID("id"), new GroupName("name"))
-				.withDescription(description)
-				.build();
-
-		assertThat("incorrect desc", g.getDescription(), is(Optional.absent()));
-	}
-	
 	@Test
 	public void getBuilderFail() throws Exception {
 		final GroupID i = new GroupID("i");
@@ -105,26 +93,15 @@ public class GroupCreationParamsTest {
 	}
 	
 	@Test
-	public void withDescriptionFail() throws Exception {
-		final String uni = "a₸𐍆"; // length 5, 4 code points, 11 bytes in utf-8
-		final StringBuilder b = new StringBuilder();
-		for (int i = 0; i < 1250; i++) {
-			b.append(uni);
-		}
-		
-		final Builder build = GroupCreationParams.getBuilder(
+	public void withOptionalFieldsFail() throws Exception {
+		final Builder b = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"));
 		
-		build.withDescription(b.toString()); // should pass
-		
-		b.append("a");
-		
 		try {
-			build.withDescription(b.toString());
+			b.withOptionalFields(null);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
-					"description size greater than limit 5000"));
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("fields"));
 		}
 	}
 	

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
@@ -34,6 +35,7 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -189,7 +191,8 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name"))
-				.withDescription("my desc")
+				.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
+						StringField.from("my desc")).build())
 				.withType(GroupType.TEAM)
 				.build()))
 				.thenReturn(new GroupView(GROUP_MIN, wsis(), MEMBER));
