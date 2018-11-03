@@ -10,6 +10,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
 import static us.kbase.test.groups.TestCommon.inst;
@@ -32,6 +33,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Notifications;
@@ -285,6 +287,88 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.createGroup(t, p);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void updateGroupNoop() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		mocks.groups.updateGroup(new Token("toketoke"), GroupUpdateParams
+				.getBuilder(new GroupID("gid"))
+				.build());
+		
+		verifyZeroInteractions(mocks.userHandler);
+		verifyZeroInteractions(mocks.storage);
+	}
+	
+	@Test
+	public void updateGroupOwner() throws Exception {
+		updateGroup(new UserName("own"));
+	}
+	
+	@Test
+	public void updateGroupAdmin() throws Exception {
+		updateGroup(new UserName("admin"));
+	}
+
+	private void updateGroup(final UserName user) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("toketoke"))).thenReturn(user);
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.clock.instant()).thenReturn(inst(30000));
+		
+		mocks.groups.updateGroup(new Token("toketoke"), GroupUpdateParams
+				.getBuilder(new GroupID("gid"))
+				.withName(new GroupName("new name"))
+				.build());
+		
+		verify(mocks.storage).updateGroup(GroupUpdateParams.getBuilder(new GroupID("gid"))
+				.withName(new GroupName("new name"))
+				.build(),
+				inst(30000));
+	}
+	
+	@Test
+	public void updateGroupFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		
+		failUpdateGroup(g, null, GroupUpdateParams.getBuilder(new GroupID("i")).build(),
+				new NullPointerException("userToken"));
+		failUpdateGroup(g, new Token("t"), null, new NullPointerException("updateParams"));
+	}
+	
+	@Test
+	public void updateGroupFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("toketoke"))).thenReturn(new UserName("mem"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withAdministrator(new UserName("admin"))
+				.withMember(new UserName("mem"))
+				.build());
+		
+		failUpdateGroup(mocks.groups, new Token("toketoke"),
+				GroupUpdateParams.getBuilder(new GroupID("gid")).withType(GroupType.TEAM).build(),
+				new UnauthorizedException("User mem may not administrate group gid"));
+	}
+	
+	private void failUpdateGroup(
+			final Groups g,
+			final Token t,
+			final GroupUpdateParams p,
+			final Exception expected) {
+		try {
+			g.updateGroup(t, p);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

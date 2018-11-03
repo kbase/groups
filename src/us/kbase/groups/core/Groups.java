@@ -123,8 +123,7 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(createParams, "createParams");
 		final UserName owner = userHandler.getUser(userToken);
-		final Instant now = clock.instant();
-		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(now)));
+		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(clock.instant())));
 		
 		try {
 			return new GroupView(
@@ -135,6 +134,32 @@ public class Groups {
 			throw new RuntimeException(
 					"Just created a group and it's already gone. Something's really broken", e);
 		}
+	}
+	
+	/** Update a group's fields.
+	 * @param userToken the token of the user that is modifying the group.
+	 * @param updateParams the update to apply.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no group with the provided ID.
+	 * @throws UnauthorizedException if the user is not a group administrator.
+	 */
+	public void updateGroup(final Token userToken, final GroupUpdateParams updateParams)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(updateParams, "updateParams");
+		if (!updateParams.hasUpdate()) {
+			return;
+		}
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(updateParams.getGroupID());
+		if (!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format("User %s may not administrate group %s",
+					user.getName(), updateParams.getGroupID().getName()));
+		}
+		storage.updateGroup(updateParams, clock.instant());
 	}
 	
 	/** Get a view of a group.
