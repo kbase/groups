@@ -5,11 +5,10 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateModAndExpireTimes;
@@ -42,16 +41,16 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
 	}
 	
@@ -80,7 +79,7 @@ public class GroupRequestTest {
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("targ"))));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
 	}
 	
@@ -96,15 +95,15 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_ADD_WORKSPACE));
@@ -122,15 +121,15 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_WORKSPACE));
@@ -150,16 +149,16 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.CANCELED));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
 	}
 	
@@ -178,15 +177,15 @@ public class GroupRequestTest {
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
 		assertThat("incorrect closed by", gr.getClosedBy(),
 				is(Optional.of(new UserName("imnice"))));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.ACCEPTED));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
 	}
 	
@@ -203,16 +202,16 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.EXPIRED));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
 	}
 	
@@ -229,8 +228,8 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
@@ -238,7 +237,7 @@ public class GroupRequestTest {
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("inv"))));
-		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.absent()));
+		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
 	}
 	
@@ -255,15 +254,15 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_ADD_WORKSPACE));
@@ -282,15 +281,15 @@ public class GroupRequestTest {
 				.build();
 		
 		assertThat("incorrect id", gr.getID(), is(new RequestID(id)));
-		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect closed by", gr.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect closed reason", gr.getClosedReason(), is(Optional.empty()));
 		assertThat("incorrect create", gr.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect expire", gr.getExpirationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect gid", gr.getGroupID(), is(new GroupID("gid")));
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect target", gr.getTarget(), is(Optional.absent()));
+		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_WORKSPACE));

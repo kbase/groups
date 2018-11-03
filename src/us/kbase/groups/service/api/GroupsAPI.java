@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -27,7 +28,6 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
@@ -201,7 +201,7 @@ public class GroupsAPI {
 		if (!g.getViewType().equals(ViewType.MINIMAL)) {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
-			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orNull());
+			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));
 			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
 			final List<Map<String, Object>> wslist = new LinkedList<>();

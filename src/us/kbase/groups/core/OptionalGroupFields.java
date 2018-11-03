@@ -25,6 +25,14 @@ public class OptionalGroupFields {
 	public FieldItem<String> getDescription() {
 		return description;
 	}
+	
+	/** True if for any of the items {@link FieldItem#hasItem()} or {@link FieldItem#isRemove()}
+	 * is true, false otherwise.
+	 * @return if a field requires an update.
+	 */
+	public boolean hasUpdate() {
+		return !description.isNoAction();
+	}
 
 	@Override
 	public int hashCode() {

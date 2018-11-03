@@ -33,6 +33,7 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect fields", p.getOptionalFields(),
 				is(OptionalGroupFields.getBuilder().build()));
 		assertThat("incorrect type", p.getType(), is(Optional.empty()));
+		assertThat("incorrect update", p.hasUpdate(), is(false));
 	}
 	
 	@Test
@@ -49,6 +50,35 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build()));
 		assertThat("incorrect type", p.getType(), is(Optional.of(GroupType.TEAM)));
+		assertThat("incorrect update", p.hasUpdate(), is(true));
+	}
+	
+	@Test
+	public void hasUpdateWithName() throws Exception {
+		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
+				.withName(new GroupName("n"))
+				.build();
+		
+		assertThat("incorrect update", p.hasUpdate(), is(true));
+	}
+	
+	@Test
+	public void hasUpdateWithType() throws Exception {
+		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
+				.withType(GroupType.TEAM)
+				.build();
+		
+		assertThat("incorrect update", p.hasUpdate(), is(true));
+	}
+	
+	@Test
+	public void hasUpdateWithOptFields() throws Exception {
+		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build();
+		
+		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 	
 	@Test

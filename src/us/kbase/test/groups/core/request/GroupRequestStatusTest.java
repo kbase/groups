@@ -4,9 +4,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import org.junit.Test;
+import java.util.Optional;
 
-import com.google.common.base.Optional;
+import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.UserName;
@@ -26,15 +26,15 @@ public class GroupRequestStatusTest {
 		final GroupRequestStatus s = GroupRequestStatus.open();
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect user", s.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.from(
 				GroupRequestStatusType.OPEN, new UserName("n"), "foo");
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.OPEN));
-		assertThat("incorrect user", s2.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s2.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.empty()));
 	}
 	
 	@Test
@@ -42,15 +42,15 @@ public class GroupRequestStatusTest {
 		final GroupRequestStatus s = GroupRequestStatus.canceled();
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.CANCELED));
-		assertThat("incorrect user", s.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.from(
 				GroupRequestStatusType.CANCELED, new UserName("n"), "foo");
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.CANCELED));
-		assertThat("incorrect user", s2.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s2.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.empty()));
 	}
 	
 	@Test
@@ -58,15 +58,15 @@ public class GroupRequestStatusTest {
 		final GroupRequestStatus s = GroupRequestStatus.expired();
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.EXPIRED));
-		assertThat("incorrect user", s.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.from(
 				GroupRequestStatusType.EXPIRED, new UserName("n"), "foo");
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.EXPIRED));
-		assertThat("incorrect user", s2.getClosedBy(), is(Optional.absent()));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect user", s2.getClosedBy(), is(Optional.empty()));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.empty()));
 	}
 	
 	@Test
@@ -75,14 +75,14 @@ public class GroupRequestStatusTest {
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.ACCEPTED));
 		assertThat("incorrect user", s.getClosedBy(), is(Optional.of(new UserName("a"))));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.from(
 				GroupRequestStatusType.ACCEPTED, new UserName("n"), "foo");
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.ACCEPTED));
 		assertThat("incorrect user", s2.getClosedBy(), is(Optional.of(new UserName("n"))));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.empty()));
 	}
 	
 	@Test
@@ -101,27 +101,27 @@ public class GroupRequestStatusTest {
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s.getClosedBy(), is(Optional.of(new UserName("a"))));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.denied(new UserName("a2"), "  \t   ");
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s2.getClosedBy(), is(Optional.of(new UserName("a2"))));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s3 = GroupRequestStatus.from(
 				GroupRequestStatusType.DENIED, new UserName("n"), null);
 		
 		assertThat("incorrect type", s3.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s3.getClosedBy(), is(Optional.of(new UserName("n"))));
-		assertThat("incorrect reason", s3.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s3.getClosedReason(), is(Optional.empty()));
 		
 		final GroupRequestStatus s4 = GroupRequestStatus.from(
 				GroupRequestStatusType.DENIED, new UserName("n"), "  \t    ");
 		
 		assertThat("incorrect type", s4.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s4.getClosedBy(), is(Optional.of(new UserName("n"))));
-		assertThat("incorrect reason", s4.getClosedReason(), is(Optional.absent()));
+		assertThat("incorrect reason", s4.getClosedReason(), is(Optional.empty()));
 	}
 	
 	@Test

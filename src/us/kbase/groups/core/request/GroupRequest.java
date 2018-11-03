@@ -3,8 +3,7 @@ package us.kbase.groups.core.request;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
-
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GroupID;
@@ -263,7 +262,7 @@ public class GroupRequest {
 
 	/** Get a builder for a {@link GroupRequest}. By default, the type is
 	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and the target user is
-	 * {@link Optional#absent()}.
+	 * {@link Optional#empty()}.
 	 * @param id the request ID.
 	 * @param groupID the ID of the group at which the request is targeted.
 	 * @param requester the user making the request.
@@ -288,12 +287,12 @@ public class GroupRequest {
 		private final GroupID groupID;
 		private final UserName requester;
 		private final CreateModAndExpireTimes times;
-		private Optional<UserName> target = Optional.absent();
-		private Optional<WorkspaceID> wsTarget = Optional.absent();
+		private Optional<UserName> target = Optional.empty();
+		private Optional<WorkspaceID> wsTarget = Optional.empty();
 		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 		private GroupRequestStatusType status = GroupRequestStatusType.OPEN;
-		private Optional<UserName> closedBy = Optional.absent();
-		private Optional<String> closedReason = Optional.absent();
+		private Optional<UserName> closedBy = Optional.empty();
+		private Optional<String> closedReason = Optional.empty();
 
 		private Builder(
 				final RequestID id,
@@ -316,8 +315,8 @@ public class GroupRequest {
 		 * @return this builder.
 		 */
 		public Builder withRequestGroupMembership() {
-			this.target = Optional.absent();
-			this.wsTarget = Optional.absent();
+			this.target = Optional.empty();
+			this.wsTarget = Optional.empty();
 			this.type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 			return this;
 		}
@@ -331,7 +330,7 @@ public class GroupRequest {
 		public Builder withInviteToGroup(final UserName target) {
 			checkNotNull(target, "target");
 			this.target = Optional.of(target);
-			this.wsTarget = Optional.absent();
+			this.wsTarget = Optional.empty();
 			this.type = GroupRequestType.INVITE_TO_GROUP;
 			return this;
 		}
@@ -348,7 +347,7 @@ public class GroupRequest {
 
 		private Builder setWorkspaceType(final WorkspaceID wsid, final GroupRequestType type) {
 			checkNotNull(wsid, "wsid");
-			this.target = Optional.absent();
+			this.target = Optional.empty();
 			this.wsTarget = Optional.of(wsid);
 			this.type = type;
 			return this;

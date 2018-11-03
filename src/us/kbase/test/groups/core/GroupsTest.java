@@ -19,12 +19,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
@@ -2703,7 +2702,7 @@ public class GroupsTest {
 		
 		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(3400));
 		
-		assertThat("incorrect request", ret, is(Optional.absent()));
+		assertThat("incorrect request", ret, is(Optional.empty()));
 	}
 	
 	@Test

@@ -11,11 +11,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Optional;
 
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.GroupView.ViewType;
@@ -545,7 +544,7 @@ public class Groups {
 			final UserName user,
 			final String actionVerb)
 			throws UnauthorizedException, WorkspaceHandlerException {
-		if (user.equals(request.getTarget().orNull())) {
+		if (user.equals(request.getTarget().orElse(null))) {
 			return;
 		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE)) &&
@@ -672,7 +671,7 @@ public class Groups {
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
 	 * @param wsid the workspace ID.
-	 * @return A request if required or {@link Optional#absent()} if the operation is already
+	 * @return A request if required or {@link Optional#empty()} if the operation is already
 	 * complete.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
@@ -704,7 +703,7 @@ public class Groups {
 		final boolean isWSAdmin = wsadmins.contains(user);
 		if (g.isAdministrator(user) && isWSAdmin) {
 			storage.addWorkspace(groupID, wsid, clock.instant());
-			return Optional.absent();
+			return Optional.empty();
 		}
 		if (isWSAdmin) {
 			return Optional.of(createRequestStoreAndNotify(

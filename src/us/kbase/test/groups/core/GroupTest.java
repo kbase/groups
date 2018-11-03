@@ -6,10 +6,9 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
@@ -41,7 +40,7 @@ public class GroupTest {
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
 				is(set(new UserName("foo"))));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
-		assertThat("incorrect desc", g.getDescription(), is(Optional.absent()));
+		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(), is(set()));
 		assertThat("incorrect member", g.getAdministrators(), is(set()));
@@ -95,7 +94,7 @@ public class GroupTest {
 				.withDescription(description)
 				.build();
 
-		assertThat("incorrect desc", g.getDescription(), is(Optional.absent()));
+		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
 	}
 
 	@Test

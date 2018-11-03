@@ -6,9 +6,8 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.base.Optional;
 
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
@@ -121,7 +120,7 @@ public class Group {
 	}
 
 	/** Get the description of the group, if any.
-	 * @return the description or {@link Optional#absent()}.
+	 * @return the description or {@link Optional#empty()}.
 	 */
 	public Optional<String> getDescription() {
 		return description;
@@ -281,7 +280,7 @@ public class Group {
 		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
 		private final Set<Integer> workspaceIDs = new HashSet<>();
-		private Optional<String> description = Optional.absent();
+		private Optional<String> description = Optional.empty();
 		
 		private Builder(
 				final GroupID id,
@@ -311,12 +310,12 @@ public class Group {
 		/** Add a group description. The maximum description size is
 		 * {@link Group#MAX_DESCRIPTION_CODE_POINTS} Unicode code points.
 		 * @param description the new description. If null or whitespace only, the description
-		 * is set to {@link Optional#absent()}. The description will be {@link String#trim()}ed.
+		 * is set to {@link Optional#empty()}. The description will be {@link String#trim()}ed.
 		 * @return this builder.
 		 */
 		public Builder withDescription(final String description) {
 			if (isNullOrEmpty(description)) {
-				this.description = Optional.absent();
+				this.description = Optional.empty();
 			} else {
 				if (description.codePointCount(0, description.length()) >
 						MAX_DESCRIPTION_CODE_POINTS) {
