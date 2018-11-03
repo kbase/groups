@@ -271,6 +271,7 @@
         <test name="us.kbase.test.groups.core.GroupNameTest"/>
         <test name="us.kbase.test.groups.core.GroupsTest"/>
         <test name="us.kbase.test.groups.core.GroupTypeTest"/>
+        <test name="us.kbase.test.groups.core.GroupUpdateParamsTest"/>
         <test name="us.kbase.test.groups.core.GroupViewTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
         <test name="us.kbase.test.groups.core.OptionalGroupFieldsTest"/>
