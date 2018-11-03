@@ -14,14 +14,10 @@ public final class JacksonFeature implements Feature {
 	private static final ObjectMapper MAPPER;
 
 	static {
-		// Create the new object mapper.
 		MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
-
-		// Enable/disable various configuration flags.
-		MAPPER.configure(
-				SerializationFeature.INDENT_OUTPUT, true);
-
+		MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
 	}
+	
 	@Override
 	public boolean configure(final FeatureContext context) {
 		final JacksonJaxbJsonProvider provider = new JacksonJaxbJsonProvider(

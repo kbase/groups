@@ -26,8 +26,11 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
@@ -199,6 +202,279 @@ public class MongoGroupsStorageOpsTest {
 		failGetGroup(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: No enum constant " +
 				"us.kbase.groups.core.GroupType.TEEM"));
+	}
+	
+	@Test
+	public void updateGroupNoUpdate() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build();
+		manager.storage.createGroup(g);
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(new GroupID("gid")).build(),
+				inst(40000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(g));
+	}
+	
+	@Test
+	public void updateGroupMinimal() throws Exception {
+		// update a field at a time
+		final GroupID gid = new GroupID("gid");
+		manager.storage.createGroup(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("newname")).build(),
+				inst(40000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(40000)))
+				.build()));
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withType(GroupType.TEAM).build(),
+				inst(60000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(60000)))
+				.withType(GroupType.TEAM)
+				.build()));
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("my desc")).build())
+				.build(),
+				inst(50000)); // naughty naughty
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
+				.withType(GroupType.TEAM)
+				.withDescription("my desc")
+				.build()));
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build(),
+				inst(567842));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(567842)))
+				.withType(GroupType.TEAM)
+				.build()));
+	}
+	
+	@Test
+	public void updateGroupMaximal() throws Exception {
+		final GroupID gid = new GroupID("gid");
+		manager.storage.createGroup(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.withDescription("my desc")
+				.build());
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("newname"))
+				.withType(GroupType.PROJECT)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("other desc")).build())
+				.build(),
+				inst(30001));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30001)))
+				.withType(GroupType.PROJECT)
+				.withDescription("other desc")
+				.build()));
+	}
+	
+	@Test
+	public void updateGroupNoopMinimalNoAction() throws Exception {
+		updateGroupNoopMinimal(StringField.noAction());
+	}
+	
+	@Test
+	public void updateGroupNoopMinimalRemove() throws Exception {
+		updateGroupNoopMinimal(StringField.remove());
+	}
+
+	private void updateGroupNoopMinimal(final StringField action) throws Exception {
+		// tests updating a group with identical contents. Ensure the mod date isn't set.
+		final GroupID gid = new GroupID("gid");
+		manager.storage.createGroup(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.build());
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(action).build())
+				.build(),
+				inst(50000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.build()));
+	}
+	
+	@Test
+	public void updateGroupNoopMaximal() throws Exception {
+		// tests updating a group with identical contents. Ensure the mod date isn't set.
+		final GroupID gid = new GroupID("gid");
+		manager.storage.createGroup(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.withDescription("my desc")
+				.build());
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("my desc")).build())
+				.build(),
+				inst(50000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.withDescription("my desc")
+				.build()));
+	}
+	
+	@Test
+	public void updateGroupSingleDifferentField() throws Exception {
+		final GroupID gid = new GroupID("gid");
+		manager.storage.createGroup(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withType(GroupType.TEAM)
+				.withDescription("my desc")
+				.build());
+		
+		// remove desc
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build(),
+				inst(50000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
+				.withType(GroupType.TEAM)
+				.build()));
+		
+		// removing again should not update the mod time
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build(),
+				inst(760000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
+				.withType(GroupType.TEAM)
+				.build()));
+		
+		// new name
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("new name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.noAction()).build())
+				.build(),
+				inst(60000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("new name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(60000)))
+				.withType(GroupType.TEAM)
+				.build()));
+		
+		// new desc
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("new name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("yay!")).build())
+				.build(),
+				inst(80000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("new name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(80000)))
+				.withType(GroupType.TEAM)
+				.withDescription("yay!")
+				.build()));
+		
+		// new team
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withName(new GroupName("new name"))
+				.withType(GroupType.PROJECT)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("yay!")).build())
+				.build(),
+				inst(90000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("new name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(90000)))
+				.withType(GroupType.PROJECT)
+				.withDescription("yay!")
+				.build()));
+	}
+	
+	@Test
+	public void updateGroupFailNulls() throws Exception {
+		failUpdateGroup(null, inst(1), new NullPointerException("update"));
+		failUpdateGroup(GroupUpdateParams.getBuilder(new GroupID("id")).build(), null,
+				new NullPointerException("modDate"));
+	}
+	
+	@Test
+	public void updateGroupFailNoSuchGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		failUpdateGroup(GroupUpdateParams.getBuilder(new GroupID("gid1"))
+				.withName(new GroupName("my name")).build(),
+				inst(56000), new NoSuchGroupException("gid1"));
+	}
+
+	private void failUpdateGroup(
+			final GroupUpdateParams p,
+			final Instant i,
+			final Exception expected) {
+		try {
+			manager.storage.updateGroup(p, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 	@Test

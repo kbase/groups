@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,8 +35,11 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -333,6 +337,63 @@ public class MongoGroupsStorage implements GroupsStorage {
 		return users.stream().map(m -> m.getName()).collect(Collectors.toList());
 	}
 	
+	@Override
+	public void updateGroup(final GroupUpdateParams update, final Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException {
+		checkNotNull(update, "update");
+		checkNotNull(modDate, "modDate");
+		if (!update.hasUpdate()) {
+			return;
+		}
+		final List<Document> or = new LinkedList<>();
+		final Document query = new Document(Fields.GROUP_ID, update.getGroupID().getName())
+				.append("$or", or);
+		final Document set = new Document(Fields.GROUP_MODIFICATION, Date.from(modDate));
+		
+		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
+		buildUpdate(or, set, update.getType(), Fields.GROUP_TYPE, n -> n.get().name());
+		final OptionalGroupFields opts = update.getOptionalFields();
+		buildUpdate(or, set, opts.getDescription(), Fields.GROUP_DESCRIPTION, n -> n.get());
+		
+		try {
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(
+					query, new Document("$set", set));
+			if (res.getMatchedCount() != 1) {
+				getGroup(update.getGroupID()); //throws no such group
+				// otherwise we don't care - the update made no changes.
+			}
+			// if it matches, it gets modified, so we don't check
+		} catch (MongoException e) {
+			throw wrapMongoException(e);
+		}
+	}
+	
+	private <T> void buildUpdate(
+			final List<Document> or,
+			final Document set,
+			final Optional<T> item,
+			final String field,
+			final Function<Optional<T>, Object> getValue) {
+		if (item.isPresent()) {
+			final Object value = getValue.apply(item);
+			or.add(new Document(field, new Document("$ne", value)));
+			set.append(field, value);
+		}
+	}
+	
+	private <T> void buildUpdate(
+			final List<Document> or,
+			final Document set,
+			final FieldItem<T> item,
+			final String field,
+			final Function<FieldItem<T>, Object> getValue) {
+		if (item.hasAction()) {
+			final Object value = item.hasItem() ? getValue.apply(item) : null;
+			or.add(new Document(field, new Document("$ne", value)));
+			set.append(field, value);
+		}
+	}
+
 	@Override
 	public Group getGroup(final GroupID groupID)
 			throws GroupsStorageException, NoSuchGroupException {

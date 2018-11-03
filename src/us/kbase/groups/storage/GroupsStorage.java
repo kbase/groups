@@ -5,6 +5,7 @@ import java.util.List;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -40,6 +41,15 @@ public interface GroupsStorage {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	void createGroup(Group group) throws GroupExistsException, GroupsStorageException;
+	
+	/** Update a group's fields.
+	 * @param update the update to apply.
+	 * @param modDate the modification date to apply to the group.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void updateGroup(GroupUpdateParams update, Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException;
 
 	/** Get a group.
 	 * @param groupID the ID of the group.
