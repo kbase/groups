@@ -32,14 +32,11 @@ export default class {
           <button id="loadtoken" class="btn btn-primary">Reload from cookie</button>
           <span id="useridentity"></span>
         </div>
-        <div class="row">Set auth root url:</div>
         <div class="row">
+          <span>Set auth root url:</span>
           <input id="authurl"/>
           <button id="setauthurl" class="btn btn-primary">Set</button>
-        </div>
-        <div class="row" id="authroot"></div>
-        <div class="row">Set service root url:</div>
-        <div class="row">
+          <span>Set service root url:</span>
           <input id="url"/>
           <button id="seturl" class="btn btn-primary">Set</button>
         </div>
@@ -76,7 +73,7 @@ export default class {
         this.renderGroups();
     });
     $('#creategroup').on('click', () => {
-        this.renderCreateGroup();
+        this.renderCreateOrUpdateGroup({}, "");
     });
     $('#createdrequests').on('click', () => {
         this.renderCreatedRequests();
@@ -156,9 +153,8 @@ export default class {
   }
   
   setURL() {
-      $('#servroot').text("");
-      let url = $('#url').val();
-      this.setServiceURL(url, $('#servroot'), this.completeSetURL);
+      const url = $('#url').val();
+      this.setServiceURL(url, this.completeSetURL);
   }
   
   completeSetURL(url) {
@@ -170,9 +166,8 @@ export default class {
   }
   
   setAuthURL() {
-      $('#authroot').text("");
-      let url = $('#authurl').val();
-      this.setServiceURL(url, $('#authroot'), this.completeAuthUrl);
+      const url = $('#authurl').val();
+      this.setServiceURL(url, this.completeAuthUrl);
   }
   
   completeAuthUrl(url) {
@@ -182,7 +177,8 @@ export default class {
       console.log("Switched auth url to " + this.authUrl);
   }
   
-  setServiceURL(url, tableelement, callback) {
+  setServiceURL(url, callback) {
+      $('#servroot').text("");
       $('#error').text("");
       fetch(url, {"headers": this.getHeaders()})
          .then( (response) => {
@@ -190,7 +186,7 @@ export default class {
                  response.json().then( (json) => {
                      const d = new Date(json.servertime).toLocaleString();
                      const s = this.sanitize;
-                     tableelement.html(
+                     $('#servroot').html(
                              `
                              <table class="table">
                                <thead>
@@ -307,6 +303,7 @@ export default class {
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
                         </tbody>
                       </table>
+                      <div><button id="editgroup" class="btn btn-primary">Edit</button></div>
                       `
                   if (priv) {
                       g += `<div>*** Group membership is private ***</div>`;
@@ -380,6 +377,9 @@ export default class {
                       `;
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
+                  $('#editgroup').on('click', () => {
+                      this.renderCreateOrUpdateGroup(json, "/update");
+                  });
                   $('#requestgroupmembership').on('click', () => {
                       this.requestGroupMembership(groupid);
                   });
@@ -753,18 +753,23 @@ export default class {
       return true;
   }
   
-  renderCreateGroup() {
+  getValueTerm(value) {
+      return value ? `value=${value}` : '';
+  }
+  
+  renderCreateOrUpdateGroup(group, urlsuffix) {
       $('#error').text("");
       if (!this.checkToken()) {
           return;
       }
+      // TODO handle setting the group type correctly
       const input = 
           `
           <div>
             <div class="form-group">
               <label for="groupid">ID</label>
               <input class="form-control" id="groupid" aria-describedby="idhelp"
-                placeholder="Enter group ID" required>
+                placeholder="Enter group ID" ${this.getValueTerm(group.id)} required />
               <small id="idhelp" class="form-text text-muted">
                 A unique immutable group ID. Lowercase ASCII letters, numbers and hyphens are
                 allowed. The first character must be a letter.
@@ -773,7 +778,7 @@ export default class {
             <div class="form-group">
               <label for="groupname">Name</label>
               <input class="form-control" id="groupname" aria-describedby="namehelp"
-                placeholder="Enter group name" required>
+                placeholder="Enter group name" ${this.getValueTerm(group.name)} required />
               <small id="namehelp" class="form-text text-muted">
                 An arbitrary name for the group.
               </small>
@@ -789,7 +794,8 @@ export default class {
             <div class="form-group">
               <label for="groupdesc">Description</label>
               <input class="form-control" id="groupdesc" aria-describedby="deschelp"
-                placeholder="Enter group description (optional)" >
+                placeholder="Enter group description (optional)"
+                ${this.getValueTerm(group.description)} />
               <small id="deschelp" class="form-text text-muted">
                 An arbitrary description of the group.
               </small>
@@ -804,7 +810,7 @@ export default class {
           let name = $('#groupname').val();
           let type = $('#grouptype').val();
           let desc = $('#groupdesc').val();
-          fetch(this.serviceUrl + "group/" + id,
+          fetch(this.serviceUrl + "group/" + id + urlsuffix,
                 {"method": "PUT",
                  "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name, "type": type, "description": desc})
