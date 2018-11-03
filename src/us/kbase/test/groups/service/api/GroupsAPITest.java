@@ -67,6 +67,10 @@ public class GroupsAPITest {
 		return WorkspaceInfoSet.getBuilder(null).build();
 	}
 	
+	private static <T> Optional<T> op(T item) {
+		return Optional.ofNullable(item);
+	}
+	
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
 	static {
@@ -168,11 +172,16 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void createGroupMinimalWhitespace() throws Exception {
-		createGroupMinimal("    \t    ");
+	public void createGroupMinimalEmptyOptional() throws Exception {
+		createGroupMinimal(Optional.empty());
 	}
 	
-	private void createGroupMinimal(final String noInput) throws Exception {
+	@Test
+	public void createGroupMinimalWhitespace() throws Exception {
+		createGroupMinimal(Optional.of("    \t    "));
+	}
+	
+	private void createGroupMinimal(final Optional<String> noInput) throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
@@ -180,7 +189,7 @@ public class GroupsAPITest {
 				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
-				"toke", "gid", new CreateGroupJSON("name", noInput, noInput));
+				"toke", "gid", new CreateGroupJSON(op("name"), noInput, noInput));
 		
 		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
 	}
@@ -198,7 +207,7 @@ public class GroupsAPITest {
 				.thenReturn(new GroupView(GROUP_MIN, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
-				"toke", "gid", new CreateGroupJSON("name", "Team", "my desc"));
+				"toke", "gid", new CreateGroupJSON(op("name"), op("Team"), op("my desc")));
 		
 		assertThat("incorrect group", ret, is(GROUP_MIN_JSON_STD));
 	}
@@ -206,7 +215,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailNullsAndWhitespace() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON("n", null, null);
+		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
 		
 		failCreateGroup(g, null, "i", b, new NoTokenProvidedException("No token provided"));
 		failCreateGroup(g, "  \t  ", "i", b, new NoTokenProvidedException("No token provided"));
@@ -215,7 +224,9 @@ public class GroupsAPITest {
 		failCreateGroup(g, "t", "i", null, new MissingParameterException("Missing JSON body"));
 		failCreateGroup(g, "t", "i", new CreateGroupJSON(null, null, null),
 				new MissingParameterException("group name"));
-		failCreateGroup(g, "t", "i", new CreateGroupJSON("   \t    ", null, null),
+		failCreateGroup(g, "t", "i", new CreateGroupJSON(Optional.empty(), null, null),
+				new MissingParameterException("group name"));
+		failCreateGroup(g, "t", "i", new CreateGroupJSON(op("   \t    "), null, null),
 				new MissingParameterException("group name"));
 		
 	}
@@ -223,7 +234,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailExtraProperties() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON("n", null, null);
+		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
 		b.setAdditionalProperties("foo", "bar");
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
@@ -233,7 +244,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailBadType() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON("n", "Teem", null);
+		final CreateGroupJSON b = new CreateGroupJSON(op("n"), op("Teem"), null);
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Invalid group type: Teem"));
@@ -242,7 +253,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailGroupExists() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON("n", null, null);
+		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
 
 		when(g.createGroup(new Token("t"), GroupCreationParams.getBuilder(
 				new GroupID("i"), new GroupName("n")).build()))
