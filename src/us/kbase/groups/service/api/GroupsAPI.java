@@ -30,10 +30,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
-import us.kbase.groups.core.GroupCreationParams.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.Groups;
@@ -85,7 +85,7 @@ public class GroupsAPI {
 		return groups.getGroups().stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
-	public static class CreateGroupJSON extends IncomingJSON {
+	public static class CreateOrUpdateGroupJSON extends IncomingJSON {
 		
 		//TODO NOW add a integration test for this when update is ready. This stuff is hairy.
 		@JsonProperty(Fields.GROUP_NAME)
@@ -96,12 +96,12 @@ public class GroupsAPI {
 		private Optional<String> description;
 
 		@SuppressWarnings("unused")
-		private CreateGroupJSON() {} // default constructor for Jackson
+		private CreateOrUpdateGroupJSON() {} // default constructor for Jackson
 		
 		// this constructor is for testing. Jackson *must* inject the fields so that the
 		// optionals can be null, which distinguishes a missing field from a field with a null
 		// value.
-		public CreateGroupJSON(
+		public CreateOrUpdateGroupJSON(
 				final Optional<String> groupName,
 				final Optional<String> type,
 				final Optional<String> description) {
@@ -112,7 +112,7 @@ public class GroupsAPI {
 
 		private GroupCreationParams toCreateParams(final GroupID groupID)
 				throws MissingParameterException, IllegalParameterException {
-			final Builder gbuilder = GroupCreationParams.getBuilder(
+			final GroupCreationParams.Builder gbuilder = GroupCreationParams.getBuilder(
 					groupID, new GroupName(fromNullable(groupName)))
 					.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
 							StringField.fromNullable(fromNullable(description))).build());
@@ -127,6 +127,43 @@ public class GroupsAPI {
 		private <T> T fromNullable(final Optional<T> nullable) {
 			return nullable == null ? null : nullable.orElse(null);
 		}
+		
+		private interface FuncExcept<T, R> {
+			
+			R apply(T item) throws IllegalParameterException, MissingParameterException;
+		}
+		
+		private GroupUpdateParams toUpdateParams(final GroupID groupID)
+				throws IllegalParameterException, MissingParameterException {
+			return GroupUpdateParams.getBuilder(groupID)
+					.withNullableName(fromNullable(groupName, s -> new GroupName(s)))
+					.withNullableType(fromNullable(type, t -> GroupType.fromRepresentation(t)))
+					.withOptionalFields(OptionalGroupFields.getBuilder()
+							.withDescription(getStringField(description))
+							.build())
+					.build();
+		}
+		
+		private <T> T fromNullable(
+				final Optional<String> nullable,
+				final FuncExcept<String, T> getValue)
+				throws IllegalParameterException, MissingParameterException {
+			if (nullable == null || !nullable.isPresent() || nullable.get().trim().isEmpty()) {
+				return null;
+			} else {
+				return getValue.apply(nullable.get().trim());
+			}
+		}
+		
+		private StringField getStringField(final Optional<String> s) {
+			if (s == null) {
+				return StringField.noAction();
+			} else if (!s.isPresent() || s.get().trim().isEmpty()) {
+				return StringField.remove();
+			} else {
+				return StringField.from(s.get());
+			}
+		}
 	}
 	
 	@PUT
@@ -135,12 +172,26 @@ public class GroupsAPI {
 	public Map<String, Object> createGroup(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			final CreateGroupJSON create)
+			final CreateOrUpdateGroupJSON create)
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
 				AuthenticationException, GroupExistsException, GroupsStorageException {
 		checkIncomingJson(create);
 		return toGroupJSON(groups.createGroup(getToken(token, true),
 				create.toCreateParams(new GroupID(groupID))));
+	}
+	
+	@PUT
+	@Path(ServicePaths.GROUP_UPDATE)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void updateGroup(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			final CreateOrUpdateGroupJSON update)
+			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
+				NoSuchGroupException, NoTokenProvidedException, AuthenticationException,
+				UnauthorizedException, GroupsStorageException {
+		checkIncomingJson(update);
+		groups.updateGroup(getToken(token, true), update.toUpdateParams(new GroupID(groupID)));
 	}
 	
 	@GET

@@ -33,6 +33,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
+import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
@@ -57,7 +58,7 @@ import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.service.api.GroupsAPI;
-import us.kbase.groups.service.api.GroupsAPI.CreateGroupJSON;
+import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
 
@@ -189,7 +190,7 @@ public class GroupsAPITest {
 				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
-				"toke", "gid", new CreateGroupJSON(op("name"), noInput, noInput));
+				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, noInput));
 		
 		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
 	}
@@ -207,7 +208,7 @@ public class GroupsAPITest {
 				.thenReturn(new GroupView(GROUP_MIN, wsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
-				"toke", "gid", new CreateGroupJSON(op("name"), op("Team"), op("my desc")));
+				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), op("Team"), op("my desc")));
 		
 		assertThat("incorrect group", ret, is(GROUP_MIN_JSON_STD));
 	}
@@ -215,18 +216,18 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailNullsAndWhitespace() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
 		
 		failCreateGroup(g, null, "i", b, new NoTokenProvidedException("No token provided"));
 		failCreateGroup(g, "  \t  ", "i", b, new NoTokenProvidedException("No token provided"));
 		failCreateGroup(g, "t", null, b, new MissingParameterException("group id"));
 		failCreateGroup(g, "t", "   \t  ", b, new MissingParameterException("group id"));
 		failCreateGroup(g, "t", "i", null, new MissingParameterException("Missing JSON body"));
-		failCreateGroup(g, "t", "i", new CreateGroupJSON(null, null, null),
+		failCreateGroup(g, "t", "i", new CreateOrUpdateGroupJSON(null, null, null),
 				new MissingParameterException("group name"));
-		failCreateGroup(g, "t", "i", new CreateGroupJSON(Optional.empty(), null, null),
+		failCreateGroup(g, "t", "i", new CreateOrUpdateGroupJSON(Optional.empty(), null, null),
 				new MissingParameterException("group name"));
-		failCreateGroup(g, "t", "i", new CreateGroupJSON(op("   \t    "), null, null),
+		failCreateGroup(g, "t", "i", new CreateOrUpdateGroupJSON(op("   \t    "), null, null),
 				new MissingParameterException("group name"));
 		
 	}
@@ -234,7 +235,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailExtraProperties() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
 		b.setAdditionalProperties("foo", "bar");
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
@@ -244,7 +245,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailBadType() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON(op("n"), op("Teem"), null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), op("Teem"), null);
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Invalid group type: Teem"));
@@ -253,7 +254,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailGroupExists() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateGroupJSON b = new CreateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
 
 		when(g.createGroup(new Token("t"), GroupCreationParams.getBuilder(
 				new GroupID("i"), new GroupName("n")).build()))
@@ -266,10 +267,119 @@ public class GroupsAPITest {
 			final Groups g,
 			final String token,
 			final String groupID,
-			final CreateGroupJSON body,
+			final CreateOrUpdateGroupJSON body,
 			final Exception expected) {
 		try {
 			new GroupsAPI(g).createGroup(token, groupID, body);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void updateGroupAllNulls() throws Exception {
+		updateGroup(null, null, null, GroupUpdateParams.getBuilder(new GroupID("gid")).build());
+	}
+	
+	@Test
+	public void updateGroupAllEmpty() throws Exception {
+		final Optional<String> mt = Optional.empty();
+		updateGroup(mt, mt, mt, GroupUpdateParams.getBuilder(new GroupID("gid"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build());
+	}
+	
+	@Test
+	public void updateGroupAllWhitespace() throws Exception {
+		final Optional<String> ws = Optional.ofNullable("   \t    ");
+		updateGroup(ws, ws, ws, GroupUpdateParams.getBuilder(new GroupID("gid"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build());
+	}
+	
+	@Test
+	public void updateGroupWithValues() throws Exception {
+		updateGroup(Optional.of("    name   "), Optional.of("    Team   "),
+						Optional.of("   desc    "),
+				GroupUpdateParams.getBuilder(new GroupID("gid"))
+						.withName(new GroupName("name"))
+						.withType(GroupType.TEAM)
+						.withOptionalFields(OptionalGroupFields.getBuilder()
+								.withDescription(StringField.from("desc")).build())
+						.build());
+	}
+	
+	private void updateGroup(
+			final Optional<String> groupName,
+			final Optional<String> type,
+			final Optional<String> description,
+			final GroupUpdateParams expected)
+			throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).updateGroup("tok", "    gid   ",
+				new CreateOrUpdateGroupJSON(groupName, type, description));
+		
+		verify(g).updateGroup(new Token("tok"), expected);
+	}
+	
+	@Test
+	public void updateGroupFailNullsAndWhitespace() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null, null);
+		
+		failUpdateGroup(g, null, "i", b, new NoTokenProvidedException("No token provided"));
+		failUpdateGroup(g, "  \t  ", "i", b, new NoTokenProvidedException("No token provided"));
+		failUpdateGroup(g, "t", null, b, new MissingParameterException("group id"));
+		failUpdateGroup(g, "t", "   \t  ", b, new MissingParameterException("group id"));
+		failUpdateGroup(g, "t", "i", null, new MissingParameterException("Missing JSON body"));
+	}
+	
+	@Test
+	public void updateGroupFailExtraProperties() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null, null);
+		b.setAdditionalProperties("foo", "bar");
+
+		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
+				"Unexpected parameters in request: foo"));
+	}
+	
+	@Test
+	public void updateGroupFailBadType() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, op("Teem"), null);
+
+		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
+				"Invalid group type: Teem"));
+	}
+	
+	@Test
+	public void updateGroupFailNoSuchGroup() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchGroupException("gid"))
+				.when(g).updateGroup(
+						new Token("tok"), GroupUpdateParams.getBuilder(new GroupID("gid"))
+								.withName(new GroupName("name"))
+								.build());
+
+		failUpdateGroup(g, "tok", "  gid", new CreateOrUpdateGroupJSON(
+				Optional.ofNullable("name"), null, null),
+				new NoSuchGroupException("gid"));
+	}
+	
+	private void failUpdateGroup(
+			final Groups g,
+			final String token,
+			final String groupID,
+			final CreateOrUpdateGroupJSON update,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).updateGroup(token, groupID, update);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

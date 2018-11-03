@@ -22,7 +22,7 @@ public class GroupIDTest {
 
 	@Test
 	public void construct() throws Exception {
-		final GroupID g1 = new GroupID("a8n-ba9");
+		final GroupID g1 = new GroupID("    a8n-ba9    ");
 		assertThat("incorrect username", g1.getName(), is("a8n-ba9"));
 		assertThat("incorrect toString", g1.toString(), is("GroupID [name=a8n-ba9]"));
 		

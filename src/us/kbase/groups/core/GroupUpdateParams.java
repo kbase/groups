@@ -153,6 +153,15 @@ public class GroupUpdateParams {
 			return this;
 		}
 		
+		/** Change the name of the group.
+		 * @param name the new name, or null to not change the name.
+		 * @return this builder.
+		 */
+		public Builder withNullableName(final GroupName name) {
+			this.groupName = Optional.ofNullable(name);
+			return this;
+		}
+		
 		/** Change the type of the group.
 		 * @param type the new type.
 		 * @return this builder.
@@ -160,6 +169,15 @@ public class GroupUpdateParams {
 		public Builder withType(final GroupType type) {
 			checkNotNull(type, "type");
 			this.type = Optional.of(type);
+			return this;
+		}
+		
+		/** Change the type of the group.
+		 * @param type the new type, or null to not change the type.
+		 * @return this builder.
+		 */
+		public Builder withNullableType(final GroupType type) {
+			this.type = Optional.ofNullable(type);
 			return this;
 		}
 		
