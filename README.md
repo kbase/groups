@@ -178,6 +178,31 @@ is `Organization`.
 
 The group description must be no longer than 5000 Unicode code points.
 
+Whitespace only strings are treated as `null`.
+
+### Update a group
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/update
+{
+    "name": <an arbitrary group name, optional>
+    "type": <the type of the group, optional>
+    "description": <the description of the group, optional>
+}
+```
+
+The user must be a group administrator.
+
+The constraints on the parameters are the same as for the creation parameters.
+
+If `name` or `type` are `null` or the field is missing altogether, they are not altered.
+
+If `description` field is missing, it is not altered. If it is `null`, it is removed.
+Otherwise it is set to the new value.
+
+Whitespace only strings are treated as `null`.
+
 ### Get a group
 
 ```

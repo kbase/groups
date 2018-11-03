@@ -24,12 +24,12 @@ public class GroupID extends Name {
 	 */
 	public GroupID(final String id) throws MissingParameterException, IllegalParameterException {
 		super(id, "group id", 100);
-		final Matcher m = INVALID_CHARS.matcher(id);
+		final Matcher m = INVALID_CHARS.matcher(getName());
 		if (m.find()) {
 			throw new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID, String.format(
 					"Illegal character in group id %s: %s", id, m.group()));
 		}
-		if (!Character.isLetter(id.codePointAt(0))) {
+		if (!Character.isLetter(getName().codePointAt(0))) {
 			throw new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 					"Group ID must start with a letter");
 		}

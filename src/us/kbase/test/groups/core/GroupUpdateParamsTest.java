@@ -54,6 +54,42 @@ public class GroupUpdateParamsTest {
 	}
 	
 	@Test
+	public void buildMaximalFromNullable() throws Exception {
+		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
+				.withNullableName(new GroupName("n"))
+				.withNullableType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build();
+		
+		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
+		assertThat("incorrect name", p.getGroupName(), is(Optional.of(new GroupName("n"))));
+		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build()));
+		assertThat("incorrect type", p.getType(), is(Optional.of(GroupType.TEAM)));
+		assertThat("incorrect update", p.hasUpdate(), is(true));
+	}
+	
+	@Test
+	public void buildMaximalAndRevertNullables() throws Exception {
+		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
+				.withName(new GroupName("n"))
+				.withType(GroupType.TEAM)
+				.withNullableName(null)
+				.withNullableType(null)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build())
+				.build();
+		
+		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
+		assertThat("incorrect name", p.getGroupName(), is(Optional.empty()));
+		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.remove()).build()));
+		assertThat("incorrect type", p.getType(), is(Optional.empty()));
+		assertThat("incorrect update", p.hasUpdate(), is(true));
+	}
+
+	@Test
 	public void hasUpdateWithName() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withName(new GroupName("n"))
