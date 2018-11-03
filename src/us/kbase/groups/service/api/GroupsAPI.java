@@ -87,7 +87,6 @@ public class GroupsAPI {
 	
 	public static class CreateOrUpdateGroupJSON extends IncomingJSON {
 		
-		//TODO NOW add a integration test for this when update is ready. This stuff is hairy.
 		@JsonProperty(Fields.GROUP_NAME)
 		private Optional<String> groupName;
 		@JsonProperty(Fields.GROUP_TYPE)

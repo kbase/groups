@@ -9,12 +9,14 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.Response;
@@ -34,6 +36,7 @@ import com.mongodb.client.MongoDatabase;
 import us.kbase.auth.AuthToken;
 import us.kbase.common.test.RegexMatcher;
 import us.kbase.groups.core.exceptions.GroupsException;
+import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.authcontroller.AuthController;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.StandaloneGroupsServer;
@@ -271,6 +274,107 @@ public class ServiceIntegrationTest {
 				"servname", "Groups service");
 		
 		assertThat("root json incorrect", r, is(expected));
+	}
+	
+	//TODO TEST add more tests for create/update/get group. This test is to verify the JDK8 Jackson additions are working.
+	@Test
+	public void createUpdateGetGroup() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc")));
+
+		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc");
+
+		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
+		
+		final WebTarget updateTarget = CLI.target(updateURI);
+		final Builder req2 = updateTarget.request().header("authorization", TOKEN1);
+
+		final Response res2 = req2.put(Entity.json(MapBuilder.<String, Object>newHashMap()
+				.with("name", null) // no change
+				.with("type", "Team") // update
+				// no description, so no change
+				.build()));
+
+		assertThat("incorrect response code", res2.getStatus(), is(204));
+		
+		assertSimpleGroupCorrect("myid", "myname", "Team", "mydesc");
+		
+		final Builder req4 = updateTarget.request().header("authorization", TOKEN1);
+		
+		final Response res4 = req4.put(Entity.json(MapBuilder.<String, Object>newHashMap()
+				// no name so no change
+				.with("type", null) // no change
+				.with("description", null) // remove
+				.build()));
+
+		assertThat("incorrect response code", res4.getStatus(), is(204));
+		
+		assertSimpleGroupCorrect("myid", "myname", "Team", null);
+		
+		final Builder req5 = updateTarget.request().header("authorization", TOKEN1);
+		
+		final Response res5 = req5.put(Entity.json(MapBuilder.<String, Object>newHashMap()
+				.with("name", "new name")
+				.with("description", "new desc")
+				.build()));
+
+		assertThat("incorrect response code", res5.getStatus(), is(204));
+		
+		assertSimpleGroupCorrect("myid", "new name", "Team", "new desc");
+	}
+
+	private void assertSimpleGroupCorrect(
+			final String groupID,
+			final String name,
+			final String type,
+			final String desc) {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/" + groupID).build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.get();
+		
+		assertSimpleGroupCorrect(res, groupID, name, type, desc);
+	}
+	
+	// assumes user = user1, and all lists are empty
+	private void assertSimpleGroupCorrect(
+			final Response res,
+			final String groupID,
+			final String name,
+			final String type,
+			final String desc) {
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> g = res.readEntity(Map.class);
+		
+		final long create = (long) g.get("createdate");
+		final long mod = (long) g.get("moddate");
+		g.remove("createdate");
+		g.remove("moddate");
+		TestCommon.assertCloseToNow(create);
+		TestCommon.assertCloseToNow(mod);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("owner", "user1")
+				.with("members", Collections.emptyList())
+				.with("name", name)
+				.with("description", desc)
+				.with("id", groupID)
+				.with("workspaces", Collections.emptyList())
+				.with("type", type)
+				.with("admins", Collections.emptyList())
+				.build();
+		
+		assertThat("incorrect group", g, is(expected));
 	}
 }
 	

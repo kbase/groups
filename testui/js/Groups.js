@@ -763,6 +763,7 @@ export default class {
           return;
       }
       // TODO handle setting the group type correctly
+      // note name is required on create, not on update. Since I'm lazy I'm just making it not required
       const input = 
           `
           <div>
@@ -778,7 +779,7 @@ export default class {
             <div class="form-group">
               <label for="groupname">Name</label>
               <input class="form-control" id="groupname" aria-describedby="namehelp"
-                placeholder="Enter group name" ${this.getValueTerm(group.name)} required />
+                placeholder="Enter group name" ${this.getValueTerm(group.name)} />
               <small id="namehelp" class="form-text text-muted">
                 An arbitrary name for the group.
               </small>
