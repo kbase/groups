@@ -31,7 +31,7 @@ public class OptionalGroupFields {
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		return !description.isNoAction();
+		return description.hasAction();
 	}
 
 	@Override

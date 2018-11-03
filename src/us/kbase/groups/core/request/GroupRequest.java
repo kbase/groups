@@ -84,7 +84,7 @@ public class GroupRequest {
 	 * request type is {@link GroupRequestType#INVITE_WORKSPACE} or
 	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}. In this case the workspace is added to the
 	 * group if the request is accepted.
-	 * @return
+	 * @return the target workspace.
 	 */
 	public Optional<WorkspaceID> getWorkspaceTarget() {
 		return wsTarget;

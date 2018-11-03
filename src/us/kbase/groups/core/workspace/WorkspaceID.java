@@ -36,12 +36,12 @@ public class WorkspaceID {
 	 * @param id the id.
 	 * @throws IllegalParameterException if the ID is not an integer or is < 1.
 	 */
-	public WorkspaceID(final String workspaceID) throws IllegalParameterException {
-		checkNotNull(workspaceID, "workspaceID");
+	public WorkspaceID(final String id) throws IllegalParameterException {
+		checkNotNull(id, "id");
 		try {
-			this.id = Integer.parseInt(workspaceID.trim());
+			this.id = Integer.parseInt(id.trim());
 		} catch (NumberFormatException e) {
-			throw new IllegalParameterException("Illegal workspace ID: " + workspaceID);
+			throw new IllegalParameterException("Illegal workspace ID: " + id);
 		}
 		checkID();
 	}

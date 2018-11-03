@@ -27,6 +27,7 @@ public class FieldItemTest {
 		assertThat("incorrect item", fi.get(), is(6));
 		assertThat("incorrect or null", fi.orNull(), is(6));
 		assertThat("incorrect has", fi.hasItem(), is(true));
+		assertThat("incorrect has", fi.hasAction(), is(true));
 		assertThat("incorrect no action", fi.isNoAction(), is(false));
 		assertThat("incorrect remove", fi.isRemove(), is(false));
 	}
@@ -48,6 +49,7 @@ public class FieldItemTest {
 		assertThat("incorrect item", fi.get(), is(6));
 		assertThat("incorrect or null", fi.orNull(), is(6));
 		assertThat("incorrect has", fi.hasItem(), is(true));
+		assertThat("incorrect has", fi.hasAction(), is(true));
 		assertThat("incorrect no action", fi.isNoAction(), is(false));
 		assertThat("incorrect remove", fi.isRemove(), is(false));
 		
@@ -55,6 +57,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", fin.orNull(), is(nullValue()));
 		assertThat("incorrect has", fin.hasItem(), is(false));
+		assertThat("incorrect has", fin.hasAction(), is(false));
 		assertThat("incorrect no action", fin.isNoAction(), is(true));
 		assertThat("incorrect remove", fin.isRemove(), is(false));
 	}
@@ -65,6 +68,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", fi.orNull(), is(nullValue()));
 		assertThat("incorrect has", fi.hasItem(), is(false));
+		assertThat("incorrect has", fi.hasAction(), is(true));
 		assertThat("incorrect no action", fi.isNoAction(), is(false));
 		assertThat("incorrect remove", fi.isRemove(), is(true));
 	}
@@ -75,6 +79,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", fi.orNull(), is(nullValue()));
 		assertThat("incorrect has", fi.hasItem(), is(false));
+		assertThat("incorrect has", fi.hasAction(), is(false));
 		assertThat("incorrect no action", fi.isNoAction(), is(true));
 		assertThat("incorrect remove", fi.isRemove(), is(false));
 	}
@@ -97,6 +102,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", s1.orNull(), is(nullValue()));
 		assertThat("incorrect has", s1.hasItem(), is(false));
+		assertThat("incorrect has", s1.hasAction(), is(false));
 		assertThat("incorrect no action", s1.isNoAction(), is(true));
 		assertThat("incorrect remove", s1.isRemove(), is(false));
 		
@@ -104,6 +110,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", s2.orNull(), is(nullValue()));
 		assertThat("incorrect has", s2.hasItem(), is(false));
+		assertThat("incorrect has", s2.hasAction(), is(false));
 		assertThat("incorrect no action", s2.isNoAction(), is(true));
 		assertThat("incorrect remove", s2.isRemove(), is(false));
 		
@@ -112,19 +119,21 @@ public class FieldItemTest {
 		assertThat("incorrect item", s3.get(), is("a string"));
 		assertThat("incorrect or null", s3.orNull(), is("a string"));
 		assertThat("incorrect has", s3.hasItem(), is(true));
+		assertThat("incorrect has", s3.hasAction(), is(true));
 		assertThat("incorrect no action", s3.isNoAction(), is(false));
 		assertThat("incorrect remove", s3.isRemove(), is(false));
 	}
 	
 	@Test
 	public void stringFieldFrom() {
-		final StringField s3 = StringField.from("     a string   \t   ");
+		final StringField s = StringField.from("     a string   \t   ");
 		
-		assertThat("incorrect item", s3.get(), is("a string"));
-		assertThat("incorrect or null", s3.orNull(), is("a string"));
-		assertThat("incorrect has", s3.hasItem(), is(true));
-		assertThat("incorrect no action", s3.isNoAction(), is(false));
-		assertThat("incorrect remove", s3.isRemove(), is(false));
+		assertThat("incorrect item", s.get(), is("a string"));
+		assertThat("incorrect or null", s.orNull(), is("a string"));
+		assertThat("incorrect has", s.hasItem(), is(true));
+		assertThat("incorrect has", s.hasAction(), is(true));
+		assertThat("incorrect no action", s.isNoAction(), is(false));
+		assertThat("incorrect remove", s.isRemove(), is(false));
 	}
 	
 	@Test
@@ -149,6 +158,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", fi.orNull(), is(nullValue()));
 		assertThat("incorrect has", fi.hasItem(), is(false));
+		assertThat("incorrect has", fi.hasAction(), is(true));
 		assertThat("incorrect no action", fi.isNoAction(), is(false));
 		assertThat("incorrect remove", fi.isRemove(), is(true));
 	}
@@ -159,6 +169,7 @@ public class FieldItemTest {
 		
 		assertThat("incorrect or null", fi.orNull(), is(nullValue()));
 		assertThat("incorrect has", fi.hasItem(), is(false));
+		assertThat("incorrect has", fi.hasAction(), is(false));
 		assertThat("incorrect no action", fi.isNoAction(), is(true));
 		assertThat("incorrect remove", fi.isRemove(), is(false));
 	}

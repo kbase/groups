@@ -41,7 +41,7 @@ public class WorkspaceInfoSet {
 	}
 	
 	/** Get the {@link WorkspaceInformation} in this set.
-	 * @return
+	 * @return the workspace information.
 	 */
 	public Set<WorkspaceInformation> getWorkspaceInformation() {
 		return isAdmin.keySet();
