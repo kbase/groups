@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupCreationParams.Builder;
 import us.kbase.groups.core.GroupID;
@@ -37,6 +38,7 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.Groups;
+import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -60,6 +62,8 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
 @Path(ServicePaths.GROUP)
 public class GroupsAPI {
 
+	// TODO WS need a get ws read privs endpoint
+	// TODO NOW reduce request list size
 	// TODO JAVADOC / swagger
 	// TODO NOW add endpoint for getting group types
 	
@@ -84,6 +88,7 @@ public class GroupsAPI {
 	
 	public static class CreateGroupJSON extends IncomingJSON {
 		
+		//TODO NOW try setting as Optional - missing should be null, null should be absent()
 		private final String groupName;
 		private final String type;
 		private final String description;
@@ -111,7 +116,8 @@ public class GroupsAPI {
 		checkIncomingJson(create);
 		final Builder gbuilder = GroupCreationParams.getBuilder(
 				new GroupID(groupID), new GroupName(create.groupName))
-				.withDescription(create.description);
+				.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
+						StringField.fromNullable(create.description)).build());
 		if (!isNullOrEmpty(create.type)) {
 			gbuilder.withType(GroupType.fromRepresentation(create.type));
 		}

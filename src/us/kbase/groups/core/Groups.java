@@ -54,7 +54,6 @@ public class Groups {
 	
 	//TODO WS needs a ws view for a request - or grant read to anyone who views a REQUST_ADD_WS request
 	//TODO LOGGING for all actions
-	//TODO NOW mod dates for add / remove ws
 	
 	/* could probably abstract the workspace handling (and upcoming apps handling) in a
 	 * general resource handling system, where resources and handlers for those resources

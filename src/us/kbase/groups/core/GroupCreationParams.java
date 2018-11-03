@@ -1,13 +1,6 @@
 package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static us.kbase.groups.util.Util.checkString;
-import static us.kbase.groups.util.Util.isNullOrEmpty;
-
-import com.google.common.base.Optional;
-
-import us.kbase.groups.core.exceptions.IllegalParameterException;
-import us.kbase.groups.core.exceptions.MissingParameterException;
 
 /** A set of parameters for creating a {@link Group}.
  * @author gaprice@lbl.gov
@@ -15,22 +8,23 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  */
 public class GroupCreationParams {
 	
-	// is there a way to reduce the duplicate code w {@link Group}?
+	// is there a way to reduce the duplicate code w {@link Group}? Tried this in auth
+	// with the admin configuration and it's kind of gross
 	
 	private final GroupID groupID;
 	private final GroupName groupName;
+	private final OptionalGroupFields opfields;
 	private final GroupType type;
-	private final Optional<String> description;
 	
 	private GroupCreationParams(
 			final GroupID groupID,
 			final GroupName groupName,
 			final GroupType type,
-			final Optional<String> description) {
+			final OptionalGroupFields opfields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
 		this.type = type;
-		this.description = description;
+		this.opfields = opfields;
 	}
 
 	/** The ID of the group.
@@ -54,13 +48,13 @@ public class GroupCreationParams {
 		return type;
 	}
 
-	/** Get the description of the group, if any.
-	 * @return the description or {@link Optional#absent()}.
+	/** Get any optional fields associated with the group.
+	 * @return the fields.
 	 */
-	public Optional<String> getDescription() {
-		return description;
+	public OptionalGroupFields getOptionalFields() {
+		return opfields;
 	}
-	
+
 	/** Create a {@link Group} from these parameters.
 	 * @param owner the owner of the group.
 	 * @param times the creation and modification times of the group.
@@ -69,7 +63,7 @@ public class GroupCreationParams {
 	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
 		return Group.getBuilder(groupID, groupName, owner, times)
 				.withType(type)
-				.withDescription(description.orNull())
+				.withDescription(opfields.getDescription().orNull())
 				.build();
 	}
 
@@ -77,9 +71,9 @@ public class GroupCreationParams {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + ((opfields == null) ? 0 : opfields.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
@@ -96,13 +90,6 @@ public class GroupCreationParams {
 			return false;
 		}
 		GroupCreationParams other = (GroupCreationParams) obj;
-		if (description == null) {
-			if (other.description != null) {
-				return false;
-			}
-		} else if (!description.equals(other.description)) {
-			return false;
-		}
 		if (groupID == null) {
 			if (other.groupID != null) {
 				return false;
@@ -115,6 +102,13 @@ public class GroupCreationParams {
 				return false;
 			}
 		} else if (!groupName.equals(other.groupName)) {
+			return false;
+		}
+		if (opfields == null) {
+			if (other.opfields != null) {
+				return false;
+			}
+		} else if (!opfields.equals(other.opfields)) {
 			return false;
 		}
 		if (type != other.type) {
@@ -144,7 +138,7 @@ public class GroupCreationParams {
 		private final GroupID groupID;
 		private final GroupName groupName;
 		private GroupType type = GroupType.ORGANIZATION;
-		private Optional<String> description = Optional.absent();
+		private OptionalGroupFields opfields = OptionalGroupFields.getBuilder().build();
 		
 		private Builder(final GroupID id, final GroupName name) {
 			checkNotNull(id, "id");
@@ -163,24 +157,15 @@ public class GroupCreationParams {
 			return this;
 		}
 		
-		/** Add a group description. The maximum description size is
-		 * {@link Group#MAX_DESCRIPTION_CODE_POINTS} Unicode code points.
-		 * @param description the new description. If null or whitespace only, the description
-		 * is set to {@link Optional#absent()}. The description will be {@link String#trim()}ed.
+		/** Add optional fields to the creation parameters. In the context of the creation
+		 * parameters, {@link FieldItem#isRemove()} is treated as {@link FieldItem#isNoAction()}.
+		 * The default set of optional fields are as {@link OptionalGroupFields#getDefault()}.
+		 * @param fields the optional fields.
 		 * @return this builder.
-		 * @throws IllegalParameterException if the description is too long.
 		 */
-		public Builder withDescription(final String description) throws IllegalParameterException {
-			if (isNullOrEmpty(description)) {
-				this.description = Optional.absent();
-			} else {
-				try {
-					checkString(description, "description", Group.MAX_DESCRIPTION_CODE_POINTS);
-				} catch (MissingParameterException e) {
-					throw new RuntimeException("This should be impossible");
-				}
-				this.description = Optional.of(description.trim());
-			}
+		public Builder withOptionalFields(final OptionalGroupFields fields) {
+			checkNotNull(fields, "fields");
+			this.opfields = fields;
 			return this;
 		}
 		
@@ -188,7 +173,7 @@ public class GroupCreationParams {
 		 * @return the parameters.
 		 */
 		public GroupCreationParams build() {
-			return new GroupCreationParams(groupID, groupName, type, description);
+			return new GroupCreationParams(groupID, groupName, type, opfields);
 		}
 	}
 	
