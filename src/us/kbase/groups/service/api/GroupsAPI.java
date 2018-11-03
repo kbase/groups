@@ -26,7 +26,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.groups.core.FieldItem.StringField;
@@ -88,19 +87,45 @@ public class GroupsAPI {
 	
 	public static class CreateGroupJSON extends IncomingJSON {
 		
-		//TODO NOW try setting as Optional - missing should be null, null should be absent()
-		private final String groupName;
-		private final String type;
-		private final String description;
+		//TODO NOW add a integration test for this when update is ready. This stuff is hairy.
+		@JsonProperty(Fields.GROUP_NAME)
+		private Optional<String> groupName;
+		@JsonProperty(Fields.GROUP_TYPE)
+		private Optional<String> type;
+		@JsonProperty(Fields.GROUP_DESCRIPTION)
+		private Optional<String> description;
+
+		@SuppressWarnings("unused")
+		private CreateGroupJSON() {} // default constructor for Jackson
 		
-		@JsonCreator
+		// this constructor is for testing. Jackson *must* inject the fields so that the
+		// optionals can be null, which distinguishes a missing field from a field with a null
+		// value.
 		public CreateGroupJSON(
-				@JsonProperty(Fields.GROUP_NAME) final String name,
-				@JsonProperty(Fields.GROUP_TYPE) final String type,
-				@JsonProperty(Fields.GROUP_DESCRIPTION) final String desc) {
-			this.groupName = name;
+				final Optional<String> groupName,
+				final Optional<String> type,
+				final Optional<String> description) {
+			this.groupName = groupName;
 			this.type = type;
-			this.description = desc;
+			this.description = description;
+		}
+
+		private GroupCreationParams toCreateParams(final GroupID groupID)
+				throws MissingParameterException, IllegalParameterException {
+			final Builder gbuilder = GroupCreationParams.getBuilder(
+					groupID, new GroupName(fromNullable(groupName)))
+					.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
+							StringField.fromNullable(fromNullable(description))).build());
+			final String gtype = fromNullable(type);
+			if (!isNullOrEmpty(gtype)) {
+				gbuilder.withType(GroupType.fromRepresentation(gtype));
+			}
+			return gbuilder.build();
+		}
+
+		// handles case where the optional itself is null
+		private <T> T fromNullable(final Optional<T> nullable) {
+			return nullable == null ? null : nullable.orElse(null);
 		}
 	}
 	
@@ -114,14 +139,8 @@ public class GroupsAPI {
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
 				AuthenticationException, GroupExistsException, GroupsStorageException {
 		checkIncomingJson(create);
-		final Builder gbuilder = GroupCreationParams.getBuilder(
-				new GroupID(groupID), new GroupName(create.groupName))
-				.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
-						StringField.fromNullable(create.description)).build());
-		if (!isNullOrEmpty(create.type)) {
-			gbuilder.withType(GroupType.fromRepresentation(create.type));
-		}
-		return toGroupJSON(groups.createGroup(getToken(token, true), gbuilder.build()));
+		return toGroupJSON(groups.createGroup(getToken(token, true),
+				create.toCreateParams(new GroupID(groupID))));
 	}
 	
 	@GET

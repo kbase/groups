@@ -4,7 +4,6 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.mongodb.MongoClient;
 
 import ch.qos.logback.classic.Level;
@@ -59,7 +58,7 @@ public class GroupsService extends ResourceConfig {
 			}
 		}
 		packages("us.kbase.groups.service.api");
-		register(JacksonJaxbJsonProvider.class);
+		register(JacksonFeature.class);
 		register(LoggingFilter.class);
 		register(ExceptionHandler.class);
 		final Groups g = gb.getGroups();

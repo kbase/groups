@@ -70,7 +70,7 @@ public class FieldItem<T> {
 	}
 	
 	/** Get the data associated with the field item or null if there is no data.
-	 * @return
+	 * @return the data.
 	 */
 	public T orNull() {
 		return item;
@@ -78,22 +78,31 @@ public class FieldItem<T> {
 	
 	/** Check if this field item denotes that any data associated with the field should be
 	 * removed.
-	 * @return
+	 * @return true if the field value should be removed.
 	 */
 	public boolean isRemove() {
 		return state == REMOVE;
 	}
 	
 	/** Check if this field item contains data.
-	 * @return
+	 * @return true if the item contains data.
 	 */
 	public boolean hasItem() {
 		return state == HAS_ITEM;
 	}
 	
+	/** Check if this field item requires that action be taken - either that a field should be
+	 * set with the value in this item, or that the field value should be removed. The inverse of
+	 * {@link #isNoAction()}.
+	 * @return true if an action should be taken.
+	 */
+	public boolean hasAction() {
+		return !isNoAction();
+	}
+	
 	/** Check if this field item denotes that any data associated with the field should be
 	 * left alone.
-	 * @return
+	 * @return true if no action should be taken.
 	 */
 	public boolean isNoAction() {
 		return state == NO_ACTION;

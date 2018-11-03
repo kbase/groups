@@ -134,7 +134,7 @@ public class GroupView {
 	}
 
 	/** Get the administrators of the group. Empty for {@link ViewType#MINIMAL} views.
-	 * @return
+	 * @return the group administrators.
 	 */
 	public Set<UserName> getAdministrators() {
 		return admins;

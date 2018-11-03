@@ -49,7 +49,7 @@ public class WorkspaceIDTest {
 	
 	@Test
 	public void constructFailString() throws Exception {
-		failConstructString(null, new NullPointerException("workspaceID"));
+		failConstructString(null, new NullPointerException("id"));
 		failConstructString("foo", new IllegalParameterException("Illegal workspace ID: foo"));
 		failConstructString(" 0  ", new IllegalParameterException("Workspace IDs are > 0"));
 	}
