@@ -2,24 +2,26 @@ package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/** A set of parameters for creating a {@link Group}.
+import java.util.Optional;
+
+/** A set of parameters for updating a {@link Group}.
  * @author gaprice@lbl.gov
  *
  */
-public class GroupCreationParams {
+public class GroupUpdateParams {
 	
-	// is there a way to reduce the duplicate code w {@link Group}? Tried this in auth
-	// with the admin configuration and it's kind of gross
+	// is there a way to reduce the duplicate code w {@link GroupCreationParams}?
+	// builder inheritance is kind of gross
 	
 	private final GroupID groupID;
-	private final GroupName groupName;
-	private final GroupType type;
+	private final Optional<GroupName> groupName;
+	private final Optional<GroupType> type;
 	private final OptionalGroupFields opfields;
 	
-	private GroupCreationParams(
+	private GroupUpdateParams(
 			final GroupID groupID,
-			final GroupName groupName,
-			final GroupType type,
+			final Optional<GroupName> groupName,
+			final Optional<GroupType> type,
 			final OptionalGroupFields opfields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
@@ -34,17 +36,18 @@ public class GroupCreationParams {
 		return groupID;
 	}
 
-	/** The name of the group.
+	/** The new name of the group, or {@link Optional#empty()} if the name should not be changed.
 	 * @return the name.
 	 */
-	public GroupName getGroupName() {
+	public Optional<GroupName> getGroupName() {
 		return groupName;
 	}
 
-	/** Get the type of the group.
+	/** Get the new type of the group, or {@link Optional#empty()} if the type
+	 * should not be changed.
 	 * @return the group type.
 	 */
-	public GroupType getType() {
+	public Optional<GroupType> getType() {
 		return type;
 	}
 
@@ -53,18 +56,6 @@ public class GroupCreationParams {
 	 */
 	public OptionalGroupFields getOptionalFields() {
 		return opfields;
-	}
-
-	/** Create a {@link Group} from these parameters.
-	 * @param owner the owner of the group.
-	 * @param times the creation and modification times of the group.
-	 * @return the new group.
-	 */
-	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
-		return Group.getBuilder(groupID, groupName, owner, times)
-				.withType(type)
-				.withDescription(opfields.getDescription().orNull())
-				.build();
 	}
 
 	@Override
@@ -89,7 +80,7 @@ public class GroupCreationParams {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		GroupCreationParams other = (GroupCreationParams) obj;
+		GroupUpdateParams other = (GroupUpdateParams) obj;
 		if (groupID == null) {
 			if (other.groupID != null) {
 				return false;
@@ -111,53 +102,61 @@ public class GroupCreationParams {
 		} else if (!opfields.equals(other.opfields)) {
 			return false;
 		}
-		if (type != other.type) {
+		if (type == null) {
+			if (other.type != null) {
+				return false;
+			}
+		} else if (!type.equals(other.type)) {
 			return false;
 		}
 		return true;
 	}
 
-	// is there a way to make Group inherit from this class & builder to DRY things up?
-	/** Get a builder for a {@link GroupCreationParams}.
+	/** Get a builder for a {@link GroupUpdateParams}.
 	 * @param id the group ID.
-	 * @param name the group name.
 	 * @return the new builder.
 	 */
-	public static Builder getBuilder(final GroupID id, final GroupName name) {
-		return new Builder(id, name);
+	public static Builder getBuilder(final GroupID id) {
+		return new Builder(id);
 	}
 	
-	/** A builder for a {@link GroupCreationParams}.
+	/** A builder for a {@link GroupUpdateParams}.
 	 * @author gaprice@lbl.gov
 	 *
 	 */
 	public static class Builder {
 		
 		private final GroupID groupID;
-		private final GroupName groupName;
-		private GroupType type = GroupType.ORGANIZATION;
+		private Optional<GroupName> groupName = Optional.empty();
+		private Optional<GroupType> type = Optional.empty();
 		private OptionalGroupFields opfields = OptionalGroupFields.getBuilder().build();
 		
-		private Builder(final GroupID id, final GroupName name) {
+		private Builder(final GroupID id) {
 			checkNotNull(id, "id");
-			checkNotNull(name, "name");
 			this.groupID = id;
-			this.groupName = name;
 		}
 		
-		/** Change the type of the group. The default type is {@link GroupType#ORGANIZATION}.
+		/** Change the name of the group.
+		 * @param name the new name.
+		 * @return this builder.
+		 */
+		public Builder withName(final GroupName name) {
+			checkNotNull(name, "name");
+			this.groupName = Optional.of(name);
+			return this;
+		}
+		
+		/** Change the type of the group.
 		 * @param type the new type.
 		 * @return this builder.
 		 */
 		public Builder withType(final GroupType type) {
 			checkNotNull(type, "type");
-			this.type = type;
+			this.type = Optional.of(type);
 			return this;
 		}
 		
-		/** Add optional fields to the creation parameters. In the context of the creation
-		 * parameters, {@link FieldItem#isRemove()} is treated as {@link FieldItem#isNoAction()}.
-		 * The default set of optional fields are as {@link OptionalGroupFields#getDefault()}.
+		/** Add optional fields to the update parameters.
 		 * @param fields the optional fields.
 		 * @return this builder.
 		 */
@@ -167,11 +166,11 @@ public class GroupCreationParams {
 			return this;
 		}
 		
-		/** Build the new {@link GroupCreationParams}.
+		/** Build the new {@link GroupUpdateParams}.
 		 * @return the parameters.
 		 */
-		public GroupCreationParams build() {
-			return new GroupCreationParams(groupID, groupName, type, opfields);
+		public GroupUpdateParams build() {
+			return new GroupUpdateParams(groupID, groupName, type, opfields);
 		}
 	}
 	
