@@ -40,6 +40,7 @@ import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -112,6 +113,8 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("a3"))
 				.withWorkspace(new WorkspaceID(31415))
 				.withWorkspace(new WorkspaceID(602))
+				.withCustomField(new NumberedCustomField("foo-83"), "bar")
+				.withCustomField(new NumberedCustomField("whoo"), "whee")
 				.build());
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
@@ -127,6 +130,8 @@ public class MongoGroupsStorageOpsTest {
 						.withAdministrator(new UserName("a3"))
 						.withWorkspace(new WorkspaceID(31415))
 						.withWorkspace(new WorkspaceID(602))
+						.withCustomField(new NumberedCustomField("foo-83"), "bar")
+						.withCustomField(new NumberedCustomField("whoo"), "whee")
 						.build()));
 	}
 	
