@@ -7,7 +7,7 @@ import java.util.Optional;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
-public class NumberedCustomField {
+public class NumberedCustomField implements Comparable<NumberedCustomField> {
 
 	// TODO JAVADOC
 	// TODO TEST
@@ -23,7 +23,7 @@ public class NumberedCustomField {
 		customField = customField.trim();
 		final String[] split = customField.split(SEP, 2);
 		final int number;
-		if (split[1].length() != 0) {
+		if (split.length > 1) {
 			try {
 				number = Integer.parseInt(split[1]);
 				if (number < 1) {
@@ -49,11 +49,20 @@ public class NumberedCustomField {
 	}
 	
 	public String getField() {
-		return field + (number > 0 ? SEP + number : "");
+		return field.getName() + (number > 0 ? SEP + number : "");
 	}
 	
 	public boolean isNumberedField() {
 		return number > 0;
+	}
+	
+	@Override
+	public int compareTo(final NumberedCustomField other) {
+		final int compareField = this.field.compareTo(other.field);
+		if (compareField != 0) {
+			return compareField;
+		}
+		return number - other.number;
 	}
 
 	@Override

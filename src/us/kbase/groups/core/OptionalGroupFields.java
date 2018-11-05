@@ -3,9 +3,15 @@ package us.kbase.groups.core;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.checkString;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 
 /** Optional fields associated with a {@link Group}. 
  * @author gaprice@lbl.gov
@@ -14,9 +20,13 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 public class OptionalGroupFields {
 	
 	private final FieldItem<String> description;
+	private final Map<NumberedCustomField, FieldItem<String>> customFields;
 
-	private OptionalGroupFields(FieldItem<String> description) {
+	private OptionalGroupFields(
+			final FieldItem<String> description,
+			final Map<NumberedCustomField, FieldItem<String>> customFields) {
 		this.description = description;
+		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
 	/** Get the description of the group.
@@ -26,18 +36,41 @@ public class OptionalGroupFields {
 		return description;
 	}
 	
-	/** True if for any of the items {@link FieldItem#hasItem()} or {@link FieldItem#isRemove()}
-	 * is true, false otherwise.
+	/** True if for any of the items {@link FieldItem#hasAction()} is true, false otherwise.
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		return description.hasAction();
+		boolean hasUpdate = false;
+		for (final FieldItem<String> s: customFields.values()) {
+			hasUpdate = hasUpdate || s.hasAction();
+		}
+		return description.hasAction() || hasUpdate;
+	}
+	
+	/** Get any custom fields included in the fields.
+	 * @return the custom fields.
+	 */
+	public Set<NumberedCustomField> getCustomFields() {
+		return customFields.keySet();
+	}
+	
+	/** Get the value for a custom field.
+	 * @param field the field.
+	 * @return the value.
+	 */
+	public FieldItem<String> getCustomValue(final NumberedCustomField field) {
+		checkNotNull(field, "field");
+		if (!customFields.containsKey(field)) {
+			throw new IllegalArgumentException("No such field " + field.getField());
+		}
+		return customFields.get(field);
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		return result;
 	}
@@ -54,6 +87,13 @@ public class OptionalGroupFields {
 			return false;
 		}
 		OptionalGroupFields other = (OptionalGroupFields) obj;
+		if (customFields == null) {
+			if (other.customFields != null) {
+				return false;
+			}
+		} else if (!customFields.equals(other.customFields)) {
+			return false;
+		}
 		if (description == null) {
 			if (other.description != null) {
 				return false;
@@ -86,6 +126,7 @@ public class OptionalGroupFields {
 	public static class Builder {
 
 		private FieldItem<String> description = FieldItem.noAction();
+		private final Map<NumberedCustomField, FieldItem<String>> customFields = new HashMap<>();
 		
 		private Builder() {}
 		
@@ -110,11 +151,23 @@ public class OptionalGroupFields {
 			return this;
 		}
 		
+		/** Add a custom field to the set of fields.
+		 * @param field the field.
+		 * @param value the value of the field.
+		 * @return this builder.
+		 */
+		public Builder withCustomField(final NumberedCustomField field, final StringField value) {
+			checkNotNull(field, "field");
+			checkNotNull(value, "value");
+			customFields.put(field, value);
+			return this;
+		}
+		
 		/** Build the {@link OptionalGroupFields}.
 		 * @return the fields.
 		 */
 		public OptionalGroupFields build() {
-			return new OptionalGroupFields(description);
+			return new OptionalGroupFields(description, customFields);
 		}
 	}
 	
