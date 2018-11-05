@@ -43,6 +43,9 @@ public class ServicePaths {
 	public static final String REQUEST = SEP + "request";
 	/** The location to access a request by ID. */
 	public static final String REQUEST_ID = SEP + "id" + SEP + "{" + Fields.REQUEST_ID + "}";
+	/** The location to request permissions to view an outside resource associated with a
+	 * request. */
+	public static final String REQUEST_ID_PERMS = REQUEST_ID + SEP + "getperm";
 	/** The location to cancel a request. */
 	public static final String REQUEST_CANCEL = REQUEST_ID + SEP + "cancel";
 	/** The location to accept a request. */

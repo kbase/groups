@@ -32,6 +32,9 @@ export default class {
           <button id="loadtoken" class="btn btn-primary">Reload from cookie</button>
           <span id="useridentity"></span>
         </div>
+        <div class="row"><span>Set linkout to workspace view prefix</space>
+          <input id="linkout" />
+        </div>
         <div class="row">
           <span>Set auth root url:</span>
           <input id="authurl"/>
@@ -55,6 +58,7 @@ export default class {
     rootElement.innerHTML = html;
     $('#url').val(this.serviceUrl);
     $('#authurl').val(this.authUrl);
+    $('#linkout').val('https://ci.kbase.us/#tbdwhatgoeshere');
     
     // attach event listeners
     $('#settoken').on('click', () => {
@@ -603,7 +607,7 @@ export default class {
                                 <td>${s(r.type)}</td>
                                 <td>${s(r.groupid)}</td>
                                 <td>${s(r.targetuser)}</td>
-                                <td>${s(r.targetws)}</td>
+                                <td>${this.renderViewWSButton(r.targetws)}</td>
                               </tr>
                               `
                       }
@@ -613,6 +617,12 @@ export default class {
                           $(`#${s(r.id)}`).on('click', () => {
                               this.renderRequest(r.id);
                           });
+                          if (r.targetws) {
+                              $(`#viewws_${s(r.targetws)}`).on('click', (e) => {
+                                  e.stopPropagation();
+                                  this.viewWS(r.id, r.targetws); 
+                              });
+                          }
                       }
                   }).catch( (err) => {
                       this.handleError(err);
@@ -622,6 +632,32 @@ export default class {
                       this.handleError(err);
                   });
               }
+      }).catch( (err) => {
+          this.handleError(err);
+      });
+  }
+  
+  renderViewWSButton(wsid) {
+      if (!wsid) {
+          return '';
+      }
+      const s = this.sanitize;
+      return `<button id="viewws_${s(wsid)}" class="btn btn-primary">View Workspace</button>`
+  }
+  
+  viewWS(requestid, wsid) {
+      $('#error').text("");
+      fetch(this.serviceUrl + "request/id/" + requestid + "/getperm",
+       {"method": "POST",
+        "headers": this.getHeaders()
+        }).then( (response) => {
+          if (response.ok) {
+              window.open($("#linkout").val() + '/' + wsid, '_blank');
+          } else {
+              response.text().then( (err) => {
+                  this.handleError(err);
+              });
+          }
       }).catch( (err) => {
           this.handleError(err);
       });
@@ -649,7 +685,8 @@ export default class {
                           <tr><th>Group ID</th><td>${s(json.groupid)}</td></tr>
                           <tr><th>Requester</th><td>${s(json.requester)}</td></tr>
                           <tr><th>Target user</th><td>${s(json.targetuser)}</td></tr>
-                          <tr><th>Target workspace</th><td>${s(json.targetws)}</td></tr>
+                          <tr><th>Target workspace</th>
+                              <td>${this.renderViewWSButton(json.targetws)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Status</th><td>${s(json.status)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
@@ -699,6 +736,11 @@ export default class {
                       $('#denyrequest').on('click', () => {
                           const denyReason = $('#denyreason').val();
                           this.denyRequest(requestid, denyReason);
+                      });
+                  }
+                  if (json.targetws) {
+                      $(`#viewws_${s(json.targetws)}`).on('click', () => {
+                          this.viewWS(json.id, json.targetws); 
                       });
                   }
               }).catch( (err) => {

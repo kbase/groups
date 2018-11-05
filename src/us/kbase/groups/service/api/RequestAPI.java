@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -28,6 +29,7 @@ import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
+import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
@@ -64,6 +66,18 @@ public class RequestAPI {
 		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions())
 				.stream().map(a -> a.getRepresentation()).collect(Collectors.toList()));
 		return json;
+	}
+	
+	@POST
+	@Path(ServicePaths.REQUEST_ID_PERMS)
+	public void getPerms(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID)
+			throws NoSuchRequestException, InvalidTokenException, NoSuchWorkspaceException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				IllegalParameterException, MissingParameterException, GroupsStorageException,
+				WorkspaceHandlerException {
+		groups.setReadPermissionOnWorkspace(getToken(token, true), new RequestID(requestID));
 	}
 	
 	@GET

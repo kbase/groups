@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
 
@@ -209,6 +210,48 @@ public class RequestAPITest {
 			final Exception expected) {
 		try {
 			new RequestAPI(g).getRequest(token, requestid);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getPerms() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		new RequestAPI(g).getPerms("t", id.toString());
+		
+		verify(g).setReadPermissionOnWorkspace(new Token("t"), new RequestID(id));
+	}
+	
+	@Test
+	public void getPermsFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final String id = UUID.randomUUID().toString();
+		
+		failGetPerms(g, null, id,
+				new NoTokenProvidedException("No token provided"));
+		failGetPerms(g, "    \t    ", id,
+				new NoTokenProvidedException("No token provided"));
+		failGetPerms(g, "t", null,
+				new MissingParameterException("request id"));
+		failGetPerms(g, "t", "   \t   ",
+				new MissingParameterException("request id"));
+		failGetPerms(g, "t", "foo",
+				new IllegalParameterException("foo is not a valid request id"));
+	}
+	
+	public void failGetPerms(
+			final Groups g,
+			final String token,
+			final String requestID,
+			final Exception expected) {
+		try {
+			new RequestAPI(g).getPerms(token, requestID);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
