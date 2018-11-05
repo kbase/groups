@@ -3,6 +3,7 @@ package us.kbase.test.groups.core;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.groups.TestCommon.set;
 
 import org.junit.Test;
 
@@ -11,6 +12,7 @@ import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.test.groups.TestCommon;
 
 public class OptionalGroupFieldsTest {
@@ -26,6 +28,7 @@ public class OptionalGroupFieldsTest {
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
 		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
 	@Test
@@ -34,6 +37,7 @@ public class OptionalGroupFieldsTest {
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
 		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
 	@Test
@@ -44,6 +48,7 @@ public class OptionalGroupFieldsTest {
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.from("foo")));
 		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
 	@Test
@@ -54,6 +59,7 @@ public class OptionalGroupFieldsTest {
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.remove()));
 		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
 	@Test
@@ -77,6 +83,97 @@ public class OptionalGroupFieldsTest {
 	private void failWithDescription(final StringField desc, final Exception expected) {
 		try {
 			OptionalGroupFields.getBuilder().withDescription(desc);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void buildMaximal() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withDescription(StringField.from("   foo    "))
+				.withCustomField(new NumberedCustomField("foo-1"), StringField.from("  val  "))
+				.withCustomField(new NumberedCustomField("foo"), StringField.remove())
+				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
+				.build();
+		
+		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.from("foo")));
+		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(
+				set(new NumberedCustomField("foo-1"), new NumberedCustomField("foo"),
+						new NumberedCustomField("bar"))));
+		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("foo-1")),
+				is(StringField.from("val")));
+		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("foo")),
+				is(StringField.remove()));
+		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
+				is(StringField.noAction()));
+	}
+	
+	@Test
+	public void buildWithCustomFieldWithUpdate() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withCustomField(new NumberedCustomField("bar"), StringField.remove())
+				.build();
+		
+		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
+		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(
+				set(new NumberedCustomField("bar"))));
+		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
+				is(StringField.remove()));
+	}
+	
+	@Test
+	public void buildWithCustomFieldNoUpdate() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
+				.build();
+		
+		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
+		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(
+				set(new NumberedCustomField("bar"))));
+		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
+				is(StringField.noAction()));
+	}
+
+	@Test
+	public void withCustomFieldFail() throws Exception {
+		failWithCustomField(null, StringField.noAction(), new NullPointerException("field"));
+		failWithCustomField(new NumberedCustomField("a"), null, new NullPointerException("value"));
+	}
+	
+	private void failWithCustomField(
+			final NumberedCustomField field,
+			final StringField value,
+			final Exception expected) {
+		try {
+			OptionalGroupFields.getBuilder().withCustomField(field, value);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getCustomValueFail() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
+				.build();
+
+		failGetCustomValue(ofg, null, new NullPointerException("field"));
+		failGetCustomValue(ofg, new NumberedCustomField("bar-1"),
+				new IllegalArgumentException("No such field bar-1"));
+	}
+	
+	private void failGetCustomValue(
+			final OptionalGroupFields f,
+			final NumberedCustomField field,
+			final Exception expected) {
+		try {
+			f.getCustomValue(field);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
