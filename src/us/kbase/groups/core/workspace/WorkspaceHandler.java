@@ -56,4 +56,15 @@ public interface WorkspaceHandler {
 	Set<UserName> getAdministrators(WorkspaceID wsid)
 			throws NoSuchWorkspaceException, WorkspaceHandlerException;
 	
+	/** Give a user read permissions if the workspace is not already readable (including
+	 * publicly) to them.
+	 * @param wsid the workspace to modify.
+	 * @param user the user to grant read permissions.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws NoSuchWorkspaceException if the workspace is deleted or there is no workspace
+	 * with the given ID.
+	 */
+	void setReadPermission(WorkspaceID wsid, UserName user)
+			throws NoSuchWorkspaceException, WorkspaceHandlerException;
+	
 }
