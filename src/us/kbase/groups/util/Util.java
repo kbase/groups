@@ -73,8 +73,25 @@ public class Util {
 		}
 	}
 	
-	private static int codePoints(final String s) {
+	/** Return the number of code points in a string. Equivalent to
+	 * {@link String#codePointCount(int, int)} with arguments of 0 and {@link String#length()}.
+	 * @param s the string.
+	 * @return the number of code points.
+	 */
+	public static int codePoints(final String s) {
 		return s.codePointCount(0, s.length());
+	}
+	
+	/** Check if a string contains control characters as per {@link Character#isISOControl(char)}.
+	 * @param s the string to check.
+	 * @return true if the string contains control characters.
+	 */
+	public static boolean containsControlCharacters(final String s) {
+		final boolean[] containsControlChars = {false};
+		s.codePoints().forEach(i -> {
+			containsControlChars[0] = containsControlChars[0] || Character.isISOControl(i);
+		});
+		return containsControlChars[0];
 	}
 	
 	/** Check that the provided collection is not null and contains no null elements.

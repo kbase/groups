@@ -796,7 +796,7 @@ export default class {
   }
   
   getValueTerm(value) {
-      return value ? `value=${value}` : '';
+      return value ? `value="${value}"` : '';
   }
   
   renderCreateOrUpdateGroup(group, urlsuffix) {
