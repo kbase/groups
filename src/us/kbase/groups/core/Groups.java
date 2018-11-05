@@ -777,4 +777,42 @@ public class Groups {
 				"User %s is not an admin for group %s or workspace %s",
 				user.getName(), groupID.getName(), wsid.getID()));
 	}
+	
+	/** Set read permissions on a workspace that has been requested to be added to a group
+	 * for the user if the workspace is not already readable (including publicly so). The user
+	 * must be a group administrator for the request and the request type must be
+	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}.
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request.
+	 * @throws NoSuchRequestException if no request with that ID exists.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchWorkspaceException if the workspace does not exist, is deleted, or is
+	 * not included in the group.
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * request type is not correct.
+	 */
+	public void setReadPermissionOnWorkspace(
+			final Token userToken,
+			final RequestID requestID)
+			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
+				AuthenticationException, UnauthorizedException, NoSuchWorkspaceException,
+				WorkspaceHandlerException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest r = storage.getRequest(requestID);
+		final Group g = getGroupFromKnownGoodRequest(r);
+		if (!g.isAdministrator(user)) {
+			throw new UnauthorizedException(String.format("User %s is not an admin for group %s",
+					user.getName(), g.getGroupID().getName()));
+		}
+		if (!GroupRequestType.REQUEST_ADD_WORKSPACE.equals(r.getType())) {
+			throw new UnauthorizedException(
+					"Only workspace add requests allow for workspace permissions changes.");
+		}
+		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
+	}
 }
