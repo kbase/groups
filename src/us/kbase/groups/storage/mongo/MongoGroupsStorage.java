@@ -51,6 +51,7 @@ import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -312,7 +313,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIDs())
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
-				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null));
+				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null))
+				.append(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
 		try {
 			db.getCollection(COL_GROUPS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -331,6 +333,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private GroupsStorageException wrapMongoException(MongoException e) {
 		return new GroupsStorageException("Connection to database failed: " +
 				e.getMessage(), e);
+	}
+	
+	private Map<String, String> getCustomFields(
+			final Map<NumberedCustomField, String> customFields) {
+		return customFields.entrySet().stream().collect(Collectors.toMap(
+				e -> e.getKey().getField(),
+				e -> e.getValue()));
 	}
 	
 	private List<String> toStringList(final Set<UserName> users) {
@@ -437,6 +446,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			addMembers(b, grp);
 			addAdmins(b, grp);
 			addWorkspaces(b, grp);
+			addCustomFields(b, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
 				IllegalArgumentException e) {
@@ -445,6 +455,16 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
+	private void addCustomFields(final Group.Builder b, final Document groupDoc)
+			throws IllegalParameterException, MissingParameterException {
+		@SuppressWarnings("unchecked")
+		final Map<String, String> custom = (Map<String, String>) groupDoc.get(
+				Fields.GROUP_CUSTOM_FIELDS);
+		for (final String field: custom.keySet()) {
+			b.withCustomField(new NumberedCustomField(field), custom.get(field));
+		}
+	}
+
 	// could probably combine the next 3 methods with lambdas, but eh
 	private void addMembers(final Group.Builder builder, final Document groupDoc)
 			throws MissingParameterException, IllegalParameterException {
