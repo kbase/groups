@@ -6,9 +6,12 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
@@ -20,6 +23,7 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupTest {
@@ -48,6 +52,7 @@ public class GroupTest {
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.ORGANIZATION));
+		assertThat("incorrect custom", g.getCustomFields(), is(Collections.emptyMap()));
 	}
 	
 	@Test
@@ -63,6 +68,8 @@ public class GroupTest {
 				.withWorkspace(new WorkspaceID(1))
 				.withWorkspace(new WorkspaceID(3))
 				.withType(GroupType.PROJECT)
+				.withCustomField(new NumberedCustomField("foo-1"), "bar")
+				.withCustomField(new NumberedCustomField("baz"), "bat")
 				.build();
 		
 		assertThat("incorrect id", g.getGroupID(), is(new GroupID("id")));
@@ -79,6 +86,8 @@ public class GroupTest {
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
+		assertThat("incorrect custom", g.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("foo-1"), "bar", new NumberedCustomField("baz"), "bat")));
 	}
 	
 	@Test
@@ -103,6 +112,8 @@ public class GroupTest {
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("bar"))
+				.withAdministrator(new UserName("bat"))
+				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.build();
 		
 		try {
@@ -114,6 +125,13 @@ public class GroupTest {
 		
 		try {
 			g.getAdministrators().add(new UserName("baz"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		try {
+			g.getCustomFields().put(new NumberedCustomField("whoo"), "whee");
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passed
@@ -244,6 +262,30 @@ public class GroupTest {
 			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
 					"description must be <= 5000 Unicode code points"));
 		}
+	}
+	
+	@Test
+	public void withCustomFieldFailNulls() throws Exception {
+		failWithCustomField(null, "v", new NullPointerException("field"));
+		failWithCustomField(new NumberedCustomField("f"), null, new IllegalArgumentException(
+				"value cannot be null or whitespace only"));
+	}
+	
+	private void failWithCustomField(
+			final NumberedCustomField field,
+			final String value,
+			final Exception expected)
+			throws Exception {
+		final Builder build = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
+		try {
+			build.withCustomField(field, value);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 	
 	@Test
