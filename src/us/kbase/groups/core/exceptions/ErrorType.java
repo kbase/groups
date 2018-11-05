@@ -38,6 +38,8 @@ public enum ErrorType {
 	NO_SUCH_USER			(50020, "No such user"),
 	/** The workspace does not exist. */
 	NO_SUCH_WORKSPACE		(50030, "No such workspace"),
+	/** The custom field does not exist. */
+	NO_SUCH_CUSTOM_FIELD	(50040, "No such custom field"),
 	/** The requested operation is not supported. */
 	UNSUPPORTED_OP			(60000, "Unsupported operation");
 	

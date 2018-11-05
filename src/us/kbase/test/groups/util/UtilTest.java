@@ -100,6 +100,28 @@ public class UtilTest {
 	}
 	
 	@Test
+	public void codePoints() throws Exception {
+		final String s = "𐍆a₸𐍆𐍆";
+		assertThat("incorrect length", s.length(), is(9));
+		assertThat("incorrect count", Util.codePoints(s), is(6));
+	}
+	
+	@Test
+	public void containsControlCharactersFalse() throws Exception {
+		assertThat("incorrect ccc", Util.containsControlCharacters("no control chars here"),
+				is(false));
+	}
+	
+	@Test
+	public void containsControlCharactersTrue() throws Exception {
+		for (final String cc: Arrays.asList("\n", "\t", "\r", "\b", "\f")) {
+			// can't do \a for some reason
+			final String s = "here's" + cc + "one";
+			assertThat("incorrect ccc for " + s, Util.containsControlCharacters(s), is(true));
+		}
+	}
+	
+	@Test
 	public void noNullsCollection() throws Exception {
 		Util.checkNoNullsInCollection(Arrays.asList("foo", "bar"), "whee"); // should work
 	}

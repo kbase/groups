@@ -2,6 +2,7 @@ package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.checkString;
+import static us.kbase.groups.util.Util.containsControlCharacters;
 import static us.kbase.groups.util.Util.exceptOnEmpty;
 
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -58,16 +59,12 @@ public class Name implements Comparable<Name> {
 		exceptOnEmpty(type, "type");
 		checkString(name, type, maxCodePoints);
 		name = name.trim();
-		final boolean[] containsControlChars = {false};
-		name.codePoints().forEach(i -> {
-			containsControlChars[0] = containsControlChars[0] || Character.isISOControl(i);
-		});
-		if (containsControlChars[0]) {
+		if (containsControlCharacters(name)) {
 			throw new IllegalParameterException(type + " contains control characters");
 		}
 		return name;
 	}
-	
+
 	/** Get the name.
 	 * @return the name.
 	 */
