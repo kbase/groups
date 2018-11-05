@@ -471,16 +471,11 @@ an html server for the UI behind a reverse proxy to avoid CORS issues.
 
 see /design/*.md
 
-* Add / remove workspaces from group
-  * return minimal metadata (probably have a workspaces endpoint rather than returning with
-    group) for each workspace
 * expire requests
 * For all request listings, sort by creation date (up or down), set a max, and allow filtering by
   creation date for non-evil paging.
 * Allow getting closed requests
 * Filter groups by user and workspaces.
-* Mutate groups
-* Admin lists
 * Search - need product team feedback
 * When display user who denied request & reason? Need product team feed back
 * Feeds implementation

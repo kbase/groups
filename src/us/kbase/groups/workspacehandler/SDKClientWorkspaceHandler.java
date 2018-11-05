@@ -33,6 +33,7 @@ import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.workspace.GetPermissionsMassParams;
 import us.kbase.workspace.ListWorkspaceIDsParams;
 import us.kbase.workspace.ListWorkspaceIDsResults;
+import us.kbase.workspace.SetPermissionsParams;
 import us.kbase.workspace.WorkspaceClient;
 import us.kbase.workspace.WorkspaceIdentity;
 
@@ -46,13 +47,15 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	// TODO CACHE may help to cache all or some of the results. YAGNI for now.
 
 	private static final String PERM_ADMIN = "a";
+	private static final String PERM_WRITE = "w";
 	private static final String PERM_READ = "r";
+	private static final String GLOBAL_READ_USER = "*";
 	
 	private final WorkspaceClient client;
 	
 	/** Create the handler.
 	 * @param client the workspace client to use to communicate with the workspace. The
-	 * client must be initialized with a token with at least administrative read privileges.
+	 * client must be initialized with a token with administrative write privileges.
 	 * @throws WorkspaceHandlerException
 	 */
 	public SDKClientWorkspaceHandler(final WorkspaceClient client)
@@ -63,6 +66,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		try {
 			ver = client.ver();
 			// ensure the client has admin creds
+			// don't think there's a way to safely ensure write creds
 			client.administer(new UObject(ImmutableMap.of("command", "listAdmins")));
 		} catch (IOException | JsonClientException e) {
 			throw getGeneralWSException(e);
@@ -97,7 +101,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		
 		private Perm(final UserName user, final Map<String, String> perms) {
 			this.isAdmin = PERM_ADMIN.equals(perms.get(user == null ? null : user.getName()));
-			this.isPublic = PERM_READ.equals(perms.get("*"));
+			this.isPublic = PERM_READ.equals(perms.get(GLOBAL_READ_USER));
 		}
 	}
 
@@ -276,5 +280,32 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			}
 		}
 		return ret;
+	}
+	
+	private static final Set<String> READ_PERMS = new HashSet<>(Arrays.asList(
+			PERM_READ, PERM_WRITE, PERM_ADMIN));
+	
+	@Override
+	public void setReadPermission(final WorkspaceID wsid, final UserName user)
+			throws NoSuchWorkspaceException, WorkspaceHandlerException {
+		checkNotNull(wsid, "wsid");
+		checkNotNull(user, "user");
+		final Map<String, String> perms = getPermissions(Arrays.asList(wsid.getID()), true)
+				.perms.get(0);
+		if (!READ_PERMS.contains(perms.get(user.getName())) &&
+				!PERM_READ.equals(perms.get(GLOBAL_READ_USER))) {
+			// tiny chance for a race condition here
+			// TODO WS add temporary perms to workspace service so these granted perms can expire rather than forcing the user to remove them if s/he doesn't want them
+			try {
+				client.administer(new UObject(ImmutableMap.of(
+						"command", "setPermissions",
+						"params", new SetPermissionsParams()
+								.withId((long) wsid.getID())
+								.withNewPermission("r")
+								.withUsers(Arrays.asList(user.getName())))));
+			} catch (IOException | JsonClientException e) {
+				throw getGeneralWSException(e);
+			}
+		}
 	}
 }

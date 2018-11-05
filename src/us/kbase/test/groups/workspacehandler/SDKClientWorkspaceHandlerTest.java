@@ -7,6 +7,8 @@ import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
 
@@ -144,6 +146,18 @@ public class SDKClientWorkspaceHandlerTest {
 				"command", "getPermissionsMass",
 				"params", ImmutableMap.of("workspaces",
 						Arrays.asList(ImmutableMap.of("id", wsid)))));
+	}
+	
+	private UObjectArgumentMatcher setPermissionsCommandMatcher(
+			final int wsid,
+			final String user,
+			final String permission) {
+		return new UObjectArgumentMatcher(ImmutableMap.of(
+				"command", "setPermissions",
+				"params", ImmutableMap.of(
+						"id", wsid,
+						"users", Arrays.asList(user),
+						"new_permission", permission)));
 	}
 	
 	@Test
@@ -712,4 +726,142 @@ public class SDKClientWorkspaceHandlerTest {
 		}
 	}
 	
+	@Test
+	public void setReadPermission() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
+				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
+				"user1", "a", "user2", "w", "user3", "r", "user4", "a")))));
+		
+		new SDKClientWorkspaceHandler(c).setReadPermission(
+				new WorkspaceID(56), new UserName("user5"));
+		
+		verify(c).administer(argThat(setPermissionsCommandMatcher(56, "user5", "r")));
+	}
+	
+	@Test
+	public void setReadPermissionsNoopHasAdmin() throws Exception {
+		setReadPermissionNoop(ImmutableMap.of("user", "a"), "user");
+	}
+	
+	@Test
+	public void setReadPermissionsNoopHasWrite() throws Exception {
+		setReadPermissionNoop(ImmutableMap.of("user", "w"), "user");
+	}
+	
+	@Test
+	public void setReadPermissionsNoopHasRead() throws Exception {
+		setReadPermissionNoop(ImmutableMap.of("user", "r"), "user");
+	}
+	
+	@Test
+	public void setReadPermissionsNoopPublicRead() throws Exception {
+		setReadPermissionNoop(ImmutableMap.of("*", "r"), "user");
+	}
+	
+	private void setReadPermissionNoop(final Map<String, String> returnedPerms, final String user)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
+				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(returnedPerms))));
+		
+		new SDKClientWorkspaceHandler(c).setReadPermission(
+				new WorkspaceID(56), new UserName(user));
+		
+		verify(c, never()).administer(argThat(setPermissionsCommandMatcher(56, user, "r")));
+	}
+	
+	@Test
+	public void setReadPermissionFailNulls() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		failSetReadPermission(h, null, new UserName("n"), new NullPointerException("wsid"));
+		failSetReadPermission(h, new WorkspaceID(5), null, new NullPointerException("user"));
+	}
+	
+	// I'm not bothering to test all the getPermissionsMass failure modes again, they're identical
+	// to the tests for getAdministrators and isAdmin. If you make changes to the fn, be sure
+	// to add tests.
+	// Just test that a deleted workspace exception throws an exception (e.g. test the boolean
+	// in the getPermissions call is true.
+	
+	@Test
+	public void setReadPermissionsFailDeletedWS() throws Exception {
+		failSetReadPermissionAtGet(new ServerException("Workspace 24 is deleted", -1, "n"),
+				new NoSuchWorkspaceException("24"));
+	}
+	
+	@Test
+	public void setReadPermissionsFailMissingWS() throws Exception {
+		failSetReadPermissionAtGet(new ServerException("No workspace with id 24 exists", -1, "n"),
+				new NoSuchWorkspaceException("24"));
+	}
+	
+	private void failSetReadPermissionAtGet(final Exception exception, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		when(c.getURL()).thenReturn(new URL("http://foo.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(exception);
+		
+		failSetReadPermission(h, new WorkspaceID(24), new UserName("foo"), expected);
+	}
+	
+	
+	@Test
+	public void setReadPermissionFailIOException() throws Exception {
+		setReadPermissionFail(new IOException("foo"), new WorkspaceHandlerException(
+				"Error contacting workspace at http://hotchacha.com"));
+	}
+	
+	@Test
+	public void setReadPermissionFailJsonClientException() throws Exception {
+		setReadPermissionFail(new JsonClientException("foo"), new WorkspaceHandlerException(
+				"Error contacting workspace at http://hotchacha.com"));
+	}
+
+	private void setReadPermissionFail(final Exception thrown, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn("0.8.0");
+		when(c.getURL()).thenReturn(new URL("http://hotchacha.com"));
+		
+		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
+				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
+				"user1", "a", "user2", "w", "user3", "r", "user4", "a")))));
+		
+		doThrow(thrown).when(c)
+				.administer(argThat(setPermissionsCommandMatcher(56, "user5", "r")));
+		
+		failSetReadPermission(new SDKClientWorkspaceHandler(c), new WorkspaceID(56),
+				new UserName("user5"), expected);
+	}
+	
+	private void failSetReadPermission(
+			final SDKClientWorkspaceHandler h,
+			final WorkspaceID id,
+			final UserName n,
+			final Exception expected) {
+		try {
+			h.setReadPermission(id, n);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }
