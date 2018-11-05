@@ -1,14 +1,18 @@
 package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.exceptOnEmpty;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 
@@ -32,6 +36,7 @@ public class Group {
 	private final Instant creationDate;
 	private final Instant modificationDate;
 	private final Optional<String> description;
+	private final Map<NumberedCustomField, String> customFields;
 	
 	private Group(
 			final GroupID groupID,
@@ -42,7 +47,8 @@ public class Group {
 			final GroupType type,
 			final Set<Integer> workspaceIDs,
 			final CreateAndModTimes times,
-			final Optional<String> description) {
+			final Optional<String> description,
+			final Map<NumberedCustomField, String> customFields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
 		this.owner = owner;
@@ -53,6 +59,7 @@ public class Group {
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
 		this.description = description;
+		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
 	/** The ID of the group.
@@ -126,6 +133,13 @@ public class Group {
 		return description;
 	}
 	
+	/** Get any custom fields associated with the group.
+	 * @return the custom fields.
+	 */
+	public Map<NumberedCustomField, String> getCustomFields() {
+		return customFields;
+	}
+	
 	/** Check if a user is a group administrator.
 	 * @param user the user to check.
 	 * @return true if the user is a group administrator, false otherwise.
@@ -159,6 +173,7 @@ public class Group {
 		int result = 1;
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
+		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
@@ -194,6 +209,13 @@ public class Group {
 				return false;
 			}
 		} else if (!creationDate.equals(other.creationDate)) {
+			return false;
+		}
+		if (customFields == null) {
+			if (other.customFields != null) {
+				return false;
+			}
+		} else if (!customFields.equals(other.customFields)) {
 			return false;
 		}
 		if (description == null) {
@@ -281,6 +303,7 @@ public class Group {
 		private GroupType type = GroupType.ORGANIZATION;
 		private final Set<Integer> workspaceIDs = new HashSet<>();
 		private Optional<String> description = Optional.empty();
+		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
 		private Builder(
 				final GroupID id,
@@ -359,9 +382,26 @@ public class Group {
 			return this;
 		}
 		
+		/** Add a workspace to the group.
+		 * @param wsid the workspace.
+		 * @return this builder.
+		 */
 		public Builder withWorkspace(final WorkspaceID wsid) {
 			checkNotNull(wsid, "wsid");
 			workspaceIDs.add(wsid.getID());
+			return this;
+		}
+		
+		/** Add a custom field to the group.
+		 * @param field the field name.
+		 * @param value the field value.
+		 * @return this builder.
+		 */
+		public Builder withCustomField(final NumberedCustomField field, final String value) {
+			checkNotNull(field, "field");
+			exceptOnEmpty(value, "value");
+			// TODO CODE limit on value size?
+			customFields.put(field, value);
 			return this;
 		}
 		
@@ -370,7 +410,7 @@ public class Group {
 		 */
 		public Group build() {
 			return new Group(groupID, groupName, owner, members, admins, type, workspaceIDs, times,
-					description);
+					description, customFields);
 		}
 	}
 	
