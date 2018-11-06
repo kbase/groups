@@ -64,7 +64,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
 @Path(ServicePaths.GROUP)
 public class GroupsAPI {
 
-	// TODO WS need a get ws read privs endpoint
 	// TODO NOW reduce request list size
 	// TODO JAVADOC / swagger
 	// TODO NOW add endpoint for getting group types
@@ -97,7 +96,7 @@ public class GroupsAPI {
 		@JsonProperty(Fields.GROUP_DESCRIPTION)
 		private Optional<String> description;
 		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
-		private Map<String, String> customFields;
+		private Object customFields;
 
 		@SuppressWarnings("unused")
 		private CreateOrUpdateGroupJSON() {} // default constructor for Jackson
@@ -109,7 +108,7 @@ public class GroupsAPI {
 				final Optional<String> groupName,
 				final Optional<String> type,
 				final Optional<String> description,
-				final Map<String, String> customFields) {
+				final Object customFields) {
 			this.groupName = groupName;
 			this.type = type;
 			this.description = description;
@@ -132,6 +131,7 @@ public class GroupsAPI {
 
 		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
 				throws IllegalParameterException, MissingParameterException {
+			final Map<String, String> customFields = getCustomFieldsAndTypeCheck();
 			final Builder b = OptionalGroupFields.getBuilder();
 			if (customFields != null) {
 				for (final String k: customFields.keySet()) {
@@ -142,6 +142,27 @@ public class GroupsAPI {
 				}
 			}
 			return b;
+		}
+
+		private Map<String, String> getCustomFieldsAndTypeCheck()
+				throws IllegalParameterException {
+			// jackson errors are too ugly, so we do it ourselves
+			if (customFields == null) {
+				return null;
+			}
+			if (!(customFields instanceof Map)) {
+				throw new IllegalParameterException("'custom' field must be a mapping");
+			}
+			// we'll assume the map keys are strings, since it's coming in as json.
+			@SuppressWarnings("unchecked")
+			final Map<String, String> map = (Map<String, String>) customFields;
+			for (final String s: map.keySet()) {
+				if (map.get(s) != null && !(map.get(s) instanceof String)) {
+					throw new IllegalParameterException(String.format(
+							"Value of '%s' field in 'custom' map is not a string", s));
+				}
+			}
+			return map;
 		}
 
 		// handles case where the optional itself is null

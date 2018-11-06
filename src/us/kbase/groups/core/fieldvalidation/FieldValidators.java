@@ -42,12 +42,12 @@ public class FieldValidators {
 			throw new IllegalParameterException(String.format(
 					"Field %s may not be a numbered field", field.getField()));
 		}
-		checkString(value, field.getField(), maximumFieldSize);
+		checkString(value, "Field " + field.getField(), maximumFieldSize);
 		try {
 			validators.get(field.getFieldRoot()).validate(value);
 		} catch (IllegalFieldValueException e) {
 			throw new IllegalParameterException(String.format("Field %s has an illegal value: %s",
-					field.getField(), e));
+					field.getField(), e.getMessage()), e);
 		}
 	}
 	

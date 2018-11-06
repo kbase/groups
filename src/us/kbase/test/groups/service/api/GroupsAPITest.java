@@ -274,6 +274,26 @@ public class GroupsAPITest {
 	}
 	
 	@Test
+	public void createGroupFailCustomNotMap() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
+				op("n"), null, null, "customstr");
+
+		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
+				"'custom' field must be a mapping"));
+	}
+	
+	@Test
+	public void createGroupFailCustomNotStringValue() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
+				op("n"), null, null, ImmutableMap.of("foo-1", Collections.emptyList()));
+
+		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
+				"Value of 'foo-1' field in 'custom' map is not a string"));
+	}
+	
+	@Test
 	public void createGroupFailBadCustomField() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
@@ -419,6 +439,26 @@ public class GroupsAPITest {
 
 		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Invalid group type: Teem"));
+	}
+	
+	@Test
+	public void updateGroupFailCustomNotMap() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
+				op("n"), null, null, "customstr");
+
+		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
+				"'custom' field must be a mapping"));
+	}
+	
+	@Test
+	public void updateGroupFailCustomNotStringValue() throws Exception {
+		final Groups g = mock(Groups.class);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
+				op("n"), null, null, ImmutableMap.of("foo-1", Collections.emptyList()));
+
+		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
+				"Value of 'foo-1' field in 'custom' map is not a string"));
 	}
 	
 	@Test

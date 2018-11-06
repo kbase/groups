@@ -36,6 +36,9 @@ import com.mongodb.client.MongoDatabase;
 import us.kbase.auth.AuthToken;
 import us.kbase.common.test.RegexMatcher;
 import us.kbase.groups.core.exceptions.GroupsException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
+import us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.authcontroller.AuthController;
 import us.kbase.test.groups.MongoStorageTestManager;
@@ -153,6 +156,10 @@ public class ServiceIntegrationTest {
 		sec.add("workspace-admin-token", wsToken);
 		sec.add("workspace-url", wsURL.toString());
 		sec.add("allow-insecure-urls", "true");
+		sec.add("field-f1-validator", SimpleFieldValidatorFactory.class.getName());
+		sec.add("field-f1-is-numbered", "true");
+		sec.add("field-f1-param-max-length", "4");
+		sec.add("field-f2-validator", SimpleFieldValidatorFactory.class.getName());
 		
 		final Path deploy = Files.createTempFile(TEMP_DIR, "cli_test_deploy", ".cfg");
 		ini.store(deploy.toFile());
@@ -192,7 +199,7 @@ public class ServiceIntegrationTest {
 			final Response res,
 			final int httpCode,
 			final String httpStatus,
-			final GroupsException e)
+			final Exception e)
 			throws Exception {
 		
 		if (res.getStatus() != httpCode) {
@@ -218,14 +225,17 @@ public class ServiceIntegrationTest {
 	public static void assertErrorCorrect(
 			final int expectedHTTPCode,
 			final String expectedHTTPStatus,
-			final GroupsException expectedException,
+			final Exception expectedException,
 			final Map<String, Object> error) {
 		
 		final Map<String, Object> innerExpected = new HashMap<>();
 		innerExpected.put("httpcode", expectedHTTPCode);
 		innerExpected.put("httpstatus", expectedHTTPStatus);
-		innerExpected.put("appcode", expectedException.getErr().getErrorCode());
-		innerExpected.put("apperror", expectedException.getErr().getError());
+		if (expectedException instanceof GroupsException) {
+			final GroupsException e = (GroupsException) expectedException;
+			innerExpected.put("appcode", e.getErr().getErrorCode());
+			innerExpected.put("apperror", e.getErr().getError());
+		}
 		innerExpected.put("message", expectedException.getMessage());
 		
 		final Map<String, Object> expected = ImmutableMap.of("error", innerExpected);
@@ -286,9 +296,11 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.put(Entity.json(ImmutableMap.of(
 				"name", "myname",
-				"description", "mydesc")));
+				"description", "mydesc",
+				"custom", ImmutableMap.of("f1-62", "yay!", "f2", "yo"))));
 
-		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc");
+		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc",
+				ImmutableMap.of("f1-62", "yay!", "f2", "yo"));
 
 		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
 		
@@ -299,11 +311,14 @@ public class ServiceIntegrationTest {
 				.with("name", null) // no change
 				.with("type", "Team") // update
 				// no description, so no change
+				.with("custom", MapBuilder.newHashMap().with("f2", null).build())
 				.build()));
 
 		assertThat("incorrect response code", res2.getStatus(), is(204));
 		
-		assertSimpleGroupCorrect("myid", "myname", "Team", "mydesc");
+		final ImmutableMap<String, String> custom = ImmutableMap.of("f1-62", "yay!");
+		
+		assertSimpleGroupCorrect("myid", "myname", "Team", "mydesc", custom);
 		
 		final Builder req4 = updateTarget.request().header("authorization", TOKEN1);
 		
@@ -315,7 +330,7 @@ public class ServiceIntegrationTest {
 
 		assertThat("incorrect response code", res4.getStatus(), is(204));
 		
-		assertSimpleGroupCorrect("myid", "myname", "Team", null);
+		assertSimpleGroupCorrect("myid", "myname", "Team", null, custom);
 		
 		final Builder req5 = updateTarget.request().header("authorization", TOKEN1);
 		
@@ -326,14 +341,120 @@ public class ServiceIntegrationTest {
 
 		assertThat("incorrect response code", res5.getStatus(), is(204));
 		
-		assertSimpleGroupCorrect("myid", "new name", "Team", "new desc");
+		assertSimpleGroupCorrect("myid", "new name", "Team", "new desc", custom);
+	}
+	
+	@Test
+	public void createGroupFailBadJson() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc",
+				"custom", ImmutableMap.of("foo", 1))));
+		
+		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
+				"Value of 'foo' field in 'custom' map is not a string"));
+	}
+	
+	@Test
+	public void createGroupFailNumberedField() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc",
+				"custom", ImmutableMap.of("f2-1", "val"))));
+		
+		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
+				"Field f2-1 may not be a numbered field"));
+	}
+	
+	@Test
+	public void createGroupFailFieldExceedsGlobalLength() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final String looong = TestCommon.LONG1001 + TestCommon.LONG1001 + TestCommon.LONG1001 +
+				TestCommon.LONG1001 + TestCommon.LONG1001;
+		
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc",
+				"custom", ImmutableMap.of("f2", looong.substring(0, 5001)))));
+		
+		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
+				"Field f2 size greater than limit 5000"));
+	}
+	
+	@Test
+	public void updateGroupFailValidationFails() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc")));
+
+		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc",
+				Collections.emptyMap());
+
+		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
+		
+		final WebTarget updateTarget = CLI.target(updateURI);
+		final Builder req2 = updateTarget.request().header("authorization", TOKEN1);
+
+		final Response res2 = req2.put(Entity.json(MapBuilder.<String, Object>newHashMap()
+				.with("custom", MapBuilder.newHashMap().with("f1", "12345").build())
+				.build()));
+		
+		failRequestJSON(res2, 400, "Bad Request", new IllegalParameterException(
+				"Field f1 has an illegal value: value is greater than maximum length 4"));
+	}
+	
+	@Test
+	public void updateGroupFailNoSuchField() throws Exception {
+		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
+		
+		final WebTarget groupTarget = CLI.target(target);
+		final Builder req = groupTarget.request().header("authorization", TOKEN1);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"name", "myname",
+				"description", "mydesc")));
+
+		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc",
+				Collections.emptyMap());
+
+		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
+		
+		final WebTarget updateTarget = CLI.target(updateURI);
+		final Builder req2 = updateTarget.request().header("authorization", TOKEN1);
+
+		final Response res2 = req2.put(Entity.json(MapBuilder.<String, Object>newHashMap()
+				.with("custom", MapBuilder.newHashMap().with("f3", "a").build())
+				.build()));
+		
+		failRequestJSON(res2, 400, "Bad Request", new NoSuchCustomFieldException(
+				"Field f3 is not a configured field"));
 	}
 
 	private void assertSimpleGroupCorrect(
 			final String groupID,
 			final String name,
 			final String type,
-			final String desc) {
+			final String desc,
+			final Map<String, String> custom) {
 		final URI target = UriBuilder.fromUri(HOST).path("/group/" + groupID).build();
 		
 		final WebTarget groupTarget = CLI.target(target);
@@ -341,7 +462,7 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.get();
 		
-		assertSimpleGroupCorrect(res, groupID, name, type, desc);
+		assertSimpleGroupCorrect(res, groupID, name, type, desc, custom);
 	}
 	
 	// assumes user = user1, and all lists are empty
@@ -350,7 +471,8 @@ public class ServiceIntegrationTest {
 			final String groupID,
 			final String name,
 			final String type,
-			final String desc) {
+			final String desc,
+			final Map<String, String> custom) {
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		@SuppressWarnings("unchecked")
@@ -372,7 +494,7 @@ public class ServiceIntegrationTest {
 				.with("workspaces", Collections.emptyList())
 				.with("type", type)
 				.with("admins", Collections.emptyList())
-				.with("custom", Collections.emptyMap())
+				.with("custom", custom)
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));

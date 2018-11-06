@@ -30,8 +30,11 @@ public class SimpleFieldValidatorFactory implements FieldValidatorFactory {
 		} else {
 			try {
 				maxLength = Integer.parseInt(configuration.get("max-length"));
+				if (maxLength < 1) {
+					throw new NumberFormatException();
+				}
 			} catch (NumberFormatException e) {
-				throw new IllegalParameterException("max-length parameter must be an integer");
+				throw new IllegalParameterException("max-length parameter must be an integer > 0");
 			}
 		}
 		final boolean allowLineFeedsAndTabs = "true".equals(
@@ -53,7 +56,7 @@ public class SimpleFieldValidatorFactory implements FieldValidatorFactory {
 
 		@Override
 		public void validate(String fieldValue) throws IllegalFieldValueException {
-			if (codePoints(fieldValue) > maxLength) {
+			if (maxLength > 0 && codePoints(fieldValue) > maxLength) {
 				throw new IllegalFieldValueException(
 						"value is greater than maximum length " + maxLength);
 			}
