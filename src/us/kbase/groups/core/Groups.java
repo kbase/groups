@@ -33,6 +33,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
@@ -125,12 +126,14 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
 	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
+	 * @throws FieldValidatorException if a validator could not validate the field.
 	 */
 	public GroupView createGroup(
 			final Token userToken,
 			final GroupCreationParams createParams)
 			throws InvalidTokenException, AuthenticationException, GroupExistsException,
-				GroupsStorageException, IllegalParameterException, NoSuchCustomFieldException {
+				GroupsStorageException, IllegalParameterException, NoSuchCustomFieldException,
+				FieldValidatorException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(createParams, "createParams");
 		validateCustomFields(createParams.getOptionalFields());
@@ -149,7 +152,7 @@ public class Groups {
 	}
 	
 	private void validateCustomFields(final OptionalGroupFields optFields)
-			throws IllegalParameterException, NoSuchCustomFieldException {
+			throws IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
 		for (final NumberedCustomField f: optFields.getCustomFields()) {
 			final FieldItem<String> value = optFields.getCustomValue(f);
 			if (value.hasItem()) {
@@ -173,11 +176,12 @@ public class Groups {
 	 * @throws UnauthorizedException if the user is not a group administrator.
 	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
 	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
+	 * @throws FieldValidatorException if a validator could not validate the field.
 	 */
 	public void updateGroup(final Token userToken, final GroupUpdateParams updateParams)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException,
-				IllegalParameterException, NoSuchCustomFieldException {
+				IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(updateParams, "updateParams");
 		if (!updateParams.hasUpdate()) {
