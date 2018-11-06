@@ -1,5 +1,6 @@
 package us.kbase.test.groups.util;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -7,11 +8,15 @@ import static org.junit.Assert.fail;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 
 import org.junit.Test;
 
+import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
+import us.kbase.groups.fieldvalidators.EnumFieldValidatorFactory;
 import us.kbase.groups.util.Util;
 import us.kbase.test.groups.TestCommon;
 
@@ -180,6 +185,68 @@ public class UtilTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void loadClassWithInterface() throws Exception {
+		final FieldValidatorFactory fac = Util.loadClassWithInterface(
+				EnumFieldValidatorFactory.class.getName(), FieldValidatorFactory.class);
+		assertThat("incorrect class loaded", fac, instanceOf(EnumFieldValidatorFactory.class));
+	}
+	
+	@Test
+	public void loadClassWithInterfaceFailNoSuchClass() throws Exception {
+		failLoadClassWithInterface(EnumFieldValidatorFactory.class.getName() + "a",
+				EnumFieldValidatorFactory.class, new GroupsConfigurationException(
+						"Cannot load class us.kbase.groups.fieldvalidators." +
+						"EnumFieldValidatorFactorya: us.kbase.groups.fieldvalidators." +
+						"EnumFieldValidatorFactorya"));
+	}
+	
+	@Test
+	public void loadClassWithInterfaceFailIncorrectInterface() throws Exception {
+		failLoadClassWithInterface(Map.class.getName(), FieldValidatorFactory.class, 
+				new GroupsConfigurationException("Module java.util.Map must implement " +
+						"us.kbase.groups.core.fieldvalidation.FieldValidatorFactory interface"));
+	}
+	
+	@Test
+	public void loadClassWithInterfaceFailOnConstruct() throws Exception {
+		failLoadClassWithInterface(FailOnInstantiation.class.getName(),
+				FieldValidatorFactory.class, new IllegalArgumentException("foo"));
+	}
+	
+	@Test
+	public void loadClassWithInterfaceFailNoNullaryConstructor() throws Exception {
+		failLoadClassWithInterface(FailOnInstantiationNoNullaryConstructor.class.getName(),
+				FieldValidatorFactory.class, new GroupsConfigurationException(
+						"Module us.kbase.test.groups.util.FailOnInstantiation" +
+						"NoNullaryConstructor could not be instantiated: us.kbase.test.groups." +
+						"util.FailOnInstantiationNoNullaryConstructor"));
+	}
+	
+	@Test
+	public void loadClassWithInterfaceFailPrivateConstructor() throws Exception {
+		failLoadClassWithInterface(FailOnInstantiationPrivateConstructor.class.getName(),
+				FieldValidatorFactory.class, new GroupsConfigurationException(
+						"Module us.kbase.test.groups.util.FailOnInstantiation" +
+						"PrivateConstructor could not be instantiated: Class us.kbase.groups." +
+						"util.Util can not access a member of class us." +
+						"kbase.test.groups.util.FailOnInstantiationPrivateConstructor " +
+						"with modifiers \"private\""));
+	}
+	
+	private void failLoadClassWithInterface(
+			final String className,
+			final Class<?> interfce,
+			final Exception e)
+			throws Exception {
+		try {
+			Util.loadClassWithInterface(className, interfce);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 }
