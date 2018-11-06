@@ -6,6 +6,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.groups.TestCommon.set;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,14 +16,18 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Token;
+import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
 import us.kbase.test.groups.TestCommon;
@@ -86,11 +91,12 @@ public class GroupsConfigTest {
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
+		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
 	@Test
-	public void sysPropNoUserNoBoolsWhitespace() throws Throwable {
+	public void sysPropNoUserNoBoolsWhitespaceFields() throws Throwable {
 		final FileOpener fo = mock(FileOpener.class);
 		final GroupsConfig cfg;
 		try {
@@ -105,6 +111,13 @@ public class GroupsConfigTest {
 					 "auth-url=http://auth.com\n" +
 					 "workspace-url=http://ws.com\n" +
 					 "workspace-admin-token=               wstoken3      \n" +
+					 "field-foo-validator    =    foovalclass  \n" +
+					 "field-bar-validator    =    barvalclass   \n" +
+					 "field-bar-is-numbered  =   nope  \n" +
+					 "field-bar-param-p1   =    p1val  \n" +
+					 "field-bar-param-p2   =    p2val  \n" +
+					 "field-baz-validator  =   bazvalclass  \n" +
+					 "field-baz-is-numbered  =   true  \n" +
 					 "allow-insecure-urls=true1\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
@@ -123,7 +136,22 @@ public class GroupsConfigTest {
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken3")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
+		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set(
+				new FieldValidatorConfiguration(new CustomField("foo"), "foovalclass", false,
+						Collections.emptyMap()),
+				new FieldValidatorConfiguration(new CustomField("bar"), "barvalclass", false,
+						ImmutableMap.of("p1", "p1val", "p2", "p2val")),
+				new FieldValidatorConfiguration(new CustomField("baz"), "bazvalclass", true,
+						Collections.emptyMap()))));
 		testLogger(cfg.getLogger(), false);
+		
+		try {
+			cfg.getFieldConfigurations().add(new FieldValidatorConfiguration(
+					new CustomField("f"), "c", false, Collections.emptyMap()));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// is immutable, test passes
+		}
 	}
 	
 	@Test
@@ -159,6 +187,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
+		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -184,6 +213,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
+		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -214,6 +244,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
+		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), true);
 	}
 	
@@ -474,6 +505,112 @@ public class GroupsConfigTest {
 				new GroupsConfigurationException(
 						"Required parameter workspace-admin-token not provided in " +
 						"configuration file some file, section groups"));
+	}
+	
+	@Test
+	public void configFailBadFieldKey() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: Unknown field parameter field-foo"));
+	}
+	
+	@Test
+	public void configFailBadFieldKeyMissingField() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-    \t   -foo=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: Missing field name from parameter field-    \t   -foo"));
+	}
+	
+	@Test
+	public void configFailIllegalFieldValue() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo_1-validator=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: 30001 Illegal input parameter: " +
+						"Illegal character in custom field foo_1: _"));
+	}
+	
+	@Test
+	public void configFailNoValidator() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo-param-p1=   p2    \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter field-foo-validator not provided in " +
+						"configuration file some file, section groups"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo-validator=       \t    \n" +
+				"field-foo-param-p1=   p2    \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter field-foo-validator not provided in " +
+						"configuration file some file, section groups"));
+	}
+	
+	@Test
+	public void configFailNoFieldParamName() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo-validator=    val    \n" +
+				"field-foo-param-=   p2    \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field foo in section groups of " +
+						"config file some file: Illegal parameter field-foo-param-"));
+	}
+	
+	@Test
+	public void configFailNoFieldParamValue() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"field-foo-validator=    val    \n" +
+				"field-foo-param-p1=   \t    \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Parameter field-foo-param-p1 in section groups of configfile some " +
+						"file has no value"));
 	}
 	
 	private InputStream toStr(final String input) {

@@ -1,12 +1,18 @@
 package us.kbase.groups.config;
 
+import static us.kbase.groups.util.Util.isNullOrEmpty;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.ini4j.Ini;
 import org.productivity.java.syslog4j.SyslogIF;
@@ -14,7 +20,10 @@ import org.productivity.java.syslog4j.SyslogIF;
 import com.google.common.base.Optional;
 
 import us.kbase.groups.core.Token;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
 import us.kbase.common.service.JsonServerSyslog;
@@ -62,6 +71,12 @@ public class GroupsConfig {
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
 	private static final String KEY_ALLOW_INSECURE_URLS = "allow-insecure-urls";
 	
+	// field validators
+	private static final String KEY_PREFIX_FIELD = "field-";
+	private static final String KEY_SUFFIX_FIELD_VALIDATOR = "-validator";
+	private static final String KEY_SUFFIX_FIELD_IS_NUMBERED = "-is-numbered";
+	private static final String KEY_SUFFIX_FIELD_PARAM = "-param-";
+	
 	public static final String TRUE = "true";
 	
 	private final String mongoHost;
@@ -74,6 +89,7 @@ public class GroupsConfig {
 	private final SLF4JAutoLogger logger;
 	private final boolean ignoreIPHeaders;
 	private final boolean allowInsecureURLs;
+	private final Set<FieldValidatorConfiguration> fieldConfigs;
 
 	/** Create a new configuration.
 	 * 
@@ -140,8 +156,9 @@ public class GroupsConfig {
 		mongoPwd = mongop.isPresent() ?
 				Optional.of(mongop.get().toCharArray()) : Optional.absent();
 		mongop = null; //GC
+		fieldConfigs = getFieldConfigs(cfg);
 	}
-	
+
 	private Token getToken(final String paramName, final Map<String, String> cfg)
 			throws GroupsConfigurationException {
 		final String t = getString(paramName, cfg, true);
@@ -150,6 +167,72 @@ public class GroupsConfig {
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible");
 		}
+	}
+	
+	private Set<FieldValidatorConfiguration> getFieldConfigs(final Map<String, String> cfg)
+			throws GroupsConfigurationException {
+		final Set<CustomField> fields = getFields(cfg);
+		final Set<FieldValidatorConfiguration> configs = new HashSet<>();
+		for (final CustomField field: fields) {
+			final String pre = KEY_PREFIX_FIELD + field.getName();
+			final String valclass = getString(pre + KEY_SUFFIX_FIELD_VALIDATOR, cfg, true);
+			final boolean isNumbered = TRUE.equals(
+					getString(pre + KEY_SUFFIX_FIELD_IS_NUMBERED, cfg));
+			final String preParam = pre + KEY_SUFFIX_FIELD_PARAM;
+			final Map<String, String> params = new HashMap<>();
+			for (final String key: cfg.keySet()) {
+				if (key.startsWith(preParam)) {
+					final String param = key.replace(preParam, "");
+					if (isNullOrEmpty(param)) {
+						throw new GroupsConfigurationException(String.format(
+								"Error building configuration for field %s in " +
+								"section %s of config file %s: Illegal parameter %s",
+								field.getName(), CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), key));
+					}
+					final String value = getString(key, cfg);
+					if (value == null) {
+						throw new GroupsConfigurationException(String.format(
+								"Parameter %s in section %s of configfile %s has no value",
+								key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
+					}
+					params.put(param, value);
+				}
+			}
+			configs.add(new FieldValidatorConfiguration(field, valclass, isNumbered, params));
+		}
+		return Collections.unmodifiableSet(configs);
+	}
+
+	private Set<CustomField> getFields(final Map<String, String> cfg)
+			throws GroupsConfigurationException {
+		final Set<CustomField> fields = new HashSet<>();
+		for (final String s: cfg.keySet()) {
+			// can't be null
+			if (s.startsWith(KEY_PREFIX_FIELD)) {
+				final String[] split = s.split("-", 3);
+				if (split.length < 3) {
+					throw new GroupsConfigurationException(String.format(
+							"Error building configuration for field in " +
+							"section %s of config file %s: Unknown field parameter %s",
+							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), s));
+				}
+				if (split[1].trim().isEmpty()) {
+					throw new GroupsConfigurationException(String.format(
+							"Error building configuration for field in " +
+							"section %s of config file %s: Missing field name from parameter %s",
+							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), s));
+				}
+				try {
+					fields.add(new CustomField(split[1].trim()));
+				} catch (MissingParameterException | IllegalParameterException e) {
+					throw new GroupsConfigurationException(String.format(
+							"Error building configuration for field in " +
+							"section %s of config file %s: %s",
+							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), e.getMessage()), e);
+				}
+			}
+		}
+		return fields;
 	}
 
 	// returns null if no string
@@ -344,6 +427,13 @@ public class GroupsConfig {
 	 */
 	public boolean isIgnoreIPHeaders() {
 		return ignoreIPHeaders;
+	}
+	
+	/** Get the configurations for the field validators.
+	 * @return the configurations.
+	 */
+	public Set<FieldValidatorConfiguration> getFieldConfigurations() {
+		return fieldConfigs;
 	}
 	
 }

@@ -21,7 +21,10 @@ import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.notifications.SLF4JNotifier;
@@ -29,6 +32,7 @@ import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.groups.userhandler.KBaseUserHandler;
+import us.kbase.groups.util.Util;
 import us.kbase.groups.workspacehandler.SDKClientWorkspaceHandler;
 import us.kbase.workspace.WorkspaceClient;
 
@@ -40,6 +44,8 @@ import us.kbase.workspace.WorkspaceClient;
 public class GroupsBuilder {
 
 	//TODO TEST
+	
+	private static final int MAX_FIELD_SIZE = 5000;
 	
 	private final MongoClient mc;
 	private final Groups groups;
@@ -120,9 +126,26 @@ public class GroupsBuilder {
 					"Failed to create workspace handler: " + e.getMessage(), e);
 		}
 		// TODO NOTIFICATIONS replace with actual implementation
-		// TODO NOW use a real validator
-		return new Groups(storage, uh, wh, FieldValidators.getBuilder(5000).build(),
-				new SLF4JNotifier());
+		return new Groups(storage, uh, wh, getValidators(c), new SLF4JNotifier());
+	}
+
+	private FieldValidators getValidators(final GroupsConfig c)
+			throws GroupsConfigurationException {
+		//TODO NOW integration test to test this
+		final FieldValidators.Builder b = FieldValidators.getBuilder(MAX_FIELD_SIZE);
+		for (final FieldValidatorConfiguration cfg: c.getFieldConfigurations()) {
+			final FieldValidatorFactory fac = Util.loadClassWithInterface(
+					cfg.getValidatorClass(), FieldValidatorFactory.class);
+			try {
+				b.withValidator(cfg.getField(), cfg.isNumberedField(),
+						fac.getValidator(cfg.getValidatorConfiguration()));
+			} catch (IllegalParameterException e) {
+				throw new GroupsConfigurationException(String.format(
+						"Error building validator for field %s: %s",
+						cfg.getField().getName(), e.getMessage()), e);
+			}
+		}
+		return b.build();
 	}
 
 	private GroupsStorage buildStorage(
