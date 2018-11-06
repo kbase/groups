@@ -55,7 +55,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
-	//TODO WS needs a ws view for a request - or grant read to anyone who views a REQUST_ADD_WS request
 	//TODO LOGGING for all actions
 	
 	/* could probably abstract the workspace handling (and upcoming apps handling) in a

@@ -131,7 +131,6 @@ public class GroupsBuilder {
 
 	private FieldValidators getValidators(final GroupsConfig c)
 			throws GroupsConfigurationException {
-		//TODO NOW integration test to test this
 		final FieldValidators.Builder b = FieldValidators.getBuilder(MAX_FIELD_SIZE);
 		for (final FieldValidatorConfiguration cfg: c.getFieldConfigurations()) {
 			final FieldValidatorFactory fac = Util.loadClassWithInterface(
