@@ -417,9 +417,10 @@ field in the `deploy.cfg` file:
 field-<field name>-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
 ```
 
-A <field name> consists of lower case ASCII letters and numbers.
+A `<field name>` consists of lower case ASCII letters and numbers.
 
-A validator factory must implement us.kbase.groups.core.fieldvalidation.FieldValidatorFactory.
+A validator factory must implement
+`us.kbase.groups.core.fieldvalidation.FieldValidatorFactory`.
 
 Regardless of the validator, no field value may be longer than 5000 Unicode code points.
 
