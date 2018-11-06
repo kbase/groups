@@ -43,8 +43,15 @@ Represents a group of users and associated data.
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
     "workspaces": <a list of WorkspaceInformation>
+    "custom": {
+        <custom field 1>: <custom value 1>,
+        ...
+        <custom field N>: <custom value N>
+    }
 }
 ```
+
+See `Custom fields` below.
 
 #### Request
 
@@ -160,9 +167,14 @@ A list of Groups. Only the id, name, owner, and type fields are included.
 AUTHORIZATION REQUIRED
 PUT /group/<group id>
 {
-    "name": <an arbitrary group name>
-    "type": <the type of the group, optional>
-    "description": <the description of the group, optional>
+    "name": <an arbitrary group name>,
+    "type": <the type of the group, optional>,
+    "description": <the description of the group, optional>,
+    "custom": {
+        <custom field 1>: <custom value 1>,
+        ...
+        <custom field N>: <custom value N>
+    }
 }
 
 RETURNS: A Group.
@@ -178,7 +190,9 @@ is `Organization`.
 
 The group description must be no longer than 5000 Unicode code points.
 
-Whitespace only strings are treated as `null`.
+See `Custom fields` below for information on custom fields.
+
+Whitespace only strings are treated as `null`. `null` values are ignored for custom fields.
 
 ### Update a group
 
@@ -186,9 +200,14 @@ Whitespace only strings are treated as `null`.
 AUTHORIZATION REQUIRED
 PUT /group/<group id>/update
 {
-    "name": <an arbitrary group name, optional>
-    "type": <the type of the group, optional>
-    "description": <the description of the group, optional>
+    "name": <an arbitrary group name, optional>,
+    "type": <the type of the group, optional>,
+    "description": <the description of the group, optional>,
+    "custom": {
+        <custom field 1>: <custom value 1>,
+        ...
+        <custom field N>: <custom value N>
+    }
 }
 ```
 
@@ -198,8 +217,10 @@ The constraints on the parameters are the same as for the creation parameters.
 
 If `name` or `type` are `null` or the field is missing altogether, they are not altered.
 
-If `description` field is missing, it is not altered. If it is `null`, it is removed.
-Otherwise it is set to the new value.
+If the `description` field or custom fields are missing, they are not altered.
+If they are `null`, they are removed. Otherwise they are set to the new value.
+
+See `Custom fields` below for information on custom fields.
 
 Whitespace only strings are treated as `null`.
 
@@ -377,6 +398,86 @@ RETURNS: A Request.
 The user must be the target of the request (including an administrator of the workspace at
 which the request is targeted) or an administrator of the group at which the
 request is targeted.
+
+## Custom fields
+
+Custom fields may be associated with a group on group creation or update. The allowed fields
+must be configured by server administrators in the `deploy.cfg` configuration file (see below).
+
+Attempting to create or update a group with a field that is not configured will result in an
+error.
+
+At minimum, a field validator must be associated with each configured field. The validator
+checks that the value of the field meets some criteria that depends on the validator.
+If the field does not meet those criteria the group creation or update fails.
+
+To configure a validator, the classname of the validator factory class must be assigned to the
+field in the `deploy.cfg` file:
+```
+field-<field name>-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+```
+
+A `<field name>` consists of lower case ASCII letters and numbers.
+
+A validator factory must implement
+`us.kbase.groups.core.fieldvalidation.FieldValidatorFactory`.
+
+Regardless of the validator, no field value may be longer than 5000 Unicode code points.
+
+Optionally, a field may be specified as numbered, in which case any field with the pattern
+`<field name>-<integer>` is allowed. For example:
+```
+field-myfield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+field-myfield-is-numbered=true
+```
+
+In this case, any field with an integer suffix separated by `-` is allowed (e.g `myfield`,
+`myfield-22`, `myfield-1`, and `myfield-42` are all allowed and validated by the same
+validator. This is useful for data where there may be a list of values for the field.
+
+Any value other than `true` for `field-<field name>-is-numbered` is treated as false.
+
+Some validators have optional or required parameters. Validator parameters can be specified
+like so:
+```
+field-myfield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+field-myfield-param-<parameter name>=<parameter value>
+```
+
+A mapping of all parameter names and values will be provided to the validator on creation.
+
+Currently available validators are:
+
+### us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+
+Checks that the value contains no control characters, and, optionally, is below a maximum length.
+
+Parameters:
+```
+field-<field name>-param-max-length=<maximum value length in Unicode code points>
+field-<field name>-param-allow-linefeeds-and-tabs=<true for true, anything else for false>
+```
+
+All parameters are optional.
+
+`allow-line-feeds-and-tabs` specifies that the `\n`, `\r`, and `\t` characters are allowed
+in the value.
+
+### us.kbase.groups.fieldvalidators.EnumFieldValidatorFactory
+
+Checks that the value is one of a set of specified values. This can be used for boolean values
+(`true`, `false`), controlled vocabularies, etc.
+
+Parameters:
+```
+field-<field name>-param-allowed-values=<comma separated list of allowed values>
+```
+
+`allowed-values` is required. Examples:
+```
+field-boolean-param-allowed-values=true, false
+field-feast-param-allowed-values=lambs, sloths, carp, orangutans, breakfast cereals, fruit bats
+```
 
 ## Requirements
 
