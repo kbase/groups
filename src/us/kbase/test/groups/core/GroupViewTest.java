@@ -7,9 +7,12 @@ import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
@@ -20,6 +23,7 @@ import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
@@ -45,6 +49,7 @@ public class GroupViewTest {
 					.withType(GroupType.PROJECT)
 					.withWorkspace(new WorkspaceID(45))
 					.withWorkspace(new WorkspaceID(2))
+					.withCustomField(new NumberedCustomField("field"), "val")
 					.build();
 			WS1 = WorkspaceInformation.getBuilder(7, "n1")
 					.withIsPublic(true)
@@ -82,10 +87,13 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 
 	@Test
@@ -106,10 +114,13 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.NON_MEMBER));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 	
 	@Test
@@ -131,10 +142,13 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MEMBER));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 	
 	private <T> void assertImmutable(final Collection<T> set, final T add) {
@@ -143,6 +157,15 @@ public class GroupViewTest {
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// it's immutable
+		}
+	}
+	
+	private <K, V> void assertImmutable(final Map<K, V> map, K addKey, V addValue) {
+		try {
+			map.put(addKey, addValue);
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// immutable 
 		}
 	}
 

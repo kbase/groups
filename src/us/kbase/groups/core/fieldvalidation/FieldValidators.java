@@ -15,15 +15,15 @@ public class FieldValidators {
 	// TODO JAVADOC
 	// TODO TEST
 
-	private final int maximumSize;
+	private final int maximumFieldSize;
 	private final Map<CustomField, FieldValidator> validators;
 	private final Map<CustomField, Boolean> isNumbered;
 	
 	private FieldValidators(
-			final int maximumSize,
+			final int maximumFieldSize,
 			final Map<CustomField, FieldValidator> validators,
 			final Map<CustomField, Boolean> isNumbered) {
-		this.maximumSize = maximumSize;
+		this.maximumFieldSize = maximumFieldSize;
 		this.validators = validators;
 		this.isNumbered = isNumbered;
 	}
@@ -42,7 +42,7 @@ public class FieldValidators {
 			throw new IllegalParameterException(String.format(
 					"Field %s may not be a numbered field", field.getField()));
 		}
-		checkString(value, field.getField(), maximumSize);
+		checkString(value, field.getField(), maximumFieldSize);
 		try {
 			validators.get(field.getFieldRoot()).validate(value);
 		} catch (IllegalFieldValueException e) {
@@ -51,25 +51,25 @@ public class FieldValidators {
 		}
 	}
 	
-	public int getMaximumSize() {
-		return maximumSize;
+	public int getMaximumFieldSize() {
+		return maximumFieldSize;
 	}
 	
-	public static Builder getBuidler(final int maximumSize) {
-		return new Builder(maximumSize);
+	public static Builder getBuilder(final int maximumFieldSize) {
+		return new Builder(maximumFieldSize);
 	}
 	
 	public static class Builder {
 
-		private final int maximumSize;
+		private final int maximumFieldSize;
 		private final Map<CustomField, FieldValidator> validators = new HashMap<>();
 		private final Map<CustomField, Boolean> isNumbered = new HashMap<>();
 
-		private Builder(final int maximumSize) {
-			if (maximumSize < 1) {
+		private Builder(final int maximumFieldSize) {
+			if (maximumFieldSize < 1) {
 				throw new IllegalArgumentException("maximumSize must be > 0");
 			}
-			this.maximumSize = maximumSize;
+			this.maximumFieldSize = maximumFieldSize;
 		}
 		
 		public Builder withValidator(
@@ -84,7 +84,7 @@ public class FieldValidators {
 		}
 		
 		public FieldValidators build() {
-			return new FieldValidators(maximumSize, validators, isNumbered);
+			return new FieldValidators(maximumFieldSize, validators, isNumbered);
 		}
 	}
 }
