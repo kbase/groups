@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 
@@ -38,6 +39,7 @@ public class GroupView {
 	private final GroupID groupID; // all views
 	private final GroupName groupName; // all views
 	private final UserName owner; // all views
+	private final Map<NumberedCustomField, String> customFields; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
 	private final GroupType type; // all views
@@ -75,6 +77,7 @@ public class GroupView {
 		this.groupName = group.getGroupName();
 		this.owner = group.getOwner();
 		this.type = group.getType();
+		this.customFields = group.getCustomFields();
 		if (viewType.equals(ViewType.MINIMAL)) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
@@ -119,6 +122,13 @@ public class GroupView {
 		return groupName;
 	}
 
+	/** Get any custom fields associated with the group.
+	 * @return the custom fields.
+	 */
+	public Map<NumberedCustomField, String> getCustomFields() {
+		return customFields;
+	}
+	
 	/** Get the owner of the group.
 	 * @return the owner.
 	 */
@@ -198,6 +208,7 @@ public class GroupView {
 		int result = 1;
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
+		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
@@ -234,6 +245,13 @@ public class GroupView {
 				return false;
 			}
 		} else if (!creationDate.equals(other.creationDate)) {
+			return false;
+		}
+		if (customFields == null) {
+			if (other.customFields != null) {
+				return false;
+			}
+		} else if (!customFields.equals(other.customFields)) {
 			return false;
 		}
 		if (description == null) {

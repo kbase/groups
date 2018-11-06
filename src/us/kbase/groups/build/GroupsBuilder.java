@@ -22,6 +22,7 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.notifications.SLF4JNotifier;
 import us.kbase.groups.storage.GroupsStorage;
@@ -119,7 +120,9 @@ public class GroupsBuilder {
 					"Failed to create workspace handler: " + e.getMessage(), e);
 		}
 		// TODO NOTIFICATIONS replace with actual implementation
-		return new Groups(storage, uh, wh, new SLF4JNotifier());
+		// TODO NOW use a real validator
+		return new Groups(storage, uh, wh, FieldValidators.getBuilder(5000).build(),
+				new SLF4JNotifier());
 	}
 
 	private GroupsStorage buildStorage(

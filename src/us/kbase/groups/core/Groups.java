@@ -22,6 +22,8 @@ import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -31,6 +33,8 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidators;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -66,6 +70,7 @@ public class Groups {
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final WorkspaceHandler wsHandler;
+	private final FieldValidators validators;
 	private final Notifications notifications;
 	private final UUIDGenerator uuidGen;
 	private final Clock clock;
@@ -75,14 +80,16 @@ public class Groups {
 	 * @param userHandler the user handler by which users shall be handled.
 	 * @param wsHandler the workspace handler by which information from the workspace service
 	 * will be retrieved.
+	 * @param validators the validators for group custom fields.
 	 * @param notifications where notification should be sent.
 	 */
 	public Groups(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final FieldValidators validators,
 			final Notifications notifications) {
-		this(storage, userHandler, wsHandler, notifications, new UUIDGenerator(),
+		this(storage, userHandler, wsHandler, validators, notifications, new UUIDGenerator(),
 				Clock.systemDefaultZone());
 	}
 	
@@ -91,16 +98,19 @@ public class Groups {
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final FieldValidators validators,
 			final Notifications notifications,
 			final UUIDGenerator uuidGen,
 			final Clock clock) {
 		checkNotNull(storage, "storage");
 		checkNotNull(userHandler, "userHandler");
 		checkNotNull(wsHandler, "wsHandler");
+		checkNotNull(validators, "validators");
 		checkNotNull(notifications, "notifications");
 		this.storage = storage;
 		this.userHandler = userHandler;
 		this.wsHandler = wsHandler;
+		this.validators = validators;
 		this.notifications = notifications;
 		this.uuidGen = uuidGen;
 		this.clock = clock;
@@ -114,14 +124,17 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupExistsException if the group already exists.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
+	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
 	 */
 	public GroupView createGroup(
 			final Token userToken,
 			final GroupCreationParams createParams)
 			throws InvalidTokenException, AuthenticationException, GroupExistsException,
-				GroupsStorageException {
+				GroupsStorageException, IllegalParameterException, NoSuchCustomFieldException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(createParams, "createParams");
+		validateCustomFields(createParams.getOptionalFields());
 		final UserName owner = userHandler.getUser(userToken);
 		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(clock.instant())));
 		
@@ -136,6 +149,21 @@ public class Groups {
 		}
 	}
 	
+	private void validateCustomFields(final OptionalGroupFields optFields)
+			throws IllegalParameterException, NoSuchCustomFieldException {
+		for (final NumberedCustomField f: optFields.getCustomFields()) {
+			final FieldItem<String> value = optFields.getCustomValue(f);
+			if (value.hasItem()) {
+				try {
+					validators.validate(f, value.get());
+				} catch (MissingParameterException e) {
+					throw new RuntimeException(
+							"This should be impossible. Please turn reality off and on again", e);
+				}
+			}
+		}
+	}
+
 	/** Update a group's fields.
 	 * @param userToken the token of the user that is modifying the group.
 	 * @param updateParams the update to apply.
@@ -144,15 +172,19 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no group with the provided ID.
 	 * @throws UnauthorizedException if the user is not a group administrator.
+	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
+	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
 	 */
 	public void updateGroup(final Token userToken, final GroupUpdateParams updateParams)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, UnauthorizedException {
+				GroupsStorageException, UnauthorizedException,
+				IllegalParameterException, NoSuchCustomFieldException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(updateParams, "updateParams");
 		if (!updateParams.hasUpdate()) {
 			return;
 		}
+		validateCustomFields(updateParams.getOptionalFields());
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(updateParams.getGroupID());
 		if (!g.isAdministrator(user)) {

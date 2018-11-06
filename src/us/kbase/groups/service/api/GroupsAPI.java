@@ -44,6 +44,7 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
@@ -173,7 +174,8 @@ public class GroupsAPI {
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			final CreateOrUpdateGroupJSON create)
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
-				AuthenticationException, GroupExistsException, GroupsStorageException {
+				AuthenticationException, GroupExistsException, GroupsStorageException,
+				NoSuchCustomFieldException {
 		checkIncomingJson(create);
 		return toGroupJSON(groups.createGroup(getToken(token, true),
 				create.toCreateParams(new GroupID(groupID))));
@@ -188,7 +190,7 @@ public class GroupsAPI {
 			final CreateOrUpdateGroupJSON update)
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
 				NoSuchGroupException, NoTokenProvidedException, AuthenticationException,
-				UnauthorizedException, GroupsStorageException {
+				UnauthorizedException, GroupsStorageException, NoSuchCustomFieldException {
 		checkIncomingJson(update);
 		groups.updateGroup(getToken(token, true), update.toUpdateParams(new GroupID(groupID)));
 	}

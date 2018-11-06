@@ -10,6 +10,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
@@ -46,7 +47,10 @@ import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -56,6 +60,8 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidators;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
@@ -96,6 +102,7 @@ public class GroupsTest {
 		final GroupsStorage storage = mock(GroupsStorage.class);
 		final UserHandler uh = mock(UserHandler.class);
 		final WorkspaceHandler wh = mock(WorkspaceHandler.class);
+		final FieldValidators val = mock(FieldValidators.class);
 		final Notifications notis = mock(Notifications.class);
 		final UUIDGenerator uuidGen = mock(UUIDGenerator.class);
 		final Clock clock = mock(Clock.class);
@@ -103,10 +110,10 @@ public class GroupsTest {
 		
 		final Constructor<Groups> c = Groups.class.getDeclaredConstructor(
 				GroupsStorage.class, UserHandler.class, WorkspaceHandler.class,
-				Notifications.class, UUIDGenerator.class, Clock.class);
+				FieldValidators.class, Notifications.class, UUIDGenerator.class, Clock.class);
 		c.setAccessible(true);
-		final Groups instance = c.newInstance(storage, uh, wh, notis, uuidGen, clock);
-		return new TestMocks(instance, storage, uh, wh, notis, uuidGen, clock);
+		final Groups instance = c.newInstance(storage, uh, wh, val, notis, uuidGen, clock);
+		return new TestMocks(instance, storage, uh, wh, val, notis, uuidGen, clock);
 	}
 	
 	public static class TestMocks {
@@ -115,6 +122,7 @@ public class GroupsTest {
 		public final GroupsStorage storage;
 		public final UserHandler userHandler;
 		public final WorkspaceHandler wsHandler;
+		private final FieldValidators validators;
 		public final Notifications notifs;
 		public final UUIDGenerator uuidGen;
 		public final Clock clock;
@@ -124,6 +132,7 @@ public class GroupsTest {
 				final GroupsStorage storage,
 				final UserHandler userHandler,
 				final WorkspaceHandler wsHandler,
+				final FieldValidators validators,
 				final Notifications notifs,
 				final UUIDGenerator uuidGen,
 				final Clock clock) {
@@ -131,6 +140,7 @@ public class GroupsTest {
 			this.storage = storage;
 			this.userHandler = userHandler;
 			this.wsHandler = wsHandler;
+			this.validators = validators;
 			this.notifs = notifs;
 			this.uuidGen = uuidGen;
 			this.clock = clock;
@@ -142,22 +152,25 @@ public class GroupsTest {
 		final GroupsStorage s = mock(GroupsStorage.class);
 		final UserHandler u = mock(UserHandler.class);
 		final WorkspaceHandler w = mock(WorkspaceHandler.class);
+		final FieldValidators v = mock(FieldValidators.class);
 		final Notifications n = mock(Notifications.class);
 		
-		failConstruct(null, u, w, n, new NullPointerException("storage"));
-		failConstruct(s, null, w, n, new NullPointerException("userHandler"));
-		failConstruct(s, u, null, n, new NullPointerException("wsHandler"));
-		failConstruct(s, u, w, null, new NullPointerException("notifications"));
+		failConstruct(null, u, w, v, n, new NullPointerException("storage"));
+		failConstruct(s, null, w, v, n, new NullPointerException("userHandler"));
+		failConstruct(s, u, null, v, n, new NullPointerException("wsHandler"));
+		failConstruct(s, u, w, null, n, new NullPointerException("validators"));
+		failConstruct(s, u, w, v, null, new NullPointerException("notifications"));
 	}
 	
 	private void failConstruct(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final FieldValidators validators,
 			final Notifications notifications,
 			final Exception expected) {
 		try {
-			new Groups(storage, userHandler, wsHandler, notifications);
+			new Groups(storage, userHandler, wsHandler, validators, notifications);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -177,6 +190,8 @@ public class GroupsTest {
 		
 		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name")).build());
+		
+		verifyZeroInteractions(mocks.validators);
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
@@ -201,20 +216,30 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
+				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("desc")).build())
+						.withDescription(StringField.from("desc"))
+						.withCustomField(new NumberedCustomField("foo-26"),
+								StringField.from("yay"))
+						.withCustomField(new NumberedCustomField("a"), StringField.remove())
+						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+						.build())
 				.withType(GroupType.TEAM)
 				.build());
+		
+		verify(mocks.validators).validate(new NumberedCustomField("foo-26"), "yay");
+		verifyNoMoreInteractions(mocks.validators);
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
+				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		assertThat("incorrect group", ret, is(new GroupView(Group.getBuilder(
@@ -222,6 +247,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
+				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build(),
 				wsis(new UserName("foo")), MEMBER)));
 	}
@@ -242,6 +268,41 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
 		
 		failCreateGroup(mocks.groups, new Token("token"), PARAMS, new InvalidTokenException());
+	}
+	
+	@Test
+	public void createGroupFailNoField() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("foo"));
+		doThrow(new NoSuchCustomFieldException("var"))
+				.when(mocks.validators).validate(new NumberedCustomField("var"), "7");
+		
+		failCreateGroup(mocks.groups, new Token("token"), GroupCreationParams
+				.getBuilder(new GroupID("bar"), new GroupName("name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.build())
+				.build(),
+				new NoSuchCustomFieldException("var"));
+	}
+
+	// test illegal parameter on update
+	@Test
+	public void createGroupFailMissingField() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		doThrow(new MissingParameterException("foo"))
+				.when(mocks.validators).validate(new NumberedCustomField("var"), "7");
+		
+		failCreateGroup(mocks.groups, new Token("token"), GroupCreationParams
+				.getBuilder(new GroupID("bar"), new GroupName("name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.build())
+				.build(),
+				new RuntimeException(
+						"This should be impossible. Please turn reality off and on again"));
 	}
 	
 	@Test
@@ -302,6 +363,7 @@ public class GroupsTest {
 		
 		verifyZeroInteractions(mocks.userHandler);
 		verifyZeroInteractions(mocks.storage);
+		verifyZeroInteractions(mocks.validators);
 	}
 	
 	@Test
@@ -328,10 +390,25 @@ public class GroupsTest {
 		mocks.groups.updateGroup(new Token("toketoke"), GroupUpdateParams
 				.getBuilder(new GroupID("gid"))
 				.withName(new GroupName("new name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("foo-26"),
+								StringField.from("yay"))
+						.withCustomField(new NumberedCustomField("a"), StringField.remove())
+						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+						.build())
 				.build());
+		
+		verify(mocks.validators).validate(new NumberedCustomField("foo-26"), "yay");
+		verifyNoMoreInteractions(mocks.validators);
 		
 		verify(mocks.storage).updateGroup(GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.withName(new GroupName("new name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("foo-26"),
+								StringField.from("yay"))
+						.withCustomField(new NumberedCustomField("a"), StringField.remove())
+						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+						.build())
 				.build(),
 				inst(30000));
 	}
@@ -343,6 +420,39 @@ public class GroupsTest {
 		failUpdateGroup(g, null, GroupUpdateParams.getBuilder(new GroupID("i")).build(),
 				new NullPointerException("userToken"));
 		failUpdateGroup(g, new Token("t"), null, new NullPointerException("updateParams"));
+	}
+	
+	@Test
+	public void updateGroupFailMissingField() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		doThrow(new MissingParameterException("foo"))
+				.when(mocks.validators).validate(new NumberedCustomField("var"), "7");
+		
+		failUpdateGroup(mocks.groups, new Token("token"), GroupUpdateParams
+				.getBuilder(new GroupID("bar"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.build())
+				.build(),
+				new RuntimeException(
+						"This should be impossible. Please turn reality off and on again"));
+	}
+	
+	@Test
+	public void updateGroupFailIllegalField() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		doThrow(new IllegalParameterException("foo"))
+				.when(mocks.validators).validate(new NumberedCustomField("var"), "7");
+		
+		failUpdateGroup(mocks.groups, new Token("token"), GroupUpdateParams
+				.getBuilder(new GroupID("bar"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.build())
+				.build(),
+				new IllegalParameterException("foo"));
 	}
 	
 	@Test
