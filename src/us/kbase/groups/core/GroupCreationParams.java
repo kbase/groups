@@ -61,10 +61,13 @@ public class GroupCreationParams {
 	 * @return the new group.
 	 */
 	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
-		return Group.getBuilder(groupID, groupName, owner, times)
+		final us.kbase.groups.core.Group.Builder b = Group.getBuilder(
+				groupID, groupName, owner, times)
 				.withType(type)
-				.withDescription(opfields.getDescription().orNull())
-				.build();
+				.withDescription(opfields.getDescription().orNull());
+		opfields.getCustomFields().stream().filter(f -> opfields.getCustomValue(f).hasItem())
+				.forEach(f -> b.withCustomField(f, opfields.getCustomValue(f).get()));
+		return b.build();
 	}
 
 	@Override

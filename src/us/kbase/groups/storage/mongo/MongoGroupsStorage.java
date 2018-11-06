@@ -184,7 +184,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 			// ok, duplicate key means the version doc is already there, this isn't the first
 			// startup
-			if (col.count() != 1) {
+			if (col.countDocuments() != 1) {
 				// if this occurs the indexes are broken, so there's no way to test without
 				// altering ensureIndexes()
 				throw new StorageInitException(
