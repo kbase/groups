@@ -18,6 +18,7 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.test.groups.TestCommon;
 
@@ -47,14 +48,24 @@ public class GroupCreationParamsTest {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.fromNullable("    my desc    ")).build())
+						.withDescription(StringField.fromNullable("    my desc    "))
+						.withCustomField(new NumberedCustomField("whee-1"),
+								StringField.from("he bit my widdle nose"))
+						.withCustomField(new NumberedCustomField("whee-2"),
+								StringField.from("oh you brute"))
+						.build())
 				.withType(GroupType.TEAM)
 				.build();
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect desc", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
-				.withDescription(StringField.from("my desc")).build()));
+				.withDescription(StringField.from("my desc"))
+				.withCustomField(new NumberedCustomField("whee-1"),
+						StringField.from("he bit my widdle nose"))
+				.withCustomField(new NumberedCustomField("whee-2"),
+						StringField.from("oh you brute"))
+				.build()));
 		assertThat("incorrect type", p.getType(), is(GroupType.TEAM));
 	}
 
@@ -106,7 +117,7 @@ public class GroupCreationParamsTest {
 	}
 	
 	@Test
-	public void toGroup() throws Exception {
+	public void toGroupMinimal() throws Exception {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.build();
@@ -117,6 +128,33 @@ public class GroupCreationParamsTest {
 		final Group expected = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.build();
+		
+		assertThat("incorrect group", g, is(expected));
+	}
+	
+	@Test
+	public void toGroupMaximal() throws Exception {
+		final GroupCreationParams p = GroupCreationParams.getBuilder(
+				new GroupID("id"), new GroupName("name"))
+				.withType(GroupType.TEAM)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withDescription(StringField.from("yay"))
+						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
+						.withCustomField(new NumberedCustomField("foo-1"), StringField.remove())
+						.withCustomField(new NumberedCustomField("foo-1"), StringField.noAction())
+						.build())
+				.build();
+		
+		final Group g = p.toGroup(new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)));
+		
+		final Group expected = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("foo"), "bar")
+				.withDescription("yay")
+				.withType(GroupType.TEAM)
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));
