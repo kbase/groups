@@ -40,7 +40,6 @@ public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 			final URI target = UriBuilder.fromUri(GURL).path(GPATH + fieldValue).build();
 			
 			final WebTarget wt = CLI.target(target).queryParam("d", "404");
-			System.out.println(wt);
 			final Builder req = wt.request();
 
 			final Response res = req.get();
