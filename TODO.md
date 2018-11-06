@@ -15,7 +15,7 @@
     * ErrorType enum and exception hierarchy
     * Null checking and string checking in utils classes
     * The Name class which is everywhere
-    * Class loading helper methods in auth and assembly homology
+    * Class loading helper methods in auth and assembly homology and here
     * The call id handling really needs to be separated from the logger in the HTTP
       services so it'd be easier to swap out the logger rather than use the
       JsonServerSyslog class.

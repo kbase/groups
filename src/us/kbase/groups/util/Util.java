@@ -2,8 +2,12 @@ package us.kbase.groups.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
+import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
@@ -119,6 +123,38 @@ public class Util {
 				throw new IllegalArgumentException(
 						"Null or whitespace only string in collection " + name);
 			}
+		}
+	}
+	
+	/** Load and instantiate a class with a given interface. Expects a no-argument constructor.
+	 * @param <T> the class that will be instantiated.
+	 * @param className the fully qualified class name.
+	 * @param interfce the required interface.
+	 * @return an instance of the class typed as the interface.
+	 * @throws GroupsConfigurationException if the instance could not be created.
+	 */
+	public static <T> T loadClassWithInterface(final String className, final Class<T> interfce)
+			throws GroupsConfigurationException {
+		final Class<?> cls;
+		try {
+			cls = Class.forName(className);
+		} catch (ClassNotFoundException e) {
+			throw new GroupsConfigurationException(String.format(
+					"Cannot load class %s: %s", className, e.getMessage()), e);
+		}
+		final Set<Class<?>> interfaces = new HashSet<>(Arrays.asList(cls.getInterfaces()));
+		if (!interfaces.contains(interfce)) {
+			throw new GroupsConfigurationException(String.format(
+					"Module %s must implement %s interface",
+					className, interfce.getName()));
+		}
+		@SuppressWarnings("unchecked")
+		final Class<T> inter = (Class<T>) cls;
+		try {
+			return inter.newInstance();
+		} catch (IllegalAccessException | InstantiationException e) {
+			throw new GroupsConfigurationException(String.format(
+					"Module %s could not be instantiated: %s", className, e.getMessage()), e);
 		}
 	}
 }
