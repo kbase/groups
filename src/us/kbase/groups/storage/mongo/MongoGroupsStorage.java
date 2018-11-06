@@ -358,15 +358,30 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document query = new Document(Fields.GROUP_ID, update.getGroupID().getName())
 				.append("$or", or);
 		final Document set = new Document(Fields.GROUP_MODIFICATION, Date.from(modDate));
+		final Document unset = new Document();
 		
 		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
 		buildUpdate(or, set, update.getType(), Fields.GROUP_TYPE, n -> n.get().name());
 		final OptionalGroupFields opts = update.getOptionalFields();
 		buildUpdate(or, set, opts.getDescription(), Fields.GROUP_DESCRIPTION, n -> n.get());
-		
+		for (final NumberedCustomField ncf: opts.getCustomFields()) {
+			final String field = Fields.GROUP_CUSTOM_FIELDS + Fields.FIELD_SEP + ncf.getField();
+			final FieldItem<String> item = opts.getCustomValue(ncf);
+			if (item.hasAction()) {
+				or.add(new Document(field, new Document("$ne", item.orNull())));
+				if (item.hasItem()) {
+					set.append(field, item.get());
+				} else {
+					unset.append(field, "");
+				}
+			}
+		}
+		final Document mod = new Document("$set", set);
+		if (!unset.isEmpty()) {
+			mod.append("$unset", unset);
+		}
 		try {
-			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(
-					query, new Document("$set", set));
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, mod);
 			if (res.getMatchedCount() != 1) {
 				getGroup(update.getGroupID()); //throws no such group
 				// otherwise we don't care - the update made no changes.
