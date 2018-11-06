@@ -372,6 +372,7 @@ public class ServiceIntegrationTest {
 				.with("workspaces", Collections.emptyList())
 				.with("type", type)
 				.with("admins", Collections.emptyList())
+				.with("custom", Collections.emptyMap())
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));
