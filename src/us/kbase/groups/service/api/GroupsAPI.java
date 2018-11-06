@@ -38,6 +38,7 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalGroupFields.Builder;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -54,6 +55,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
@@ -94,6 +96,8 @@ public class GroupsAPI {
 		private Optional<String> type;
 		@JsonProperty(Fields.GROUP_DESCRIPTION)
 		private Optional<String> description;
+		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
+		private Map<String, String> customFields;
 
 		@SuppressWarnings("unused")
 		private CreateOrUpdateGroupJSON() {} // default constructor for Jackson
@@ -104,23 +108,40 @@ public class GroupsAPI {
 		public CreateOrUpdateGroupJSON(
 				final Optional<String> groupName,
 				final Optional<String> type,
-				final Optional<String> description) {
+				final Optional<String> description,
+				final Map<String, String> customFields) {
 			this.groupName = groupName;
 			this.type = type;
 			this.description = description;
+			this.customFields = customFields;
 		}
 
 		private GroupCreationParams toCreateParams(final GroupID groupID)
 				throws MissingParameterException, IllegalParameterException {
 			final GroupCreationParams.Builder gbuilder = GroupCreationParams.getBuilder(
 					groupID, new GroupName(fromNullable(groupName)))
-					.withOptionalFields(OptionalGroupFields.getBuilder().withDescription(
-							StringField.fromNullable(fromNullable(description))).build());
+					.withOptionalFields(getOptionalFieldsBuilder(true)
+							.withDescription(StringField.fromNullable(fromNullable(description)))
+							.build());
 			final String gtype = fromNullable(type);
 			if (!isNullOrEmpty(gtype)) {
 				gbuilder.withType(GroupType.fromRepresentation(gtype));
 			}
 			return gbuilder.build();
+		}
+
+		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
+				throws IllegalParameterException, MissingParameterException {
+			final Builder b = OptionalGroupFields.getBuilder();
+			if (customFields != null) {
+				for (final String k: customFields.keySet()) {
+					if (!ignoreMissingValues || !isNullOrEmpty(customFields.get(k))) {
+						b.withCustomField(new NumberedCustomField(k),
+								getStringField(Optional.ofNullable(customFields.get(k))));
+					}
+				}
+			}
+			return b;
 		}
 
 		// handles case where the optional itself is null
@@ -138,7 +159,7 @@ public class GroupsAPI {
 			return GroupUpdateParams.getBuilder(groupID)
 					.withNullableName(fromNullable(groupName, s -> new GroupName(s)))
 					.withNullableType(fromNullable(type, t -> GroupType.fromRepresentation(t)))
-					.withOptionalFields(OptionalGroupFields.getBuilder()
+					.withOptionalFields(getOptionalFieldsBuilder(false)
 							.withDescription(getStringField(description))
 							.build())
 					.build();
@@ -269,6 +290,7 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
 		ret.put(Fields.GROUP_TYPE, g.getType().getRepresentation());
+		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g));
 		if (!g.getViewType().equals(ViewType.MINIMAL)) {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
@@ -290,6 +312,11 @@ public class GroupsAPI {
 		return ret;
 	}
 	
+	private Map<String, String> getCustomFields(final GroupView g) {
+		return g.getCustomFields().keySet().stream().collect(Collectors.toMap(
+				k -> k.getField(), k -> g.getCustomFields().get(k)));
+	}
+
 	private List<WorkspaceInformation> sorted(final Set<WorkspaceInformation> wsi) {
 		final List<WorkspaceInformation> ret = new ArrayList<>(wsi);
 		Collections.sort(ret, (wsi1, wsi2) -> wsi1.getID() - wsi2.getID());
