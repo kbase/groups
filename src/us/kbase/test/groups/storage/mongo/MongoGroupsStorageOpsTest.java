@@ -2149,4 +2149,71 @@ public class MongoGroupsStorageOpsTest {
 		}
 	}
 	
+	@Test
+	public void expireRequests() throws Exception {
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		final UUID id3 = UUID.randomUUID();
+		final UUID id4 = UUID.randomUUID();
+		// won't expire - expire time in future
+		final GroupRequest gr1 = GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(inst(20000), inst(40001)).build())
+				.build();
+		manager.storage.storeRequest(gr1);
+		// won't expire - already closed
+		final GroupRequest gr2 = GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(inst(20000), inst(30000)).build())
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		manager.storage.storeRequest(gr2);
+		// will expire
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bat"),
+					CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000)).build())
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("foo"), new UserName("bae"),
+					CreateModAndExpireTimes.getBuilder(inst(20000), inst(30000)).build())
+				.build());
+		
+		manager.storage.expireRequests(inst(40000));
+		
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id1)), is(gr1));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id2)), is(gr2));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id3)),
+				is(GroupRequest.getBuilder(
+						new RequestID(id3), new GroupID("foo"), new UserName("bat"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000))
+								.withModificationTime(inst(40000))
+								.build())
+						.withStatus(GroupRequestStatus.expired())
+						.build()));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id4)),
+				is(GroupRequest.getBuilder(
+						new RequestID(id4), new GroupID("foo"), new UserName("bae"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(30000))
+								.withModificationTime(inst(40000))
+								.build())
+						.withStatus(GroupRequestStatus.expired())
+					.build()));
+		
+		// ensure the request characteristic string is removed
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bat"),
+					CreateModAndExpireTimes.getBuilder(inst(20000), inst(30000)).build())
+				.build());
+	}
+	
+	@Test
+	public void expireRequestsFail() throws Exception {
+		try {
+			manager.storage.expireRequests(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("expireTime"));
+		}
+	}
+	
 }

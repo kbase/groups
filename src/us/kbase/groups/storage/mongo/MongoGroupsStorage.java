@@ -905,6 +905,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final Instant modificationTime)
 			throws NoSuchRequestException, GroupsStorageException {
 		checkNotNull(requestID, "requestID");
+		final Document query = new Document(Fields.REQUEST_ID, requestID.getID());
+		closeRequests(query, newStatus, modificationTime, requestID);
+	}
+
+	// pass non-null request ID if modifying a single request. That'll cause an exception
+	// if the query doesn't match.
+	// the query is appended with a doc enforcing that the status is OPEN.
+	private void closeRequests(
+			final Document query, 
+			final GroupRequestStatus newStatus,
+			final Instant modificationTime,
+			final RequestID requestID)
+			throws NoSuchRequestException, GroupsStorageException {
+		query.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
 		checkNotNull(newStatus, "newStatus");
 		checkNotNull(modificationTime, "modificationTime");
 		if (newStatus.getStatusType().equals(GroupRequestStatusType.OPEN)) {
@@ -921,12 +935,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 			set.append(Fields.REQUEST_REASON_CLOSED, newStatus.getClosedReason().get());
 		}
 		final Document unset = new Document(Fields.REQUEST_CHARACTERISTIC_STRING, "");
-		final Document query = new Document(Fields.REQUEST_ID, requestID.getID())
-				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
 		try {
-			final UpdateResult res = db.getCollection(COL_REQUESTS).updateOne(
+			final UpdateResult res = db.getCollection(COL_REQUESTS).updateMany(
 					query, new Document("$set", set).append("$unset", unset));
-			if (res.getMatchedCount() != 1) {
+			if (requestID != null && res.getMatchedCount() != 1) {
 				throw new NoSuchRequestException("No open request with ID " +
 						requestID.getID());
 			}
@@ -936,6 +948,35 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 
+	/** Set any requests in the {@link GroupRequestStatusType#OPEN} state where the 
+	 * {@link GroupRequest#getExpirationDate()} is earlier than the expire time to
+	 * {@link GroupRequestStatusType#EXPIRED}. The expire time is also used as the modification
+	 * time for the altered requests.
+	 * @param expireTime the cutoff time for requests - any requests with an expire time prior
+	 * to this value will be expired.
+	 * @throws GroupsStorageException if an error occurred contacting the server.
+	 */
+	public void expireRequests(final Instant expireTime) throws GroupsStorageException {
+		/* there's no way to run a multi document update and see which documents were actually
+		 * updated AFAICT which sucks.
+		 * So to return the request ids that were updated we'd have to
+		 * 1) Find the docs where status = OPEN and expire < expireTime
+		 * 2) For each doc do an update where status = OPEN expire it
+		 * 3) If the update modified the doc, add it to the returned list. Otherwise,
+		 *   it was accepted/canceled/denied/expired by another thread.
+		 *
+		 * So YAGNI for now.
+		 */
+		checkNotNull(expireTime, "expireTime");
+		final Document query = new Document(Fields.REQUEST_EXPIRATION,
+				new Document("$lte", Date.from(expireTime)));
+		try {
+			closeRequests(query, GroupRequestStatus.expired(), expireTime, null);
+		} catch (NoSuchRequestException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
 	/* Use this for finding documents where indexes should force only a single
 	 * document. Assumes the indexes are doing their job.
 	 */
