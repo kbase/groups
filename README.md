@@ -431,8 +431,8 @@ field-myfield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFact
 field-myfield-is-numbered=true
 ```
 
-In this case, any field with an integer suffix separated by `-` is allowed (e.g `myfield`,
-`myfield-22`, `myfield-1`, and `myfield-42` are all allowed and validated by the same
+In this case, any fields with an integer suffix separated by `-` are allowed (e.g `myfield`,
+`myfield-22`, `myfield-1`, and `myfield-42`) and are validated by the same
 validator. This is useful for data where there may be a list of values for the field.
 
 Any value other than `true` for `field-<field name>-is-numbered` is treated as false.
