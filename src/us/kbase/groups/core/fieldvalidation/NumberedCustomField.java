@@ -7,16 +7,24 @@ import java.util.Optional;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
+/** A {@link CustomField} that may optionally be suffixed with a positive integer,
+ * separated by a '-'.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class NumberedCustomField implements Comparable<NumberedCustomField> {
 
-	// TODO JAVADOC
-	// TODO TEST
-	
 	private static final String SEP = "-";
 	
 	private final CustomField field;
 	private final int number;
 	
+	/** Create the custom field. The field will be {@link String#trim()}ed.
+	 * @param customField the field.
+	 * @throws IllegalParameterException if the field root doesn't meet any of the requirements
+	 * of {@link CustomField} or the suffix is not an integer.
+	 * @throws MissingParameterException if the field is null or whitespace only.
+	 */
 	public NumberedCustomField(String customField)
 			throws IllegalParameterException, MissingParameterException {
 		checkString(customField, "customField", CustomField.MAXIMUM_FIELD_SIZE);
@@ -36,22 +44,37 @@ public class NumberedCustomField implements Comparable<NumberedCustomField> {
 		} else {
 			number = -1;
 		}
+		if (split[0].trim().isEmpty()) {
+			throw new IllegalParameterException("Illegal custom field: " + customField);
+		}
 		this.field = new CustomField(split[0]);
 		this.number = number;
 	}
 
+	/** Get the field root - the portion of the field without the integer suffix.
+	 * @return the field root.
+	 */
 	public CustomField getFieldRoot() {
 		return field;
 	}
 
+	/** Get the suffix, if present, as an integer.
+	 * @return the suffix.
+	 */
 	public Optional<Integer> getNumber() {
 		return number > 0 ? Optional.of(number) : Optional.empty();
 	}
 	
+	/** Get the entire field.
+	 * @return the field.
+	 */
 	public String getField() {
 		return field.getName() + (number > 0 ? SEP + number : "");
 	}
 	
+	/** True if the field is suffixed by a number, false otherwise.
+	 * @return if the field is suffixed.
+	 */
 	public boolean isNumberedField() {
 		return number > 0;
 	}
