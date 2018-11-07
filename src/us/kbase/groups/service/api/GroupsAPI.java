@@ -55,6 +55,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
+import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.workspace.WorkspaceID;
@@ -217,7 +218,7 @@ public class GroupsAPI {
 			final CreateOrUpdateGroupJSON create)
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
 				AuthenticationException, GroupExistsException, GroupsStorageException,
-				NoSuchCustomFieldException {
+				NoSuchCustomFieldException, FieldValidatorException {
 		checkIncomingJson(create);
 		return toGroupJSON(groups.createGroup(getToken(token, true),
 				create.toCreateParams(new GroupID(groupID))));
@@ -232,7 +233,8 @@ public class GroupsAPI {
 			final CreateOrUpdateGroupJSON update)
 			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
 				NoSuchGroupException, NoTokenProvidedException, AuthenticationException,
-				UnauthorizedException, GroupsStorageException, NoSuchCustomFieldException {
+				UnauthorizedException, GroupsStorageException, NoSuchCustomFieldException,
+				FieldValidatorException {
 		checkIncomingJson(update);
 		groups.updateGroup(getToken(token, true), update.toUpdateParams(new GroupID(groupID)));
 	}

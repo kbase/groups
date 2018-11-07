@@ -479,6 +479,11 @@ field-boolean-param-allowed-values=true, false
 field-feast-param-allowed-values=lambs, sloths, carp, orangutans, breakfast cereals, fruit bats
 ```
 
+### us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
+
+Checks that the value is a valid [Gravatar hash](https://en.gravatar.com/site/implement/hash/).
+Has no parameters.
+
 ## Requirements
 
 Java 8 (OpenJDK OK)  

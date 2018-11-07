@@ -30,7 +30,7 @@ public class FieldValidators {
 
 	public void validate(final NumberedCustomField field, final String value)
 			throws MissingParameterException, IllegalParameterException,
-				NoSuchCustomFieldException {
+				NoSuchCustomFieldException, FieldValidatorException {
 		checkNotNull(field, "field");
 		if (!validators.containsKey(field.getFieldRoot())) {
 			throw new NoSuchCustomFieldException(String.format(

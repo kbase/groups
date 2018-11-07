@@ -4,5 +4,6 @@ public interface FieldValidator {
 	
 	// TODO JAVADOC
 
-	public void validate(final String fieldValue) throws IllegalFieldValueException;
+	public void validate(final String fieldValue)
+			throws IllegalFieldValueException, FieldValidatorException;
 }
