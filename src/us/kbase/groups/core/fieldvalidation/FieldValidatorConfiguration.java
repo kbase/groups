@@ -7,10 +7,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/** A configuration for a {@link FieldValidator}.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class FieldValidatorConfiguration {
-	
-	// TODO JAVADOC
-	// TODO TEST
 	
 	private final CustomField field;
 	private final String validatorClass;
@@ -18,6 +19,14 @@ public class FieldValidatorConfiguration {
 	private final Map<String, String> validatorConfiguration;
 	
 	// probably won't need a builder ...?
+	/** Create a configuration.
+	 * @param field the field that the validator will validate.
+	 * @param validatorClass the class name of the {@link FieldValidatorFactory} class.
+	 * @param isNumberedField whether the field may be a numbered field, as specified by
+	 * {@link NumberedCustomField#isNumberedField()}.
+	 * @param validatorConfiguration the configuration of the validator, as provided to
+	 * {@link FieldValidatorFactory#getValidator(Map)}
+	 */
 	public FieldValidatorConfiguration(
 			final CustomField field,
 			final String validatorClass,
@@ -38,18 +47,32 @@ public class FieldValidatorConfiguration {
 				new HashMap<>(validatorConfiguration));
 	}
 
+	/** Get the field that the validator will validate.
+	 * @return the field.
+	 */
 	public CustomField getField() {
 		return field;
 	}
 
+	/** Get the class name for the {@link FieldValidatorFactory} that builds the validator.
+	 * @return the class name.
+	 */
 	public String getValidatorClass() {
 		return validatorClass;
 	}
 
+	/** Get whether the field may be a numbered field, as specified by
+	 * {@link NumberedCustomField#isNumberedField()}.
+	 * @return true if the field is a numbered field.
+	 */
 	public boolean isNumberedField() {
 		return isNumberedField;
 	}
 
+	/** Get the configuration for the validator, as provided to
+	 * {@link FieldValidatorFactory#getValidator(Map)}.
+	 * @return the validator configuration.
+	 */
 	public Map<String, String> getValidatorConfiguration() {
 		return validatorConfiguration;
 	}
