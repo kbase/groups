@@ -278,6 +278,7 @@
         <test name="us.kbase.test.groups.core.OptionalGroupFieldsTest"/>
         <test name="us.kbase.test.groups.core.TokenTest"/>
         <test name="us.kbase.test.groups.core.UserNameTest"/>
+        <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTest"/>
