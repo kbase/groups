@@ -12,10 +12,17 @@ import us.kbase.groups.core.fieldvalidation.FieldValidator;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.IllegalFieldValueException;
 
+/** A generic string validator. It ensures there are no control characters in the string
+ * (optionally allowing line feeds and tabs) and optionally enforces a maximum length.
+ * 
+ * The parameters are max-length, which is a positive integer and designates the maximum size of
+ * the field in Unicode code points, and allow-line-feeds-and-tabs, which allows for the presence
+ * of the \n, \r, and \t characters in the field.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class SimpleFieldValidatorFactory implements FieldValidatorFactory {
 
-	// TODO JAVADOC
-	// TODO TEST
 	// TODO VAL add force 1st char = letter
 	// TODO VAL regex
 	// TODO VAL regex for illegal characters
