@@ -27,7 +27,7 @@ export default class {
         </div>
         <div class="row">Set a token to use with the service:</div>
         <div class="row">
-          <input id="token"/>
+          <input type="password" id="token"/>
           <button id="settoken" class="btn btn-primary">Set</button>
           <button id="loadtoken" class="btn btn-primary">Reload from cookie</button>
           <span id="useridentity"></span>
@@ -252,7 +252,7 @@ export default class {
                       gtable +=
                           `
                           <tr id="${s(g.id)}">
-                            <th>${s(g.id)}</th>
+                            <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
                             <td>${s(g.type)}</td>
                             <td>${s(g.owner)}</td>
@@ -298,7 +298,7 @@ export default class {
                       `
                       <table class="table">
                         <tbody>
-                          <tr><th>ID</th><td>${s(json.id)}</td></tr>
+                          <tr><th>ID</th><td>${this.getGravatar(json)}${s(json.id)}</td></tr>
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
@@ -430,6 +430,14 @@ export default class {
       }).catch( (err) => {
           this.handleError(err);
       });
+  }
+  
+  getGravatar(group) {
+      if (!group.custom.gravatarhash) {
+          return "";
+      }
+      const url = "https://www.gravatar.com/avatar/" + group.custom.gravatarhash + "?s=80&r=pg";
+      return `<img src="${url}"/>`
   }
   
   addMember(groupid, member) {
@@ -843,6 +851,15 @@ export default class {
                 An arbitrary description of the group.
               </small>
             </div>
+            <div class="form-group">
+              <label for="groupgravatar">Gravatar hash</label>
+              <input class="form-control" id="groupgravatar" aria-describedby="gravhelp"
+                placeholder="Enter gravatar hash (optional)"
+                ${this.getValueTerm(group.custom.gravatarhash)} />
+              <small id="gravhelp" class="form-text text-muted">
+                The gravatar hash for a gravatar account.
+              </small>
+            </div>
             <button id="creategroupinput" class="btn btn-primary">Submit</button>
           </div>
           `;
@@ -853,10 +870,14 @@ export default class {
           let name = $('#groupname').val();
           let type = $('#grouptype').val();
           let desc = $('#groupdesc').val();
+          let grav = $('#groupgravatar').val();
           fetch(this.serviceUrl + "group/" + id + urlsuffix,
                 {"method": "PUT",
                  "headers": this.getHeaders(),
-                 "body": JSON.stringify({"name": name, "type": type, "description": desc})
+                 "body": JSON.stringify({"name": name,
+                                         "type": type,
+                                         "description": desc,
+                                         "custom": {"gravatarhash": grav}})
                  }).then( (response) => {
                      if (response.ok) {
                          this.renderGroup(id);
