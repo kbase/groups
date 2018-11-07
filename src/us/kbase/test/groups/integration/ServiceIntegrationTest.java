@@ -392,7 +392,7 @@ public class ServiceIntegrationTest {
 				"custom", ImmutableMap.of("f2", looong.substring(0, 5001)))));
 		
 		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
-				"Field f2 size greater than limit 5000"));
+				"Value for field f2 size greater than limit 5000"));
 	}
 	
 	@Test
