@@ -466,7 +466,8 @@ in the value.
 ### us.kbase.groups.fieldvalidators.EnumFieldValidatorFactory
 
 Checks that the value is one of a set of specified values. This can be used for boolean values
-(`true`, `false`), controlled vocabularies, etc.
+(`true`, `false`), controlled vocabularies, etc. The values may not be longer than 50 Unicode
+code points.
 
 Parameters:
 ```
