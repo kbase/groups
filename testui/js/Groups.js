@@ -814,6 +814,9 @@ export default class {
       }
       // TODO handle setting the group type correctly
       // note name is required on create, not on update. Since I'm lazy I'm just making it not required
+      if (!group.custom) {
+          group.custom = '';
+      }
       const input = 
           `
           <div>
