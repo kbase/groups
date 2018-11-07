@@ -278,9 +278,7 @@
         <test name="us.kbase.test.groups.core.OptionalGroupFieldsTest"/>
         <test name="us.kbase.test.groups.core.TokenTest"/>
         <test name="us.kbase.test.groups.core.UserNameTest"/>
-        <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>
-        <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
-        <test name="us.kbase.test.groups.fieldvalidators.SimpleFieldValidatorFactoryTest"/>
+        <test name="us.kbase.test.groups.core.fieldvalidation.CustomFieldTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTypeTest"/>
@@ -292,6 +290,9 @@
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceInformationTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceInfoSetTest"/>
+        <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>
+        <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
+        <test name="us.kbase.test.groups.fieldvalidators.SimpleFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
         <test name="us.kbase.test.groups.service.api.APICommonTest"/>
