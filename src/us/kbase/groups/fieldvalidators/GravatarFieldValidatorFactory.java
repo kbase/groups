@@ -16,18 +16,26 @@ import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.IllegalFieldValueException;
 
+/** Validates that a gravatar hash is valid and does not return a 404.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 
-	// TODO JAVADOC
-	// TODO TEST
-	
 	@Override
 	public FieldValidator getValidator(final Map<String, String> configuration)
 			throws IllegalParameterException {
-		return new GravatarFieldValidator();
+		return new GravatarFieldValidator(404);
 	}
 	
 	private static class GravatarFieldValidator implements FieldValidator {
+		
+		private final int errorCode;
+		
+		// this constructor is here solely to allow testing the final exception
+		private GravatarFieldValidator(final int errorCode) {
+			this.errorCode = errorCode;
+		}
 		
 		private static final Client CLI = ClientBuilder.newClient();
 		private static final String GURL = "https://www.gravatar.com/";
@@ -46,22 +54,13 @@ public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 			if (res.getStatus() == 200) {
 				return;
 			}
-			if (res.getStatus() == 404) {
+			if (res.getStatus() == errorCode) {
 				throw new IllegalFieldValueException(
 						"Gravatar service does not recognize Gravatar hash " + fieldValue);
 			}
-			// pretty much impossible to test other than changing one of the above values
 			throw new FieldValidatorException("Error contacting Gravatar service: " +
 						res.getStatus());
 		}
-	}
-	
-	public static void main(String[] args) throws Exception {
-		final FieldValidator v = new GravatarFieldValidatorFactory().getValidator(null);
-		
-		v.validate("87194228ef49d635fec5938099042b1d");
-		v.validate("87194228ef49d635fec5938099042b1");
-		
 	}
 
 }
