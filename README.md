@@ -405,7 +405,7 @@ Custom fields may be associated with a group on group creation or update. The al
 must be configured by server administrators in the `deploy.cfg` configuration file (see below).
 
 Attempting to create or update a group with a field that is not configured will result in an
-error.
+error. The maximum field size (including numbered fields, see below) is 50 Unicode code points.
 
 At minimum, a field validator must be associated with each configured field. The validator
 checks that the value of the field meets some criteria that depends on the validator.
