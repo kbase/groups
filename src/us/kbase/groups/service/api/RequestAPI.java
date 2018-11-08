@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -76,7 +77,7 @@ public class RequestAPI {
 			throws NoSuchRequestException, InvalidTokenException, NoSuchWorkspaceException,
 				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
 				IllegalParameterException, MissingParameterException, GroupsStorageException,
-				WorkspaceHandlerException {
+				WorkspaceHandlerException, ClosedRequestException {
 		groups.setReadPermissionOnWorkspace(getToken(token, true), new RequestID(requestID));
 	}
 	
@@ -113,7 +114,7 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException {
+				IllegalParameterException, ClosedRequestException {
 		return toGroupRequestJSON(groups.cancelRequest(
 				getToken(token, true), new RequestID(requestID)));
 	}
@@ -127,7 +128,7 @@ public class RequestAPI {
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
 				IllegalParameterException, UserIsMemberException, NoSuchWorkspaceException,
-				WorkspaceExistsException, WorkspaceHandlerException {
+				WorkspaceExistsException, WorkspaceHandlerException, ClosedRequestException {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return toGroupRequestJSON(groups.acceptRequest(
 				getToken(token, true), new RequestID(requestID)));
@@ -153,7 +154,7 @@ public class RequestAPI {
 			final DenyRequestJSON denyJSON)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, WorkspaceHandlerException {
+				IllegalParameterException, WorkspaceHandlerException, ClosedRequestException {
 		final String reason;
 		if (denyJSON == null) {
 			reason = null;

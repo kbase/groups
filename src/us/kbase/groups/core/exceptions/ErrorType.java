@@ -40,8 +40,10 @@ public enum ErrorType {
 	NO_SUCH_WORKSPACE		(50030, "No such workspace"),
 	/** The custom field does not exist. */
 	NO_SUCH_CUSTOM_FIELD	(50040, "No such custom field"),
+	/** The request is closed. */
+	REQUEST_CLOSED			(60000, "Request closed"),
 	/** The requested operation is not supported. */
-	UNSUPPORTED_OP			(60000, "Unsupported operation");
+	UNSUPPORTED_OP			(70000, "Unsupported operation");
 	
 	private final int errcode;
 	private final String error;
