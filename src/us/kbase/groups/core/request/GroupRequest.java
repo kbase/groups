@@ -17,8 +17,6 @@ import us.kbase.groups.core.Group;
  */
 public class GroupRequest {
 	
-	// TODO NOW expire requests in DB - need a thread running
-	
 	private final RequestID id;
 	private final GroupID groupID;
 	private final Optional<UserName> target;
