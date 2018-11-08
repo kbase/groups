@@ -17,7 +17,7 @@ services:
       field_validator_configs: |
          field-foo-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
          field-foo-is-numbered=true
-         # add more configurations here
+      # add more configurations here
     command:
       - "-multiline"
       - "-wait"
