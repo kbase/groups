@@ -49,6 +49,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
@@ -78,6 +79,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(30000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.DENIED));
+		assertThat("incorrect open", gr.isOpen(), is(false));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("targ"))));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
@@ -103,6 +105,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
@@ -129,6 +132,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
@@ -157,6 +161,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.CANCELED));
+		assertThat("incorrect open", gr.isOpen(), is(false));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
@@ -184,6 +189,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.ACCEPTED));
+		assertThat("incorrect open", gr.isOpen(), is(false));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
@@ -210,6 +216,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.EXPIRED));
+		assertThat("incorrect open", gr.isOpen(), is(false));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
@@ -236,6 +243,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("inv"))));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
@@ -262,6 +270,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));
@@ -289,6 +298,7 @@ public class GroupRequestTest {
 		assertThat("incorrect mod", gr.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect requester", gr.getRequester(), is(new UserName("foo")));
 		assertThat("incorrect status", gr.getStatusType(), is(GroupRequestStatusType.OPEN));
+		assertThat("incorrect open", gr.isOpen(), is(true));
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));

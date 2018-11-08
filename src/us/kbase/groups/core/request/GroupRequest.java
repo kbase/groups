@@ -110,6 +110,13 @@ public class GroupRequest {
 	public GroupRequestStatusType getStatusType() {
 		return statusType;
 	}
+	
+	/** Get whether this request is open or not.
+	 * @return true if the request is open, false otherwise.
+	 */
+	public boolean isOpen() {
+		return GroupRequestStatusType.OPEN.equals(statusType);
+	}
 
 	/** Get the user that closed the request. Only present when the status type is
 	 * {@link GroupRequestStatusType#ACCEPTED} or {@link GroupRequestStatusType#DENIED}.
