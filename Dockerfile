@@ -28,5 +28,6 @@ ENTRYPOINT [ "/kb/deployment/bin/dockerize" ]
 
 # Here are some default params passed to dockerize. They would typically
 # be overidden by docker-compose at startup
-CMD [  "-template", "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg", \
+CMD [  "-multiline", \
+       "-template", "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg", \
        "java", "-Djetty.home=/usr/local/jetty", "-jar", "/usr/local/jetty/start.jar" ]

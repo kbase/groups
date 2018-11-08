@@ -14,7 +14,9 @@ services:
       - auth_url=https://ci.kbase.us/services/auth
       - workspace_url=https://ci.kbase.us/services/ws
       - workspace_admin_token=faketoken_replace
+      - field_validator_configs=field-foo-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory\nfield-foo-is-numbered=true
     command:
+      - "-multiline"
       - "-wait"
       - "tcp://ci-mongo:27017"
       - "-wait"
