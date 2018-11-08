@@ -72,6 +72,7 @@ public class GroupsConfigTest {
 					("[groups]\n" +
 					 "mongo-host=mongo\n" +
 					 "mongo-db=database\n" +
+					 "notifier-factory=     factoryclass   \n" + 
 					 "auth-url=     http://auth.com       \n" +
 					 "workspace-admin-token=wstoken      \n" +
 					 "workspace-url=http://ws.com\n")
@@ -89,6 +90,9 @@ public class GroupsConfigTest {
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
+		assertThat("incorrect notfac", cfg.getNotifierFactory(), is("factoryclass"));
+		assertThat("incorrect fac params", cfg.getNotifierParameters(),
+				is(Collections.emptyMap()));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
@@ -108,6 +112,9 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=\n" +
 					 "mongo-pwd=\n" +
+					 "notifier-factory=     factoryclass   \n" +
+					 "notifier-param-p1    =     np1    \n" +
+					 "notifier-param-p2    =     np2    \n" +
 					 "auth-url=http://auth.com\n" +
 					 "workspace-url=http://ws.com\n" +
 					 "workspace-admin-token=               wstoken3      \n" +
@@ -134,6 +141,9 @@ public class GroupsConfigTest {
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken3")));
+		assertThat("incorrect notfac", cfg.getNotifierFactory(), is("factoryclass"));
+		assertThat("incorrect fac params", cfg.getNotifierParameters(),
+				is(ImmutableMap.of("p1", "np1", "p2", "np2")));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set(
@@ -152,6 +162,13 @@ public class GroupsConfigTest {
 		} catch (UnsupportedOperationException e) {
 			// is immutable, test passes
 		}
+		
+		try {
+			cfg.getNotifierParameters().put("p3", "np3");
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// is immutable test passes
+		}
 	}
 	
 	@Test
@@ -166,6 +183,7 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=userfoo\n" +
 					 "mongo-pwd=somepwd\n" +
+					 "notifier-factory=     factoryclass   \n" + 
 					 "auth-url=https://auth.com\n" +
 					 "workspace-url=https://ws.com\n" +
 					 "workspace-admin-token=wstoken      \n" +
@@ -185,6 +203,9 @@ public class GroupsConfigTest {
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
+		assertThat("incorrect notfac", cfg.getNotifierFactory(), is("factoryclass"));
+		assertThat("incorrect fac params", cfg.getNotifierParameters(),
+				is(Collections.emptyMap()));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
@@ -198,6 +219,7 @@ public class GroupsConfigTest {
 				("[groups]\n" +
 				 "mongo-host=mongo\n" +
 				 "mongo-db=database\n" +
+				 "notifier-factory=     factoryclass   \n" + 
 				 "auth-url=https://auth.com\n" +
 				 "workspace-admin-token=wstoken      \n" +
 				 "workspace-url=https://ws.com\n")
@@ -211,6 +233,9 @@ public class GroupsConfigTest {
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
+		assertThat("incorrect notfac", cfg.getNotifierFactory(), is("factoryclass"));
+		assertThat("incorrect fac params", cfg.getNotifierParameters(),
+				is(Collections.emptyMap()));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
@@ -226,6 +251,7 @@ public class GroupsConfigTest {
 				 "mongo-db=database\n" +
 				 "mongo-user=userfoo\n" +
 				 "mongo-pwd=somepwd\n" +
+				 "notifier-factory=     factoryclass   \n" + 
 				 "auth-url=https://auth.com\n" +
 				 "workspace-url=https://ws.com\n" +
 				 "workspace-admin-token=wstoken      \n" +
@@ -242,6 +268,9 @@ public class GroupsConfigTest {
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
 		assertThat("incorrect ws token", cfg.getWorkspaceAdminToken(), is(new Token("wstoken")));
+		assertThat("incorrect notfac", cfg.getNotifierFactory(), is("factoryclass"));
+		assertThat("incorrect fac params", cfg.getNotifierParameters(),
+				is(Collections.emptyMap()));
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
@@ -305,6 +334,7 @@ public class GroupsConfigTest {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -316,6 +346,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-db=bar\n" +
 				"mongo-host=     \t     \n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -329,6 +360,7 @@ public class GroupsConfigTest {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -340,6 +372,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=     \t     \n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -354,6 +387,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
@@ -367,6 +401,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
@@ -384,6 +419,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
@@ -397,6 +433,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n" +
@@ -414,6 +451,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
 				new GroupsConfigurationException(
@@ -424,6 +462,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=     \t     \n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -438,6 +477,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=   htp://foo.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=https://ws.com\n",
@@ -451,6 +491,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"workspace-admin-token=wstoken      \n" +
 				"auth-url=https://auth.com\n",
 				new GroupsConfigurationException(
@@ -461,6 +502,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=     \t     \n",
@@ -475,6 +517,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=wstoken      \n" +
 				"workspace-url=htp://foo.com\n",
@@ -484,11 +527,12 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void configFailNoToken() throws Throwable {
+	public void configFailNoWSToken() throws Throwable {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
@@ -499,6 +543,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=  \t       \n" +
 				"workspace-url=http://foo.com\n",
@@ -508,11 +553,70 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
+	public void configFailNoNotifierClass() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=  t     \n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter notifier-factory not provided in " +
+						"configuration file some file, section groups"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     \t   \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=  t       \n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Required parameter notifier-factory not provided in " +
+								"configuration file some file, section groups"));
+	}
+	
+	@Test
+	public void configFailNoNotifierParamName() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" +
+				"notifier-param-=     pval   \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration in section groups of " +
+						"config file some file: Illegal parameter notifier-param-"));
+	}
+	
+	@Test
+	public void configFailNoNotifierParamValue() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" +
+				"notifier-param-p1=     \t   \n" + 
+				"auth-url=https://auth.com\n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Parameter notifier-param-p1 in section groups of configfile some " +
+						"file has no value"));
+	}
+	
+	@Test
 	public void configFailBadFieldKey() throws Throwable {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo=bleah\n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=token\n" +
@@ -528,6 +632,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-    \t   -foo=bleah\n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=token\n" +
@@ -543,6 +648,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo_1-validator=bleah\n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=token\n" +
@@ -559,6 +665,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo-param-p1=   p2    \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=token\n" +
@@ -571,6 +678,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo-validator=       \t    \n" +
 				"field-foo-param-p1=   p2    \n" + 
 				"auth-url=https://auth.com\n" +
@@ -587,13 +695,14 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo-validator=    val    \n" +
 				"field-foo-param-=   p2    \n" + 
 				"auth-url=https://auth.com\n" +
 				"workspace-admin-token=token\n" +
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
-						"Error building configuration for field foo in section groups of " +
+						"Error building configuration in section groups of " +
 						"config file some file: Illegal parameter field-foo-param-"));
 	}
 	
@@ -603,6 +712,7 @@ public class GroupsConfigTest {
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
 				"field-foo-validator=    val    \n" +
 				"field-foo-param-p1=   \t    \n" + 
 				"auth-url=https://auth.com\n" +

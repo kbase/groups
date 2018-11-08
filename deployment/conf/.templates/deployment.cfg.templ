@@ -8,4 +8,8 @@ workspace-url={{ default .Env.workspace_url "https://ci.kbase.us/services/ws" }}
 workspace-admin-token={{ default .Env.workspace_admin_token ""}}
 allow-insecure-urls= {{ default .Env.allow_insecure_urls "false" }}
 
+notifier-factory={{ default .Env.notifier_factory "us.kbase.groups.notifications.DirectFeedsServiceNotifierFactory" }}
+notifier-param-url={{ default .Env.notifier_url "https://ci.kbase.us/services/feeds"}}
+notifier-param-token={{ default .Env.notifier_token "" }}
+
 {{ default .Env.field_validator_configs "" }}

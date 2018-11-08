@@ -37,6 +37,7 @@ import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
+import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestType;
