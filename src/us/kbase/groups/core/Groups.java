@@ -336,8 +336,6 @@ public class Groups {
 		return request;
 	}
 	
-	//TODO NOW for all requests methods, check if request is expired. If it is, expire it in the DB and possibly re-search to get new requests.
-	
 	private final Set<GroupRequestUserAction> CREATOR_ACTIONS = new HashSet<>(Arrays.asList(
 			GroupRequestUserAction.CANCEL));
 	private final Set<GroupRequestUserAction> TARGET_ACTIONS = new HashSet<>(Arrays.asList(
