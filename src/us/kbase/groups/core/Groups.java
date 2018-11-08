@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
@@ -482,10 +483,11 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user is not the creator of the request.
+	 * @throws ClosedRequestException if the request is closed.
 	 */
 	public GroupRequest cancelRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException {
+				GroupsStorageException, UnauthorizedException, ClosedRequestException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -494,6 +496,7 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
 					user.getName(), requestID.getID()));
 		}
+		ensureOpen(gr);
 		storage.closeRequest(requestID, GroupRequestStatus.canceled(), clock.instant());
 		notifications.cancel(requestID);
 		return storage.getRequest(requestID);
@@ -511,19 +514,22 @@ public class Groups {
 	 * @throws UnauthorizedException if the user is not the target of the request or an
 	 * administrator of the group targeted in the request, if a group is targeted.
 	 * @throws WorkspaceHandlerException if the workspace service could not be contacted.
+	 * @throws ClosedRequestException if the request is closed.
 	 */
 	public GroupRequest denyRequest(
 			final Token userToken,
 			final RequestID requestID,
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException {
+				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException,
+				ClosedRequestException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "deny");
+		ensureOpen(request);
 		
 		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
 		final GroupRequest r = storage.getRequest(requestID);
@@ -548,19 +554,22 @@ public class Groups {
 	 * of the group.
 	 * @throws WorkspaceHandlerException if there is an error contacting the workspace service.
 	 * @throws NoSuchWorkspaceException if the workspace to be added to a group does not exist.
+	 * @throws ClosedRequestException if the request is closed.
 	 */ 
 	public GroupRequest acceptRequest(
 			final Token userToken,
 			final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, UserIsMemberException,
-				WorkspaceExistsException, NoSuchWorkspaceException, WorkspaceHandlerException {
+				WorkspaceExistsException, NoSuchWorkspaceException, WorkspaceHandlerException,
+				ClosedRequestException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
+		ensureOpen(request);
 		final Set<UserName> notifyTargets = processRequest(group.getGroupID(), request);
 		notifyTargets.addAll(group.getAdministratorsAndOwner());
 		notifyTargets.remove(user);
@@ -594,6 +603,12 @@ public class Groups {
 			throw new UnimplementedException();
 		}
 		return new HashSet<>(toNotify);
+	}
+	
+	private void ensureOpen(final GroupRequest request) throws ClosedRequestException {
+		if (!GroupRequestStatusType.OPEN.equals(request.getStatusType())) {
+			throw new ClosedRequestException(request.getID().getID().toString());
+		}
 	}
 
 	private void ensureIsRequestTarget(
@@ -826,13 +841,14 @@ public class Groups {
 	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * request type is not correct.
+	 * @throws ClosedRequestException if the request is closed.
 	 */
 	public void setReadPermissionOnWorkspace(
 			final Token userToken,
 			final RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, NoSuchWorkspaceException,
-				WorkspaceHandlerException {
+				WorkspaceHandlerException, ClosedRequestException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -846,6 +862,9 @@ public class Groups {
 			throw new UnauthorizedException(
 					"Only workspace add requests allow for workspace permissions changes.");
 		}
+		ensureOpen(r);
 		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
 	}
+	
+	//TODO WS fn to give read perms to group ws for group member. Config whether fn is allowed or not.
 }

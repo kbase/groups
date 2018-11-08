@@ -45,6 +45,7 @@ import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -1798,6 +1799,25 @@ public class GroupsTest {
 				new UnauthorizedException("User otheruser may not cancel request " + id));
 	}
 	
+	@Test
+	public void cancelRequestFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("invite"))
+						.withStatus(GroupRequestStatus.accepted(new UserName("someguy")))
+						.build());
+		
+		failCancelRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new ClosedRequestException(id + ""));
+	}
+	
 	private void failCancelRequest(
 			final Groups g,
 			final Token t,
@@ -2050,6 +2070,31 @@ public class GroupsTest {
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not deny request " + id));
+	}
+	
+	@Test
+	public void denyRequestFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.canceled())
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new ClosedRequestException(id + ""));
 	}
 	
 	@Test
@@ -2428,6 +2473,31 @@ public class GroupsTest {
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteToGroup(new UserName("target"))
+						.withStatus(GroupRequestStatus.expired())
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new ClosedRequestException(id.toString()));
 	}
 	
 	@Test
@@ -3388,6 +3458,32 @@ public class GroupsTest {
 		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
 				new UnauthorizedException(
 						"Only workspace add requests allow for workspace permissions changes."));
+	}
+	
+	@Test
+	public void setReadPermissionOnWorkspaceFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestAddWorkspace(new WorkspaceID(43))
+						.withStatus(GroupRequestStatus.denied(new UserName("d"), null))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
+				new ClosedRequestException(id + ""));
 	}
 	
 	private void failSetReadPermissionsOnWorkspace(

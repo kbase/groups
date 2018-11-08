@@ -126,6 +126,7 @@ Current error types are:
 30000	Missing input parameter
 30001	Illegal input parameter
 30010	Illegal user name
+30020	Illegal group ID
 40000	Group already exists
 40010	Request already exists
 40020	User already group member
@@ -134,7 +135,9 @@ Current error types are:
 50010	No such request
 50020	No such user
 50030	No such workspace
-60000	Unsupported operation
+50040	No such custom field
+60000	Request closed
+70000	Unsupported operation
 ```
 
 ### Root
@@ -335,6 +338,16 @@ to the user.
 ```
 
 Possible actions are `Cancel`, `Accept`, and `Deny`.
+
+### Get permission to read a workspace associated with a request
+
+```
+AUTHORIZATION REQUIRED
+POST /request/id/<request id>/getperm
+```
+
+The request type must be `Request add workspace to group` and the user must be a group
+administrator.
 
 ### List created requests
 
