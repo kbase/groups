@@ -19,6 +19,12 @@ workspace-url=https://ci.kbase.us/services/ws
 # KBase Workspace administrator service token.
 workspace-admin-token=
 
+# The notifier factory class that will provide the notifier for notifications and any parameters
+# for that class.
+notifier-factory=us.kbase.groups.notifications.DirectFeedsServiceNotifierFactory
+notifier-param-url=https://ci.kbase.us/services/feeds
+notifier-param-token=<add token here>
+
 # "true" to allow insecure (http vs https) URLs.
 # allow-insecure-urls=false
 
@@ -26,3 +32,10 @@ workspace-admin-token=
 # (the default behavior), the logged IP address for a request, in order of precedence, is
 # 1) the first address in X-Forwarded-For, 2) X-Real-IP, and 3) the address of the client.
 dont-trust-x-ip-headers=false
+
+# Any custom fields can be configured here, for example:
+# field-gravatarhash-validator=us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
+#
+# field-somefield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+# field-somefield-param-max-length=20
+# See the custom fields documentation in README.md for more information.

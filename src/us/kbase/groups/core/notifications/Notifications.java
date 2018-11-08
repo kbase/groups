@@ -1,7 +1,9 @@
-package us.kbase.groups.core;
+package us.kbase.groups.core.notifications;
 
 import java.util.Collection;
 
+import us.kbase.groups.core.Group;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.RequestID;
 

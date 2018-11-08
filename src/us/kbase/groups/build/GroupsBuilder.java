@@ -26,8 +26,9 @@ import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
+import us.kbase.groups.core.notifications.Notifications;
+import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
-import us.kbase.groups.notifications.SLF4JNotifier;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -125,8 +126,19 @@ public class GroupsBuilder {
 			throw new GroupsConfigurationException(
 					"Failed to create workspace handler: " + e.getMessage(), e);
 		}
-		// TODO NOTIFICATIONS replace with actual implementation
-		return new Groups(storage, uh, wh, getValidators(c), new SLF4JNotifier());
+		return new Groups(storage, uh, wh, getValidators(c), getNotifier(c));
+	}
+
+	private Notifications getNotifier(final GroupsConfig c)
+			throws GroupsConfigurationException {
+		final NotificationsFactory fac = Util.loadClassWithInterface(
+				c.getNotifierFactory(), NotificationsFactory.class);
+		try {
+			return fac.getNotifier(c.getNotifierParameters());
+		} catch (IllegalParameterException e) {
+			throw new GroupsConfigurationException(
+					"Error building notifier: " + e.getMessage(), e);
+		}
 	}
 
 	private FieldValidators getValidators(final GroupsConfig c)

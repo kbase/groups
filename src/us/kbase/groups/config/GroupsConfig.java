@@ -68,6 +68,8 @@ public class GroupsConfig {
 	private static final String KEY_AUTH_URL = "auth-url";
 	private static final String KEY_WORKSPACE_URL = "workspace-url";
 	private static final String KEY_WORKSPACE_TOKEN = "workspace-admin-token";
+	private static final String KEY_NOTIFIER_FACTORY = "notifier-factory";
+	private static final String KEY_PREFIX_NOTIFIER_PARAMS = "notifier-param-";
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
 	private static final String KEY_ALLOW_INSECURE_URLS = "allow-insecure-urls";
 	
@@ -86,6 +88,8 @@ public class GroupsConfig {
 	private final URL authURL;
 	private final URL workspaceURL;
 	private final Token workspaceAdminToken;
+	private final String notifierFactory;
+	private final Map<String, String> notifierParameters;
 	private final SLF4JAutoLogger logger;
 	private final boolean ignoreIPHeaders;
 	private final boolean allowInsecureURLs;
@@ -142,6 +146,8 @@ public class GroupsConfig {
 		authURL = getURL(KEY_AUTH_URL, cfg);
 		workspaceURL = getURL(KEY_WORKSPACE_URL, cfg);
 		workspaceAdminToken = getToken(KEY_WORKSPACE_TOKEN, cfg);
+		notifierFactory = getString(KEY_NOTIFIER_FACTORY, cfg, true);
+		notifierParameters = getParams(KEY_PREFIX_NOTIFIER_PARAMS, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 		mongoDB = getString(KEY_MONGO_DB, cfg, true);
 		mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -178,29 +184,34 @@ public class GroupsConfig {
 			final String valclass = getString(pre + KEY_SUFFIX_FIELD_VALIDATOR, cfg, true);
 			final boolean isNumbered = TRUE.equals(
 					getString(pre + KEY_SUFFIX_FIELD_IS_NUMBERED, cfg));
-			final String preParam = pre + KEY_SUFFIX_FIELD_PARAM;
-			final Map<String, String> params = new HashMap<>();
-			for (final String key: cfg.keySet()) {
-				if (key.startsWith(preParam)) {
-					final String param = key.replace(preParam, "");
-					if (isNullOrEmpty(param)) {
-						throw new GroupsConfigurationException(String.format(
-								"Error building configuration for field %s in " +
-								"section %s of config file %s: Illegal parameter %s",
-								field.getName(), CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), key));
-					}
-					final String value = getString(key, cfg);
-					if (value == null) {
-						throw new GroupsConfigurationException(String.format(
-								"Parameter %s in section %s of configfile %s has no value",
-								key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
-					}
-					params.put(param, value);
-				}
-			}
-			configs.add(new FieldValidatorConfiguration(field, valclass, isNumbered, params));
+			configs.add(new FieldValidatorConfiguration(
+					field, valclass, isNumbered, getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg)));
 		}
 		return Collections.unmodifiableSet(configs);
+	}
+
+	private Map<String, String> getParams(final String paramPrefix, final Map<String, String> cfg)
+			throws GroupsConfigurationException {
+		final Map<String, String> params = new HashMap<>();
+		for (final String key: cfg.keySet()) {
+			if (key.startsWith(paramPrefix)) {
+				final String param = key.replace(paramPrefix, "");
+				if (isNullOrEmpty(param)) {
+					throw new GroupsConfigurationException(String.format(
+							"Error building configuration in " +
+							"section %s of config file %s: Illegal parameter %s",
+							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), key));
+				}
+				final String value = getString(key, cfg);
+				if (value == null) {
+					throw new GroupsConfigurationException(String.format(
+							"Parameter %s in section %s of configfile %s has no value",
+							key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
+				}
+				params.put(param, value);
+			}
+		}
+		return Collections.unmodifiableMap(params);
 	}
 
 	private Set<CustomField> getFields(final Map<String, String> cfg)
@@ -404,6 +415,20 @@ public class GroupsConfig {
 	 */
 	public Token getWorkspaceAdminToken() {
 		return workspaceAdminToken;
+	}
+	
+	/** Get the name of the factory class for the notifier.
+	 * @return the class name.
+	 */
+	public String getNotifierFactory() {
+		return notifierFactory;
+	}
+	
+	/** Get any notifier parameters.
+	 * @return the notifier parameters.
+	 */
+	public Map<String, String> getNotifierParameters() {
+		return notifierParameters;
 	}
 	
 	/** Get a logger. The logger is expected to intercept SLF4J log events and log them

@@ -39,6 +39,7 @@ import us.kbase.groups.core.exceptions.GroupsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory;
+import us.kbase.groups.notifications.SLF4JNotifierFactory;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.authcontroller.AuthController;
 import us.kbase.test.groups.MongoStorageTestManager;
@@ -155,6 +156,8 @@ public class ServiceIntegrationTest {
 		sec.add("auth-url", authURL.toString());
 		sec.add("workspace-admin-token", wsToken);
 		sec.add("workspace-url", wsURL.toString());
+		//TODO TEST with actual notifier? depends how hard it is to run feeds. Or test with mock notifier
+		sec.add("notifier-factory", SLF4JNotifierFactory.class.getName());
 		sec.add("allow-insecure-urls", "true");
 		sec.add("field-f1-validator", SimpleFieldValidatorFactory.class.getName());
 		sec.add("field-f1-is-numbered", "true");
