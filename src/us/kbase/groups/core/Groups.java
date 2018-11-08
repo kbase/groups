@@ -39,7 +39,6 @@ import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
-import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
@@ -365,11 +364,9 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(request);
 		//TODO PRIVATE may want to censor accepter/denier and deny reason here and in other methods that return a closed request
-		final boolean isOpen = request.getStatusType().equals(GroupRequestStatusType.OPEN);
-		final Set<GroupRequestUserAction> creator = isOpen ? CREATOR_ACTIONS : NO_ACTIONS;
-		final Set<GroupRequestUserAction> target = isOpen ? TARGET_ACTIONS : NO_ACTIONS;
 		if (user.equals(request.getRequester())) {
-			return new GroupRequestWithActions(request, creator);
+			return new GroupRequestWithActions(request,
+					request.isOpen() ? CREATOR_ACTIONS : NO_ACTIONS);
 		} else {
 			/* For the invite types, this code means that admins can't see the request unless they
 			 * created it (same deal for the list fns). I think that's ok - the request is between
@@ -379,7 +376,8 @@ public class Groups {
 			 * Or maybe admins should be able to view and cancel each other's requests.
 			 */
 			ensureIsRequestTarget(request, g.isAdministrator(user), user, "access");
-			return new GroupRequestWithActions(request, target);
+			return new GroupRequestWithActions(request,
+					request.isOpen() ? TARGET_ACTIONS : NO_ACTIONS);
 		}
 	}
 	
@@ -496,7 +494,7 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s may not cancel request %s",
 					user.getName(), requestID.getID()));
 		}
-		ensureOpen(gr);
+		ensureIsOpen(gr);
 		storage.closeRequest(requestID, GroupRequestStatus.canceled(), clock.instant());
 		notifications.cancel(requestID);
 		return storage.getRequest(requestID);
@@ -529,7 +527,7 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "deny");
-		ensureOpen(request);
+		ensureIsOpen(request);
 		
 		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
 		final GroupRequest r = storage.getRequest(requestID);
@@ -569,7 +567,7 @@ public class Groups {
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
-		ensureOpen(request);
+		ensureIsOpen(request);
 		final Set<UserName> notifyTargets = processRequest(group.getGroupID(), request);
 		notifyTargets.addAll(group.getAdministratorsAndOwner());
 		notifyTargets.remove(user);
@@ -605,8 +603,8 @@ public class Groups {
 		return new HashSet<>(toNotify);
 	}
 	
-	private void ensureOpen(final GroupRequest request) throws ClosedRequestException {
-		if (!GroupRequestStatusType.OPEN.equals(request.getStatusType())) {
+	private void ensureIsOpen(final GroupRequest request) throws ClosedRequestException {
+		if (!request.isOpen()) {
 			throw new ClosedRequestException(request.getID().getID().toString());
 		}
 	}
@@ -862,7 +860,7 @@ public class Groups {
 			throw new UnauthorizedException(
 					"Only workspace add requests allow for workspace permissions changes.");
 		}
-		ensureOpen(r);
+		ensureIsOpen(r);
 		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
 	}
 	
