@@ -1,8 +1,11 @@
 package us.kbase.test.groups;
 
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.time.Clock;
 
 import org.bson.Document;
 
@@ -19,6 +22,7 @@ public class MongoStorageTestManager {
 	public MongoClient mc;
 	public MongoDatabase db;
 	public MongoGroupsStorage storage;
+	public Clock clockMock;
 	public Version mongoDBVer;
 	public int indexVer;
 	public boolean wiredTiger;
@@ -63,9 +67,10 @@ public class MongoStorageTestManager {
 		// anyway when the new storage instance is created
 		// db.drop();
 		TestCommon.destroyDB(db);
+		clockMock = mock(Clock.class);
 		final Constructor<MongoGroupsStorage> con = MongoGroupsStorage.class.
-				getDeclaredConstructor(MongoDatabase.class);
+				getDeclaredConstructor(MongoDatabase.class, Clock.class);
 		con.setAccessible(true);
-		storage = con.newInstance(db);
+		storage = con.newInstance(db, clockMock);
 	}
 }

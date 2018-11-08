@@ -3,11 +3,14 @@ package us.kbase.test.groups.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
+import static us.kbase.test.groups.TestCommon.assertLogEventsCorrect;
 import static us.kbase.test.groups.TestCommon.inst;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,6 +24,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -48,6 +52,8 @@ import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
+import us.kbase.groups.storage.mongo.MongoGroupsStorage;
+import us.kbase.test.groups.TestCommon.LogEvent;
 import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.TestCommon;
 
@@ -60,8 +66,8 @@ public class MongoGroupsStorageOpsTest {
 	
 	@BeforeClass
 	public static void setUp() throws Exception {
-		logEvents = TestCommon.setUpSLF4JTestLoggerAppender("us.kbase.assemblyhomology");
-		manager = new MongoStorageTestManager("test_mongoahstorage");
+		logEvents = TestCommon.setUpSLF4JTestLoggerAppender("us.kbase.groups");
+		manager = new MongoStorageTestManager("test_mongogroupsstorage");
 		TEMP_DIR = TestCommon.getTempDir().resolve("StorageTest_" + UUID.randomUUID().toString());
 		Files.createDirectories(TEMP_DIR);
 		EMPTY_FILE_MSH = TEMP_DIR.resolve(UUID.randomUUID().toString() + ".msh");
@@ -2216,4 +2222,107 @@ public class MongoGroupsStorageOpsTest {
 		}
 	}
 	
+	@Test
+	public void expireAgent() throws Exception {
+		// also tests that stopping the agent multiple times in succession has no effect.
+		final MongoGroupsStorage s = manager.storage;
+		final Clock clock = manager.clockMock;
+		final Instant now = Instant.ofEpochMilli(50000);
+		when(clock.instant()).thenReturn(now);
+		assertThat("incorrect agent running", s.isExpirationAgentRunning(), is(true));
+		s.stopExpirationAgent(); // stop the default agent
+		assertThat("incorrect agent running", s.isExpirationAgentRunning(), is(false));
+		s.stopExpirationAgent();
+		assertThat("incorrect agent running", s.isExpirationAgentRunning(), is(false));
+		// to be expired immediately
+		final UUID id1 = UUID.randomUUID();
+		final GroupRequest gr1 = GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bat"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000)).build())
+				.build();
+		final GroupRequest gr1ex = GroupRequest.getBuilder(
+				new RequestID(id1), new GroupID("foo"), new UserName("bat"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000))
+								.withModificationTime(inst(50000))
+								.build())
+						.withStatus(GroupRequestStatus.expired())
+				.build();
+		// safe data
+		final UUID id2 = UUID.randomUUID();
+		final GroupRequest gr2 = GroupRequest.getBuilder(
+				new RequestID(id2), new GroupID("foo"), new UserName("baz"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(80000)).build())
+				.build();
+		// to be expired later
+		final UUID id3 = UUID.randomUUID();
+		final GroupRequest gr3 = GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000)).build())
+				.build();
+		final GroupRequest gr3ex = GroupRequest.getBuilder(
+				new RequestID(id3), new GroupID("foo"), new UserName("bar"),
+						CreateModAndExpireTimes.getBuilder(inst(20000), inst(40000))
+								.withModificationTime(inst(50000))
+								.build())
+						.withStatus(GroupRequestStatus.expired())
+				.build();
+
+		logEvents.clear();
+		manager.storage.storeRequest(gr1);
+		manager.storage.storeRequest(gr2);
+		s.startExpirationAgent(1); // runs the agent immediately, so hold off a sec
+		Thread.sleep(100); // let the agent finish
+		assertThat("incorrect agent running", s.isExpirationAgentRunning(), is(true));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id1)), is(gr1ex));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id2)), is(gr2));
+		
+		manager.storage.storeRequest(gr3);
+		assertThat("incorrect agent running", s.isExpirationAgentRunning(), is(true));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id1)), is(gr1ex));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id2)), is(gr2));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id3)), is(gr3));
+
+		Thread.sleep(400);
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id1)), is(gr1ex));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id2)), is(gr2));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id3)), is(gr3));
+
+		Thread.sleep(600);
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id1)), is(gr1ex));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id2)), is(gr2));
+		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id3)), is(gr3ex));
+
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Running expiration agent",
+						MongoGroupsStorage.class.getName() + "$ExpirationAgent"),
+				new LogEvent(Level.INFO, "Running expiration agent",
+						MongoGroupsStorage.class.getName() + "$ExpirationAgent"));
+	}
+	
+	@Test
+	public void startReaperFail() {
+		final MongoGroupsStorage s = manager.storage;
+		failStartExpirationAgent(s, 1, new IllegalArgumentException(
+				"The expiration agent is already running"));
+		
+		s.stopExpirationAgent();
+		failStartExpirationAgent(s, 0, new IllegalArgumentException(
+				"periodInSeconds must be > 0"));
+		
+		s.startExpirationAgent(1000);
+		failStartExpirationAgent(s, 1, new IllegalArgumentException(
+				"The expiration agent is already running"));
+	}
+	
+	private void failStartExpirationAgent(
+			final MongoGroupsStorage storage,
+			final long period, 
+			final Exception expected) {
+		try {
+			storage.startExpirationAgent(period);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }

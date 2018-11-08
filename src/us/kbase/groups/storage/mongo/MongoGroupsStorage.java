@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
@@ -14,12 +15,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
+import org.slf4j.LoggerFactory;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
@@ -155,18 +160,85 @@ public class MongoGroupsStorage implements GroupsStorage {
 		INDEXES.put(COL_CONFIG, cfg);
 	}
 	
+	private static final long EXPIRATION_AGENT_FREQUENCY_SEC = 60;
+	
+	private ScheduledExecutorService executor;
+	private boolean expirationAgentRunning = false;
+	
 	private final MongoDatabase db;
+	private final Clock clock;
 	
 	/** Create MongoDB based storage for the Groups application.
 	 * @param db the MongoDB database the storage system will use.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
-	public MongoGroupsStorage(final MongoDatabase db) 
+	public MongoGroupsStorage(final MongoDatabase db) throws StorageInitException {
+		this(db, Clock.systemDefaultZone());
+	}
+	
+	// for tests
+	private MongoGroupsStorage(final MongoDatabase db, final Clock clock)
 			throws StorageInitException {
 		checkNotNull(db, "db");
 		this.db = db;
-		ensureIndexes(); // MUST come before check config;
+		this.clock = clock;
+		ensureIndexes(); // MUST come before check config
 		checkConfig();
+		startExpirationAgent(EXPIRATION_AGENT_FREQUENCY_SEC);
+	}
+	
+	/** Schedule the request expiration agent with the given period between expirations.
+	 * The agent calls {@link #expireRequests(Instant)}
+	 * every periodInSeconds with the current {@link Instant} from a {@link Clock#instant()}.
+	 * @param periodInSeconds how often the reaper runs.
+	 * @throws IllegalArgumentException if the reaper is already running or the period is less
+	 * than or equal to zero.
+	 */
+	public synchronized void startExpirationAgent(long periodInSeconds) {
+		if (expirationAgentRunning) {
+			throw new IllegalArgumentException("The expiration agent is already running");
+		}
+		if (periodInSeconds <= 0) {
+			throw new IllegalArgumentException("periodInSeconds must be > 0");
+		}
+		expirationAgentRunning = true;
+		executor = Executors.newSingleThreadScheduledExecutor();
+		executor.scheduleAtFixedRate(
+				new ExpirationAgent(), 0, periodInSeconds, TimeUnit.SECONDS);
+	}
+	
+	/** Returns true if the expiration agent is running, false otherwise.
+	 * @return true if the agent is running.
+	 */
+	public synchronized boolean isExpirationAgentRunning() {
+		return expirationAgentRunning;
+	}
+	
+	/** Stops the expiration agent from running again. Call {@link #startExpirationAgent(long)}
+	 * to restart the agent.
+	 * Calling this method multiple times in succession has no effect.
+	 */
+	public synchronized void stopExpirationAgent() {
+		executor.shutdown();
+		expirationAgentRunning = false;
+	}
+	
+	private class ExpirationAgent implements Runnable {
+
+		@Override
+		public void run() {
+			try {
+				LoggerFactory.getLogger(getClass()).info("Running expiration agent");
+				expireRequests(clock.instant());
+			} catch (Throwable e) {
+				// the only error that can really occur here is losing the connection to mongo,
+				// so we just punt, log, and retry next time.
+				// unfortunately this is really difficult to test in an automated way, so test
+				// manually by shutting down mongo.
+				LoggerFactory.getLogger(getClass())
+						.error("Error expiring requests: " + e.getMessage(), e);
+			}
+		}
 	}
 	
 	
