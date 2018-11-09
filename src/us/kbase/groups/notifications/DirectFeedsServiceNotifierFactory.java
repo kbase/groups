@@ -3,6 +3,7 @@ package us.kbase.groups.notifications;
 import static us.kbase.groups.util.Util.checkString;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,11 +65,23 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				final Collection<UserName> targets,
 				final Group group,
 				final GroupRequest request) {
+			postNotification(targets, request.getRequester(), request, request.getExpirationDate(),
+					request.isInvite() ? "invite" : "request", "request");
+		}
+
+		private void postNotification(
+				final Collection<UserName> targets,
+				final UserName actor,
+				final GroupRequest request,
+				final Instant expirationDate,
+				final String verb,
+				final String level) {
 			final Map<String, Object> post = new HashMap<>();
 			post.put("target", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
-			post.put("level", "request");
-			post.put("actor", request.getRequester().getName());
+			post.put("level", level);
+			//TODO NOW should accept/deny be anonymous?
+			post.put("actor", actor.getName());
 			if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
 				post.put("object", request.getGroupID().getName());
 			} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
@@ -76,12 +89,15 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
 					request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 				post.put("object", request.getWorkspaceTarget().get().getID());
+			} else {
+				throw new IllegalStateException();
 			}
-			post.put("verb", request.isInvite() ? "invite" : "request");
+			post.put("verb", verb);
 			post.put("external_key", request.getID().getID());
-			post.put("expires", request.getExpirationDate().toEpochMilli());
+			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
 			final Map<String, Object> context = new HashMap<>();
+			//TODO NOW include denyReason?
 			context.put("requesttype", request.getType().getRepresentation());
 			context.put("groupid", request.getGroupID().getName());
 			post.put("context", context);
@@ -112,13 +128,19 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		
 		@Override
 		public void deny(final Collection<UserName> targets, final GroupRequest request) {
-			// TODO NOW Auto-generated method stub
+			if (targets.isEmpty()) {
+				// currently deny is unused
+				return;
+			}
+			postNotification(
+					targets, request.getClosedBy().get(), request, null, "reject", "alert");
 		
 		}
 		
 		@Override
 		public void accept(final Collection<UserName> targets, final GroupRequest request) {
-			// TODO NOW Auto-generated method stub
+			postNotification(
+					targets, request.getClosedBy().get(), request, null, "accept", "alert");
 		
 		}
 	}
