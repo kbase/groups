@@ -114,7 +114,7 @@ workspaces in all their groups.
 
 * The service that manages groups will need at least a read-only workspace administration
   account to display information about the workspaces with which it is associated.
-* ~~If the service changes workspace permissions, it will need a full administration account.~~
+* If the service changes workspace permissions, it will need a full administration account.
 * It is recommended, but not required, that we finish the workspace read only accounts and
   move account details to the auth service.
 * The workspace will need a bulk method for retrieving workspace information.
