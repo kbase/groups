@@ -304,7 +304,10 @@ public class ServiceIntegrationTest {
 
 		assertSimpleGroupCorrect(res, "myid", "myname", "Organization", "mydesc",
 				ImmutableMap.of("f1-62", "yay!", "f2", "yo"));
-
+		
+		assertGroupExists("myid", true);
+		assertGroupExists("myid2", false);
+		
 		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
 		
 		final WebTarget updateTarget = CLI.target(updateURI);
@@ -347,6 +350,18 @@ public class ServiceIntegrationTest {
 		assertSimpleGroupCorrect("myid", "new name", "Team", "new desc", custom);
 	}
 	
+	private void assertGroupExists(final String gid, boolean exists) {
+		final URI uri = UriBuilder.fromUri(HOST).path("/group/" + gid + "/exists").build();
+		
+		final WebTarget target = CLI.target(uri);
+		final Response req = target.request().get();
+		
+		assertThat("incorrect code", req.getStatus(), is(200));
+		
+		assertThat("incorrect body", req.readEntity(Map.class),
+				is(ImmutableMap.of("exists", exists)));
+	}
+
 	@Test
 	public void createGroupFailBadJson() throws Exception {
 		final URI target = UriBuilder.fromUri(HOST).path("/group/myid").build();
