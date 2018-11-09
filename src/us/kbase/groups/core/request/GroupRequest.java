@@ -109,7 +109,7 @@ public class GroupRequest {
 	 * {@link GroupRequestType#INVITE_WORKSPACE}.
 	 * Requests are {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and
 	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}.
-	 * @return
+	 * @return true if the request is an invitation.
 	 */
 	public boolean isInvite() {
 		return GroupRequestType.INVITE_TO_GROUP.equals(type) ||
