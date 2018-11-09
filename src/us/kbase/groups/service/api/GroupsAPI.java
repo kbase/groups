@@ -27,6 +27,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
@@ -249,6 +250,15 @@ public class GroupsAPI {
 				AuthenticationException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException, WorkspaceHandlerException {
 		return toGroupJSON(groups.getGroup(getToken(token, false), new GroupID(groupID)));
+	}
+	
+	@GET
+	@Path(ServicePaths.GROUP_EXISTS)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getGroupExists(
+			@PathParam(Fields.GROUP_ID) final String groupID)
+			throws MissingParameterException, IllegalParameterException, GroupsStorageException {
+		return ImmutableMap.of(Fields.EXISTS, (groups.getGroupExists(new GroupID(groupID))));
 	}
 	
 	@POST

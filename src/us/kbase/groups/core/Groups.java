@@ -236,6 +236,16 @@ public class Groups {
 		return new GroupView(g, wis, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
+	/** Check if a group exists based on the group ID.
+	 * @param groupID the group ID.
+	 * @return true if the group exists, false otherwise.
+	 * @throws GroupsStorageException
+	 */
+	public boolean getGroupExists(final GroupID groupID) throws GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		return storage.getGroupExists(groupID);
+	}
+	
 	// this assumes the number of groups is small enough that listing them all is OK.
 	// obviously if the number of groups gets > ~100k something will have to change
 	/** Get views of all the groups in the system, where the view type is

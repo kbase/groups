@@ -246,6 +246,15 @@ returned.
 If authorization is provided and the user is a member of the group, the members list is populated
 and all group-associated workspaces are returned.
 
+### Check if a group ID exists
+
+```
+GET /group/<group id>/exists
+
+RETURNS:
+{"exists": <true if the group exists, false otherwise>}
+```
+
 ### Request membership to a group
 
 ```
@@ -620,13 +629,13 @@ see /design/*.md
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
       deleted / missing workspace instead of erroring out
     * (WS) Add bulk call for get_workspace_info with same error handling option
-  * Endpoint for checking group ID existence (current endpoint returns much more data than needed)
 * Usability
   * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate
     * Currently I have to go group by group
   * Allow getting closed requests (see above)
   * Text search - need product team feedback
+    * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
     list
   * When display user who denied request & reason? Need product team feedback

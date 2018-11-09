@@ -684,6 +684,29 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getGroupExists() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroupExists(new GroupID("g1"))).thenReturn(true);
+		when(mocks.storage.getGroupExists(new GroupID("g2"))).thenReturn(false);
+		
+		assertThat("incorrect group exists", mocks.groups.getGroupExists(new GroupID("g1")),
+				is(true));
+		assertThat("incorrect group exists", mocks.groups.getGroupExists(new GroupID("g2")),
+				is(false));
+	}
+	
+	@Test
+	public void getGroupExistsFail() throws Exception {
+		try {
+			initTestMocks().groups.getGroupExists(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+	
+	@Test
 	public void getGroupsEmpty() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
