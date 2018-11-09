@@ -103,6 +103,18 @@ public class GroupRequest {
 	public GroupRequestType getType() {
 		return type;
 	}
+	
+	/** Returns true if the request is an invitation, or false if it is a request.
+	 * Invitations are {@link GroupRequestType#INVITE_TO_GROUP} and
+	 * {@link GroupRequestType#INVITE_WORKSPACE}.
+	 * Requests are {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and
+	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}.
+	 * @return
+	 */
+	public boolean isInvite() {
+		return GroupRequestType.INVITE_TO_GROUP.equals(type) ||
+				GroupRequestType.INVITE_WORKSPACE.equals(type);
+	}
 
 	/** Get the type of the status of the request.
 	 * @return the request status type.
