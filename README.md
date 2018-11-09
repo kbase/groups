@@ -591,20 +591,38 @@ an html server for the UI behind a reverse proxy to avoid CORS issues.
 
 see /design/*.md
 
-* expire requests
-* For all request listings, sort by creation date (up or down), set a max, and allow filtering by
-  creation date for non-evil paging.
-* Allow getting closed requests
-* Filter groups by user and workspaces.
-* Search - need product team feedback
-* When display user who denied request & reason? Need product team feed back
-* Feeds implementation
-* Gravatar support
-* System admin support (what do they need to be able to do other than see everything?)
-* travis
-  * try mongo 4 - maybe wait for a couple bugfix versions
-* Maybe filter groups by mod date & set limit to allow for cheap paging. Not really expecting a
-  huge number of groups though.
-* Add lots of tests.
-  * Integration and otherwise
-* HTTP2 support
+* Security
+  * (WS) Temporary permissions in workspace for request-based view of ws vs. permanent grant
+* Reliability
+  * Feeds notification is currently Fire & Forget. Is this what we want? Options in order of
+    time & maintenance cost:
+    * F&F
+    * Synchronous retry X times then fail
+    * Add to in memory queue & continue retrying until success
+    * Persistent queue
+  * Feeds notification implementation is unclear - currently going straight to feeds, may go
+    to Kafka instead.
+  * Limit return count & filter and sort groups
+    * Every filter & sort combination (usually) requires a new MongoDB index & more
+      time & maintenance cost, so choose carefully
+    * Remember - skip is evil
+    * Find groups where I'm (owner / admin / member)
+    * Find groups that contain workspaces I administrate
+    * Find groups that contain workspace X and where I'm a group member
+  * Limit return count & filter and sort requests (this becomes especially important when exposing
+    closed requests (below)
+    * Same as above for filter & sort combinations
+* Usability
+  * Allow getting closed requests (see above)
+  * Text search - need product team feedback
+  * When display user who denied request & reason? Need product team feedback
+    * Currently request denials are not notified
+  * System administration support - what do we need?
+* Testing
+  * travis
+    * try mongo 4 - maybe wait for 4.2
+  * finish last few tests
+  * integration tests
+* Other
+  * HTTP2 support
+  * Reduce code duplication between services - see TODO.md
