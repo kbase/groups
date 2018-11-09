@@ -57,7 +57,6 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			this.url = url;
 			this.token = token;
 			//TODO NOW finish startup check
-			//TODO CODE handle clock skew
 		}
 
 		@Override

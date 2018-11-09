@@ -594,6 +594,7 @@ see /design/*.md
 * Security
   * (WS) Temporary permissions in workspace for request-based view of ws vs. permanent grant
 * Reliability
+  * Needs logging for most actions. Currently nothing is logged.
   * Feeds notification is currently Fire & Forget. Is this what we want? Options in order of
     time & maintenance cost:
     * F&F
@@ -609,15 +610,34 @@ see /design/*.md
     * Find groups where I'm (owner / admin / member)
     * Find groups that contain workspaces I administrate
     * Find groups that contain workspace X and where I'm a group member
+    * Find groups where user X is an owner or admin
+    * Find groups where users X is a member and I'm a member
   * Limit return count & filter and sort requests (this becomes especially important when exposing
     closed requests (below)
     * Same as above for filter & sort combinations
+* Performance
+  * Currently group workspaces are pulled 1 at a time w/ 2 WSS calls per group workspace
+    * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
+      deleted / missing workspace instead of erroring out
+    * (WS) Add bulk call for get_workspace_info with same error handling option
+  * Endpoint for checking group ID existence (current endpoint returns much more data than needed)
 * Usability
+  * Canceling a request should cancel the notification (needs feeds endpoint)
+  * Endpoint for getting all requests targeted at groups I administrate
+    * Currently I have to go group by group
   * Allow getting closed requests (see above)
   * Text search - need product team feedback
+  * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
+    list
   * When display user who denied request & reason? Need product team feedback
     * Currently request denials are not notified
   * System administration support - what do we need?
+* New features
+  * Associate apps with groups
+  * Relations between groups
+    * This needs a lot of thought / design if the relations are hierarchical.
+      * Cycle detection, etc.
+  * Change owner
 * Testing
   * travis
     * try mongo 4 - maybe wait for 4.2
@@ -626,3 +646,5 @@ see /design/*.md
 * Other
   * HTTP2 support
   * Reduce code duplication between services - see TODO.md
+  * May need more field validators depending on UI needs
+  * Although WS Admin read privs are no longer needed for groups, it'd still be good to finish.
