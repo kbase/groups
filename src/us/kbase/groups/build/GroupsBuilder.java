@@ -22,6 +22,7 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
@@ -135,7 +136,7 @@ public class GroupsBuilder {
 				c.getNotifierFactory(), NotificationsFactory.class);
 		try {
 			return fac.getNotifier(c.getNotifierParameters());
-		} catch (IllegalParameterException e) {
+		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new GroupsConfigurationException(
 					"Error building notifier: " + e.getMessage(), e);
 		}

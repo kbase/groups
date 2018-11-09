@@ -53,6 +53,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -83,6 +84,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("targ"))));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
+		assertThat("incorrect is invite", gr.isInvite(), is(true));
 	}
 	
 	@Test
@@ -110,6 +112,7 @@ public class GroupRequestTest {
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_ADD_WORKSPACE));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -137,6 +140,7 @@ public class GroupRequestTest {
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(24))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_WORKSPACE));
+		assertThat("incorrect is invite", gr.isInvite(), is(true));
 	}
 	
 	@Test
@@ -165,6 +169,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -193,6 +198,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -220,6 +226,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.empty()));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_GROUP_MEMBERSHIP));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -247,6 +254,7 @@ public class GroupRequestTest {
 		assertThat("incorrect target", gr.getTarget(), is(Optional.of(new UserName("inv"))));
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(), is(Optional.empty()));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_TO_GROUP));
+		assertThat("incorrect is invite", gr.isInvite(), is(true));
 	}
 	
 	@Test
@@ -275,6 +283,7 @@ public class GroupRequestTest {
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.REQUEST_ADD_WORKSPACE));
+		assertThat("incorrect is invite", gr.isInvite(), is(false));
 	}
 	
 	@Test
@@ -303,6 +312,7 @@ public class GroupRequestTest {
 		assertThat("incorrect ws target", gr.getWorkspaceTarget(),
 				is(Optional.of(new WorkspaceID(42))));
 		assertThat("incorrect type", gr.getType(), is(GroupRequestType.INVITE_WORKSPACE));
+		assertThat("incorrect is invite", gr.isInvite(), is(true));
 	}
 	
 	@Test
