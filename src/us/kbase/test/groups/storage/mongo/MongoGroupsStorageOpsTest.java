@@ -92,7 +92,7 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void createAndGetGroupMinimal() throws Exception {
+	public void createAndGetGroupAndExistsMinimal() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
@@ -104,6 +104,11 @@ public class MongoGroupsStorageOpsTest {
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 						.build()));
+		
+		assertThat("incorrect group exists", manager.storage.getGroupExists(new GroupID("gid")),
+				is(true));
+		assertThat("incorrect group exists", manager.storage.getGroupExists(new GroupID("gid1")),
+				is(false));
 	}
 	
 	@Test
@@ -183,6 +188,16 @@ public class MongoGroupsStorageOpsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getGroupExistsFail() throws Exception {
+		try {
+			manager.storage.getGroupExists(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
 		}
 	}
 	

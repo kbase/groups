@@ -504,6 +504,17 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
+	public boolean getGroupExists(final GroupID groupID) throws GroupsStorageException {
+		checkNotNull(groupID, "groupID");
+		try {
+			return db.getCollection(COL_GROUPS)
+					.countDocuments(new Document(Fields.GROUP_ID, groupID.getName())) == 1;
+		} catch (MongoException e) {
+			throw wrapMongoException(e);
+		}
+	}
+	
+	@Override
 	public List<Group> getGroups() throws GroupsStorageException {
 		final List<Group> ret = new LinkedList<>();
 		try {

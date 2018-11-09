@@ -59,6 +59,13 @@ public interface GroupsStorage {
 	 */
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
+	/** Check whether a group exists.
+	 * @param groupID the ID of the group.
+	 * @return true if the group exists, false otherwise.
+	 * @throws GroupsStorageException
+	 */
+	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
+	
 	// assumes not that many groups. If it turns out we make a lot of groups (probably > ~100k)
 	// something will have to change.
 	// ordered by group ID
