@@ -78,4 +78,13 @@ public class Fields {
 	public static final String REQUEST_USER_ACTIONS = "actions";
 	/** The reason a request was denied. */
 	public static final String REQUEST_DENIED_REASON = "reason";
+	
+	
+	/* ***********************
+	 * other fields
+	 * ***********************
+	 */
+	
+	/** Whether something exists or not. */
+	public static final String EXISTS = "exists";
 }

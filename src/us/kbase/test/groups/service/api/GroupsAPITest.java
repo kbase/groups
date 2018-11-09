@@ -607,6 +607,41 @@ public class GroupsAPITest {
 	}
 	
 	@Test
+	public void getGroupExists() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroupExists(new GroupID("g1"))).thenReturn(true);
+		when(g.getGroupExists(new GroupID("g2"))).thenReturn(false);
+		
+		final GroupsAPI api = new GroupsAPI(g);
+		
+		assertThat("incorrect exists", api.getGroupExists("   g1  "),
+				is(ImmutableMap.of("exists", true)));
+		assertThat("incorrect exists", api.getGroupExists("   g2  "),
+				is(ImmutableMap.of("exists", false)));
+	}
+	
+	@Test
+	public void getGroupExistsFailMissingID() {
+		final Groups g = mock(Groups.class);
+		
+		failGetGroupExists(g, null, new MissingParameterException("group id"));
+		failGetGroupExists(g, "   \t   ", new MissingParameterException("group id"));
+	}
+	
+	private void failGetGroupExists(
+			final Groups g,
+			final String groupid,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).getGroupExists(groupid);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void requestGroupMembership() throws Exception {
 		final Groups g = mock(Groups.class);
 		
