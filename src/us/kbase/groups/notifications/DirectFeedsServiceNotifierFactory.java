@@ -2,6 +2,7 @@ package us.kbase.groups.notifications;
 
 import static us.kbase.groups.util.Util.checkString;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Collection;
@@ -14,8 +15,14 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
+
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Token;
@@ -29,6 +36,10 @@ import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 
 public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
+	
+	// this is probably going to change significantly, so no docs or tests for now, and
+	// minimal implementation. Might be switching to Kafka, not clear what policy needs to be
+	// re failures, etc.
 
 	// TODO JAVADOC
 	// TODO TEST
@@ -47,16 +58,61 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 	
 	private static class DirectFeedsServiceNotifier implements Notifications {
 	
+		private static final ObjectMapper MAPPER = new ObjectMapper();
 		private static final Client CLI = ClientBuilder.newClient();
-		private static final String CREATE_PATH = "api/V1/notification";
+		private static final String PATH_CREATE = "api/V1/notification";
+		private static final String PATH_PERMS = "permissions";
 		private static final String AUTH_HEADER = "Authorization";
 		private final String url;
 		private final Token token;
 		
-		public DirectFeedsServiceNotifier(final String url, final Token token) {
+		public DirectFeedsServiceNotifier(final String url, final Token token)
+				throws IllegalParameterException {
 			this.url = url;
 			this.token = token;
-			//TODO NOW finish startup check
+			final URI target = UriBuilder.fromUri(url).path(PATH_PERMS).build();
+			
+			final WebTarget wt = CLI.target(target);
+			final Builder req = wt.request().header(AUTH_HEADER, token.getToken());
+
+			final Response res = req.get();
+			
+			if (res.getStatus() != 200) {
+				final String err = res.readEntity(String.class);
+				final Map<String, Object> errMap;
+				try {
+					errMap = MAPPER.readValue(err, new TypeReference<Map<String, Object>>() {});
+				} catch (IOException e) {
+					// ok, we got some random web page probably
+					LoggerFactory.getLogger(getClass()).error("Error contacting feeds service:\n" +
+							err);
+					throw new IllegalParameterException("Error contacting feeds service:\n" +
+							truncate(err));
+				}
+				// assume we're talking to the feeds service at this point
+				throw new IllegalParameterException("Error contacting feeds service: " +
+						errMap.get("error")); // just shove the whole thing in there for now
+			} else {
+				// we'll assume that if we get a 200 we are actually talking to the feeds
+				// service
+				final Map<String, Object> resp = res.readEntity(
+						new GenericType<Map<String, Object>>() {});
+				@SuppressWarnings("unchecked")
+				final Map<String, String> tokenInfo = (Map<String, String>) resp.get("token");
+				if (tokenInfo.get("service") == null) {
+					// this error seems crummy. Probably want a better errors.
+					throw new IllegalParameterException(
+							"Feeds notifier token must be a service token");
+				}
+			}
+		}
+
+		private String truncate(final String err) {
+			if (err.length() > 500) {
+				return err.substring(0, 497) + "...";
+			} else {
+				return err;
+			}
 		}
 
 		@Override
@@ -105,7 +161,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			post.put("source", "fake");
 			context.put("requestid", request.getID().getID());
 			
-			final URI target = UriBuilder.fromUri(url).path(CREATE_PATH).build();
+			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
 			
 			final WebTarget wt = CLI.target(target);
 			final Builder req = wt.request().header(AUTH_HEADER, token.getToken());
