@@ -116,7 +116,8 @@ public class WorkspaceInfoSet {
 
 	/** Get a builder for a {@link WorkspaceInfoSet}.
 	 * @param user the user associated with this set. The workspace admininstration information
-	 * passed to {@link Builder#withWorkspaceInformation(WorkspaceInformation, boolean)} must
+	 * passed to
+	 * {@link Builder#withWorkspaceInformation(WorkspaceInformation, WorkspacePermission)} must
 	 * be based on this user. Pass null for an anonymous user.
 	 * @return a new builder.
 	 */
