@@ -27,6 +27,7 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupViewTest {
@@ -59,8 +60,8 @@ public class GroupViewTest {
 			WIS = WorkspaceInfoSet.getBuilder(new UserName("foo"))
 					.withNonexistentWorkspace(5)
 					.withNonexistentWorkspace(8)
-					.withWorkspaceInformation(WS1, false)
-					.withWorkspaceInformation(WS2, true)
+					.withWorkspaceInformation(WS1, WorkspacePermission.READ)
+					.withWorkspaceInformation(WS2, WorkspacePermission.ADMIN)
 					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -192,11 +193,11 @@ public class GroupViewTest {
 	}
 	
 	@Test
-	public void isAdministrator() throws Exception {
+	public void getPermission() throws Exception {
 		final GroupView gv = new GroupView(GROUP, WIS, ViewType.MINIMAL);
 		
-		assertThat("incorrect admin", gv.isAdministrator(WS1), is(false));
-		assertThat("incorrect admin", gv.isAdministrator(WS2), is(true));
+		assertThat("incorrect admin", gv.getPermission(WS1), is(WorkspacePermission.READ));
+		assertThat("incorrect admin", gv.getPermission(WS2), is(WorkspacePermission.ADMIN));
 	}
 	
 	@Test
@@ -210,7 +211,7 @@ public class GroupViewTest {
 			final WorkspaceInformation wi,
 			final Exception expected) {
 		try {
-			new GroupView(GROUP, WIS, ViewType.MEMBER).isAdministrator(wi);
+			new GroupView(GROUP, WIS, ViewType.MEMBER).getPermission(wi);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -34,6 +34,7 @@ import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.groups.workspacehandler.SDKClientWorkspaceHandler;
 import us.kbase.test.groups.TestCommon;
 import us.kbase.workspace.WorkspaceClient;
@@ -262,18 +263,21 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentWorkspace(9)
 						.withNonexistentWorkspace(20)
 						.withNonexistentWorkspace(21)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(3, "name3")
+								.build(),
+								WorkspacePermission.OWN)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(5, "name5")
 								.withNullableNarrativeName("narr_name").build(),
-								true)
+								WorkspacePermission.ADMIN)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(7, "name7")
 								.build(),
-								false)
+								WorkspacePermission.WRITE)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.READ)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.NONE)
 						.build());
 	}
 	
@@ -286,15 +290,18 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentWorkspace(9)
 						.withNonexistentWorkspace(20)
 						.withNonexistentWorkspace(21)
+						.withWorkspaceInformation(WorkspaceInformation.getBuilder(3, "name3")
+								.build(),
+								WorkspacePermission.OWN)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(5, "name5")
 								.withNullableNarrativeName("narr_name").build(),
-								true)
+								WorkspacePermission.ADMIN)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.READ)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.NONE)
 						.build());
 	}
 	
@@ -319,10 +326,10 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentWorkspace(21)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.NONE)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
 								.withIsPublic(true).build(),
-								false)
+								WorkspacePermission.NONE)
 						.build());
 	}
 
@@ -336,6 +343,10 @@ public class SDKClientWorkspaceHandlerTest {
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user1", "a", "user2", "w")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(3)));
 		
 		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
 				ImmutableMap.of("user1", "a", "user2", "w")))))
@@ -358,7 +369,7 @@ public class SDKClientWorkspaceHandlerTest {
 				.when(c).administer(argThat(getPermissionsCommandMatcher(10)));
 		
 		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
-				ImmutableMap.of("user1", "r", "user2", "w", "*", "r")))))
+				ImmutableMap.of("user2", "w", "*", "r")))))
 				.when(c).administer(argThat(getPermissionsCommandMatcher(11)));
 		
 		doThrow(new ServerException("Workspace 20 is deleted", -1, "n"))
@@ -366,12 +377,15 @@ public class SDKClientWorkspaceHandlerTest {
 		doThrow(new ServerException("No workspace with id 21 exists", -1, "n"))
 				.when(c).administer(argThat(getPermissionsCommandMatcher(21)));
 
-		doReturn(getWorkspaceInfoResponse(5, "name5", false, ImmutableMap.of(
+		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", false, Collections.emptyMap()))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(3)));
+		
+		doReturn(getWorkspaceInfoResponse(5, "name5", "user3", false, ImmutableMap.of(
 				"is_temporary", "false",
 				"narrative_nice_name", "narr_name")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(5)));
 
-		doReturn(getWorkspaceInfoResponse(7, "name7", false, ImmutableMap.of(
+		doReturn(getWorkspaceInfoResponse(7, "name7", "user3", false, ImmutableMap.of(
 				"is_temporary", "true",
 				"narrative_nice_name", "narr_name2")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(7)));
@@ -381,16 +395,16 @@ public class SDKClientWorkspaceHandlerTest {
 		doThrow(new ServerException("No workspace with id 9 exists", -1, "n"))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(9)));
 		
-		doReturn(getWorkspaceInfoResponse(10, "name10", true, ImmutableMap.of(
+		doReturn(getWorkspaceInfoResponse(10, "name10", "user3", true, ImmutableMap.of(
 				"is_temporary", "false")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(10)));
 
-		doReturn(getWorkspaceInfoResponse(11, "name11", true, Collections.emptyMap()))
+		doReturn(getWorkspaceInfoResponse(11, "name11", "user3", true, Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(11)));
 		
 		final WorkspaceInfoSet wi = h.getWorkspaceInformation(
 				user,
-				WorkspaceIDSet.fromInts(set(5, 7, 8, 9, 10, 11, 20, 21)),
+				WorkspaceIDSet.fromInts(set(3, 5, 7, 8, 9, 10, 11, 20, 21)),
 				administratedWorkspacesOnly);
 		
 		assertThat("incorrect wsinfo", wi, is(expected));
@@ -405,12 +419,14 @@ public class SDKClientWorkspaceHandlerTest {
 	private UObject getWorkspaceInfoResponse(
 			final int id,
 			final String name,
+			final String userName,
 			final boolean isPublic,
 			final Map<String, String> meta) {
 		return new UObject(new Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>>()
 				.withE1((long) id)
 				.withE2(name)
+				.withE3(userName)
 				.withE7(isPublic ? "r" : "n")
 				.withE9(meta));
 		// other fields are currently unused in the handler

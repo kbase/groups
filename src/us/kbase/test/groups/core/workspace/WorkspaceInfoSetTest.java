@@ -13,6 +13,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.test.groups.TestCommon;
 
 public class WorkspaceInfoSetTest {
@@ -36,11 +37,13 @@ public class WorkspaceInfoSetTest {
 		final WorkspaceInfoSet wis = WorkspaceInfoSet.getBuilder(new UserName("foo"))
 				.withNonexistentWorkspace(1)
 				.withNonexistentWorkspace(8)
-				.withWorkspaceInformation(WorkspaceInformation.getBuilder(9, "n").build(), false)
+				.withWorkspaceInformation(WorkspaceInformation.getBuilder(9, "n").build(),
+						WorkspacePermission.READ)
 				.withWorkspaceInformation(WorkspaceInformation.getBuilder(22, "n2")
 						.withIsPublic(true)
 						.withNullableNarrativeName("narr")
-						.build(), true)
+						.build(),
+						WorkspacePermission.NONE)
 				.build();
 		
 		assertThat("incorrect user", wis.getUser(), is(Optional.of(new UserName("foo"))));
@@ -52,20 +55,21 @@ public class WorkspaceInfoSetTest {
 						.build())));
 		assertThat("incorrect del ws", wis.getNonexistentWorkspaces(), is(set(1, 8)));
 		
-		assertThat("incorrect admin", wis.isAdministrator(
-				WorkspaceInformation.getBuilder(9, "n").build()), is(false));
-		assertThat("incorrect admin", wis.isAdministrator(
+		assertThat("incorrect admin", wis.getPermission(
+				WorkspaceInformation.getBuilder(9, "n").build()), is(WorkspacePermission.READ));
+		assertThat("incorrect admin", wis.getPermission(
 				WorkspaceInformation.getBuilder(22, "n2")
 						.withIsPublic(true)
 						.withNullableNarrativeName("narr")
 						.build()),
-				is(true));
+				is(WorkspacePermission.NONE));
 	}
 	
 	@Test
 	public void immutable() throws Exception {
 		final WorkspaceInfoSet wis = WorkspaceInfoSet.getBuilder(new UserName("foo"))
-				.withWorkspaceInformation(WorkspaceInformation.getBuilder(9, "n").build(), false)
+				.withWorkspaceInformation(WorkspaceInformation.getBuilder(9, "n").build(),
+						WorkspacePermission.ADMIN)
 				.withNonexistentWorkspace(8)
 				.build();
 		
@@ -85,11 +89,21 @@ public class WorkspaceInfoSetTest {
 	
 	@Test
 	public void withWorkspaceInformationFail() throws Exception {
+		failWithWorkspaceInformation(null, WorkspacePermission.NONE,
+				new NullPointerException("wsInfo"));
+		failWithWorkspaceInformation(WorkspaceInformation.getBuilder(1, "n").build(), null,
+				new NullPointerException("permission"));
+	}
+
+	private void failWithWorkspaceInformation(
+			final WorkspaceInformation wi,
+			final WorkspacePermission perm, 
+			final Exception expected) {
 		try {
-			WorkspaceInfoSet.getBuilder(null).withWorkspaceInformation(null, false);
+			WorkspaceInfoSet.getBuilder(null).withWorkspaceInformation(wi, perm);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("wsInfo"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -105,24 +119,25 @@ public class WorkspaceInfoSetTest {
 	}
 	
 	@Test
-	public void isAdministratorFail() throws Exception {
+	public void getPermission() throws Exception {
 		final WorkspaceInfoSet wis = WorkspaceInfoSet.getBuilder(null)
-				.withWorkspaceInformation(WorkspaceInformation.getBuilder(2, "n").build(), true)
+				.withWorkspaceInformation(WorkspaceInformation.getBuilder(2, "n").build(),
+						WorkspacePermission.READ)
 				.build();
 		
-		failIsAdministrator(wis, null, new NullPointerException("wsInfo"));
-		failIsAdministrator(wis, WorkspaceInformation.getBuilder(3, "n").build(),
+		failGetPermission(wis, null, new NullPointerException("wsInfo"));
+		failGetPermission(wis, WorkspaceInformation.getBuilder(3, "n").build(),
 				new IllegalArgumentException("Provided workspace info not included in set"));
 				
 		
 	}
 	
-	private void failIsAdministrator(
+	private void failGetPermission(
 			final WorkspaceInfoSet wis,
 			final WorkspaceInformation info,
 			final Exception expected) {
 		try {
-			wis.isAdministrator(info);
+			wis.getPermission(info);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

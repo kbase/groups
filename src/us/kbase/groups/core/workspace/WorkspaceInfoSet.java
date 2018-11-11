@@ -20,20 +20,20 @@ public class WorkspaceInfoSet {
 
 	private final Optional<UserName> user;
 	// might need to think about sorting here. YAGNI for now.
-	private final Map<WorkspaceInformation, Boolean> isAdmin;
+	private final Map<WorkspaceInformation, WorkspacePermission> perms;
 	private final Set<Integer> nonexistent;
 	
 	private WorkspaceInfoSet(
 			final Optional<UserName> user,
-			final Map<WorkspaceInformation, Boolean> isAdmin,
+			final Map<WorkspaceInformation, WorkspacePermission> perms,
 			final Set<Integer> nonexistent) {
 		this.user = user;
-		this.isAdmin = Collections.unmodifiableMap(isAdmin);
+		this.perms = Collections.unmodifiableMap(perms);
 		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
-	/** Get the user associated with the set. The the admin status returned by
-	 * {@link #isAdministrator(WorkspaceInformation)} refers to this user.
+	/** Get the user associated with the set. The the permission returned by
+	 * {@link #getPermission(WorkspaceInformation)} refers to this user.
 	 * @return the user, or {@link Optional#absent()} if the user is anonymous.
 	 */
 	public Optional<UserName> getUser() {
@@ -44,19 +44,19 @@ public class WorkspaceInfoSet {
 	 * @return the workspace information.
 	 */
 	public Set<WorkspaceInformation> getWorkspaceInformation() {
-		return isAdmin.keySet();
+		return perms.keySet();
 	}
 	
-	/** Determine whether the user is an administrator of a particular workspace.
+	/** Get the user's permission to a particular workspace.
 	 * @param wsInfo the workspace to check.
-	 * @return true if the user is an administrator, false otherwise.
+	 * @return the user's permission.
 	 */
-	public boolean isAdministrator(final WorkspaceInformation wsInfo) {
+	public WorkspacePermission getPermission(final WorkspaceInformation wsInfo) {
 		checkNotNull(wsInfo, "wsInfo");
-		if (!isAdmin.containsKey(wsInfo)) {
+		if (!perms.containsKey(wsInfo)) {
 			throw new IllegalArgumentException("Provided workspace info not included in set");
 		} else {
-			return isAdmin.get(wsInfo);
+			return perms.get(wsInfo);
 		}
 	}
 	
@@ -72,7 +72,7 @@ public class WorkspaceInfoSet {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((isAdmin == null) ? 0 : isAdmin.hashCode());
+		result = prime * result + ((perms == null) ? 0 : perms.hashCode());
 		result = prime * result + ((nonexistent == null) ? 0 : nonexistent.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;
@@ -90,11 +90,11 @@ public class WorkspaceInfoSet {
 			return false;
 		}
 		WorkspaceInfoSet other = (WorkspaceInfoSet) obj;
-		if (isAdmin == null) {
-			if (other.isAdmin != null) {
+		if (perms == null) {
+			if (other.perms != null) {
 				return false;
 			}
-		} else if (!isAdmin.equals(other.isAdmin)) {
+		} else if (!perms.equals(other.perms)) {
 			return false;
 		}
 		if (nonexistent == null) {
@@ -132,7 +132,7 @@ public class WorkspaceInfoSet {
 
 		private final Optional<UserName> user;
 		// might need to think about sorting here. YAGNI for now.
-		private final Map<WorkspaceInformation, Boolean> isAdmin = new HashMap<>();
+		private final Map<WorkspaceInformation, WorkspacePermission> perms = new HashMap<>();
 		private final Set<Integer> nonexistent = new HashSet<>();
 		
 		private Builder(final UserName user) {
@@ -141,15 +141,16 @@ public class WorkspaceInfoSet {
 		
 		/** Add a workspace to the builder.
 		 * @param wsInfo the workspace information.
-		 * @param isAdmin whether the user provided in
-		 * {@link WorkspaceInfoSet#getBuilder(UserName)} is an administrator of the workspace.
+		 * @param permission the user provided in {@link WorkspaceInfoSet#getBuilder(UserName)}'s
+		 * permission for the workspace.
 		 * @return this builder.
 		 */
 		public Builder withWorkspaceInformation(
 				final WorkspaceInformation wsInfo,
-				final boolean isAdmin) {
+				final WorkspacePermission permission) {
 			checkNotNull(wsInfo, "wsInfo");
-			this.isAdmin.put(wsInfo, isAdmin);
+			checkNotNull(permission, "permission");
+			this.perms.put(wsInfo, permission);
 			return this;
 		}
 		
@@ -170,7 +171,7 @@ public class WorkspaceInfoSet {
 		 * @return the new set.
 		 */
 		public WorkspaceInfoSet build() {
-			return new WorkspaceInfoSet(user, isAdmin, nonexistent);
+			return new WorkspaceInfoSet(user, perms, nonexistent);
 		}
 	}
 }

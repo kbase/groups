@@ -58,6 +58,7 @@ import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -548,9 +549,11 @@ public class GroupsAPITest {
 								WorkspaceInformation.getBuilder(82, "name82")
 								.withIsPublic(true)
 								.withNullableNarrativeName("narrname")
-								.build(), true)
+								.build(),
+								WorkspacePermission.ADMIN)
 						.withWorkspaceInformation(
-								WorkspaceInformation.getBuilder(45, "name45").build(), false)
+								WorkspaceInformation.getBuilder(45, "name45").build(),
+								WorkspacePermission.NONE)
 						.build(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
@@ -562,14 +565,14 @@ public class GroupsAPITest {
 						.with("name", "name45")
 						.with("narrname", null)
 						.with("public", false)
-						.with("admin", false)
+						.with("perm", "None")
 						.build(),
 				MapBuilder.newHashMap()
 						.with("wsid", 82)
 						.with("name", "name82")
 						.with("narrname", "narrname")
 						.with("public", true)
-						.with("admin", true)
+						.with("perm", "Admin")
 						.build()
 				));
 		

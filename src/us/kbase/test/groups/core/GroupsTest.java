@@ -73,6 +73,7 @@ import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 
@@ -508,7 +509,7 @@ public class GroupsTest {
 								.withIsPublic(true)
 								.withNullableNarrativeName("narr")
 								.build(),
-								false)
+								WorkspacePermission.WRITE)
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
@@ -524,7 +525,7 @@ public class GroupsTest {
 								.withIsPublic(true)
 								.withNullableNarrativeName("narr")
 								.build(),
-								false)
+								WorkspacePermission.WRITE)
 						.build(),
 				NON_MEMBER)));
 	}
@@ -552,10 +553,10 @@ public class GroupsTest {
 								.withIsPublic(true)
 								.withNullableNarrativeName("narr")
 								.build(),
-								false)
+								WorkspacePermission.READ)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
 								.build(),
-								true)
+								WorkspacePermission.ADMIN)
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
@@ -570,10 +571,10 @@ public class GroupsTest {
 								.withIsPublic(true)
 								.withNullableNarrativeName("narr")
 								.build(),
-								false)
+								WorkspacePermission.READ)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
 								.build(),
-								true)
+								WorkspacePermission.ADMIN)
 						.build(),
 				NON_MEMBER)));
 	}
@@ -602,13 +603,13 @@ public class GroupsTest {
 								.withIsPublic(true)
 								.withNullableNarrativeName("narr")
 								.build(),
-								false)
+								WorkspacePermission.NONE)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
 								.build(),
-								false)
+								WorkspacePermission.NONE)
 						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
 								.build(),
-								true)
+								WorkspacePermission.ADMIN)
 						.withNonexistentWorkspace(34)
 						.withNonexistentWorkspace(86) // will throw error, should be ignored
 						.build());
@@ -633,13 +634,13 @@ public class GroupsTest {
 							.withIsPublic(true)
 							.withNullableNarrativeName("narr")
 							.build(),
-							false)
+							WorkspacePermission.NONE)
 					.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
 							.build(),
-							false)
+							WorkspacePermission.NONE)
 					.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
 							.build(),
-							true)
+							WorkspacePermission.ADMIN)
 					.build(),
 				MEMBER)));
 	}

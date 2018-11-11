@@ -30,6 +30,7 @@ import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.workspace.GetPermissionsMassParams;
 import us.kbase.workspace.ListWorkspaceIDsParams;
 import us.kbase.workspace.ListWorkspaceIDsResults;
@@ -88,7 +89,7 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		checkNotNull(wsid, "wsid");
 		checkNotNull(user, "user");
 		final Perms perms = getPermissions(Arrays.asList(wsid.getID()), true);
-		return new Perm(user, perms.perms.get(0)).isAdmin;
+		return new Perm(user, perms.perms.get(0)).perm.isAdmin();
 	}
 	
 	private final TypeReference<Map<String, List<Map<String, String>>>> TR_GET_PERMS =
@@ -96,11 +97,13 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 
 	private static class Perm {
 		
-		private final boolean isAdmin;
+		private final WorkspacePermission perm;
 		private final boolean isPublic;
 		
 		private Perm(final UserName user, final Map<String, String> perms) {
-			this.isAdmin = PERM_ADMIN.equals(perms.get(user == null ? null : user.getName()));
+			final String perm = user == null ? null : perms.get(user.getName());
+			this.perm = perm == null ? WorkspacePermission.NONE :
+				WorkspacePermission.fromWorkspaceRepresentation(perm);
 			this.isPublic = PERM_READ.equals(perms.get(GLOBAL_READ_USER));
 		}
 	}
@@ -189,13 +192,17 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 				b.withNonexistentWorkspace(wsid);
 			} else {
 				final Perm perm = new Perm(user, perms.perms.get(0));
-				if (!administratedWorkspacesOnly || perm.isAdmin || perm.isPublic) {
-					final WorkspaceInformation wi = getWSInfo(wsid);
+				if (!administratedWorkspacesOnly || perm.perm.isAdmin() || perm.isPublic) {
+					final WSInfoOwner wi = getWSInfo(wsid);
 					if (wi == null) {
 						// should almost never happen since we checked for inaccessible ws above
 						b.withNonexistentWorkspace(wsid);
 					} else {
-						b.withWorkspaceInformation(wi, perm.isAdmin);
+						if (user != null && wi.owner.equals(user.getName())) {
+							b.withWorkspaceInformation(wi.wi, WorkspacePermission.OWN);
+						} else {
+							b.withWorkspaceInformation(wi.wi, perm.perm);
+						}
 					}
 				}
 			}
@@ -208,8 +215,18 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 				new TypeReference<Tuple9<Long, String, String, String, Long, String, String,
 						String,Map<String,String>>>() {};
 
+	private static class WSInfoOwner {
+		private final WorkspaceInformation wi;
+		private final String owner;
+		
+		private WSInfoOwner(WorkspaceInformation wi, String owner) {
+			this.wi = wi;
+			this.owner = owner;
+		}
+	}
+						
 	// returns null if missing or deleted
-	private WorkspaceInformation getWSInfo(final int wsid) throws WorkspaceHandlerException {
+	private WSInfoOwner getWSInfo(final int wsid) throws WorkspaceHandlerException {
 		final Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>> wsinfo;
 		try {
@@ -226,10 +243,12 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		} catch (IOException | JsonClientException | IllegalStateException e) {
 			throw getGeneralWSException(e);
 		}
-		return WorkspaceInformation.getBuilder(Math.toIntExact(wsinfo.getE1()), wsinfo.getE2())
+		final WorkspaceInformation wi = WorkspaceInformation
+				.getBuilder(Math.toIntExact(wsinfo.getE1()), wsinfo.getE2())
 				.withNullableNarrativeName(getNarrativeName(wsinfo.getE9()))
 				.withIsPublic(PERM_READ.equals(wsinfo.getE7()))
 				.build();
+		return new WSInfoOwner(wi, wsinfo.getE3());
 	}
 
 	private String getNarrativeName(final Map<String, String> meta) {

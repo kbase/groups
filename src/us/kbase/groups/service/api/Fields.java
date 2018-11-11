@@ -41,8 +41,8 @@ public class Fields {
 	public static final String GROUP_WS_NARRATIVE_NAME = "narrname";
 	/** The public state of the workspace. */
 	public static final String GROUP_WS_IS_PUBLIC = "public";
-	/** Whether the user administrates the workspace. */
-	public static final String GROUP_WS_IS_ADMIN = "admin";
+	/** The user's permission for workspace. */
+	public static final String GROUP_WS_PERMISSION = "perm";
 	
 	/** Whether an action is complete or not, ant therefore whether a request object is
 	 * included in the response.

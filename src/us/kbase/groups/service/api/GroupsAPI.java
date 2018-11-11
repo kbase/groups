@@ -339,7 +339,7 @@ public class GroupsAPI {
 				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
 				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
 				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
-				ws.put(Fields.GROUP_WS_IS_ADMIN, g.isAdministrator(wsi));
+				ws.put(Fields.GROUP_WS_PERMISSION, g.getPermission(wsi).getRepresentation());
 			}
 		}
 		return ret;
