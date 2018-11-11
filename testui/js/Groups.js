@@ -345,7 +345,7 @@ export default class {
                             <th scope="col">Name</th>
                             <th scope="col">Narrative Name</th>
                             <th scope="col">Public</th>
-                            <th scope="col">Administrator</th>
+                            <th scope="col">Permission</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -356,7 +356,7 @@ export default class {
                               <td>${s(ws.name)}</td>
                               <td>${s(ws.narrname)}</td>
                               <td>${s(ws.public)}</td>
-                              <td>${s(ws.admin)}</td>
+                              <td>${s(ws.perm)}</td>
                               <td>
                                 <button id="removews_${s(ws.wsid)}" class="btn btn-primary">Remove
                                       </button>

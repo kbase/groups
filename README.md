@@ -23,9 +23,11 @@ Represents information about a workspace.
     "name": <the workspace name>,
     "narrname": <the name of the narrative contained in the workspace or null>
     "public": <true if the workspace is public, false otherwise>
-    "admin": <true if the user is an admin of the workspace, false otherwise>
+    "perm": <the user's permission for the workspace>
 }
 ```
+
+`perm` is one of `None`, `Read`, `Write`, `Admin`, or `Own`.
 
 #### Group
 
@@ -629,6 +631,7 @@ see /design/*.md
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
       deleted / missing workspace instead of erroring out
     * (WS) Add bulk call for get_workspace_info with same error handling option
+    * Cache results
 * Usability
   * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate

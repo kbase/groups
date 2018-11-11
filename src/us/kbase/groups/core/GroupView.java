@@ -12,6 +12,7 @@ import java.util.Set;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.workspace.WorkspacePermission;
 
 /** A view of a {@link Group}. A view consists of a subset of the full information in a
  * {@link Group}.
@@ -48,7 +49,7 @@ public class GroupView {
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
-	private final Map<WorkspaceInformation, Boolean> workspaceSet;
+	private final Map<WorkspaceInformation, WorkspacePermission> workspaceSet;
 	
 	// not part of the view, just describes the view
 	private final ViewType viewType;
@@ -66,9 +67,9 @@ public class GroupView {
 		checkNotNull(workspaceSet, "workspaceSet");
 		checkNotNull(viewType, "viewType");
 		this.viewType = viewType;
-		final Map<WorkspaceInformation, Boolean> wsSet = new HashMap<>();
+		final Map<WorkspaceInformation, WorkspacePermission> wsSet = new HashMap<>();
 		for (final WorkspaceInformation wsi: workspaceSet.getWorkspaceInformation()) {
-			wsSet.put(wsi, workspaceSet.isAdministrator(wsi));
+			wsSet.put(wsi, workspaceSet.getPermission(wsi));
 		}
 		this.workspaceSet = Collections.unmodifiableMap(wsSet);
 		
@@ -188,12 +189,12 @@ public class GroupView {
 		return workspaceSet.keySet();
 	}
 	
-	/** Determine if the user for whom this view was created is an administrator of a
+	/** Get the permission of the user for whom this view was created to a
 	 * workspace included in the view.
 	 * @param wsInfo the workspace.
-	 * @return true if the user is an administrator of the workspace.
+	 * @return the user's permission.
 	 */
-	public boolean isAdministrator(final WorkspaceInformation wsInfo) {
+	public WorkspacePermission getPermission(final WorkspaceInformation wsInfo) {
 		checkNotNull(wsInfo, "wsInfo");
 		if (!workspaceSet.containsKey(wsInfo)) {
 			throw new IllegalArgumentException("Provided workspace info not included in view");
