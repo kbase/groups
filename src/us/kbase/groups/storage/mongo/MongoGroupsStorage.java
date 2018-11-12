@@ -121,11 +121,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Map<List<String>, IndexOptions> requests = new HashMap<>();
 		// may need compound indexes to speed things up.
 		requests.put(Arrays.asList(Fields.REQUEST_ID), IDX_UNIQ);
-		// find by group & sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_MODIFICATION), null);
-		// find by group & status and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_STATUS,
+		// find by group & type & sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_TYPE,
 				Fields.REQUEST_MODIFICATION), null);
+		// find by group, status, and type and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_GROUP_ID, Fields.REQUEST_STATUS,
+				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
 		// find by requester and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_MODIFICATION), null);
 		// find by requester and state and sort/filter by modification time.

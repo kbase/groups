@@ -237,14 +237,15 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "id_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("gid", 1).append("mod", 1))
-						.append("name", "gid_1_mod_1")
+						.append("key", new Document("gid", 1).append("type", 1).append("mod", 1))
+						.append("name", "gid_1_type_1_mod_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("gid", 1)
 								.append("status", 1)
+								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "gid_1_status_1_mod_1")
+						.append("name", "gid_1_status_1_type_1_mod_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("requester", 1).append("mod", 1))
