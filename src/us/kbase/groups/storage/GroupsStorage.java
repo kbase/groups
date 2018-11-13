@@ -166,16 +166,15 @@ public interface GroupsStorage {
 	GroupRequest getRequest(RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException;
 	
-	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	//TODO NOW allow getting closed requests
 	/** Get the open requests created by a user, sorted by the modification time of the request.
 	 * At most 100 requests are returned.
 	 * @param requester the user that created the requests.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<GroupRequest> getRequestsByRequester(
-			UserName requester) throws GroupsStorageException;
+	List<GroupRequest> getRequestsByRequester(UserName requester, GetRequestsParams params)
+			throws GroupsStorageException;
 	
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	//TODO NOW allow getting closed requests
