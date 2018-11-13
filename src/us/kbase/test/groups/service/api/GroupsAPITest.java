@@ -3,6 +3,7 @@ package us.kbase.test.groups.service.api;
 import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
 import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
 import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -787,8 +788,58 @@ public class GroupsAPITest {
 		}
 	}
 	
+	// not really sure how to name these other than copy the params.
 	@Test
-	public void getRequestsForGroup() throws Exception {
+	public void getRequestsForGroup1() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(10000))
+				.withNullableIncludeClosed(true)
+				.build();
+		getRequestsForGroup("   10000   ", "", "asc", params);
+	}
+	
+	@Test
+	public void getRequestsForGroup2() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getRequestsForGroup(null, null, "asc", params);
+	}
+	
+	@Test
+	public void getRequestsForGroup3() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build();
+		getRequestsForGroup(null, null, "desc", params);
+	}
+	
+	@Test
+	public void getRequestsForGroup4() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getRequestsForGroup(null, null, null, params);
+	}
+	
+	@Test
+	public void getRequestsForGroup5() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getRequestsForGroup(null, "", null, params);
+	}
+	
+	@Test
+	public void getRequestsForGroup6() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getRequestsForGroup(null, "", "desc", params);
+	}
+
+	private void getRequestsForGroup(
+			final String excludeUpTo,
+			final String closed,
+			final String sortOrder,
+			final GetRequestsParams params)
+			throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		final UUID id1 = UUID.randomUUID();
@@ -796,7 +847,7 @@ public class GroupsAPITest {
 		
 		
 		when(g.getRequestsForGroup(
-				new Token("t"), new GroupID("id"), GetRequestsParams.getBuilder().build()))
+				new Token("t"), new GroupID("id"), params))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("id"), new UserName("foo"),
@@ -815,7 +866,8 @@ public class GroupsAPITest {
 								.build()
 						));
 		
-		final List<Map<String, Object>> ret = new GroupsAPI(g).getRequestsForGroup("t", "id");
+		final List<Map<String, Object>> ret = new GroupsAPI(g).getRequestsForGroup(
+				"t", "id", excludeUpTo, closed, sortOrder);
 		
 		assertThat("incorrect requests", ret, is(Arrays.asList(
 				MapBuilder.newHashMap()
@@ -849,14 +901,24 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForGroup(g, null, "i",
+		failGetRequestsForGroup(g, null, "i", null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "    \t    ", "i",
+		failGetRequestsForGroup(g, "    \t    ", "i", null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "t", null,
+		failGetRequestsForGroup(g, "t", null, null, null,
 				new MissingParameterException("group id"));
-		failGetRequestsForGroup(g, "t", "   \t   ",
+		failGetRequestsForGroup(g, "t", "   \t   ", null, null,
 				new MissingParameterException("group id"));
+	}
+	
+	@Test
+	public void getRequestsForGroupFailIllegalInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetRequestsForGroup(g, "t", "g", " bar ", null,
+				new IllegalParameterException("Invalid epoch ms: bar"));
+		failGetRequestsForGroup(g, "t", "g", "", "   bat   ", 
+				new IllegalParameterException("Invalid sort direction: bat"));
 	}
 
 	@Test
@@ -867,16 +929,18 @@ public class GroupsAPITest {
 				GetRequestsParams.getBuilder().build()))
 				.thenThrow(new UnauthorizedException("yay"));
 		
-		failGetRequestsForGroup(g, "t", "i", new UnauthorizedException("yay"));
+		failGetRequestsForGroup(g, "t", "i",  null, null, new UnauthorizedException("yay"));
 	}
 	
 	private void failGetRequestsForGroup(
 			final Groups g,
 			final String token,
 			final String groupid,
+			final String excludeUpTo,
+			final String sortOrder,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).getRequestsForGroup(token, groupid);
+			new GroupsAPI(g).getRequestsForGroup(token, groupid, excludeUpTo, null, sortOrder);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

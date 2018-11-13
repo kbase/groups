@@ -24,13 +24,13 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.FieldItem.StringField;
-import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -295,16 +295,16 @@ public class GroupsAPI {
 	@Path(ServicePaths.GROUP_REQUESTS)
 	public List<Map<String, Object>> getRequestsForGroup(
 			@HeaderParam(HEADER_TOKEN) final String token,
-			@PathParam(Fields.GROUP_ID) final String groupID)
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException {
-		//TODO NOW allow getting all vs just open requests
-		//TODO NOW sort by created date, up or down
-		//TODO NOW allow date ranges and set limit
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID),
-				GetRequestsParams.getBuilder().build()));
+				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
 	
 	@DELETE
