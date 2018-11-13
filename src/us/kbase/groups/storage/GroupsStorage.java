@@ -3,6 +3,7 @@ package us.kbase.groups.storage;
 import java.time.Instant;
 import java.util.List;
 
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
