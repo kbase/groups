@@ -17,12 +17,12 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
@@ -86,27 +86,28 @@ public class RequestAPI {
 	@Path(ServicePaths.REQUEST_CREATED)
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getCreatedRequests(
-			@HeaderParam(HEADER_TOKEN) final String token)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
-		//TODO NOW allow getting all vs just open requests
-		//TODO NOW sort by created date, up or down
-		//TODO NOW allow date ranges and set limit
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+			IllegalParameterException {
 		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true),
-				GetRequestsParams.getBuilder().build()));
+				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
 	
 	@GET
 	@Path(ServicePaths.REQUEST_TARGETED)
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getTargetedRequests(
-			@HeaderParam(HEADER_TOKEN) final String token)
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException {
-		//TODO NOW allow getting all vs just open requests
-		//TODO NOW sort by created date, up or down
-		//TODO NOW allow date ranges and set limit
+				WorkspaceHandlerException, IllegalParameterException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
-				GetRequestsParams.getBuilder().build()));
+				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
 	
 	@PUT

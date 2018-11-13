@@ -884,6 +884,4 @@ public class Groups {
 		ensureIsOpen(r);
 		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
 	}
-	
-	//TODO WS fn to give read perms to group ws for group member. Config whether fn is allowed or not.
 }
