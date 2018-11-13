@@ -79,6 +79,19 @@ public class Fields {
 	/** The reason a request was denied. */
 	public static final String REQUEST_DENIED_REASON = "reason";
 	
+	/* ***********************
+	 * request listing fields
+	 * ***********************
+	 */
+	
+	/** Exclude any requests modified before or after this date, inclusive, depending on the
+	 * sort order.
+	 */
+	public static final String GET_REQUESTS_EXLUDE_UP_TO = "excludeupto";
+	/** Include closed requests. */
+	public static final String GET_REQUESTS_INCLUDE_CLOSED = "closed";
+	/** Set the sort order. */
+	public static final String GET_REQUESTS_SORT_ORDER = "order";
 	
 	/* ***********************
 	 * other fields

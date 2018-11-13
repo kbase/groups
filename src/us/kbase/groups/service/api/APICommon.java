@@ -90,7 +90,7 @@ public class APICommon {
 	/** Get parameters for listing requests from a set of strings as may be presented in
 	 * query params.
 	 * @param excludeUpTo set where the list of requests starts by excluding requests modified
-	 * before or after this date, depending on the sort direction.
+	 * before or after this date, inclusive, depending on the sort direction.
 	 * The date must be in epoch milliseconds.
 	 * Null or whitespace only values are ignored.
 	 * @param includeClosed if not null or whitespace only, closed requests are included.
@@ -99,7 +99,7 @@ public class APICommon {
 	 * for a descending sort.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
-	 * @return the request parameters.
+	 * @return the get request parameters.
 	 * @throws IllegalParameterException if excludeUpTo is not a valid date or sortDirection
 	 * is not a valid options.
 	 */
@@ -115,7 +115,7 @@ public class APICommon {
 			try {
 				epochms = Long.parseLong(excludeUpTo.trim());
 			} catch (NumberFormatException e) {
-				throw new IllegalParameterException("Invalid epoch ms: " + excludeUpTo);
+				throw new IllegalParameterException("Invalid epoch ms: " + excludeUpTo.trim());
 			}
 			b.withNullableExcludeUpTo(Instant.ofEpochMilli(epochms));
 		}

@@ -290,7 +290,8 @@ public class APICommonTest {
 	
 	@Test
 	public void getRequestParamsFail() throws Exception {
-		failGetRequestParams("foo", null, new IllegalParameterException("Invalid epoch ms: foo"));
+		failGetRequestParams("   foo   ", null,
+				new IllegalParameterException("Invalid epoch ms: foo"));
 		failGetRequestParams(null, "asd", new IllegalParameterException(
 				"Invalid sort direction: asd"));
 	}
