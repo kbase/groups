@@ -900,13 +900,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName()), params);
 	}
 	
-	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
-	// TODO NOW allow including closed requests
-	// TODO NOW test limit
 	@Override
 	public List<GroupRequest> getRequestsByTarget(
 			final UserName target,
-			final WorkspaceIDSet wsids)
+			final WorkspaceIDSet wsids,
+			final GetRequestsParams params)
 			throws GroupsStorageException {
 		checkNotNull(target, "target");
 		checkNotNull(wsids, "wsids");
@@ -915,7 +913,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
 						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
 								"$in", wsids.getIDs())))),
-				GetRequestsParams.getBuilder().build());
+				params);
 	}
 
 	@Override
@@ -945,7 +943,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final List<GroupRequest> ret = new LinkedList<>();
 		try {
 			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query)
-					.limit(100)
+					.limit(100) // could make a param, YAGNI for now
 					// allow other sorts? can't think of any particularly useful ones
 					.sort(new Document(Fields.REQUEST_MODIFICATION,
 							params.isSortAscending() ? 1 : -1));

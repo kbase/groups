@@ -1545,7 +1545,8 @@ public class GroupsTest {
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
 			.thenReturn(WorkspaceIDSet.fromInts(set(96)));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("user"), WorkspaceIDSet.fromInts(set(96))))
+				new UserName("user"), WorkspaceIDSet.fromInts(set(96)),
+				GetRequestsParams.getBuilder().build()))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(new Token("token")),
@@ -1562,7 +1563,8 @@ public class GroupsTest {
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
 				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24))))
+				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24)),
+				GetRequestsParams.getBuilder().build()))
 				.thenReturn(Arrays.asList(
 					GroupRequest.getBuilder(
 							new RequestID(id1), new GroupID("gid"), new UserName("user"),

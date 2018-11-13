@@ -63,6 +63,12 @@ public class MongoStorageTestManager {
 	}
 	
 	public void reset() throws Exception {
+		if (storage != null) {
+			// not sure this will fix the occasional test errors due to too many expires
+			// running during the test, but worth a try. Maybe some of the previously
+			// scheduled ones still run.
+			storage.stopExpirationAgent();
+		}
 		// only drop the data, not the indexes, since creating indexes is slow and will be done
 		// anyway when the new storage instance is created
 		// db.drop();
