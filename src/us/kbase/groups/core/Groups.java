@@ -48,7 +48,6 @@ import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 

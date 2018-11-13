@@ -45,6 +45,7 @@ import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -64,7 +65,6 @@ import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
-import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -941,9 +941,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 			query.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
 		}
 		if (params.getExcludeUpTo().isPresent()) {
-			final String equality = params.isSortAscending() ? "$gt" : "$lt";
+			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
 			query.append(Fields.REQUEST_MODIFICATION,
-					new Document(equality, Date.from(params.getExcludeUpTo().get())));
+					new Document(inequality, Date.from(params.getExcludeUpTo().get())));
 		}
 		final List<GroupRequest> ret = new LinkedList<>();
 		try {

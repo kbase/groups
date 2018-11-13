@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
@@ -74,7 +75,6 @@ import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.core.workspace.WorkspacePermission;
-import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 

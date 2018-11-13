@@ -1,4 +1,4 @@
-package us.kbase.groups.storage;
+package us.kbase.groups.core;
 
 import java.time.Instant;
 import java.util.Optional;
