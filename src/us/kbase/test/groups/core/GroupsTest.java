@@ -1470,10 +1470,15 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
 		when(mocks.storage.getRequestsByRequester(
-				new UserName("user"), GetRequestsParams.getBuilder().build()))
+				new UserName("user"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(5600))
+						.build()))
 				.thenReturn(Collections.emptyList());
 		
-		assertThat("incorrect requests", mocks.groups.getRequestsForRequester(new Token("token")),
+		assertThat("incorrect requests", mocks.groups.getRequestsForRequester(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(5600))
+						.build()),
 				is(Collections.emptyList()));
 	}
 	
@@ -1485,7 +1490,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
 		when(mocks.storage.getRequestsByRequester(
-				new UserName("user"), GetRequestsParams.getBuilder().build()))
+				new UserName("user"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1505,7 +1513,11 @@ public class GroupsTest {
 								.build()
 						));
 				
-		assertThat("incorrect requests", mocks.groups.getRequestsForRequester(new Token("token")),
+		assertThat("incorrect requests", mocks.groups.getRequestsForRequester(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1528,12 +1540,22 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestsForRequesterFail() throws Exception {
+		failGetRequestsForRequester(null, GetRequestsParams.getBuilder().build(),
+				new NullPointerException("userToken"));
+		failGetRequestsForRequester(new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	private void failGetRequestsForRequester(
+			final Token token,
+			final GetRequestsParams params,
+			final Exception expected)
+			throws Exception {
 		final TestMocks mocks = initTestMocks();
 		try {
-			mocks.groups.getRequestsForRequester(null);
+			mocks.groups.getRequestsForRequester(token, params);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("userToken"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -1546,10 +1568,17 @@ public class GroupsTest {
 			.thenReturn(WorkspaceIDSet.fromInts(set(96)));
 		when(mocks.storage.getRequestsByTarget(
 				new UserName("user"), WorkspaceIDSet.fromInts(set(96)),
-				GetRequestsParams.getBuilder().build()))
+				GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.build()))
 				.thenReturn(Collections.emptyList());
 		
-		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(new Token("token")),
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.build()),
 				is(Collections.emptyList()));
 	}
 	
@@ -1564,7 +1593,10 @@ public class GroupsTest {
 				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
 		when(mocks.storage.getRequestsByTarget(
 				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24)),
-				GetRequestsParams.getBuilder().build()))
+				GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.build()))
 				.thenReturn(Arrays.asList(
 					GroupRequest.getBuilder(
 							new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1584,7 +1616,11 @@ public class GroupsTest {
 							.build()
 					));
 		
-		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(new Token("token")),
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1607,12 +1643,22 @@ public class GroupsTest {
 	
 	@Test
 	public void getRequestsForTargetFail() throws Exception {
+		failGetRequestsForTarget(null, GetRequestsParams.getBuilder().build(),
+				new NullPointerException("userToken"));
+		failGetRequestsForTarget(new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	private void failGetRequestsForTarget(
+			final Token token,
+			final GetRequestsParams params,
+			final Exception expected)
+			throws Exception {
 		final TestMocks mocks = initTestMocks();
 		try {
-			mocks.groups.getRequestsForTarget(null);
+			mocks.groups.getRequestsForTarget(token, params);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("userToken"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -1628,11 +1674,18 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.build());
 		when(mocks.storage.getRequestsByGroup(
-				new GroupID("gid"), GetRequestsParams.getBuilder().build()))
+				new GroupID("gid"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(21000))
+						.withNullableIncludeClosed(true)
+						.build()))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForGroup(
-				new Token("token"), new GroupID("gid")), is(Collections.emptyList()));
+				new Token("token"), new GroupID("gid"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(21000))
+						.withNullableIncludeClosed(true)
+						.build()),
+				is(Collections.emptyList()));
 	}
 	
 	@Test
@@ -1649,7 +1702,10 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.build());
 		when(mocks.storage.getRequestsByGroup(
-				new GroupID("gid"), GetRequestsParams.getBuilder().build()))
+				new GroupID("gid"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1670,7 +1726,10 @@ public class GroupsTest {
 						));
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForGroup(
-				new Token("token"), new GroupID("gid")),
+				new Token("token"), new GroupID("gid"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
 								new RequestID(id1), new GroupID("gid"), new UserName("user"),
@@ -1695,9 +1754,13 @@ public class GroupsTest {
 	public void getRequestsForGroupFailNulls() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final Groups g = mocks.groups;
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
 		
-		failGetRequestsForGroup(g, null, new GroupID("i"), new NullPointerException("userToken"));
-		failGetRequestsForGroup(g, new Token("t"), null, new NullPointerException("groupID"));
+		failGetRequestsForGroup(g, null, new GroupID("i"), p,
+				new NullPointerException("userToken"));
+		failGetRequestsForGroup(g, new Token("t"), null, p, new NullPointerException("groupID"));
+		failGetRequestsForGroup(g, new Token("t"), new GroupID("i"), null,
+				new NullPointerException("params"));
 	}
 	
 	@Test
@@ -1707,6 +1770,7 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
 		
 		failGetRequestsForGroup(mocks.groups, new Token("token"), new GroupID("i"),
+				GetRequestsParams.getBuilder().build(),
 				new InvalidTokenException());
 	}
 	
@@ -1719,6 +1783,7 @@ public class GroupsTest {
 				.thenThrow(new NoSuchGroupException("gid"));
 		
 		failGetRequestsForGroup(mocks.groups, new Token("token"), new GroupID("gid"),
+				GetRequestsParams.getBuilder().build(),
 				new NoSuchGroupException("gid"));
 	}
 	
@@ -1736,6 +1801,7 @@ public class GroupsTest {
 				.build());
 		
 		failGetRequestsForGroup(mocks.groups, new Token("token"), new GroupID("gid"),
+				GetRequestsParams.getBuilder().build(),
 				new UnauthorizedException("User u1 cannot view requests for group gid"));
 	}
 	
@@ -1743,9 +1809,10 @@ public class GroupsTest {
 			final Groups g,
 			final Token t,
 			final GroupID i,
+			final GetRequestsParams params,
 			final Exception expected) {
 		try {
-			g.getRequestsForGroup(t, i);
+			g.getRequestsForGroup(t, i, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

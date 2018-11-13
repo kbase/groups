@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.junit.Test;
 
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
@@ -262,8 +263,8 @@ public class RequestAPITest {
 	public void getCreatedRequests() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForRequester(new Token("t"))).thenReturn(Arrays.asList(
-				REQ_DENIED, REQ_MIN, REQ_TARG));
+		when(g.getRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(REQ_DENIED, REQ_MIN, REQ_TARG));
 		
 		final List<Map<String, Object>> ret = new RequestAPI(g).getCreatedRequests("t");
 		
@@ -285,7 +286,7 @@ public class RequestAPITest {
 	public void getCreatedRequestsFailInvalidToken() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForRequester(new Token("t")))
+		when(g.getRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new InvalidTokenException());
 		
 		failGetCreatedRequests(g, "t", new InvalidTokenException());
@@ -307,8 +308,8 @@ public class RequestAPITest {
 	public void getTargetedRequests() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForTarget(new Token("t"))).thenReturn(Arrays.asList(
-				REQ_MIN, REQ_DENIED, REQ_TARG));
+		when(g.getRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(REQ_MIN, REQ_DENIED, REQ_TARG));
 		
 		final List<Map<String, Object>> ret = new RequestAPI(g).getTargetedRequests("t");
 		
@@ -330,7 +331,7 @@ public class RequestAPITest {
 	public void getTargetedRequestsFailAuth() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForTarget(new Token("t")))
+		when(g.getRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
 		
 		failGetTargetedRequests(g, "t", new AuthenticationException(

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -302,7 +303,8 @@ public class GroupsAPI {
 		//TODO NOW sort by created date, up or down
 		//TODO NOW allow date ranges and set limit
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
-				getToken(token, true), new GroupID(groupID)));
+				getToken(token, true), new GroupID(groupID),
+				GetRequestsParams.getBuilder().build()));
 	}
 	
 	@DELETE
