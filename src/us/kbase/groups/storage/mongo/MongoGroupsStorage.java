@@ -64,6 +64,7 @@ import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
+import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -893,16 +894,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
 	// TODO NOW allow including closed requests
+	// TODO NOW test limit
 	@Override
 	public List<GroupRequest> getRequestsByRequester(
 			final UserName requester) throws GroupsStorageException {
 		checkNotNull(requester, "requester");
-		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName())
-				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name()));
+		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName()),
+				GetRequestsParams.getBuilder().build());
 	}
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
 	// TODO NOW allow including closed requests
+	// TODO NOW test limit
 	@Override
 	public List<GroupRequest> getRequestsByTarget(
 			final UserName target,
@@ -914,34 +917,41 @@ public class MongoGroupsStorage implements GroupsStorage {
 				new Document(Fields.REQUEST_TARGET, target.getName()),
 				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
 						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
-								"$in", wsids.getIDs()))))
-				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name()));
+								"$in", wsids.getIDs())))),
+				GetRequestsParams.getBuilder().build());
 	}
 
-	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
-	// TODO NOW allow including closed requests
 	@Override
 	public List<GroupRequest> getRequestsByGroup(
-			final GroupID groupID)
+			final GroupID groupID,
+			final GetRequestsParams params)
 			throws GroupsStorageException {
 		checkNotNull(groupID, "groupID");
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
-				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name())
 				.append(Fields.REQUEST_TYPE, new Document("$in", Arrays.asList(
 						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name(),
 						GroupRequestType.REQUEST_ADD_WORKSPACE.name())));
-		return findRequests(query);
+		return findRequests(query, params);
 	}
 
-	private List<GroupRequest> findRequests(final Document query)
+	private List<GroupRequest> findRequests(final Document query, final GetRequestsParams params)
 			throws GroupsStorageException {
+		checkNotNull(params, "params");
+		if (!params.isIncludeClosed()) {
+			query.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
+		}
+		if (params.getExcludeUpTo().isPresent()) {
+			final String equality = params.isSortAscending() ? "$gt" : "$lt";
+			query.append(Fields.REQUEST_MODIFICATION,
+					new Document(equality, Date.from(params.getExcludeUpTo().get())));
+		}
 		final List<GroupRequest> ret = new LinkedList<>();
 		try {
 			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query)
+					.limit(100)
 					// allow other sorts? can't think of any particularly useful ones
-					// maybe allow reverse sort. Default should be oldest first for
-					// open requests & newest first for closed (e.g. what happened most recently)
-					.sort(new Document(Fields.REQUEST_MODIFICATION, 1));
+					.sort(new Document(Fields.REQUEST_MODIFICATION,
+							params.isSortAscending() ? 1 : -1));
 			for (final Document rdoc: gdocs) {
 				ret.add(toRequest(rdoc));
 			}

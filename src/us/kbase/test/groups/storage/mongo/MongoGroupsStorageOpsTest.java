@@ -37,6 +37,8 @@ import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -48,9 +50,11 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
+import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
+import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.test.groups.TestCommon.LogEvent;
@@ -1878,8 +1882,9 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void getRequestsByGroupOpenState() throws Exception {
-		// as of writing this test, only the open state is supported
+	public void getRequestsByGroup() throws Exception {
+		// tests including open/closed groups, sort direction, and skipping by date.
+		// does not test limit.
 		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
 		
 		final GroupRequest first = GroupRequest.getBuilder(
@@ -1934,7 +1939,8 @@ public class MongoGroupsStorageOpsTest {
 				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("closed"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
-					.build())
+							.withModificationTime(inst(160000))
+							.build())
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -1947,26 +1953,158 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.storeRequest(third);
 		manager.storage.storeRequest(second);
 
-		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroup(new GroupID("foo")), is(
-						Arrays.asList(first, second, third, fourth)));
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
 		
 		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroup(new GroupID("other")), is(
+				manager.storage.getRequestsByGroup(new GroupID("foo"), p), is(
+						Arrays.asList(first, second, third, fourth)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(130000))
+								.build()),
+						is(Arrays.asList(third, fourth)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(130000))
+								.withNullableIncludeClosed(true)
+								.build()),
+						is(Arrays.asList(third, fourth, closed)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(120000))
+								.build()),
+						is(Arrays.asList(second, third, fourth)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(129999))
+								.build()),
+						is(Arrays.asList(second, third, fourth)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder().withNullableSortAscending(false).build()),
+						is(Arrays.asList(fourth, third, second, first)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableSortAscending(false)
+								.withNullableIncludeClosed(true)
+								.build()),
+						is(Arrays.asList(closed, fourth, third, second, first)));
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withNullableSortAscending(false)
+								.withNullableExcludeUpTo(inst(140000))
+								.build()),
+						is(Arrays.asList(second, first)));
+		
+		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("other"), p), is(
 						Arrays.asList(othergroup)));
 		
 		assertThat("incorrect get by group",
-				manager.storage.getRequestsByGroup(new GroupID("baz")), is(
+				manager.storage.getRequestsByGroup(new GroupID("baz"), p), is(
 						Collections.emptyList()));
 	}
 	
 	@Test
-	public void failGetRequestsByGroup() {
+	public void getRequestByGroupHitLimit() throws Exception {
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		for (int i = 1; i < 202; i++) {
+			final GroupRequest req = getRequestByGroupLimitMakeRequest(forever, i);
+			manager.storage.storeRequest(req);
+		}
+		
+		// these should not show up
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("foo"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1030000))
+						.build())
+				.withRequestGroupMembership()
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("foo"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1130000))
+						.build())
+				.withRequestAddWorkspace(new WorkspaceID(2))
+				.build());
+		
+		assertRequestsByGroupCorrect(null, 1, 100);
+		assertRequestsByGroupCorrect(inst(1000000), 1, 100);
+		assertRequestsByGroupCorrect(inst(1009999), 1, 100);
+		assertRequestsByGroupCorrect(inst(1010000), 2, 100);
+		assertRequestsByGroupCorrect(inst(1990001), 100, 100);
+		assertRequestsByGroupCorrect(inst(1999999), 100, 100);
+		assertRequestsByGroupCorrect(inst(2000000), 101, 100);
+		assertRequestsByGroupCorrect(inst(2019999), 102, 100);
+		assertRequestsByGroupCorrect(inst(2020000), 103, 99);
+		assertRequestsByGroupCorrect(inst(2499999), 150, 52);
+		assertRequestsByGroupCorrect(inst(2999999), 200, 2);
+		assertRequestsByGroupCorrect(inst(3000000), 201, 1);
+		assertRequestsByGroupCorrect(inst(3000001), 201, 1);
+		assertRequestsByGroupCorrect(inst(3010000), 201, 0);
+		assertRequestsByGroupCorrect(inst(4000000), 201, 0);
+	}
+
+	private void assertRequestsByGroupCorrect(
+			final Instant excludeUpTo,
+			final int start,
+			final int size)
+			throws Exception {
+		final List<GroupRequest> res = manager.storage.getRequestsByGroup(
+				new GroupID("gid"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableExcludeUpTo(excludeUpTo)
+						.build());
+		assertThat("incorrect size", res.size(), is(size));
+		int i = start;
+		for (final GroupRequest r: res) {
+			assertThat("incorrect request", r.getRequester().getName(), is("n" + i));
+			i++;
+		}
+	}
+
+	private GroupRequest getRequestByGroupLimitMakeRequest(final Instant forever, int i)
+			throws MissingParameterException, IllegalParameterException {
+		final GroupRequestStatusType st = GroupRequestStatusType.values()[i % 5];
+		final GroupRequestType t = i % 2 == 0 ? GroupRequestType.REQUEST_ADD_WORKSPACE :
+			GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
+		final GroupRequest req = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid"), new UserName("n" + i),
+				CreateModAndExpireTimes.getBuilder(inst(1000000 - (10000 * i)), forever)
+						.withModificationTime(inst(1000000 + (10000 * i)))
+						.build())
+				.withStatus(GroupRequestStatus.from(st, new UserName("c"), "r"))
+				.withType(t, new UserName("t"), new WorkspaceID(1))
+				.build();
+		return req;
+	}
+	
+	@Test
+	public void failGetRequestsByGroup() throws Exception {
+		getRequestsByGroupFail(null, GetRequestsParams.getBuilder().build(),
+				new NullPointerException("groupID"));
+		getRequestsByGroupFail(new GroupID("id"), null, new NullPointerException("params"));
+	}
+	
+	private void getRequestsByGroupFail(
+			final GroupID id,
+			final GetRequestsParams p,
+			final Exception expected) {
+		
 		try {
-			manager.storage.getRequestsByGroup(null);
+			manager.storage.getRequestsByGroup(id, p);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	

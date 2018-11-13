@@ -74,6 +74,7 @@ import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.core.workspace.WorkspacePermission;
+import us.kbase.groups.storage.GetRequestsParams;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 
@@ -1620,7 +1621,8 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
-		when(mocks.storage.getRequestsByGroup(new GroupID("gid")))
+		when(mocks.storage.getRequestsByGroup(
+				new GroupID("gid"), GetRequestsParams.getBuilder().build()))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForGroup(
@@ -1640,23 +1642,26 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
-		when(mocks.storage.getRequestsByGroup(new GroupID("gid"))).thenReturn(Arrays.asList(
-				GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withRequestGroupMembership()
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id2), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.withModificationTime(Instant.ofEpochMilli(25000))
-								.build())
-						.withRequestGroupMembership()
-						.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
-						.build()
-				));
+		when(mocks.storage.getRequestsByGroup(
+				new GroupID("gid"), GetRequestsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+										.build())
+								.withRequestGroupMembership()
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withRequestGroupMembership()
+								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+								.build()
+						));
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForGroup(
 				new Token("token"), new GroupID("gid")),
