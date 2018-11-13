@@ -145,10 +145,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE, Fields.REQUEST_STATUS,
 				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
-		// sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_MODIFICATION), null);
-		// find by state and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_STATUS, Fields.REQUEST_MODIFICATION), null);
 		// find expired requests.
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
 		// ensure equivalent requests are rejected. See getCharacteristicString()
