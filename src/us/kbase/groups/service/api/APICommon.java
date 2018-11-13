@@ -3,13 +3,19 @@ package us.kbase.groups.service.api;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Token;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
@@ -74,5 +80,55 @@ public class APICommon {
 				throw new RuntimeException("This is impossible. It didn't happen.", e);
 			}
 		}
+	}
+	
+	private static final String SORT_ASCENDING = "asc";
+	private static final String SORT_DESCENDING = "desc";
+	private static final Set<String> SORT_DIRECTION_OPTIONS = new HashSet<>(Arrays.asList(
+			SORT_ASCENDING, SORT_DESCENDING));
+	
+	/** Get parameters for listing requests from a set of strings as may be presented in
+	 * query params.
+	 * @param excludeUpTo set where the list of requests starts by excluding requests modified
+	 * before or after this date, depending on the sort direction.
+	 * The date must be in epoch milliseconds.
+	 * Null or whitespace only values are ignored.
+	 * @param includeClosed if not null or whitespace only, closed requests are included.
+	 * Otherwise they are excluded from the results.
+	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
+	 * for a descending sort.
+	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
+	 * true sets an ascending sort, false sets a descending sort.
+	 * @return the request parameters.
+	 * @throws IllegalParameterException if excludeUpTo is not a valid date or sortDirection
+	 * is not a valid options.
+	 */
+	public static GetRequestsParams getRequestsParams(
+			final String excludeUpTo,
+			final String includeClosed,
+			final String sortDirection,
+			final boolean defaultSort)
+			throws IllegalParameterException {
+		final GetRequestsParams.Builder b = GetRequestsParams.getBuilder();
+		if (!isNullOrEmpty(excludeUpTo)) {
+			final long epochms;
+			try {
+				epochms = Long.parseLong(excludeUpTo.trim());
+			} catch (NumberFormatException e) {
+				throw new IllegalParameterException("Invalid epoch ms: " + excludeUpTo);
+			}
+			b.withNullableExcludeUpTo(Instant.ofEpochMilli(epochms));
+		}
+		if (isNullOrEmpty(sortDirection)) {
+			b.withNullableSortAscending(defaultSort);
+		} else {
+			if (!SORT_DIRECTION_OPTIONS.contains(sortDirection.trim())) {
+				throw new IllegalParameterException("Invalid sort direction: " +
+						sortDirection.trim());
+			}
+			b.withNullableSortAscending(SORT_ASCENDING.equals(sortDirection.trim()));
+		}
+		
+		return b.withNullableIncludeClosed(includeClosed != null).build();
 	}
 }
