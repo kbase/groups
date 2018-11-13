@@ -176,18 +176,20 @@ public interface GroupsStorage {
 	List<GroupRequest> getRequestsByRequester(UserName requester, GetRequestsParams params)
 			throws GroupsStorageException;
 	
-	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	//TODO NOW allow getting closed requests
 	/** Get the open requests that target a user or the workspaces a user administrates,
 	 * sorted by the modification time of the request.
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param wsids the targeted workspaces for that user.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	List<GroupRequest> getRequestsByTarget(
-			UserName target, WorkspaceIDSet wsids) throws GroupsStorageException;
+			UserName target,
+			WorkspaceIDSet wsids,
+			GetRequestsParams params)
+			throws GroupsStorageException;
 
 	/** Get the open requests that target a group, sorted by the modification time of the request.
 	 * At most 100 requests are returned.

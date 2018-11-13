@@ -404,7 +404,7 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		//TODO NOW pass along requests
+		//TODO NOW pass along params
 		return storage.getRequestsByRequester(user, GetRequestsParams.getBuilder().build());
 	}
 	
@@ -423,7 +423,8 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
 		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
-		return storage.getRequestsByTarget(user, ws);
+		//TODO NOW Pass through params
+		return storage.getRequestsByTarget(user, ws, GetRequestsParams.getBuilder().build());
 	}
 
 	//TODO NOW allow getting closed requests

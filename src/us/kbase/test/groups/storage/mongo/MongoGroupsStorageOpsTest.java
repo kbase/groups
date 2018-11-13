@@ -1781,7 +1781,8 @@ public class MongoGroupsStorageOpsTest {
 		for (int i = 1; i < 202; i++) {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("n" + i), new UserName("name"),
-					GroupRequestType.values()[i % GroupRequestType.values().length]);
+					GroupRequestType.values()[i % GroupRequestType.values().length],
+					1);
 			manager.storage.storeRequest(req);
 		}
 		
@@ -1895,17 +1896,17 @@ public class MongoGroupsStorageOpsTest {
 				.build();
 		final GroupRequest closed = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), forever)
-					.build())
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(inst(170000))
+							.build())
 				.withInviteToGroup(new UserName("bar"))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		final GroupRequest closedws = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), forever)
-					.build())
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(inst(110000))
+							.build())
 				.withInviteWorkspace(new WorkspaceID(1))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
@@ -1923,50 +1924,144 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.storeRequest(second);
 
 		final WorkspaceIDSet mt = WorkspaceIDSet.fromIDs(set());
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bar"), mt),
+				manager.storage.getRequestsByTarget(new UserName("bar"), mt, p),
 				is(Arrays.asList(first, second, third, fifth)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1))),
+						WorkspaceIDSet.fromInts(set(1)), p),
 				is(Arrays.asList(first, second, third, fourth, fifth)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1, 2))),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(130000))
+								.build()),
+				is(Arrays.asList(third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(130000))
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(third, fourth, fifth, closed)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(120000))
+								.build()),
+				is(Arrays.asList(second, third, fourth, fifth)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableExcludeUpTo(inst(129999))
+								.build()),
+				is(Arrays.asList(second, third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableSortAscending(false)
+								.build()),
+				is(Arrays.asList(fifth, fourth, third, second, first)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableSortAscending(false)
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(closed, fifth, fourth, third, second, first, closedws)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1)), GetRequestsParams.getBuilder()
+								.withNullableSortAscending(false)
+								.withNullableExcludeUpTo(inst(140000))
+								.build()),
+				is(Arrays.asList(second, first)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(new UserName("bar"),
+						WorkspaceIDSet.fromInts(set(1, 2)), p),
 				is(Arrays.asList(first, otherws, second, third, fourth, fifth)));
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bat"), mt),
+				manager.storage.getRequestsByTarget(new UserName("bat"), mt, p),
 				is(Arrays.asList(othertarget)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bat"),
-						WorkspaceIDSet.fromInts(set(2))),
+						WorkspaceIDSet.fromInts(set(2)), p),
 				is(Arrays.asList(othertarget, otherws)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("baz"),
-						WorkspaceIDSet.fromInts(set(3))),
+						WorkspaceIDSet.fromInts(set(3)), p),
 				is(Collections.emptyList()));
 	}
 	
 	@Test
+	public void getRequestByTargetHitLimit() throws Exception {
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		for (int i = 1; i < 202; i++) {
+			final GroupRequest req = makeRequestForLimitTests(
+					forever, i, new GroupID("n" + i), new UserName("name"),
+					i % 2 == 0 ? GroupRequestType.INVITE_TO_GROUP :
+						GroupRequestType.INVITE_WORKSPACE,
+					(i % 3) + 1);
+			manager.storage.storeRequest(req);
+		}
+		
+		// these should not show up
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1030000))
+						.build())
+				.withInviteToGroup(new UserName("target1"))
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1130000))
+						.build())
+				.withInviteWorkspace(new WorkspaceID(4))
+				.build());
+		
+		assertRequestListCorrect(
+				r -> r.getGroupID().getName(),
+				(s, p) -> s.getRequestsByTarget(
+						new UserName("target"),
+						WorkspaceIDSet.fromInts(set(1, 2, 3)),
+						p));
+	}
+	
+	@Test
 	public void getRequestsByTargetFailNulls() throws Exception {
-		failGetRequestsByTarget(null, WorkspaceIDSet.fromIDs(set()),
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
+		failGetRequestsByTarget(null, WorkspaceIDSet.fromIDs(set()), p,
 				new NullPointerException("target"));
-		failGetRequestsByTarget(new UserName("u"), null,
+		failGetRequestsByTarget(new UserName("u"), null, p,
 				new NullPointerException("wsids"));
+		failGetRequestsByTarget(new UserName("u"), WorkspaceIDSet.fromIDs(set()), null,
+				new NullPointerException("params"));
 	}
 	
 	private void failGetRequestsByTarget(
 			final UserName target,
 			final WorkspaceIDSet wsids,
+			final GetRequestsParams params,
 			final Exception expected) {
 		try {
-			manager.storage.getRequestsByTarget(target, wsids);
+			manager.storage.getRequestsByTarget(target, wsids, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -2112,7 +2207,8 @@ public class MongoGroupsStorageOpsTest {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("gid"), new UserName("n" + i),
 					i % 2 == 0 ? GroupRequestType.REQUEST_ADD_WORKSPACE :
-						GroupRequestType.REQUEST_GROUP_MEMBERSHIP);
+						GroupRequestType.REQUEST_GROUP_MEMBERSHIP,
+					1);
 			manager.storage.storeRequest(req);
 		}
 		
@@ -2188,7 +2284,8 @@ public class MongoGroupsStorageOpsTest {
 			final int i,
 			final GroupID gid,
 			final UserName requester,
-			final GroupRequestType type)
+			final GroupRequestType type,
+			final int workspaceID)
 			throws Exception {
 		final GroupRequestStatusType st = GroupRequestStatusType.values()
 				[i % GroupRequestStatusType.values().length];
@@ -2198,7 +2295,7 @@ public class MongoGroupsStorageOpsTest {
 						.withModificationTime(inst(1000000 + (10000 * i)))
 						.build())
 				.withStatus(GroupRequestStatus.from(st, new UserName("c"), "r"))
-				.withType(type, new UserName("t"), new WorkspaceID(1))
+				.withType(type, new UserName("target"), new WorkspaceID(workspaceID))
 				.build();
 		return req;
 	}
