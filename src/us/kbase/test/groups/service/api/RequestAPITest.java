@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.groups.TestCommon.inst;
 import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
@@ -259,14 +260,65 @@ public class RequestAPITest {
 		}
 	}
 	
+	// not really sure how to name these other than copy the params.
 	@Test
-	public void getCreatedRequests() throws Exception {
+	public void getCreatedRequests1() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(10000))
+				.withNullableIncludeClosed(true)
+				.build();
+		getCreatedRequests("   10000   ", "", "asc", params);
+	}
+	
+	@Test
+	public void getCreatedRequests2() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getCreatedRequests(null, null, "asc", params);
+	}
+	
+	@Test
+	public void getCreatedRequests3() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build();
+		getCreatedRequests(null, null, "desc", params);
+	}
+	
+	@Test
+	public void getCreatedRequests4() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getCreatedRequests(null, null, null, params);
+	}
+	
+	@Test
+	public void getCreatedRequests5() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getCreatedRequests(null, "", null, params);
+	}
+	
+	@Test
+	public void getCreatedRequests6() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getCreatedRequests(null, "", "desc", params);
+	}
+	
+	private void getCreatedRequests(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final GetRequestsParams params)
+			throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder().build()))
+		when(g.getRequestsForRequester(new Token("t"), params))
 				.thenReturn(Arrays.asList(REQ_DENIED, REQ_MIN, REQ_TARG));
 		
-		final List<Map<String, Object>> ret = new RequestAPI(g).getCreatedRequests("t");
+		final List<Map<String, Object>> ret = new RequestAPI(g).getCreatedRequests(
+				"t", excludeUpTo, closed, order);
 		
 		assertThat("incorrect reqs", ret, is(Arrays.asList(
 				REQ_DENIED_JSON, REQ_MIN_JSON, REQ_TARG_JSON)));
@@ -276,10 +328,20 @@ public class RequestAPITest {
 	public void getCreatedRequestsMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetCreatedRequests(g, null,
+		failGetCreatedRequests(g, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetCreatedRequests(g, "    \t    ",
+		failGetCreatedRequests(g, "    \t    ", null, null,
 				new NoTokenProvidedException("No token provided"));
+	}
+	
+	@Test
+	public void getCreatedRequestsIllegalInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetCreatedRequests(g, "t", " yay ", null,
+				new IllegalParameterException("Invalid epoch ms: yay"));
+		failGetCreatedRequests(g, "t", null, "boo",
+				new IllegalParameterException("Invalid sort direction: boo"));
 	}
 
 	@Test
@@ -289,29 +351,82 @@ public class RequestAPITest {
 		when(g.getRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new InvalidTokenException());
 		
-		failGetCreatedRequests(g, "t", new InvalidTokenException());
+		failGetCreatedRequests(g, "t", null, null, new InvalidTokenException());
 	}
 	
 	private void failGetCreatedRequests(
 			final Groups g,
 			final String token,
+			final String excludeUpTo,
+			final String sortOrder,
 			final Exception expected) {
 		try {
-			new RequestAPI(g).getCreatedRequests(token);
+			new RequestAPI(g).getCreatedRequests(token, excludeUpTo, null, sortOrder);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
+	// not really sure how to name these other than copy the params.
 	@Test
-	public void getTargetedRequests() throws Exception {
+	public void getTargetedRequests1() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(10000))
+				.withNullableIncludeClosed(true)
+				.build();
+		getTargetedRequests("   10000   ", "", "asc", params);
+	}
+	
+	@Test
+	public void getTargetedRequests2() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getTargetedRequests(null, null, "asc", params);
+	}
+	
+	@Test
+	public void getTargetedRequests3() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build();
+		getTargetedRequests(null, null, "desc", params);
+	}
+	
+	@Test
+	public void getTargetedRequests4() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getTargetedRequests(null, null, null, params);
+	}
+	
+	@Test
+	public void getTargetedRequests5() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getTargetedRequests(null, "", null, params);
+	}
+	
+	@Test
+	public void getTargetedRequests6() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getTargetedRequests(null, "", "desc", params);
+	}
+
+	private void getTargetedRequests(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final GetRequestsParams params)
+			throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder().build()))
+		when(g.getRequestsForTarget(new Token("t"), params))
 				.thenReturn(Arrays.asList(REQ_MIN, REQ_DENIED, REQ_TARG));
 		
-		final List<Map<String, Object>> ret = new RequestAPI(g).getTargetedRequests("t");
+		final List<Map<String, Object>> ret = new RequestAPI(g).getTargetedRequests(
+				"t", excludeUpTo, closed, order);
 		
 		assertThat("incorrect reqs", ret, is(Arrays.asList(
 				REQ_MIN_JSON, REQ_DENIED_JSON, REQ_TARG_JSON)));
@@ -321,12 +436,22 @@ public class RequestAPITest {
 	public void getTargetedRequestsMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetTargetedRequests(g, null,
+		failGetTargetedRequests(g, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetTargetedRequests(g, "    \t    ",
+		failGetTargetedRequests(g, "    \t    ", null, null,
 				new NoTokenProvidedException("No token provided"));
 	}
 
+	@Test
+	public void getTargetedRequestsIllegalInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetTargetedRequests(g, "t", " whoo" , null,
+				new IllegalParameterException("Invalid epoch ms: whoo"));
+		failGetTargetedRequests(g, "t", null, "but mommy   ",
+				new IllegalParameterException("Invalid sort direction: but mommy"));
+	}
+	
 	@Test
 	public void getTargetedRequestsFailAuth() throws Exception {
 		final Groups g = mock(Groups.class);
@@ -334,16 +459,18 @@ public class RequestAPITest {
 		when(g.getRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
 		
-		failGetTargetedRequests(g, "t", new AuthenticationException(
+		failGetTargetedRequests(g, "t", null, null, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "yikes"));
 	}
 	
 	private void failGetTargetedRequests(
 			final Groups g,
 			final String token,
+			final String excludeUpTo,
+			final String order,
 			final Exception expected) {
 		try {
-			new RequestAPI(g).getTargetedRequests(token);
+			new RequestAPI(g).getTargetedRequests(token, excludeUpTo, null, order);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
