@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -13,9 +14,11 @@ import java.util.UUID;
 import org.junit.Test;
 
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
@@ -227,4 +230,81 @@ public class APICommonTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void getRequestParamsNulls() throws Exception {
+		final GetRequestsParams p = APICommon.getRequestsParams(null, null, null, true);
+		
+		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder().build()));
+		
+		final GetRequestsParams p2 = APICommon.getRequestsParams(null, null, null, false);
+		
+		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build()));
+	}
+	
+	@Test
+	public void getRequestParamsWhitespace() throws Exception {
+		final String ws = "    \t    ";
+		final GetRequestsParams p = APICommon.getRequestsParams(ws, ws, ws, true);
+		
+		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.build()));
+		
+		final GetRequestsParams p2 = APICommon.getRequestsParams(ws, ws, ws, false);
+		
+		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.withNullableIncludeClosed(true)
+				.build()));
+	}
+	
+	@Test
+	public void getRequestParamsValues() throws Exception {
+		final GetRequestsParams p = APICommon.getRequestsParams(
+				"   \t   12000   ", " yes ", "  asc  ", false);
+		
+		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(12000))
+				.withNullableIncludeClosed(true)
+				.build()));
+		
+		final GetRequestsParams p2 = APICommon.getRequestsParams(
+				"   \t   " + Long.MAX_VALUE + "   ", " no ", "  desc  ", true);
+		
+		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(Long.MAX_VALUE))
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false)
+				.build()));
+		
+		final GetRequestsParams p3 = APICommon.getRequestsParams(
+				"   \t   " + Long.MIN_VALUE + "   ", null, null, true);
+		
+		assertThat("incorrect params", p3, is(GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(Long.MIN_VALUE))
+				.build()));
+	}
+	
+	@Test
+	public void getRequestParamsFail() throws Exception {
+		failGetRequestParams("foo", null, new IllegalParameterException("Invalid epoch ms: foo"));
+		failGetRequestParams(null, "asd", new IllegalParameterException(
+				"Invalid sort direction: asd"));
+	}
+	
+	private void failGetRequestParams(
+			final String excludeUpTo,
+			final String sortDirection,
+			final Exception expected) {
+		try {
+			APICommon.getRequestsParams(excludeUpTo, null, sortDirection, true);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 }
