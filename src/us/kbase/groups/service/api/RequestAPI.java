@@ -22,6 +22,7 @@ import javax.ws.rs.core.MediaType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
@@ -90,7 +91,8 @@ public class RequestAPI {
 		//TODO NOW allow getting all vs just open requests
 		//TODO NOW sort by created date, up or down
 		//TODO NOW allow date ranges and set limit
-		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true)));
+		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true),
+				GetRequestsParams.getBuilder().build()));
 	}
 	
 	@GET
@@ -103,7 +105,8 @@ public class RequestAPI {
 		//TODO NOW allow getting all vs just open requests
 		//TODO NOW sort by created date, up or down
 		//TODO NOW allow date ranges and set limit
-		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true)));
+		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
+				GetRequestsParams.getBuilder().build()));
 	}
 	
 	@PUT

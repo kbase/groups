@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
@@ -794,21 +795,25 @@ public class GroupsAPITest {
 		final UUID id2 = UUID.randomUUID();
 		
 		
-		when(g.getRequestsForGroup(new Token("t"), new GroupID("id"))).thenReturn(Arrays.asList(
-				GroupRequest.getBuilder(new RequestID(id1), new GroupID("id"), new UserName("foo"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(40000))
-								.build())
-						.build(),
-				GroupRequest.getBuilder(new RequestID(id2), new GroupID("id"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.withModificationTime(Instant.ofEpochMilli(25000))
-								.build())
-						.withInviteToGroup(new UserName("baz"))
-						.withStatus(GroupRequestStatus.canceled())
-						.build()
-				));
+		when(g.getRequestsForGroup(
+				new Token("t"), new GroupID("id"), GetRequestsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("id"), new UserName("foo"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(40000))
+										.build())
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("id"), new UserName("bar"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withInviteToGroup(new UserName("baz"))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						));
 		
 		final List<Map<String, Object>> ret = new GroupsAPI(g).getRequestsForGroup("t", "id");
 		
@@ -858,8 +863,9 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailUnauthorized() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getRequestsForGroup(new Token("t"), new GroupID("i"))).thenThrow(
-				new UnauthorizedException("yay"));
+		when(g.getRequestsForGroup(new Token("t"), new GroupID("i"),
+				GetRequestsParams.getBuilder().build()))
+				.thenThrow(new UnauthorizedException("yay"));
 		
 		failGetRequestsForGroup(g, "t", "i", new UnauthorizedException("yay"));
 	}

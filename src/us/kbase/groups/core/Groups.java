@@ -392,45 +392,49 @@ public class Groups {
 		}
 	}
 	
-	//TODO NOW allow getting closed requests
 	/** Get requests that were created by the user.
 	 * @param userToken the user's token.
+	 * @param the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	public List<GroupRequest> getRequestsForRequester(final Token userToken)
+	public List<GroupRequest> getRequestsForRequester(
+			final Token userToken,
+			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
+		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
-		//TODO NOW pass along params
-		return storage.getRequestsByRequester(user, GetRequestsParams.getBuilder().build());
+		return storage.getRequestsByRequester(user, params);
 	}
 	
-	//TODO NOW allow getting closed requests
 	/** Get requests where the user is the target of the request.
 	 * @param userToken the user's token.
+	 * @param the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 */
-	public List<GroupRequest> getRequestsForTarget(final Token userToken)
+	public List<GroupRequest> getRequestsForTarget(
+			final Token userToken,
+			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
 				WorkspaceHandlerException {
 		checkNotNull(userToken, "userToken");
+		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
 		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
-		//TODO NOW Pass through params
-		return storage.getRequestsByTarget(user, ws, GetRequestsParams.getBuilder().build());
+		return storage.getRequestsByTarget(user, ws, params);
 	}
 
-	//TODO NOW allow getting closed requests
 	/** Get requests where the group is the target of the request.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group for which requests will be returned.
+	 * @param the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
@@ -438,11 +442,15 @@ public class Groups {
 	 * @throws UnauthorizedException if the user is not a group admin.
 	 * @throws NoSuchGroupException if the group does not exist.
 	 */
-	public List<GroupRequest> getRequestsForGroup(final Token userToken, final GroupID groupID)
+	public List<GroupRequest> getRequestsForGroup(
+			final Token userToken,
+			final GroupID groupID,
+			final GetRequestsParams params)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
+		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
@@ -450,8 +458,7 @@ public class Groups {
 					"User %s cannot view requests for group %s",
 					user.getName(), groupID.getName()));
 		}
-		//TODO NOW pass params
-		return storage.getRequestsByGroup(groupID, GetRequestsParams.getBuilder().build());
+		return storage.getRequestsByGroup(groupID, params);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
