@@ -23,9 +23,12 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
+/** A user handler for the KBase authentication service.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class KBaseUserHandler implements UserHandler {
 
-	// TODO JAVADOC
 	// TODO TEST
 	
 	// note the configurable auth service handles its own caching.
@@ -37,6 +40,16 @@ public class KBaseUserHandler implements UserHandler {
 	private final ConfigurableAuthService auth;
 	private final Token serviceToken;
 	
+	/** Create the handler.
+	 * @param rootAuthURL the root url of the KBase authentication service.
+	 * @param serviceToken a service token for the KBase authentication service. This is used
+	 * to check that user names are valid.
+	 * @param allowInsecureURL allow a non-https URL.
+	 * @throws IOException if the authentication service could not be contacted.
+	 * @throws URISyntaxException if the URL is not a valid URI.
+	 * @throws InvalidTokenException if the service token is invalid.
+	 * @throws AuthenticationException if an error occurs while validating the token.
+	 */
 	public KBaseUserHandler(
 			final URL rootAuthURL,
 			final Token serviceToken,
