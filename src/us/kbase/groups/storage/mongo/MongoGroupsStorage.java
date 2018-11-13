@@ -892,15 +892,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
-	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes
-	// TODO NOW allow including closed requests
-	// TODO NOW test limit
 	@Override
 	public List<GroupRequest> getRequestsByRequester(
-			final UserName requester) throws GroupsStorageException {
+			final UserName requester,
+			final GetRequestsParams params) throws GroupsStorageException {
 		checkNotNull(requester, "requester");
-		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName()),
-				GetRequestsParams.getBuilder().build());
+		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName()), params);
 	}
 	
 	// TODO NOW need to provide limit and specify date range to split up large request lists - sort by created, will need new indexes

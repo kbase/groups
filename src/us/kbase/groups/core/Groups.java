@@ -404,7 +404,8 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		checkNotNull(userToken, "userToken");
 		final UserName user = userHandler.getUser(userToken);
-		return storage.getRequestsByRequester(user);
+		//TODO NOW pass along requests
+		return storage.getRequestsByRequester(user, GetRequestsParams.getBuilder().build());
 	}
 	
 	//TODO NOW allow getting closed requests
