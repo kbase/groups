@@ -19,6 +19,7 @@ import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
+import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
@@ -167,6 +168,7 @@ public interface GroupsStorage {
 	//TODO NOW need date range, limit & sort by date up /down if there's a lot
 	//TODO NOW allow getting closed requests
 	/** Get the open requests created by a user, sorted by the modification time of the request.
+	 * At most 100 requests are returned.
 	 * @param requester the user that created the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
@@ -178,6 +180,7 @@ public interface GroupsStorage {
 	//TODO NOW allow getting closed requests
 	/** Get the open requests that target a user or the workspaces a user administrates,
 	 * sorted by the modification time of the request.
+	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param wsids the targeted workspaces for that user.
 	 * @return the requests.
@@ -186,15 +189,16 @@ public interface GroupsStorage {
 	List<GroupRequest> getRequestsByTarget(
 			UserName target, WorkspaceIDSet wsids) throws GroupsStorageException;
 
-	//TODO NOW need date range, limit & sort by date up /down if there's a lot
-	// only returns requests for that group specifically, e.g. no target user
-	//TODO NOW allow getting closed requests
 	/** Get the open requests that target a group, sorted by the modification time of the request.
+	 * At most 100 requests are returned.
+	 * Requests that target a group are {@link GroupRequestType#REQUEST_ADD_WORKSPACE} and
+	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}.
 	 * @param groupID the targeted group.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<GroupRequest> getRequestsByGroup(GroupID groupID)
+	List<GroupRequest> getRequestsByGroup(GroupID groupID, GetRequestsParams params)
 			throws GroupsStorageException;
 	
 	/** Close a request. WARNING: this function will allow setting the modification time to
