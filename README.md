@@ -360,7 +360,7 @@ All endpoints return a maximum of 100 requests at once.
 These endpoints have common parameter sets and behavior, other than the actual requests they
 return. They all have the following optional query parameters:
 
-* `closed` - include closed requests (e.g. those with a state other than `OPEN` in the list.
+* `closed` - include closed requests (e.g. those with a state other than `OPEN`) in the list.
   If omitted, only open requests are included.
 * `order` - `asc` to sort the requests in order of the least recently modified,
   `desc` to sort by the most recently modified.
