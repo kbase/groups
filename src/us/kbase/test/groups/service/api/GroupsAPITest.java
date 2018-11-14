@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
@@ -169,7 +170,7 @@ public class GroupsAPITest {
 	@Test
 	public void getGroups() throws Exception {
 		final Groups g = mock(Groups.class);
-		when(g.getGroups()).thenReturn(Arrays.asList(
+		when(g.getGroups(GetGroupsParams.getBuilder().build())).thenReturn(Arrays.asList(
 				new GroupView(GROUP_MAX, wsis(), MINIMAL),
 				new GroupView(GROUP_MIN, wsis(), MINIMAL)));
 		final List<Map<String, Object>> ret = new GroupsAPI(g).getGroups("unused for now");

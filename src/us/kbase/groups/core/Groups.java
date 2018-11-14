@@ -246,17 +246,17 @@ public class Groups {
 		return storage.getGroupExists(groupID);
 	}
 	
-	// this assumes the number of groups is small enough that listing them all is OK.
-	// obviously if the number of groups gets > ~100k something will have to change
-	/** Get views of all the groups in the system, where the view type is
+	/** Get views of the groups in the system, where the view type is
 	 * {@link ViewType#MINIMAL}.
-	 * @return all the groups.
+	 * At most 100 groups are returned.
+	 * @params the parameters for getting the groups.
+	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	public List<GroupView> getGroups()
+	public List<GroupView> getGroups(final GetGroupsParams params)
 			throws GroupsStorageException {
-		//TODO NOW pass through params
-		return storage.getGroups(GetGroupsParams.getBuilder().build()).stream()
+		checkNotNull(params, "params");
+		return storage.getGroups(params).stream()
 				.map(g -> new GroupView(
 						g, WorkspaceInfoSet.getBuilder(null).build(), ViewType.MINIMAL))
 				.collect(Collectors.toList());
@@ -394,6 +394,7 @@ public class Groups {
 	}
 	
 	/** Get requests that were created by the user.
+	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param the parameters for getting the requests.
 	 * @return the requests.
@@ -412,6 +413,7 @@ public class Groups {
 	}
 	
 	/** Get requests where the user is the target of the request.
+	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param the parameters for getting the requests.
 	 * @return the requests.
@@ -433,6 +435,7 @@ public class Groups {
 	}
 
 	/** Get requests where the group is the target of the request.
+	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group for which requests will be returned.
 	 * @param the parameters for getting the requests.

@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -79,15 +80,14 @@ public class GroupsAPI {
 		this.groups = groups;
 	}
 	
-	// this assumes there are a relatively small number of groups. If that proves false,
-	// will need to filter somehow. Remember, deep paging was invented by Satan himself.
-	// might want to remove description, members, and other fields
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getGroups(
 			@HeaderParam(HEADER_TOKEN) final String token)
 			throws GroupsStorageException {
-		return groups.getGroups().stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
+		//TODO NOW handle creating params
+		return groups.getGroups(GetGroupsParams.getBuilder().build()).stream()
+				.map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
 	public static class CreateOrUpdateGroupJSON extends IncomingJSON {

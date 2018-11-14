@@ -11,8 +11,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -90,7 +92,7 @@ public class APICommon {
 	/** Get parameters for listing requests from a set of strings as may be presented in
 	 * query params.
 	 * @param excludeUpTo set where the list of requests starts by excluding requests modified
-	 * before or after this date, inclusive, depending on the sort direction.
+	 * before or after this date, exclusive, depending on the sort direction.
 	 * The date must be in epoch milliseconds.
 	 * Null or whitespace only values are ignored.
 	 * @param includeClosed if not null or whitespace only, closed requests are included.
@@ -119,16 +121,47 @@ public class APICommon {
 			}
 			b.withNullableExcludeUpTo(Instant.ofEpochMilli(epochms));
 		}
+		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
+		
+		return b.withNullableIncludeClosed(includeClosed != null).build();
+	}
+	
+	/** Get parameters for listing groups from a set of strings as may be presented in
+	 * query params.
+	 * @param excludeUpTo set where the list of groups starts by excluding groups where the
+	 * sort key is greater or less than this value, exclusive, depending on the sort direction.
+	 * Null or whitespace only values are ignored.
+	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
+	 * for a descending sort.
+	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
+	 * true sets an ascending sort, false sets a descending sort.
+	 * @return the get groups parameters.
+	 * @throws IllegalParameterException if sortDirection is not a valid options.
+	 */
+	public static GetGroupsParams getGroupsParams(
+			final String excludeUpTo,
+			final String sortDirection,
+			final boolean defaultSort)
+			throws IllegalParameterException {
+		final GetGroupsParams.Builder b = GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo(excludeUpTo);
+		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
+		return b.build();
+	}
+
+	private static void setSortDirection(
+			final String sortDirection,
+			final boolean defaultSort,
+			final Consumer<Boolean> sortConsumer)
+			throws IllegalParameterException {
 		if (isNullOrEmpty(sortDirection)) {
-			b.withNullableSortAscending(defaultSort);
+			sortConsumer.accept(defaultSort);
 		} else {
 			if (!SORT_DIRECTION_OPTIONS.contains(sortDirection.trim())) {
 				throw new IllegalParameterException("Invalid sort direction: " +
 						sortDirection.trim());
 			}
-			b.withNullableSortAscending(SORT_ASCENDING.equals(sortDirection.trim()));
+			sortConsumer.accept(SORT_ASCENDING.equals(sortDirection.trim()));
 		}
-		
-		return b.withNullableIncludeClosed(includeClosed != null).build();
 	}
 }
