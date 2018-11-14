@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.junit.Test;
 
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
@@ -305,6 +306,56 @@ public class APICommonTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getGroupParamsNulls() throws Exception {
+		final GetGroupsParams p = APICommon.getGroupsParams(null, null, true);
+		
+		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
+		
+		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, false);
+		
+		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
+				.withNullableSortAscending(false).build()));
+	}
+	
+	@Test
+	public void getGroupParamsWhitespace() throws Exception {
+		final String ws = "    \t  ";
+		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, true);
+		
+		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
+		
+		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, false);
+		
+		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
+				.withNullableSortAscending(false).build()));
+	}
+	
+	@Test
+	public void getGroupParamsValues() throws Exception {
+		final GetGroupsParams p = APICommon.getGroupsParams("   foo   ", "asc", false);
+		
+		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("foo").build()));
+		
+		final GetGroupsParams p2 = APICommon.getGroupsParams("  \t  bar  ", "desc", true);
+		
+		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("bar")
+				.withNullableSortAscending(false).build()));
+	}
+	
+	@Test
+	public void getGroupParamsFail() throws Exception {
+		try {
+			APICommon.getGroupsParams(null, "asd", false);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
+					"Invalid sort direction: asd"));
 		}
 	}
 	
