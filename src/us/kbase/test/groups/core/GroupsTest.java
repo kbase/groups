@@ -713,17 +713,26 @@ public class GroupsTest {
 	public void getGroupsEmpty() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.storage.getGroups(GetGroupsParams.getBuilder().build()))
+		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("ex")
+				.withNullableSortAscending(false)
+				.build()))
 				.thenReturn(Collections.emptyList());
 		
-		assertThat("incorrect groups", mocks.groups.getGroups(), is(Collections.emptyList()));
+		assertThat("incorrect groups", mocks.groups.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("ex")
+				.withNullableSortAscending(false)
+				.build()),
+				is(Collections.emptyList()));
 	}
 	
 	@Test
 	public void getGroups() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.storage.getGroups(GetGroupsParams.getBuilder().build()))
+		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("someex")
+				.build()))
 				.thenReturn(Arrays.asList(
 						Group.getBuilder(
 								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
@@ -740,22 +749,35 @@ public class GroupsTest {
 								.build()
 						));
 		
-		assertThat("incorrect groups", mocks.groups.getGroups(), is(Arrays.asList(
-				new GroupView(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.build(),
-						wsis(), MINIMAL),
-				new GroupView(Group.getBuilder(
-						new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withDescription("desc")
-						.withType(GroupType.PROJECT)
-						.withAdministrator(new UserName("whoo"))
-						.build(),
-						wsis(), MINIMAL)
-				)));
+		assertThat("incorrect groups", mocks.groups.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("someex")
+				.build()),
+				is(Arrays.asList(
+						new GroupView(Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.build(),
+								wsis(), MINIMAL),
+						new GroupView(Group.getBuilder(
+								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withDescription("desc")
+								.withType(GroupType.PROJECT)
+								.withAdministrator(new UserName("whoo"))
+								.build(),
+								wsis(), MINIMAL)
+						)));
+	}
+
+	@Test
+	public void getGroupsFail() throws Exception {
+		try {
+			initTestMocks().groups.getGroups(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
+		}
 	}
 	
 	@Test
