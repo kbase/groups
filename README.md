@@ -655,9 +655,6 @@ see /design/*.md
     * Find groups that contain workspace X and where I'm a group member
     * Find groups where user X is an owner or admin
     * Find groups where users X is a member and I'm a member
-  * Limit return count & filter and sort requests (this becomes especially important when exposing
-    closed requests (below)
-    * Same as above for filter & sort combinations
 * Performance
   * Currently group workspaces are pulled 1 at a time w/ 2 WSS calls per group workspace
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
@@ -668,7 +665,6 @@ see /design/*.md
   * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate
     * Currently I have to go group by group
-  * Allow getting closed requests (see above)
   * Text search - need product team feedback
     * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
@@ -679,7 +675,8 @@ see /design/*.md
 * New features
   * Associate apps with groups
   * Relations between groups
-    * This needs a lot of thought / design if the relations are hierarchical.
+    * This needs a lot of thought / design if the relations are hierarchical /
+      directional.
       * Cycle detection, etc.
   * Change owner
 * Testing
