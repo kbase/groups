@@ -31,7 +31,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.FieldItem.StringField;
-import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -83,10 +82,11 @@ public class GroupsAPI {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getGroups(
-			@HeaderParam(HEADER_TOKEN) final String token)
-			throws GroupsStorageException {
-		//TODO NOW handle creating params
-		return groups.getGroups(GetGroupsParams.getBuilder().build()).stream()
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order)
+			throws GroupsStorageException, IllegalParameterException {
+		return groups.getGroups(APICommon.getGroupsParams(excludeUpTo, order, true)).stream()
 				.map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
@@ -296,7 +296,7 @@ public class GroupsAPI {
 	public List<Map<String, Object>> getRequestsForGroup(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,

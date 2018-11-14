@@ -80,14 +80,26 @@ public class Fields {
 	public static final String REQUEST_DENIED_REASON = "reason";
 	
 	/* ***********************
+	 * groups listing fields
+	 * ***********************
+	 */
+	
+	/** Exclude any groups where the sort key is before or after this key, exclusive,
+	 * depending on the sort order.
+	 */
+	public static final String GET_GROUPS_EXCLUDE_UP_TO = "excludeupto";
+	/** Set the sort order. */
+	public static final String GET_GROUPS_SORT_ORDER = "order";
+	
+	/* ***********************
 	 * request listing fields
 	 * ***********************
 	 */
 	
-	/** Exclude any requests modified before or after this date, inclusive, depending on the
+	/** Exclude any requests modified before or after this date, exclusive, depending on the
 	 * sort order.
 	 */
-	public static final String GET_REQUESTS_EXLUDE_UP_TO = "excludeupto";
+	public static final String GET_REQUESTS_EXCLUDE_UP_TO = "excludeupto";
 	/** Include closed requests. */
 	public static final String GET_REQUESTS_INCLUDE_CLOSED = "closed";
 	/** Set the sort order. */

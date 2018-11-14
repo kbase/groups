@@ -166,17 +166,55 @@ public class GroupsAPITest {
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 
+	@Test
+	public void getGroupsNulls() throws Exception {
+		getGroups(null, null, GetGroupsParams.getBuilder().build());
+	}
 	
 	@Test
-	public void getGroups() throws Exception {
+	public void getGroupsWhitespace() throws Exception {
+		getGroups("   \t   ", "   \t   ", GetGroupsParams.getBuilder().build());
+	}
+	
+	@Test
+	public void getGroupsWhitespaceValuesAsc() throws Exception {
+		getGroups("   foo  \t  ", "  asc  \t ", GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("foo").build());
+	}
+	
+	@Test
+	public void getGroupsWhitespaceValuesDesc() throws Exception {
+		getGroups("   foo  \t  ", "  desc  \t ", GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("foo")
+				.withNullableSortAscending(false).build());
+	}
+
+	private void getGroups(
+			final String excludeUpTo,
+			final String order,
+			final GetGroupsParams expected)
+			throws Exception {
 		final Groups g = mock(Groups.class);
-		when(g.getGroups(GetGroupsParams.getBuilder().build())).thenReturn(Arrays.asList(
+		when(g.getGroups(expected)).thenReturn(Arrays.asList(
 				new GroupView(GROUP_MAX, wsis(), MINIMAL),
 				new GroupView(GROUP_MIN, wsis(), MINIMAL)));
-		final List<Map<String, Object>> ret = new GroupsAPI(g).getGroups("unused for now");
+		final List<Map<String, Object>> ret = new GroupsAPI(g)
+				.getGroups("unused for now", excludeUpTo, order);
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
+	}
+	
+	@Test
+	public void failGetGroups() throws Exception {
+		final Groups g = mock(Groups.class);
+		try {
+			new GroupsAPI(g).getGroups("t", null, "  asd   ");
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
+					"Invalid sort direction: asd"));
+		}
 	}
 	
 	@Test

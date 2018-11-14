@@ -87,7 +87,7 @@ public class RequestAPI {
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getCreatedRequests(
 			@HeaderParam(HEADER_TOKEN) final String token,
-			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
@@ -101,7 +101,7 @@ public class RequestAPI {
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getTargetedRequests(
 			@HeaderParam(HEADER_TOKEN) final String token,
-			@QueryParam(Fields.GET_REQUESTS_EXLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
