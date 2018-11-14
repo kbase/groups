@@ -309,6 +309,7 @@ The user must be the group owner.
 ```
 AUTHORIZATION REQUIRED
 POST /group/<group id>/workspace/<workspace id>
+
 RETURNS: Either {"complete": true} or a Request with the additional field "complete"
 with a value of false.
 ```
@@ -325,18 +326,6 @@ DELETE /group/<group id>/workspace/<workspace id>
 ```
 
 The user must be an administrator of either the group or the workspace.
-
-### Get the list of requests for a group
-
-```
-AUTHORIZATION REQUIRED
-GET /group/<group id>/requests
-
-RETURNS: A list of Requests.
-```
-
-The user must be a group administrator. The requests only include those where a group administrator
-must take action on the request.
 
 ### Get a request
 
@@ -360,28 +349,71 @@ POST /request/id/<request id>/getperm
 The request type must be `Request add workspace to group` and the user must be a group
 administrator.
 
-### List created requests
+### Listing requests
+
+There are three endpoints for listing requests detailed below - one for listing requests you
+created, one for listing requests targeted at you, and one for listing requests targeted at
+a specific group.
+
+All endpoints return a maximum of 100 requests at once.
+
+These endpoints have common parameter sets and behavior, other than the actual requests they
+return. They all have the following optional query parameters:
+
+* `closed` - include closed requests (e.g. those with a state other than `OPEN`) in the list.
+  If omitted, only open requests are included.
+* `order` - `asc` to sort the requests in order of the least recently modified,
+  `desc` to sort by the most recently modified.
+  If omitted, and if `closed` is also omitted, the sort order is set to `asc`.
+  If closed requests are included, it is set to `desc`.
+* `excludeupto` - a date in epoch milliseconds that determines the starting point of the list,
+  depending on the sort order. `asc` and `desc` sorts will include requests with
+  modification dates, respectively, after and before the `excludeupto` date, non-inclusive.
+  This can be used to page through the requests if needed.
+
+Examples:
+
+* `?` - only include open requests and sort oldest first by modification date.
+* `?closed` - include all requests and sort newest first by modification date.
+* `?closed&order=asc&excludeupto=1500000000000` - include all requests, sort by
+  least recently modified, and exclude any requests that were modified on or before
+  Friday, July 14, 2017, at 2:40:00 AM GMT.
+ 
+
+#### List created requests
 
 ```
 AUTHORIZATION REQUIRED
-GET /request/created
+GET /request/created[?parameters]
 
 RETURNS: A list of Requests.
 ```
 
 Returns requests that were created by the user.
 
-### List targeted requests
+#### List targeted requests
 
 ```
 AUTHORIZATION REQUIRED
-GET /request/targeted
+GET /request/targeted[?parameters]
 
 RETURNS: A list of Requests.
 ```
 
 Returns requests where the user is a target (including an administrator of the workspace at
 which the request is targeted) of the request.
+
+#### Get the list of requests for a group
+
+```
+AUTHORIZATION REQUIRED
+GET /group/<group id>/requests[?parameters]
+
+RETURNS: A list of Requests.
+```
+
+The user must be a group administrator. The requests only include those where a group administrator
+must take action on the request.
 
 ### Cancel a request
 
@@ -623,9 +655,6 @@ see /design/*.md
     * Find groups that contain workspace X and where I'm a group member
     * Find groups where user X is an owner or admin
     * Find groups where users X is a member and I'm a member
-  * Limit return count & filter and sort requests (this becomes especially important when exposing
-    closed requests (below)
-    * Same as above for filter & sort combinations
 * Performance
   * Currently group workspaces are pulled 1 at a time w/ 2 WSS calls per group workspace
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
@@ -636,7 +665,6 @@ see /design/*.md
   * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate
     * Currently I have to go group by group
-  * Allow getting closed requests (see above)
   * Text search - need product team feedback
     * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
@@ -647,7 +675,8 @@ see /design/*.md
 * New features
   * Associate apps with groups
   * Relations between groups
-    * This needs a lot of thought / design if the relations are hierarchical.
+    * This needs a lot of thought / design if the relations are hierarchical /
+      directional.
       * Cycle detection, etc.
   * Change owner
 * Testing
