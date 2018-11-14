@@ -160,11 +160,21 @@ RETURNS:
 ### List groups
 
 ```
-GET /group
+GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
 A list of Groups. Only the id, name, owner, and type fields are included.
 ```
+
+A maximum of 100 groups are returned.
+
+The query parameters are all optional:
+* `order` - `asc` to sort the groups in order of their group IDs, `desc` to sort the groups
+  in reverse order. If omitted the sort order is set to `asc`.
+* `excludeupto` - a string that determines the starting point of the list,
+  depending on the sort order. `asc` and `desc` sorts will include groups with
+  group IDs, respectively, after and before the `excludeupto` string, non-inclusive.
+  This can be used to page through the groups if needed.
 
 ### Create a group
 
