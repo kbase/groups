@@ -249,7 +249,7 @@ public class Groups {
 	/** Get views of the groups in the system, where the view type is
 	 * {@link ViewType#MINIMAL}.
 	 * At most 100 groups are returned.
-	 * @params the parameters for getting the groups.
+	 * @param params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
@@ -396,7 +396,7 @@ public class Groups {
 	/** Get requests that were created by the user.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
-	 * @param the parameters for getting the requests.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
@@ -415,7 +415,7 @@ public class Groups {
 	/** Get requests where the user is the target of the request.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
-	 * @param the parameters for getting the requests.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
@@ -438,7 +438,7 @@ public class Groups {
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group for which requests will be returned.
-	 * @param the parameters for getting the requests.
+	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.

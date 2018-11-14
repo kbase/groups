@@ -71,7 +71,7 @@ public interface GroupsStorage {
 	
 	/** Get all the groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.
-	 * @params the parameters for getting the groups.
+	 * @param params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
