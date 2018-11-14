@@ -584,9 +584,9 @@ export default class {
       if (closed === true) {
           params.push("closed");
       }
-      if (order === true) {
+      if (order === "asc") {
           params.push("order=asc");
-      } else if (order === false) {
+      } else if (order === "desc") {
           params.push("order=desc");
       }
       if (excludeupto) {
@@ -610,10 +610,22 @@ export default class {
               if (response.ok) {
                   response.json().then( (json) => {
                       //TODO NOW gotta be a better way than this
+                      //TODO NOW set selection to correct value
+                      const s = this.sanitize;
                       let gtable =
                           `
                           <div>
-                            <input type="checkbox" id="closed"/>Include closed requests
+                            <span>
+                              <input type="checkbox" id="closed"/>Include closed requests
+                              <select id="order">
+                                <option value="">Default</option>
+                                <option value="asc">Asc</option>
+                                <option value="desc">Desc</option>
+                              </select>
+                              Order
+                              <input type="text" id="excludeupto" value="${s(excludeupto)}"
+                                placeholder="excludeupto in epochms"/>
+                            <span/>
                           </div>
                           </div>
                             <button id="requests" class="btn btn-primary">Submit</button>
@@ -631,7 +643,6 @@ export default class {
                             </thead>
                             <tbody>
                           `;
-                      const s = this.sanitize;
                       for (const r of json) {
                           gtable +=
                               `
@@ -652,7 +663,9 @@ export default class {
                       }
                       $('#requests').on('click', () => {
                           const c = document.getElementById("closed").checked
-                          this.renderRequests(requesturl, c)
+                          const o = $("#order").val();
+                          const e = $("#excludeupto").val();
+                          this.renderRequests(requesturl, c, o, e)
                       });
                       for (const r of json) {
                           $(`#${s(r.id)}`).on('click', () => {
