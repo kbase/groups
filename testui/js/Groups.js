@@ -579,12 +579,32 @@ export default class {
       this.renderRequests(this.serviceUrl + "request/targeted");
   }
   
-  renderRequests(requesturl) {
+  getRequestURL(requesturl, closed, order, excludeupto) {
+      let params = [];
+      if (closed === true) {
+          params.push("closed");
+      }
+      if (order === true) {
+          params.push("order=asc");
+      } else if (order === false) {
+          params.push("order=desc");
+      }
+      if (excludeupto) {
+          params.push("excludeupto=" + excludeupto);
+      }
+      if (params.length != 0) {
+          return requesturl + "?" + params.join("&");
+      } else {
+          return requesturl;
+      }
+  }
+  
+  renderRequests(requesturl, closed, order, excludeupto) {
       $('#error').text("");
       if (!this.checkToken()) {
           return;
       }
-      fetch(requesturl,
+      fetch(this.getRequestURL(requesturl, closed, order, excludeupto),
         {"headers": this.getHeaders()})
          .then( (response) => {
               if (response.ok) {
@@ -592,6 +612,12 @@ export default class {
                       //TODO NOW gotta be a better way than this
                       let gtable =
                           `
+                          <div>
+                            <input type="checkbox" id="closed"/>Include closed requests
+                          </div>
+                          </div>
+                            <button id="requests" class="btn btn-primary">Submit</button>
+                          </div>
                           <table class="table">
                             <thead>
                               <tr>
@@ -621,6 +647,13 @@ export default class {
                       }
                       gtable += `</tbody></table>`;
                       $('#groups').html(gtable);
+                      if (closed === true) {
+                          document.getElementById("closed").checked = closed;
+                      }
+                      $('#requests').on('click', () => {
+                          const c = document.getElementById("closed").checked
+                          this.renderRequests(requesturl, c)
+                      });
                       for (const r of json) {
                           $(`#${s(r.id)}`).on('click', () => {
                               this.renderRequest(r.id);
