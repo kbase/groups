@@ -43,7 +43,7 @@ public class GetRequestsParams {
 	/** Get a date that determines where a list of requests should begin. If the sort is
 	 * ascending, the request list should begin at a date strictly later than this date, and
 	 * vice versa for descending sorts.
-	 * @return the exlusion date.
+	 * @return the exclusion date.
 	 */
 	public Optional<Instant> getExcludeUpTo() {
 		return excludeUpTo;
