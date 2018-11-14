@@ -3,6 +3,7 @@ package us.kbase.groups.storage;
 import java.time.Instant;
 import java.util.List;
 
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -68,14 +69,13 @@ public interface GroupsStorage {
 	 */
 	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
 	
-	// assumes not that many groups. If it turns out we make a lot of groups (probably > ~100k)
-	// something will have to change.
-	// ordered by group ID
 	/** Get all the groups in the system, sorted by the group ID.
+	 * At most 100 groups are returned.
+	 * @params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<Group> getGroups() throws GroupsStorageException;
+	List<Group> getGroups(GetGroupsParams params) throws GroupsStorageException;
 	
 	/** Add a member to a group.
 	 * @param groupID the ID of the group.
