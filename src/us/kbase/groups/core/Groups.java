@@ -255,7 +255,8 @@ public class Groups {
 	 */
 	public List<GroupView> getGroups()
 			throws GroupsStorageException {
-		return storage.getGroups().stream()
+		//TODO NOW pass through params
+		return storage.getGroups(GetGroupsParams.getBuilder().build()).stream()
 				.map(g -> new GroupView(
 						g, WorkspaceInfoSet.getBuilder(null).build(), ViewType.MINIMAL))
 				.collect(Collectors.toList());

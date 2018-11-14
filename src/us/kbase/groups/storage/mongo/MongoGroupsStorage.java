@@ -45,6 +45,7 @@ import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -513,12 +514,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public List<Group> getGroups() throws GroupsStorageException {
+	public List<Group> getGroups(final GetGroupsParams params) throws GroupsStorageException {
+		checkNotNull(params, "params");
 		final List<Group> ret = new LinkedList<>();
+		final Document query = new Document();
+		if (params.getExcludeUpTo().isPresent()) {
+			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
+			query.append(Fields.GROUP_ID, new Document(inequality, params.getExcludeUpTo().get()));
+		}
 		try {
-			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS)
+			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS).find(query)
 					// may want to allow alternate sorts later, will need indexes
-					.find().sort(new Document(Fields.GROUP_ID, 1));
+					.sort(new Document(Fields.GROUP_ID, params.isSortAscending() ? 1 : -1))
+					// could make limit a param (with a max), YAGNI for now
+					.limit(100); 
 			for (final Document gdoc: gdocs) {
 				ret.add(toGroup(gdoc));
 			}

@@ -37,6 +37,7 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
@@ -93,6 +94,10 @@ public class MongoGroupsStorageOpsTest {
 	public void before() throws Exception {
 		manager.reset();
 		logEvents.clear();
+	}
+	
+	public <T> List<T> list(@SuppressWarnings("unchecked") T... items) {
+		return Arrays.asList(items);
 	}
 	
 	@Test
@@ -669,7 +674,14 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void getGroups() throws Exception {
+	public void getGroupsEmpty() throws Exception {
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(GetGroupsParams.getBuilder().build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getGroupsDefaultParams() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
@@ -694,38 +706,141 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("foo2"))
 				.build());
 		
-		assertThat("incorrect get group", manager.storage.getGroups(), is(Arrays.asList(
-				Group.getBuilder(
-						new GroupID("aid"), new GroupName("name1"), new UserName("uname1"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000),
-								Instant.ofEpochMilli(10000)))
-						.withType(GroupType.PROJECT)
-						.withDescription("desc1")
-						.withMember(new UserName("foo1"))
-						.withMember(new UserName("bar1"))
-						.withAdministrator(new UserName("admin"))
-						.withWorkspace(new WorkspaceID(42))
-						.build(),
-				Group.getBuilder(
-						new GroupID("fid"), new GroupName("name2"), new UserName("uname2"),
-						new CreateAndModTimes(Instant.ofEpochMilli(20000),
-								Instant.ofEpochMilli(30000)))
-						.withType(GroupType.TEAM)
-						.withDescription("desc2")
-						.withMember(new UserName("foo2"))
-						.build(),
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(50000)))
-						.build()
-				)));
+		assertThat("incorrect get group", manager.storage.getGroups(
+				GetGroupsParams.getBuilder().build()), is(Arrays.asList(
+						Group.getBuilder(
+								new GroupID("aid"), new GroupName("name1"), new UserName("uname1"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000),
+										Instant.ofEpochMilli(10000)))
+								.withType(GroupType.PROJECT)
+								.withDescription("desc1")
+								.withMember(new UserName("foo1"))
+								.withMember(new UserName("bar1"))
+								.withAdministrator(new UserName("admin"))
+								.withWorkspace(new WorkspaceID(42))
+								.build(),
+						Group.getBuilder(
+								new GroupID("fid"), new GroupName("name2"), new UserName("uname2"),
+								new CreateAndModTimes(Instant.ofEpochMilli(20000),
+										Instant.ofEpochMilli(30000)))
+								.withType(GroupType.TEAM)
+								.withDescription("desc2")
+								.withMember(new UserName("foo2"))
+								.build(),
+						Group.getBuilder(
+								new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+								new CreateAndModTimes(Instant.ofEpochMilli(40000),
+										Instant.ofEpochMilli(50000)))
+								.build()
+						)));
 	}
 	
 	@Test
-	public void getGroupsEmpty() throws Exception {
-		assertThat("incorrect get groups", manager.storage.getGroups(),
-				is(Collections.emptyList()));
+	public void getGroupsSortAndExclude() throws Exception {
+		final Group ga = Group.getBuilder(
+				new GroupID("gida"), new GroupName("na"), new UserName("n"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build();
+		final Group gb = Group.getBuilder(
+				new GroupID("gidb"), new GroupName("na"), new UserName("n"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build();
+		final Group gd = Group.getBuilder(
+				new GroupID("gidd"), new GroupName("na"), new UserName("n"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build();
+		manager.storage.createGroup(ga);
+		manager.storage.createGroup(gd);
+		manager.storage.createGroup(gb);
+		
+		checkGroupsList(GetGroupsParams.getBuilder().build(), list(ga, gb, gd));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableSortAscending(true)
+				.build(),
+				list(ga, gb, gd));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build(),
+				list(gd, gb, ga));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("gida")
+				.build(),
+				list(gb, gd));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("gidb")
+				.build(),
+				list(gd));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("gidc")
+				.build(),
+				list(gd));
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("gidd")
+				.build(),
+				list());
+		checkGroupsList(GetGroupsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.withNullableExcludeUpTo("gidc")
+				.build(),
+				list(gb, ga));
+	}
+
+	@Test
+	public void getGroupsLimit() throws Exception {
+		for (int i = 1; i < 202; i++) {
+			final String id = String.format("g%03d", i);
+			manager.storage.createGroup(Group.getBuilder(
+					new GroupID(id), new GroupName("g" + 1), new UserName("n"),
+					new CreateAndModTimes(inst(1000))).build());
+		}
+		
+		assertGroupListCorrect(null, 1, 100);
+		assertGroupListCorrect("fzzz", 1, 100);
+		assertGroupListCorrect("g0", 1, 100);
+		assertGroupListCorrect("g000", 1, 100);
+		assertGroupListCorrect("g001", 2, 100);
+		assertGroupListCorrect("g099", 100, 100);
+		assertGroupListCorrect("g100", 101, 100);
+		assertGroupListCorrect("g101", 102, 100);
+		assertGroupListCorrect("g102", 103, 99);
+		assertGroupListCorrect("g149", 150, 52);
+		assertGroupListCorrect("g199", 200, 2);
+		assertGroupListCorrect("g200", 201, 1);
+		assertGroupListCorrect("g201", 201, 0);
+		assertGroupListCorrect("g300", 201, 0);
+	}
+	
+	private <T> void assertGroupListCorrect(
+			final String excludeUpTo,
+			final int start,
+			final int size)
+			throws Exception {
+		final List<Group> res = manager.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo(excludeUpTo).build());
+		assertThat("incorrect size", res.size(), is(size));
+		int i = start;
+		for (final Group g: res) {
+			final String id = String.format("g%03d", i);
+			assertThat("incorrect group", g.getGroupID().getName(), is(id));
+			i++;
+		}
+	}
+
+	
+	private void checkGroupsList(final GetGroupsParams p, final List<Group> expected)
+			throws GroupsStorageException {
+		assertThat("incorrect groups", manager.storage.getGroups(p), is(expected));
+	}
+	
+	@Test
+	public void getGroupsFail() throws Exception {
+		try {
+			manager.storage.getGroups(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
+		}
+		
 	}
 	
 	@Test

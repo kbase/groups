@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
+import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
@@ -712,7 +713,8 @@ public class GroupsTest {
 	public void getGroupsEmpty() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.storage.getGroups()).thenReturn(Collections.emptyList());
+		when(mocks.storage.getGroups(GetGroupsParams.getBuilder().build()))
+				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(), is(Collections.emptyList()));
 	}
@@ -721,19 +723,22 @@ public class GroupsTest {
 	public void getGroups() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.storage.getGroups()).thenReturn(Arrays.asList(
-				Group.getBuilder(new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.build(),
-				Group.getBuilder(new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withDescription("desc")
-						.withType(GroupType.PROJECT)
-						.withMember(new UserName("whee"))
-						.withAdministrator(new UserName("whoo"))
-						.build()
-				));
+		when(mocks.storage.getGroups(GetGroupsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(
+						Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.build(),
+						Group.getBuilder(
+								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withDescription("desc")
+								.withType(GroupType.PROJECT)
+								.withMember(new UserName("whee"))
+								.withAdministrator(new UserName("whoo"))
+								.build()
+						));
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(), is(Arrays.asList(
 				new GroupView(Group.getBuilder(
