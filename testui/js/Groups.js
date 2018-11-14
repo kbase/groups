@@ -579,19 +579,57 @@ export default class {
       this.renderRequests(this.serviceUrl + "request/targeted");
   }
   
-  renderRequests(requesturl) {
+  getRequestURL(requesturl, closed, order, excludeupto) {
+      let params = [];
+      if (closed === true) {
+          params.push("closed");
+      }
+      if (order === "asc") {
+          params.push("order=asc");
+      } else if (order === "desc") {
+          params.push("order=desc");
+      }
+      if (excludeupto) {
+          params.push("excludeupto=" + excludeupto);
+      }
+      if (params.length != 0) {
+          return requesturl + "?" + params.join("&");
+      } else {
+          return requesturl;
+      }
+  }
+  
+  renderRequests(requesturl, closed, order, excludeupto) {
       $('#error').text("");
       if (!this.checkToken()) {
           return;
       }
-      fetch(requesturl,
+      fetch(this.getRequestURL(requesturl, closed, order, excludeupto),
         {"headers": this.getHeaders()})
          .then( (response) => {
               if (response.ok) {
                   response.json().then( (json) => {
                       //TODO NOW gotta be a better way than this
+                      //TODO NOW set selection to correct value
+                      const s = this.sanitize;
                       let gtable =
                           `
+                          <div>
+                            <span>
+                              <input type="checkbox" id="closed"/>Include closed requests
+                              <select id="order">
+                                <option value="">Default</option>
+                                <option value="asc">Asc</option>
+                                <option value="desc">Desc</option>
+                              </select>
+                              Order
+                              <input type="text" id="excludeupto" value="${s(excludeupto)}"
+                                placeholder="excludeupto in epochms"/>
+                            <span/>
+                          </div>
+                          </div>
+                            <button id="requests" class="btn btn-primary">Submit</button>
+                          </div>
                           <table class="table">
                             <thead>
                               <tr>
@@ -605,7 +643,6 @@ export default class {
                             </thead>
                             <tbody>
                           `;
-                      const s = this.sanitize;
                       for (const r of json) {
                           gtable +=
                               `
@@ -621,6 +658,15 @@ export default class {
                       }
                       gtable += `</tbody></table>`;
                       $('#groups').html(gtable);
+                      if (closed === true) {
+                          document.getElementById("closed").checked = closed;
+                      }
+                      $('#requests').on('click', () => {
+                          const c = document.getElementById("closed").checked
+                          const o = $("#order").val();
+                          const e = $("#excludeupto").val();
+                          this.renderRequests(requesturl, c, o, e)
+                      });
                       for (const r of json) {
                           $(`#${s(r.id)}`).on('click', () => {
                               this.renderRequest(r.id);
