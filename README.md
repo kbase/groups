@@ -656,15 +656,6 @@ see /design/*.md
     * Persistent queue
   * Feeds notification implementation is unclear - currently going straight to feeds, may go
     to Kafka instead.
-  * Limit return count & filter and sort groups
-    * Every filter & sort combination (usually) requires a new MongoDB index & more
-      time & maintenance cost, so choose carefully
-    * Remember - skip is evil
-    * Find groups where I'm (owner / admin / member)
-    * Find groups that contain workspaces I administrate
-    * Find groups that contain workspace X and where I'm a group member
-    * Find groups where user X is an owner or admin
-    * Find groups where users X is a member and I'm a member
 * Performance
   * Currently group workspaces are pulled 1 at a time w/ 2 WSS calls per group workspace
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
@@ -682,6 +673,15 @@ see /design/*.md
   * When display user who denied request & reason? Need product team feedback
     * Currently request denials are not notified
   * System administration support - what do we need?
+  * Filters and sorts for groups
+    * Every filter & sort combination (usually) requires a new MongoDB index & more
+      time & maintenance cost, so choose carefully
+    * Remember - skip is evil
+    * Find groups where I'm (owner / admin / member)
+    * Find groups that contain workspaces I administrate
+    * Find groups that contain workspace X and where I'm a group member
+    * Find groups where user X is an owner or admin
+    * Find groups where users X is a member and I'm a member
 * New features
   * Associate apps with groups
   * Relations between groups

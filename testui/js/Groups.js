@@ -228,14 +228,29 @@ export default class {
          });
   }
   
-  renderGroups() {
+  renderGroups(order, excludeupto) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group").then( (response) => {
+      fetch(this.getListURL(this.serviceUrl + "group", 0, order, excludeupto))
+        .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
                   //TODO NOW gotta be a better way than this
+                  const s = this.sanitize;
                   let gtable =
                       `
+                      <div>
+                        <span>
+                          <select id="order">
+                            <option value="">Default</option>
+                            <option value="asc">Asc</option>
+                            <option value="desc">Desc</option>
+                          </select>
+                          Order
+                          <input type="text" id="excludeupto" value="${s(excludeupto)}"
+                            placeholder="excludeupto group ID"/>
+                          <button id="listgroups" class="btn btn-primary">Submit</button>
+                        </span>
+                      </div>
                       <table class="table">
                         <thead>
                           <tr>
@@ -247,7 +262,6 @@ export default class {
                         </thead>
                         <tbody>
                       `;
-                  const s = this.sanitize;
                   for (const g of json) {
                       gtable +=
                           `
@@ -261,6 +275,11 @@ export default class {
                   }
                   gtable += `</tbody></table>`;
                   $('#groups').html(gtable);
+                  $('#listgroups').on('click', () => {
+                      const o = $("#order").val();
+                      const e = $("#excludeupto").val();
+                      this.renderGroups(o, e)
+                  });
                   for (const g of json) {
                       $(`#${s(g.id)}`).on('click', () => {
                           this.renderGroup(g.id);
@@ -281,8 +300,7 @@ export default class {
   
   renderGroup(groupid) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid,
-            {"headers": this.getHeaders()})
+      fetch(this.serviceUrl + "group/" + groupid, {"headers": this.getHeaders()})
         .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -579,7 +597,7 @@ export default class {
       this.renderRequests(this.serviceUrl + "request/targeted");
   }
   
-  getRequestURL(requesturl, closed, order, excludeupto) {
+  getListURL(url, closed, order, excludeupto) {
       let params = [];
       if (closed === true) {
           params.push("closed");
@@ -593,9 +611,9 @@ export default class {
           params.push("excludeupto=" + excludeupto);
       }
       if (params.length != 0) {
-          return requesturl + "?" + params.join("&");
+          return url + "?" + params.join("&");
       } else {
-          return requesturl;
+          return url;
       }
   }
   
@@ -604,7 +622,7 @@ export default class {
       if (!this.checkToken()) {
           return;
       }
-      fetch(this.getRequestURL(requesturl, closed, order, excludeupto),
+      fetch(this.getListURL(requesturl, closed, order, excludeupto),
         {"headers": this.getHeaders()})
          .then( (response) => {
               if (response.ok) {
@@ -625,10 +643,8 @@ export default class {
                               Order
                               <input type="text" id="excludeupto" value="${s(excludeupto)}"
                                 placeholder="excludeupto in epochms"/>
-                            <span/>
-                          </div>
-                          </div>
-                            <button id="requests" class="btn btn-primary">Submit</button>
+                              <button id="requests" class="btn btn-primary">Submit</button>
+                            </span>
                           </div>
                           <table class="table">
                             <thead>
