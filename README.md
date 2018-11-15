@@ -133,11 +133,13 @@ Current error types are:
 40010	Request already exists
 40020	User already group member
 40030	Workspace already in group
+40040	Catalog method already in group
 50000	No such group
 50010	No such request
 50020	No such user
-50030	No such workspace
-50040	No such custom field
+50030	No such custom field
+50040	No such workspace
+50050	No such catalog entry
 60000	Request closed
 70000	Unsupported operation
 ```
