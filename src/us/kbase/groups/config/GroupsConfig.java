@@ -135,10 +135,8 @@ public class GroupsConfig {
 			logger = new NullLogger();
 		} else {
 			// may want to allow configuring the logger name, but YAGNI
-			logger = new JsonServerSysLogAutoLogger(new JsonServerSyslog(LOG_NAME,
-					//TODO KBASECOMMON allow null for the fake config prop arg
-					"thisisafakekeythatshouldntexistihope",
-					JsonServerSyslog.LOG_LEVEL_INFO, true));
+			logger = new JsonServerSysLogAutoLogger(new JsonServerSyslog(
+					LOG_NAME, null, JsonServerSyslog.LOG_LEVEL_INFO, true));
 		}
 		final Map<String, String> cfg = getConfig(filepath, fileOpener);
 		ignoreIPHeaders = TRUE.equals(getString(KEY_IGNORE_IP_HEADERS, cfg));

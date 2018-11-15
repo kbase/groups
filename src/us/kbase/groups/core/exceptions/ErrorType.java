@@ -30,16 +30,20 @@ public enum ErrorType {
 	USER_IS_MEMBER			(40020, "User already group member"),
 	/** The workspace is already a member of the group. */
 	WORKSPACE_IN_GROUP		(40030, "Workspace already in group"),
+	/** The catalog method is already a member of the group. */
+	CATALOG_METHOD_IN_GROUP	(40040, "Catalog method already in group"),
 	/** The requested group does not exist. */
 	NO_SUCH_GROUP			(50000, "No such group"),
 	/** The requested request does not exist. */
 	NO_SUCH_REQUEST			(50010, "No such request"),
 	/** The requested user does not exist. */
 	NO_SUCH_USER			(50020, "No such user"),
-	/** The workspace does not exist. */
-	NO_SUCH_WORKSPACE		(50030, "No such workspace"),
 	/** The custom field does not exist. */
-	NO_SUCH_CUSTOM_FIELD	(50040, "No such custom field"),
+	NO_SUCH_CUSTOM_FIELD	(50030, "No such custom field"),
+	/** The workspace does not exist. */
+	NO_SUCH_WORKSPACE		(50040, "No such workspace"),
+	/** The catalog module or method does not exist. */
+	NO_SUCH_CATALOG_ENTRY	(50050, "No such catalog entry"),
 	/** The request is closed. */
 	REQUEST_CLOSED			(60000, "Request closed"),
 	/** The requested operation is not supported. */
