@@ -79,4 +79,20 @@ public class CatalogMethodTest {
 		}
 	}
 	
+	@Test
+	public void compare() throws Exception {
+		compare("foo.bar", "foo.bar", 0);
+		compare("fao.bar", "fbo.bar", -1);
+		compare("foo.bar", "foo.bbr", -1);
+		compare("fbo.bar", "fao.bar", 1);
+		compare("foo.bbr", "foo.bar", 1);
+	}
+	
+	private void compare(final String one, final String two, final int expected)
+			throws Exception {
+		assertThat("incorrect compare",
+				new CatalogMethod(one).compareTo(new CatalogMethod(two)),
+				is(expected));
+	}
+	
 }
