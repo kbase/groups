@@ -11,7 +11,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  * @author gaprice@lbl.gov
  *
  */
-public class CatalogMethod {
+public class CatalogMethod implements Comparable<CatalogMethod> {
 
 	private final CatalogModule module;
 	private final String method;
@@ -63,6 +63,15 @@ public class CatalogMethod {
 		return method;
 	}
 
+	@Override
+	public int compareTo(final CatalogMethod o) {
+		final int c1 = module.compareTo(o.module);
+		if (c1 != 0) {
+			return c1;
+		}
+		return method.compareTo(o.method);
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

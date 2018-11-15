@@ -17,7 +17,7 @@ public interface CatalogHandler {
 	 * @param user the user.
 	 * @return true if the user is a method owner, false otherwise.
 	 * @throws CatalogHandlerException if an error occurs contacting the catalog.
-	 * @throws NoSuchCatalogEntryException if there is no catalog method with the given name.
+	 * @throws NoSuchCatalogEntryException if there is no catalog module with the given name.
 	 */
 	boolean isAdministrator(CatalogModule module, UserName user)
 			throws CatalogHandlerException, NoSuchCatalogEntryException;
@@ -41,7 +41,7 @@ public interface CatalogHandler {
 	 * @param module the module to query.
 	 * @return the set of owners.
 	 * @throws CatalogHandlerException if an error occurs contacting the catalog.
-	 * @throws NoSuchCatalogEntryException if there is no catalog method with the given name.
+	 * @throws NoSuchCatalogEntryException if there is no catalog module with the given name.
 	 */
 	Set<UserName> getOwners(CatalogModule module)
 			throws NoSuchCatalogEntryException, CatalogHandlerException;
