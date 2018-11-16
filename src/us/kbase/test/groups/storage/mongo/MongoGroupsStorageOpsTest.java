@@ -37,6 +37,7 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -133,6 +134,8 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(new UserName("a3"))
 				.withWorkspace(new WorkspaceID(31415))
 				.withWorkspace(new WorkspaceID(602))
+				.withCatalogMethod(new CatalogMethod("yay.boo"))
+				.withCatalogMethod(new CatalogMethod("futz.batz"))
 				.withCustomField(new NumberedCustomField("foo-83"), "bar")
 				.withCustomField(new NumberedCustomField("whoo"), "whee")
 				.build());
@@ -150,6 +153,8 @@ public class MongoGroupsStorageOpsTest {
 						.withAdministrator(new UserName("a3"))
 						.withWorkspace(new WorkspaceID(31415))
 						.withWorkspace(new WorkspaceID(602))
+						.withCatalogMethod(new CatalogMethod("yay.boo"))
+						.withCatalogMethod(new CatalogMethod("futz.batz"))
 						.withCustomField(new NumberedCustomField("foo-83"), "bar")
 						.withCustomField(new NumberedCustomField("whoo"), "whee")
 						.build()));

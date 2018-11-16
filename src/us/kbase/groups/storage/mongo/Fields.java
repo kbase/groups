@@ -31,6 +31,8 @@ public class Fields {
 	public static final String GROUP_MEMBERS = "memb";
 	/** The IDs of the workspaces associated with the group. */
 	public static final String GROUP_WORKSPACES = "ws";
+	/** The IDs of the catalog methods associated with the group. */
+	public static final String GROUP_CATALOG_METHODS = "catmeth";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "create";
 	/** The group modification date. */
