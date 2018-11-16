@@ -735,7 +735,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException {
-		if (!alterWorkspaceInGroup(groupID, wsid, modDate, true)) {
+		checkNotNull(wsid, "wsid");
+		if (!alterListFieldInGroup(groupID, modDate, true, Fields.GROUP_WORKSPACES,
+				wsid.getID())) {
 			throw new WorkspaceExistsException(wsid.getID() + "");
 		}
 	}
@@ -746,27 +748,28 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final WorkspaceID wsid,
 			final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException {
-		if (!alterWorkspaceInGroup(groupID, wsid, modDate, false)) {
+		checkNotNull(wsid, "wsid");
+		if (!alterListFieldInGroup(groupID, modDate, false, Fields.GROUP_WORKSPACES,
+				wsid.getID())) {
 			throw new NoSuchWorkspaceException(String.format(
 					"Group %s does not include workspace %s", groupID.getName(), wsid.getID()));
 		}
 	}
-		
+
 	// true if modified, false otherwise.
-	private boolean alterWorkspaceInGroup(
+	private boolean alterListFieldInGroup(
 			final GroupID groupID,
-			final WorkspaceID wsid,
 			final Instant modDate,
-			final boolean add)
-			throws NoSuchGroupException, GroupsStorageException {
+			final boolean add,
+			final String field,
+			final Object item)
+			throws GroupsStorageException, NoSuchGroupException {
 		checkNotNull(groupID, "groupID");
-		checkNotNull(wsid, "wsid");
 		checkNotNull(modDate, "modDate");
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				.append(Fields.GROUP_WORKSPACES,
-						add ? new Document("$ne", wsid.getID()) : wsid.getID());
+				.append(field, add ? new Document("$ne", item) : item);
 		final Document update = new Document(add ? "$addToSet" : "$pull",
-				new Document(Fields.GROUP_WORKSPACES, wsid.getID()))
+				new Document(field, item))
 				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
