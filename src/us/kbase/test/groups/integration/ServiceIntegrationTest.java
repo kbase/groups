@@ -3,12 +3,14 @@ package us.kbase.test.groups.integration;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockserver.model.JsonBody.json;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +31,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockserver.integration.ClientAndServer;
+import org.mockserver.matchers.MatchType;
+import org.mockserver.model.HttpRequest;
+import org.mockserver.model.HttpResponse;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.mongodb.client.MongoDatabase;
 
@@ -71,6 +78,7 @@ public class ServiceIntegrationTest {
 	
 	private static final String DB_NAME = "test_groups_service";
 	
+	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final Client CLI = ClientBuilder.newClient();
 	
 	private static MongoStorageTestManager MANAGER = null;
@@ -80,6 +88,7 @@ public class ServiceIntegrationTest {
 	private static WorkspaceClient WS_CLI1 = null;
 	private static WorkspaceClient WS_CLI2 = null;
 	private static MongoDatabase WSDB = null;
+	private static ClientAndServer mockCatalogClientAndServer;
 	private static StandaloneGroupsServer SERVER = null;
 	private static int PORT = -1;
 	private static String HOST = null;
@@ -128,8 +137,12 @@ public class ServiceIntegrationTest {
 		System.out.println(String.format("Started workspace service %s at %s",
 				WS_CLI1.ver(), WS_URL));
 
+		// TODO TEST replace mockserver with actual catalog service? Might be too much work. Docker?
+		mockCatalogClientAndServer = setUpCatalogMockServer();
+		
 		// set up the Groups server
-		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME, authURL, TOKEN2, WS_URL);
+		final Path cfgfile = generateTempConfigFile(MANAGER, DB_NAME, authURL, TOKEN2, WS_URL,
+				new URL("http://localhost:" + mockCatalogClientAndServer.getLocalPort()));
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		SERVER = new StandaloneGroupsServer();
 		new ServerThread(SERVER).start();
@@ -141,12 +154,42 @@ public class ServiceIntegrationTest {
 		HOST = "http://localhost:" + PORT;
 	}
 	
+	// sets up a version response for starting up the groups server
+	private static ClientAndServer setUpCatalogMockServer() throws Exception {
+		// comment out these lines to see mockserver logs, which are very helpful for debugging
+		// using org.mockserver does not work, must include .mock
+		// https://github.com/jamesdbloom/mockserver/issues/561
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("org.mockserver.mock"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		mockCatalogClientAndServer = ClientAndServer
+				.startClientAndServer(TestCommon.findFreePort());
+		final HttpResponse resp = new HttpResponse()
+				.withStatusCode(200)
+				.withBody(MAPPER.writeValueAsString(ImmutableMap.of(
+						"version", "1.1",
+						"id", "3",
+						"result", Arrays.asList("2.1.3"))));
+		mockCatalogClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withBody(json(MAPPER.writeValueAsString(ImmutableMap.of(
+							"method", "Catalog.version",
+							"params", Collections.emptyList())),
+							MatchType.ONLY_MATCHING_FIELDS))
+			).respond(
+				resp
+			);
+		return mockCatalogClientAndServer;
+	}
+
 	public static Path generateTempConfigFile(
 			final MongoStorageTestManager manager,
 			final String dbName,
 			final URL authURL,
 			final String wsToken,
-			final URL wsURL)
+			final URL wsURL,
+			final URL catalogURL)
 			throws IOException {
 		
 		final Ini ini = new Ini();
@@ -156,7 +199,7 @@ public class ServiceIntegrationTest {
 		sec.add("auth-url", authURL.toString());
 		sec.add("workspace-admin-token", wsToken);
 		sec.add("workspace-url", wsURL.toString());
-		sec.add("catalog-url", "http://fakeurlfornowwillneedtomock.com");
+		sec.add("catalog-url", catalogURL.toString());
 		//TODO TEST with actual notifier? depends how hard it is to run feeds. Or test with mock notifier
 		sec.add("notifier-factory", SLF4JNotifierFactory.class.getName());
 		sec.add("allow-insecure-urls", "true");
@@ -196,6 +239,7 @@ public class ServiceIntegrationTest {
 	public void clean() {
 		TestCommon.destroyDB(MANAGER.db);
 		TestCommon.destroyDB(WSDB);
+		mockCatalogClientAndServer.reset();
 	}
 	
 	

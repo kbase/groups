@@ -45,6 +45,7 @@ import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -106,6 +107,7 @@ public class GroupsTest {
 		final GroupsStorage storage = mock(GroupsStorage.class);
 		final UserHandler uh = mock(UserHandler.class);
 		final WorkspaceHandler wh = mock(WorkspaceHandler.class);
+		final CatalogHandler ch = mock(CatalogHandler.class);
 		final FieldValidators val = mock(FieldValidators.class);
 		final Notifications notis = mock(Notifications.class);
 		final UUIDGenerator uuidGen = mock(UUIDGenerator.class);
@@ -114,10 +116,11 @@ public class GroupsTest {
 		
 		final Constructor<Groups> c = Groups.class.getDeclaredConstructor(
 				GroupsStorage.class, UserHandler.class, WorkspaceHandler.class,
-				FieldValidators.class, Notifications.class, UUIDGenerator.class, Clock.class);
+				CatalogHandler.class, FieldValidators.class, Notifications.class,
+				UUIDGenerator.class, Clock.class);
 		c.setAccessible(true);
-		final Groups instance = c.newInstance(storage, uh, wh, val, notis, uuidGen, clock);
-		return new TestMocks(instance, storage, uh, wh, val, notis, uuidGen, clock);
+		final Groups instance = c.newInstance(storage, uh, wh, ch, val, notis, uuidGen, clock);
+		return new TestMocks(instance, storage, uh, wh, ch, val, notis, uuidGen, clock);
 	}
 	
 	public static class TestMocks {
@@ -126,7 +129,8 @@ public class GroupsTest {
 		public final GroupsStorage storage;
 		public final UserHandler userHandler;
 		public final WorkspaceHandler wsHandler;
-		private final FieldValidators validators;
+		public final CatalogHandler catHandler;
+		public final FieldValidators validators;
 		public final Notifications notifs;
 		public final UUIDGenerator uuidGen;
 		public final Clock clock;
@@ -136,6 +140,7 @@ public class GroupsTest {
 				final GroupsStorage storage,
 				final UserHandler userHandler,
 				final WorkspaceHandler wsHandler,
+				final CatalogHandler catHandler,
 				final FieldValidators validators,
 				final Notifications notifs,
 				final UUIDGenerator uuidGen,
@@ -144,6 +149,7 @@ public class GroupsTest {
 			this.storage = storage;
 			this.userHandler = userHandler;
 			this.wsHandler = wsHandler;
+			this.catHandler = catHandler;
 			this.validators = validators;
 			this.notifs = notifs;
 			this.uuidGen = uuidGen;
@@ -156,25 +162,28 @@ public class GroupsTest {
 		final GroupsStorage s = mock(GroupsStorage.class);
 		final UserHandler u = mock(UserHandler.class);
 		final WorkspaceHandler w = mock(WorkspaceHandler.class);
+		final CatalogHandler c = mock(CatalogHandler.class);
 		final FieldValidators v = mock(FieldValidators.class);
 		final Notifications n = mock(Notifications.class);
 		
-		failConstruct(null, u, w, v, n, new NullPointerException("storage"));
-		failConstruct(s, null, w, v, n, new NullPointerException("userHandler"));
-		failConstruct(s, u, null, v, n, new NullPointerException("wsHandler"));
-		failConstruct(s, u, w, null, n, new NullPointerException("validators"));
-		failConstruct(s, u, w, v, null, new NullPointerException("notifications"));
+		failConstruct(null, u, w, c, v, n, new NullPointerException("storage"));
+		failConstruct(s, null, w, c, v, n, new NullPointerException("userHandler"));
+		failConstruct(s, u, null, c, v, n, new NullPointerException("wsHandler"));
+		failConstruct(s, u, w, null, v, n, new NullPointerException("catHandler"));
+		failConstruct(s, u, w, c, null, n, new NullPointerException("validators"));
+		failConstruct(s, u, w, c, v, null, new NullPointerException("notifications"));
 	}
 	
 	private void failConstruct(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final CatalogHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final Exception expected) {
 		try {
-			new Groups(storage, userHandler, wsHandler, validators, notifications);
+			new Groups(storage, userHandler, wsHandler, catHandler, validators, notifications);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

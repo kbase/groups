@@ -664,6 +664,7 @@ see /design/*.md
       deleted / missing workspace instead of erroring out
     * (WS) Add bulk call for get_workspace_info with same error handling option
     * Cache results
+  * Cache results of catalog service queries
 * Usability
   * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate
@@ -700,4 +701,5 @@ see /design/*.md
   * HTTP2 support
   * Reduce code duplication between services - see TODO.md
   * May need more field validators depending on UI needs
+    * Make private fields?
   * Although WS Admin read privs are no longer needed for groups, it'd still be good to finish.
