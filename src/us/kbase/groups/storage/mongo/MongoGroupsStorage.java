@@ -49,9 +49,11 @@ import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.catalog.CatalogMethod;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -756,6 +758,34 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 
+	@Override
+	public void addCatalogMethod(
+			final GroupID groupID,
+			final CatalogMethod method,
+			final Instant modDate)
+			throws NoSuchGroupException, CatalogMethodExistsException, GroupsStorageException {
+		checkNotNull(method, "method");
+		if (!alterListFieldInGroup(groupID, modDate, true, Fields.GROUP_CATALOG_METHODS,
+				method.getFullMethod())) {
+			throw new CatalogMethodExistsException(method.getFullMethod());
+		}
+	}
+	
+	@Override
+	public void removeCatalogMethod(
+			final GroupID groupID,
+			final CatalogMethod method,
+			final Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchCatalogEntryException {
+		checkNotNull(method, "method");
+		if (!alterListFieldInGroup(groupID, modDate, false, Fields.GROUP_CATALOG_METHODS,
+				method.getFullMethod())) {
+			throw new NoSuchCatalogEntryException(String.format(
+					"Group %s does not include catalog method %s",
+					groupID.getName(), method.getFullMethod()));
+		}
+	}
+	
 	// true if modified, false otherwise.
 	private boolean alterListFieldInGroup(
 			final GroupID groupID,
