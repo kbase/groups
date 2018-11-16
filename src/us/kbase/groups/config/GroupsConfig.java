@@ -68,6 +68,7 @@ public class GroupsConfig {
 	private static final String KEY_AUTH_URL = "auth-url";
 	private static final String KEY_WORKSPACE_URL = "workspace-url";
 	private static final String KEY_WORKSPACE_TOKEN = "workspace-admin-token";
+	private static final String KEY_CATALOG_URL = "catalog-url";
 	private static final String KEY_NOTIFIER_FACTORY = "notifier-factory";
 	private static final String KEY_PREFIX_NOTIFIER_PARAMS = "notifier-param-";
 	private static final String KEY_IGNORE_IP_HEADERS = "dont-trust-x-ip-headers";
@@ -88,6 +89,7 @@ public class GroupsConfig {
 	private final URL authURL;
 	private final URL workspaceURL;
 	private final Token workspaceAdminToken;
+	private final URL catalogURL;
 	private final String notifierFactory;
 	private final Map<String, String> notifierParameters;
 	private final SLF4JAutoLogger logger;
@@ -144,6 +146,7 @@ public class GroupsConfig {
 		authURL = getURL(KEY_AUTH_URL, cfg);
 		workspaceURL = getURL(KEY_WORKSPACE_URL, cfg);
 		workspaceAdminToken = getToken(KEY_WORKSPACE_TOKEN, cfg);
+		catalogURL = getURL(KEY_CATALOG_URL, cfg);
 		notifierFactory = getString(KEY_NOTIFIER_FACTORY, cfg, true);
 		notifierParameters = getParams(KEY_PREFIX_NOTIFIER_PARAMS, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
@@ -395,14 +398,14 @@ public class GroupsConfig {
 	}
 	
 	/** Get the root url of the KBase authentication service.
-	 * @return the url
+	 * @return the url.
 	 */
 	public URL getAuthURL() {
 		return authURL;
 	}
 	
 	/** Get the root url of the KBase workspace service.
-	 * @return the url
+	 * @return the url.
 	 */
 	public URL getWorkspaceURL() {
 		return workspaceURL;
@@ -413,6 +416,13 @@ public class GroupsConfig {
 	 */
 	public Token getWorkspaceAdminToken() {
 		return workspaceAdminToken;
+	}
+	
+	/** Get the root url of the KBase catalog service.
+	 * @return the url.
+	 */
+	public URL getCatalogURL() {
+		return catalogURL;
 	}
 	
 	/** Get the name of the factory class for the notifier.
