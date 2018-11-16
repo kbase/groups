@@ -15,12 +15,16 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth.AuthToken;
+import us.kbase.catalog.CatalogClient;
 import us.kbase.common.service.UnauthorizedException;
+import us.kbase.groups.cataloghandler.SDKClientCatalogHandler;
 import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
+import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
@@ -107,8 +111,8 @@ public class GroupsBuilder {
 	private Groups buildGroups(final GroupsConfig c, final GroupsStorage storage)
 			throws StorageInitException, GroupsConfigurationException {
 		final UserHandler uh;
-		final WorkspaceHandler wh;
-		// these may need changes if we want to allow alternate implementations. YAGNI for now.
+		// these handler creation methods may need changes if we want to allow alternate
+		// implementations. YAGNI for now.
 		try {
 			uh = new KBaseUserHandler(
 					c.getAuthURL(), c.getWorkspaceAdminToken(), c.isAllowInsecureURLs());
@@ -117,19 +121,36 @@ public class GroupsBuilder {
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
 		
+		return new Groups(storage, uh, getWorkspaceHandler(c), getCatalogHandler(c),
+				getValidators(c), getNotifier(c));
+	}
+
+	private WorkspaceHandler getWorkspaceHandler(final GroupsConfig c)
+			throws GroupsConfigurationException {
 		try {
 			final WorkspaceClient client = new WorkspaceClient(
 					c.getWorkspaceURL(),
 					new AuthToken(c.getWorkspaceAdminToken().getToken(), "<fake>"));
 			client.setIsInsecureHttpConnectionAllowed(c.isAllowInsecureURLs());
-			wh = new SDKClientWorkspaceHandler(client);
+			return new SDKClientWorkspaceHandler(client);
 		} catch (IOException | UnauthorizedException | WorkspaceHandlerException e) {
 			throw new GroupsConfigurationException(
 					"Failed to create workspace handler: " + e.getMessage(), e);
 		}
-		return new Groups(storage, uh, wh, getValidators(c), getNotifier(c));
 	}
 
+	private CatalogHandler getCatalogHandler(final GroupsConfig c)
+			throws GroupsConfigurationException {
+		try {
+			final CatalogClient client = new CatalogClient(c.getCatalogURL());
+			client.setIsInsecureHttpConnectionAllowed(c.isAllowInsecureURLs());
+			return new SDKClientCatalogHandler(client);
+		} catch (CatalogHandlerException e) {
+			throw new GroupsConfigurationException(
+					"Failed to create catalog handler: " + e.getMessage(), e);
+		}
+	}
+	
 	private Notifications getNotifier(final GroupsConfig c)
 			throws GroupsConfigurationException {
 		final NotificationsFactory fac = Util.loadClassWithInterface(

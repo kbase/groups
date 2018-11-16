@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.GroupView.ViewType;
+import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -59,7 +60,7 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
-	/* could probably abstract the workspace handling (and upcoming apps handling) in a
+	/* could probably abstract the workspace & catalog handling in a
 	 * general resource handling system, where resources and handlers for those resources
 	 * could be specified in a configuration file. Then you could add new resources w/o major
 	 * code changes.
@@ -71,6 +72,8 @@ public class Groups {
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final WorkspaceHandler wsHandler;
+	@SuppressWarnings("unused") // for now
+	private final CatalogHandler catHandler;
 	private final FieldValidators validators;
 	private final Notifications notifications;
 	private final UUIDGenerator uuidGen;
@@ -81,17 +84,21 @@ public class Groups {
 	 * @param userHandler the user handler by which users shall be handled.
 	 * @param wsHandler the workspace handler by which information from the workspace service
 	 * will be retrieved.
+	 * @param catHandler the catalog handler by which information from the catalog service
+	 * will be retrieved.
 	 * @param validators the validators for group custom fields.
 	 * @param notifications where notification should be sent.
 	 */
 	public Groups(
+			// getting to the point where a builder might be useful, but everything's required.
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final CatalogHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications) {
-		this(storage, userHandler, wsHandler, validators, notifications, new UUIDGenerator(),
-				Clock.systemDefaultZone());
+		this(storage, userHandler, wsHandler, catHandler, validators, notifications,
+				new UUIDGenerator(), Clock.systemDefaultZone());
 	}
 	
 	// for testing
@@ -99,6 +106,7 @@ public class Groups {
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
+			final CatalogHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final UUIDGenerator uuidGen,
@@ -106,11 +114,13 @@ public class Groups {
 		checkNotNull(storage, "storage");
 		checkNotNull(userHandler, "userHandler");
 		checkNotNull(wsHandler, "wsHandler");
+		checkNotNull(catHandler, "catHandler");
 		checkNotNull(validators, "validators");
 		checkNotNull(notifications, "notifications");
 		this.storage = storage;
 		this.userHandler = userHandler;
 		this.wsHandler = wsHandler;
+		this.catHandler = catHandler;
 		this.validators = validators;
 		this.notifications = notifications;
 		this.uuidGen = uuidGen;
