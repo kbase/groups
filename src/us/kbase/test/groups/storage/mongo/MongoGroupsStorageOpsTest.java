@@ -40,7 +40,9 @@ import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -1313,6 +1315,147 @@ public class MongoGroupsStorageOpsTest {
 			final Exception expected) {
 		try {
 			manager.storage.removeWorkspace(g, ws, modDate);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addCatalogMethod() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withCatalogMethod(new CatalogMethod("mod.meth"))
+				.build());
+		
+		manager.storage.addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod2.meth2"),
+				inst(65000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(65000)))
+						.withCatalogMethod(new CatalogMethod("mod.meth"))
+						.withCatalogMethod(new CatalogMethod("mod2.meth2"))
+						.build()));
+	}
+	
+	@Test
+	public void addCatalogMethodFailNulls() throws Exception {
+		failAddCatalogMethod(null, new CatalogMethod("m.m"), inst(1),
+				new NullPointerException("groupID"));
+		failAddCatalogMethod(new GroupID("g"), null, inst(1), new NullPointerException("method"));
+		failAddCatalogMethod(new GroupID("g"), new CatalogMethod("m.m"), null,
+				new NullPointerException("modDate"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailNoGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failAddCatalogMethod(new GroupID("gid1"), new CatalogMethod("m.m"), inst(60000),
+				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
+	}
+	
+	@Test
+	public void addCatalogMethodFailMethodExists() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withCatalogMethod(new CatalogMethod("m.m"))
+				.build());
+		
+		failAddCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m"), inst(32),
+				new CatalogMethodExistsException("m.m"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
+	}
+	
+	private void failAddCatalogMethod(
+			final GroupID g,
+			final CatalogMethod m,
+			final Instant modDate,
+			final Exception expected) {
+		try {
+			manager.storage.addCatalogMethod(g, m, modDate);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeCatalogMethod() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withCatalogMethod(new CatalogMethod("m.m"))
+				.withCatalogMethod(new CatalogMethod("m2.m2"))
+				.build());
+		
+		manager.storage.removeCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m"),
+				inst(109200));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(109200)))
+						.withCatalogMethod(new CatalogMethod("m2.m2"))
+						.build()));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNulls() throws Exception {
+		failRemoveCatalogMethod(null, new CatalogMethod("m.m"), inst(1),
+				new NullPointerException("groupID"));
+		failRemoveCatalogMethod(new GroupID("g"), null, inst(1),
+				new NullPointerException("method"));
+		failRemoveCatalogMethod(new GroupID("g"), new CatalogMethod("m.m"), null,
+				new NullPointerException("modDate"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNoGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
+		
+		failRemoveCatalogMethod(new GroupID("gid1"), new CatalogMethod("m.m"), inst(60000),
+				new NoSuchGroupException("gid1"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNoMethod() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withCatalogMethod(new CatalogMethod("m.m"))
+				.build());
+		
+		failRemoveCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m2"), inst(1),
+				new NoSuchCatalogEntryException("Group gid does not include catalog method m.m2"));
+		
+		assertModificationTimeIs(new GroupID("gid"), inst(50000));
+	}
+	
+	private void failRemoveCatalogMethod(
+			final GroupID g,
+			final CatalogMethod m,
+			final Instant modDate,
+			final Exception expected) {
+		try {
+			manager.storage.removeCatalogMethod(g, m, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

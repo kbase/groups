@@ -10,7 +10,10 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -145,6 +148,28 @@ public interface GroupsStorage {
 	 */
 	void removeWorkspace(GroupID groupID, WorkspaceID wsid, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException;
+	
+	/** Add a catalog method to a group.
+	 * @param groupID the group ID.
+	 * @param method the method.
+	 * @param modDate the modification date to apply to the group.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws CatalogMethodExistsException if the method already exists in the group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void addCatalogMethod(GroupID groupID, CatalogMethod method, Instant modDate)
+			throws NoSuchGroupException, CatalogMethodExistsException, GroupsStorageException;
+	
+	/** Remove a catalog method from a group.
+	 * @param groupID the group ID.
+	 * @param method the method.
+	 * @param modDate the modification date to apply to the group.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws NoSuchCatalogEntryException if the group does not contain the method.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void removeCatalogMethod(GroupID groupID, CatalogMethod method, Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchCatalogEntryException;
 	
 	/** Store a new request. The request ID must not already be present in the system.
 	 * @param request the new request.
