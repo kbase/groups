@@ -48,6 +48,7 @@ import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -382,6 +383,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_TYPE, group.getType().name())
 				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIDs())
+				/* this might not be the best way to store them. Can still search by module
+				 * by using a regex, but if we need to add more fields in future it'll be a pain.
+				 * I'm guessing we won't, so YAGNI for now.
+				 * I might regret that decision.
+				 */
+				.append(Fields.GROUP_CATALOG_METHODS, group.getCatalogMethods().stream()
+						.map(m -> m.getFullMethod()).collect(Collectors.toList()))
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
 				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null))
@@ -548,9 +556,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
 					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
-			addMembers(b, grp);
-			addAdmins(b, grp);
-			addWorkspaces(b, grp);
+			addList(u -> b.withMember(new UserName(u)), grp, Fields.GROUP_MEMBERS, String.class);
+			addList(u -> b.withAdministrator(new UserName(u)), grp, Fields.GROUP_ADMINS,
+					String.class);
+			addList(w -> b.withWorkspace(new WorkspaceID(w)), grp, Fields.GROUP_WORKSPACES,
+					Integer.class);
+			addList(m -> b.withCatalogMethod(new CatalogMethod(m)), grp,
+					Fields.GROUP_CATALOG_METHODS, String.class);
 			addCustomFields(b, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
@@ -570,34 +582,22 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 
-	// could probably combine the next 3 methods with lambdas, but eh
-	private void addMembers(final Group.Builder builder, final Document groupDoc)
-			throws MissingParameterException, IllegalParameterException {
-		// can't be null
-		@SuppressWarnings("unchecked")
-		final List<String> members = (List<String>) groupDoc.get(Fields.GROUP_MEMBERS);
-		for (final String m: members) {
-			builder.withMember(new UserName(m));
-		}
+	private interface BuildConsumer<T> {
+		
+		void apply(T t) throws MissingParameterException, IllegalParameterException;
 	}
-	
-	private void addAdmins(final Group.Builder builder, final Document groupDoc)
+		
+	private <T> void addList(
+			final BuildConsumer<T> cons,
+			final Document groupDoc,
+			final String field,
+			final Class<T> type)
 			throws MissingParameterException, IllegalParameterException {
-		// can't be null
+		// can't be null assuming the field is set correctly
 		@SuppressWarnings("unchecked")
-		final List<String> admins = (List<String>) groupDoc.get(Fields.GROUP_ADMINS);
-		for (final String a: admins) {
-			builder.withAdministrator(new UserName(a));
-		}
-	}
-	
-	private void addWorkspaces(final Group.Builder builder, final Document groupDoc)
-			throws MissingParameterException, IllegalParameterException {
-		// can't be null
-		@SuppressWarnings("unchecked")
-		final List<Integer> wsids = (List<Integer>) groupDoc.get(Fields.GROUP_WORKSPACES);
-		for (final int w: wsids) {
-			builder.withWorkspace(new WorkspaceID(w));
+		final List<T> items = (List<T>) groupDoc.get(field);
+		for (final T item: items) {
+			cons.apply(item);
 		}
 	}
 	
