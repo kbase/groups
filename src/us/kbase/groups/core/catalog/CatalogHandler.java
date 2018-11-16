@@ -13,16 +13,16 @@ import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 public interface CatalogHandler {
 
 	/** Determine whether a user is an owner of a catalog module.
-	 * @param method the catalog method.
+	 * @param module the catalog method.
 	 * @param user the user.
 	 * @return true if the user is a method owner, false otherwise.
 	 * @throws CatalogHandlerException if an error occurs contacting the catalog.
 	 * @throws NoSuchCatalogEntryException if there is no catalog module with the given name.
 	 */
-	boolean isAdministrator(CatalogModule module, UserName user)
+	boolean isOwner(CatalogModule module, UserName user)
 			throws CatalogHandlerException, NoSuchCatalogEntryException;
 
-	/** Determine whether a catalog method exists.
+	/** Determine whether a catalog method exists and is released.
 	 * @param method the method to check.
 	 * @return true if the method exists, false otherwise.
 	 * @throws CatalogHandlerException if an error occurs contacting the catalog.

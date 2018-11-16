@@ -57,7 +57,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	/** Create the handler.
 	 * @param client the workspace client to use to communicate with the workspace. The
 	 * client must be initialized with a token with administrative write privileges.
-	 * @throws WorkspaceHandlerException
+	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace or
+	 * the workspace version is less than 0.8.0.
 	 */
 	public SDKClientWorkspaceHandler(final WorkspaceClient client)
 			throws WorkspaceHandlerException {
