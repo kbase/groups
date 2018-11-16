@@ -6,6 +6,7 @@ mongo-pwd={{ default .Env.mongo_pwd "" }}
 auth-url={{ default .Env.auth_url "https://ci.kbase.us/services/auth" }}
 workspace-url={{ default .Env.workspace_url "https://ci.kbase.us/services/ws" }}
 workspace-admin-token={{ default .Env.workspace_admin_token ""}}
+catalog-url={{ default .Env.catalog_url "https://ci.kbase.us/services/catalog" }}
 allow-insecure-urls= {{ default .Env.allow_insecure_urls "false" }}
 
 notifier-factory={{ default .Env.notifier_factory "us.kbase.groups.notifications.DirectFeedsServiceNotifierFactory" }}

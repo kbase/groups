@@ -156,6 +156,7 @@ public class ServiceIntegrationTest {
 		sec.add("auth-url", authURL.toString());
 		sec.add("workspace-admin-token", wsToken);
 		sec.add("workspace-url", wsURL.toString());
+		sec.add("catalog-url", "http://fakeurlfornowwillneedtomock.com");
 		//TODO TEST with actual notifier? depends how hard it is to run feeds. Or test with mock notifier
 		sec.add("notifier-factory", SLF4JNotifierFactory.class.getName());
 		sec.add("allow-insecure-urls", "true");

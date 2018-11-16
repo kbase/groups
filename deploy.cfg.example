@@ -19,6 +19,9 @@ workspace-url=https://ci.kbase.us/services/ws
 # KBase Workspace administrator service token.
 workspace-admin-token=
 
+# KBase catalog service root url.
+catalog-url=https://ci.kbase.us/services/catalog
+
 # The notifier factory class that will provide the notifier for notifications and any parameters
 # for that class.
 notifier-factory=us.kbase.groups.notifications.DirectFeedsServiceNotifierFactory
