@@ -26,6 +26,7 @@ public class CatalogMethodTest {
 		
 		assertThat("incorrect module", cm.getModule(), is(new CatalogModule("mod")));
 		assertThat("incorrect method", cm.getMethod(), is("meth"));
+		assertThat("incorrect method", cm.getFullMethod(), is("mod.meth"));
 	}
 	
 	@Test
@@ -57,6 +58,7 @@ public class CatalogMethodTest {
 		
 		assertThat("incorrect module", cm.getModule(), is(new CatalogModule("mod")));
 		assertThat("incorrect method", cm.getMethod(), is("meth"));
+		assertThat("incorrect method", cm.getFullMethod(), is("mod.meth"));
 	}
 	
 	@Test

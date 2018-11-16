@@ -62,6 +62,13 @@ public class CatalogMethod implements Comparable<CatalogMethod> {
 	public String getMethod() {
 		return method;
 	}
+	
+	/** Returns the method in the module.method format.
+	 * @return the full method name.
+	 */
+	public String getFullMethod() {
+		return module.getName() + "." + method;
+	}
 
 	@Override
 	public int compareTo(final CatalogMethod o) {

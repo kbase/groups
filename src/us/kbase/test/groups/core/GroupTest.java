@@ -17,6 +17,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.core.GroupID;
@@ -47,8 +48,9 @@ public class GroupTest {
 		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(), is(set()));
-		assertThat("incorrect member", g.getAdministrators(), is(set()));
-		assertThat("incorrec wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set())));
+		assertThat("incorrect admins", g.getAdministrators(), is(set()));
+		assertThat("incorrect wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set())));
+		assertThat("incorrect methods", g.getCatalogMethods(), is(set()));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.ORGANIZATION));
@@ -67,6 +69,8 @@ public class GroupTest {
 				.withAdministrator(new UserName("whoo"))
 				.withWorkspace(new WorkspaceID(1))
 				.withWorkspace(new WorkspaceID(3))
+				.withCatalogMethod(new CatalogMethod("foo.bar"))
+				.withCatalogMethod(new CatalogMethod("baz.bat"))
 				.withType(GroupType.PROJECT)
 				.withCustomField(new NumberedCustomField("foo-1"), "bar")
 				.withCustomField(new NumberedCustomField("baz"), "bat")
@@ -82,7 +86,9 @@ public class GroupTest {
 				is(set(new UserName("bar"), new UserName("baz"))));
 		assertThat("incorrect admin", g.getAdministrators(),
 				is(set(new UserName("whee"), new UserName("whoo"))));
-		assertThat("incorrec wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set(1, 3))));
+		assertThat("incorrect wsids", g.getWorkspaceIDs(), is(WorkspaceIDSet.fromInts(set(1, 3))));
+		assertThat("incorrect methods", g.getCatalogMethods(),
+				is(set(new CatalogMethod("foo.bar"), new CatalogMethod("baz.bat"))));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
@@ -125,6 +131,13 @@ public class GroupTest {
 		
 		try {
 			g.getAdministrators().add(new UserName("baz"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		try {
+			g.getCatalogMethods().add(new CatalogMethod("f.b"));
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passed
@@ -222,6 +235,20 @@ public class GroupTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("wsid"));
+		}
+	}
+	
+	@Test
+	public void withCatalogMethodFail() throws Exception {
+		final Builder b = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
+		
+		try {
+			b.withCatalogMethod(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("method"));
 		}
 	}
 	

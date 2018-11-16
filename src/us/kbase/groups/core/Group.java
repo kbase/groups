@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
@@ -32,6 +33,7 @@ public class Group {
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
 	private final GroupType type;
+	private final Set<CatalogMethod> methods;
 	private final WorkspaceIDSet workspaceIDs;
 	private final Instant creationDate;
 	private final Instant modificationDate;
@@ -46,6 +48,7 @@ public class Group {
 			final Set<UserName> admins,
 			final GroupType type,
 			final Set<Integer> workspaceIDs,
+			final Set<CatalogMethod> methods,
 			final CreateAndModTimes times,
 			final Optional<String> description,
 			final Map<NumberedCustomField, String> customFields) {
@@ -56,6 +59,7 @@ public class Group {
 		this.admins = Collections.unmodifiableSet(admins);
 		this.type = type;
 		this.workspaceIDs = WorkspaceIDSet.fromInts(workspaceIDs);
+		this.methods = Collections.unmodifiableSet(methods);
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
 		this.description = description;
@@ -110,6 +114,13 @@ public class Group {
 	 */
 	public WorkspaceIDSet getWorkspaceIDs() {
 		return workspaceIDs;
+	}
+	
+	/** Get the catalog service methods associated with this group.
+	 * @return the methods.
+	 */
+	public Set<CatalogMethod> getCatalogMethods() {
+		return methods;
 	}
 
 	/** Get the date the group was created.
@@ -178,6 +189,7 @@ public class Group {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
+		result = prime * result + ((methods == null) ? 0 : methods.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
@@ -246,6 +258,13 @@ public class Group {
 		} else if (!members.equals(other.members)) {
 			return false;
 		}
+		if (methods == null) {
+			if (other.methods != null) {
+				return false;
+			}
+		} else if (!methods.equals(other.methods)) {
+			return false;
+		}
 		if (modificationDate == null) {
 			if (other.modificationDate != null) {
 				return false;
@@ -302,6 +321,7 @@ public class Group {
 		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
 		private final Set<Integer> workspaceIDs = new HashSet<>();
+		private final Set<CatalogMethod> methods = new HashSet<>();
 		private Optional<String> description = Optional.empty();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
@@ -392,6 +412,16 @@ public class Group {
 			return this;
 		}
 		
+		/** Add a catalog service method to the group.
+		 * @param method the method.
+		 * @return this builder.
+		 */
+		public Builder withCatalogMethod(final CatalogMethod method) {
+			checkNotNull(method, "method");
+			methods.add(method);
+			return this;
+		}
+		
 		/** Add a custom field to the group.
 		 * @param field the field name.
 		 * @param value the field value.
@@ -409,8 +439,8 @@ public class Group {
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, members, admins, type, workspaceIDs, times,
-					description, customFields);
+			return new Group(groupID, groupName, owner, members, admins, type, workspaceIDs,
+					methods, times, description, customFields);
 		}
 	}
 	
