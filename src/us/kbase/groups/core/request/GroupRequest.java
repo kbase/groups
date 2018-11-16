@@ -8,6 +8,7 @@ import java.util.Optional;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.Group;
 
@@ -21,6 +22,7 @@ public class GroupRequest {
 	private final GroupID groupID;
 	private final Optional<UserName> target;
 	private final Optional<WorkspaceID> wsTarget;
+	private final Optional<CatalogMethod> catTarget;
 	private final UserName requester;
 	private final GroupRequestType type;
 	private final GroupRequestStatusType statusType;
@@ -35,6 +37,7 @@ public class GroupRequest {
 			final GroupID groupID,
 			final Optional<UserName> target,
 			final Optional<WorkspaceID> wsTarget,
+			final Optional<CatalogMethod> catTarget,
 			final UserName requester,
 			final GroupRequestType type,
 			final GroupRequestStatusType status,
@@ -45,6 +48,7 @@ public class GroupRequest {
 		this.groupID = groupID;
 		this.target = target;
 		this.wsTarget = wsTarget;
+		this.catTarget = catTarget;
 		this.requester = requester;
 		this.type = type;
 		this.statusType = status;
@@ -87,6 +91,16 @@ public class GroupRequest {
 	public Optional<WorkspaceID> getWorkspaceTarget() {
 		return wsTarget;
 	}
+	
+	/** Get the catalog targeted by the request, if any. The target is present when the
+	 * request type is {@link GroupRequestType#INVITE_CATALOG_METHOD} or
+	 * {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD}. In this case the catalog method is
+	 * added to the group if the request is accepted.
+	 * @return the target workspace.
+	 */
+	public Optional<CatalogMethod> getCatalogMethodTarget() {
+		return catTarget;
+	}
 
 	/** Get the user that created the request. If the request type is
 	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}, the user is added to the group if
@@ -105,15 +119,18 @@ public class GroupRequest {
 	}
 	
 	/** Returns true if the request is an invitation, or false if it is a request.
-	 * Invitations are {@link GroupRequestType#INVITE_TO_GROUP} and
-	 * {@link GroupRequestType#INVITE_WORKSPACE}.
-	 * Requests are {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and
-	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}.
+	 * Invitations are {@link GroupRequestType#INVITE_TO_GROUP},
+	 * {@link GroupRequestType#INVITE_WORKSPACE}, and
+	 * {@link GroupRequestType#INVITE_CATALOG_METHOD}.
+	 * Requests are {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP},
+	 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE}, and
+	 * {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD}.
 	 * @return true if the request is an invitation.
 	 */
 	public boolean isInvite() {
 		return GroupRequestType.INVITE_TO_GROUP.equals(type) ||
-				GroupRequestType.INVITE_WORKSPACE.equals(type);
+				GroupRequestType.INVITE_WORKSPACE.equals(type) ||
+				GroupRequestType.INVITE_CATALOG_METHOD.equals(type);
 	}
 
 	/** Get the type of the status of the request.
@@ -171,6 +188,7 @@ public class GroupRequest {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((catTarget == null) ? 0 : catTarget.hashCode());
 		result = prime * result + ((closedBy == null) ? 0 : closedBy.hashCode());
 		result = prime * result + ((closedReason == null) ? 0 : closedReason.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
@@ -198,6 +216,13 @@ public class GroupRequest {
 			return false;
 		}
 		GroupRequest other = (GroupRequest) obj;
+		if (catTarget == null) {
+			if (other.catTarget != null) {
+				return false;
+			}
+		} else if (!catTarget.equals(other.catTarget)) {
+			return false;
+		}
 		if (closedBy == null) {
 			if (other.closedBy != null) {
 				return false;
@@ -306,6 +331,7 @@ public class GroupRequest {
 		private final CreateModAndExpireTimes times;
 		private Optional<UserName> target = Optional.empty();
 		private Optional<WorkspaceID> wsTarget = Optional.empty();
+		private Optional<CatalogMethod> catTarget = Optional.empty();
 		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 		private GroupRequestStatusType status = GroupRequestStatusType.OPEN;
 		private Optional<UserName> closedBy = Optional.empty();
@@ -326,21 +352,26 @@ public class GroupRequest {
 			this.times = times;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
-		 * with {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} as the type and null user and
-		 * workspace ID.
+		/** Request membership to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
+		 * with {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} as the type and null
+		 *  user, method, and workspace ID.
 		 * @return this builder.
 		 */
 		public Builder withRequestGroupMembership() {
 			this.target = Optional.empty();
 			this.wsTarget = Optional.empty();
+			this.catTarget = Optional.empty();
 			this.type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
 			return this;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		/** Invite a user to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
 		 * with {@link GroupRequestType#INVITE_TO_GROUP} as the type and a non-null user and
-		 * null workspace ID.
+		 * null workspace ID and method.
 		 * @param target the user to invite to the group.
 		 * @return this builder.
 		 */
@@ -348,13 +379,16 @@ public class GroupRequest {
 			checkNotNull(target, "target");
 			this.target = Optional.of(target);
 			this.wsTarget = Optional.empty();
+			this.catTarget = Optional.empty();
 			this.type = GroupRequestType.INVITE_TO_GROUP;
 			return this;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		/** Request that a workspace is added to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
 		 * with {@link GroupRequestType#REQUEST_ADD_WORKSPACE} as the type and a non-null
-		 * workspace ID and a null user.
+		 * workspace ID and a null user and method.
 		 * @param wsid the workspace ID that is the subject of the request.
 		 * @return this builder.
 		 */
@@ -366,13 +400,16 @@ public class GroupRequest {
 			checkNotNull(wsid, "wsid");
 			this.target = Optional.empty();
 			this.wsTarget = Optional.of(wsid);
+			this.catTarget = Optional.empty();
 			this.type = type;
 			return this;
 		}
 		
-		/** The equivalent of {@link #withType(GroupRequestType, UserName, WorkspaceID)}
+		/** Invite a workspace to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
 		 * with {@link GroupRequestType#INVITE_WORKSPACE} as the type and a non-null
-		 * workspace ID and a null user.
+		 * workspace ID and a null user and method.
 		 * @param wsid the workspace ID that is to be invited to the group.
 		 * @return this builder.
 		 */
@@ -380,19 +417,56 @@ public class GroupRequest {
 			return setWorkspaceType(wsid, GroupRequestType.INVITE_WORKSPACE);
 		}
 		
-		/** Set the type of this request. A user is required for
-		 * {@link GroupRequestType#INVITE_TO_GROUP} requests. A workspace ID is required for
-		 * {@link GroupRequestType#REQUEST_ADD_WORKSPACE} and
+		/** Request that a catalog method is added to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
+		 * with {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD} as the type and a non-null
+		 * method and a null user and workspace ID.
+		 * @param method the catalog method that is the subject of the request.
+		 * @return this builder.
+		 */
+		public Builder withRequestAddCatalogMethod(final CatalogMethod method) {
+			return setCatalogType(method, GroupRequestType.REQUEST_ADD_CATALOG_METHOD);
+		}
+
+		private Builder setCatalogType(final CatalogMethod method, final GroupRequestType type) {
+			checkNotNull(method, "method");
+			this.target = Optional.empty();
+			this.wsTarget = Optional.empty();
+			this.catTarget = Optional.of(method);
+			this.type = type;
+			return this;
+		}
+		
+		/** Invite a catalog method to a group.
+		 * The equivalent of
+		 * {@link #withType(GroupRequestType, UserName, WorkspaceID, CatalogMethod)}
+		 * with {@link GroupRequestType#INVITE_CATALOG_METHOD} as the type and a non-null
+		 * method and a null user and workspace ID.
+		 * @param method the catalog method that is the subject of the request.
+		 * @return this builder.
+		 */
+		public Builder withInviteCatalogMethod(final CatalogMethod method) {
+			return setCatalogType(method, GroupRequestType.INVITE_CATALOG_METHOD);
+		}
+		
+		/** Set the type of this request.
+		 * A user is required for {@link GroupRequestType#INVITE_TO_GROUP} requests.
+		 * A workspace ID is required for {@link GroupRequestType#REQUEST_ADD_WORKSPACE} and
 		 * {@link GroupRequestType#INVITE_WORKSPACE} requests.
+		 * A catalog method is required for {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD} and
+		 * {@link GroupRequestType#INVITE_CATALOG_METHOD} requests.
 		 * @param type the type of the request.
 		 * @param nullableUser an optional user.
 		 * @param nullableWorkspaceID an optional workspace ID.
+		 * @param nullableCatalogMethod an optional catalog method.
 		 * @return this builder.
 		 */
 		public Builder withType(
 				final GroupRequestType type,
 				final UserName nullableUser,
-				final WorkspaceID nullableWorkspaceID) {
+				final WorkspaceID nullableWorkspaceID,
+				final CatalogMethod nullableCatalogMethod) {
 			checkNotNull(type, "type");
 			if (type.equals(GroupRequestType.INVITE_TO_GROUP)) {
 				if (nullableUser == null) {
@@ -407,6 +481,12 @@ public class GroupRequest {
 			} else if (type.equals(GroupRequestType.INVITE_WORKSPACE)) {
 				checkWSID(nullableWorkspaceID);
 				return withInviteWorkspace(nullableWorkspaceID);
+			} else if (type.equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD)) {
+				checkMethod(nullableCatalogMethod);
+				return withRequestAddCatalogMethod(nullableCatalogMethod);
+			} else if (type.equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
+				checkMethod(nullableCatalogMethod);
+				return withInviteCatalogMethod(nullableCatalogMethod);
 			} else {
 				// since type is an enum, this is impossible to test unless we're missing a case
 				throw new RuntimeException("Unknown type: " + type);
@@ -417,6 +497,13 @@ public class GroupRequest {
 			if (wsid == null) {
 				throw new IllegalArgumentException(
 						"Workspace requests and invites must have a target workspace");
+			}
+		}
+		
+		private void checkMethod(final CatalogMethod method) {
+			if (method == null) {
+				throw new IllegalArgumentException(
+						"Catalog method requests and invites must have a target method");
 			}
 		}
 
@@ -436,8 +523,8 @@ public class GroupRequest {
 		 * @return the new instance.
 		 */
 		public GroupRequest build() {
-			return new GroupRequest(id, groupID, target, wsTarget, requester, type, status,
-					closedBy, closedReason, times);
+			return new GroupRequest(id, groupID, target, wsTarget, catTarget, requester, type,
+					status, closedBy, closedReason, times);
 		}
 	}
 }

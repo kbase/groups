@@ -15,7 +15,11 @@ public enum GroupRequestType {
 	/** Invite a workspace (via its administrators) to a group you administrate. */
 	INVITE_WORKSPACE			("Invite workspace to group"),
 	/** Request that a workspace you administrate is added to a group. */
-	REQUEST_ADD_WORKSPACE		("Request add workspace to group");
+	REQUEST_ADD_WORKSPACE		("Request add workspace to group"),
+	/** Invite a catalog method (via its owners) to a group you administrate. */
+	INVITE_CATALOG_METHOD		("Invite catalog method to group"),
+	/** Request that a catalog method you own is added to a group. */
+	REQUEST_ADD_CATALOG_METHOD	("Request add catalog method to group");
 	
 	private final String representation;
 	

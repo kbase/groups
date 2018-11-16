@@ -2041,10 +2041,17 @@ public class MongoGroupsStorageOpsTest {
 	public void getRequestByRequesterHitLimit() throws Exception {
 		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
 		
+		//TODO REQUEST change this to try all values, seme with the other hit limit methods.
+		final List<GroupRequestType> types = Arrays.asList(
+				GroupRequestType.REQUEST_GROUP_MEMBERSHIP,
+				GroupRequestType.INVITE_TO_GROUP,
+				GroupRequestType.REQUEST_ADD_WORKSPACE,
+				GroupRequestType.INVITE_WORKSPACE);
+		
 		for (int i = 1; i < 202; i++) {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("n" + i), new UserName("name"),
-					GroupRequestType.values()[i % GroupRequestType.values().length],
+					types.get(i % types.size()),
 					1);
 			manager.storage.storeRequest(req);
 		}
@@ -2558,7 +2565,8 @@ public class MongoGroupsStorageOpsTest {
 						.withModificationTime(inst(1000000 + (10000 * i)))
 						.build())
 				.withStatus(GroupRequestStatus.from(st, new UserName("c"), "r"))
-				.withType(type, new UserName("target"), new WorkspaceID(workspaceID))
+				.withType(type, new UserName("target"), new WorkspaceID(workspaceID),
+						new CatalogMethod("m.m"))
 				.build();
 		return req;
 	}
