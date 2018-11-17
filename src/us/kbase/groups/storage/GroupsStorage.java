@@ -2,6 +2,7 @@ package us.kbase.groups.storage;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
@@ -11,6 +12,7 @@ import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.catalog.CatalogMethod;
+import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
@@ -206,6 +208,7 @@ public interface GroupsStorage {
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param wsids the targeted workspaces for that user.
+	 * @param modules the targeted catalog modules for that user.
 	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
@@ -213,6 +216,7 @@ public interface GroupsStorage {
 	List<GroupRequest> getRequestsByTarget(
 			UserName target,
 			WorkspaceIDSet wsids,
+			Set<CatalogModule> modules,
 			GetRequestsParams params)
 			throws GroupsStorageException;
 

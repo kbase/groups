@@ -1,6 +1,7 @@
 package us.kbase.groups.storage.mongo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -49,6 +50,7 @@ import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.catalog.CatalogMethod;
+import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -830,6 +832,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 						.map(t -> t.getName()).orElse(null))
 				.append(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget()
 						.map(wt -> wt.getID()).orElse(null))
+				.append(Fields.REQUEST_TARGET_CATALOG_MODULE, request.getCatalogMethodTarget()
+						.map(m -> m.getModule().getName()).orElse(null))
+				.append(Fields.REQUEST_TARGET_CATALOG_METHOD, request.getCatalogMethodTarget()
+						.map(m -> m.getMethod()).orElse(null))
 				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy()
 						.map(cb -> cb.getName()).orElse(null))
 				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orElse(null))
@@ -899,9 +905,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 		builder.append(request.getGroupID().getName());
 		builder.append(request.getRequester().getName());
 		builder.append(request.getType().name());
-		builder.append(request.getTarget().isPresent() ? request.getTarget().get().getName() : "");
-		builder.append(request.getWorkspaceTarget().isPresent() ?
-				request.getWorkspaceTarget().get().getID() : "");
+		builder.append(request.getTarget().map(t -> t.getName()).orElse(""));
+		builder.append(request.getWorkspaceTarget().map(m -> m.getID() + "").orElse(""));
+		builder.append(request.getCatalogMethodTarget().map(m -> m.getFullMethod()).orElse(""));
 		final MessageDigest digester;
 		try {
 			digester = MessageDigest.getInstance("MD5");
@@ -942,16 +948,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public List<GroupRequest> getRequestsByTarget(
 			final UserName target,
 			final WorkspaceIDSet wsids,
+			final Set<CatalogModule> modules,
 			final GetRequestsParams params)
 			throws GroupsStorageException {
 		checkNotNull(target, "target");
 		checkNotNull(wsids, "wsids");
-		return findRequests(new Document("$or", Arrays.asList(
+		checkNoNullsInCollection(modules, "modules");
+		final List<Document> or = Arrays.asList(
 				new Document(Fields.REQUEST_TARGET, target.getName()),
 				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
 						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
-								"$in", wsids.getIDs())))),
-				params);
+								"$in", wsids.getIDs())),
+				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_CATALOG_METHOD.name())
+						.append(Fields.REQUEST_TARGET_CATALOG_MODULE, new Document(
+								"$in", modules.stream().map(m -> m.getName())
+										.collect(Collectors.toList())))
+		);
+		return findRequests(new Document("$or", or), params);
 	}
 
 	@Override
@@ -963,7 +976,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
 				.append(Fields.REQUEST_TYPE, new Document("$in", Arrays.asList(
 						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name(),
-						GroupRequestType.REQUEST_ADD_WORKSPACE.name())));
+						GroupRequestType.REQUEST_ADD_WORKSPACE.name(),
+						GroupRequestType.REQUEST_ADD_CATALOG_METHOD.name())));
 		return findRequests(query, params);
 	}
 
@@ -999,6 +1013,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final String target = req.getString(Fields.REQUEST_TARGET);
 			final Integer wsTarget = req.getInteger(Fields.REQUEST_TARGET_WORKSPACE);
 			final String closedBy = req.getString(Fields.REQUEST_CLOSED_BY);
+			final String module = req.getString(Fields.REQUEST_TARGET_CATALOG_MODULE);
 			return GroupRequest.getBuilder(
 					new RequestID(req.getString(Fields.REQUEST_ID)),
 					new GroupID(req.getString(Fields.REQUEST_GROUP_ID)),
@@ -1013,7 +1028,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target),
 							wsTarget == null ? null : new WorkspaceID(wsTarget),
-							null) // TODO NOW handle catalog methods
+							module == null ? null : new CatalogMethod(new CatalogModule(module),
+									req.getString(Fields.REQUEST_TARGET_CATALOG_METHOD)))
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),
