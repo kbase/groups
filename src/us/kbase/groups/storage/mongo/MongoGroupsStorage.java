@@ -144,12 +144,19 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// find by target and state and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS,
 				Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards ws or group admins and sort/filter by modification time.
+		// find requests targeted towards ws admins and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE,
 				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards ws or group admins with a particular state and
+		// find requests targeted towards ws admins with a particular state and
 		// sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE, Fields.REQUEST_STATUS,
+				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
+		// find requests targeted towards module owners and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET_CATALOG_MODULE,
+				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
+		// find requests targeted towards module owners with a particular state and
+		// sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_TARGET_CATALOG_MODULE, Fields.REQUEST_STATUS,
 				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
 		// find expired requests.
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
