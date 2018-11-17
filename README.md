@@ -681,10 +681,12 @@ see /design/*.md
       time & maintenance cost, so choose carefully
     * Remember - skip is evil
     * Find groups where I'm (owner / admin / member)
-    * Find groups that contain workspaces I administrate
-    * Find groups that contain workspace X and where I'm a group member
     * Find groups where user X is an owner or admin
     * Find groups where users X is a member and I'm a member
+    * Find groups that contain workspaces I administrate
+    * Find groups that contain workspace X and where I'm a group member
+    * Find groups that contain catalog methods I own
+    * Find groups that contain catalog method X
 * New features
   * Associate apps with groups
   * Relations between groups

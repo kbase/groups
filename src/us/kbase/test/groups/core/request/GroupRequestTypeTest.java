@@ -19,7 +19,9 @@ public class GroupRequestTypeTest {
 				"INVITE_TO_GROUP/Invite to group",
 				"REQUEST_GROUP_MEMBERSHIP/Request group membership",
 				"INVITE_WORKSPACE/Invite workspace to group",
-				"REQUEST_ADD_WORKSPACE/Request add workspace to group"
+				"REQUEST_ADD_WORKSPACE/Request add workspace to group",
+				"INVITE_CATALOG_METHOD/Invite catalog method to group",
+				"REQUEST_ADD_CATALOG_METHOD/Request add catalog method to group"
 				)) {
 			final String[] split = enumRep.split("/");
 			assertThat("incorrect rep",
@@ -35,7 +37,9 @@ public class GroupRequestTypeTest {
 						GroupRequestType.INVITE_TO_GROUP,
 						GroupRequestType.REQUEST_GROUP_MEMBERSHIP,
 						GroupRequestType.INVITE_WORKSPACE,
-						GroupRequestType.REQUEST_ADD_WORKSPACE)));
+						GroupRequestType.REQUEST_ADD_WORKSPACE,
+						GroupRequestType.INVITE_CATALOG_METHOD,
+						GroupRequestType.REQUEST_ADD_CATALOG_METHOD)));
 	}
 
 }

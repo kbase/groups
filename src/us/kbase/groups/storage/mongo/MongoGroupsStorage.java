@@ -1012,7 +1012,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.withType(
 							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
 							target == null ? null : new UserName(target),
-							wsTarget == null ? null : new WorkspaceID(wsTarget))
+							wsTarget == null ? null : new WorkspaceID(wsTarget),
+							null) // TODO NOW handle catalog methods
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),
