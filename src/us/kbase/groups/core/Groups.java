@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.catalog.CatalogHandler;
+import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -63,7 +65,7 @@ public class Groups {
 	/* could probably abstract the workspace & catalog handling in a
 	 * general resource handling system, where resources and handlers for those resources
 	 * could be specified in a configuration file. Then you could add new resources w/o major
-	 * code changes.
+	 * code changes. Indexing might be tricky but doable.
 	 * 
 	 * That being said, it's probably only ever going to be workspaces and apps so YAGNI.
 	 */
@@ -72,7 +74,6 @@ public class Groups {
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final WorkspaceHandler wsHandler;
-	@SuppressWarnings("unused") // for now
 	private final CatalogHandler catHandler;
 	private final FieldValidators validators;
 	private final Notifications notifications;
@@ -431,18 +432,19 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
+	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException {
+				WorkspaceHandlerException, CatalogHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
 		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
-		//TODO REQUESTS pass through owned modules
-		return storage.getRequestsByTarget(user, ws, null, params);
+		final Set<CatalogModule> mods = catHandler.getOwnedModules(user);
+		return storage.getRequestsByTarget(user, ws, mods, params);
 	}
 
 	/** Get requests where the group is the target of the request.

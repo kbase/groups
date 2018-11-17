@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
@@ -105,7 +106,7 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException, IllegalParameterException {
+				WorkspaceHandlerException, IllegalParameterException, CatalogHandlerException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}

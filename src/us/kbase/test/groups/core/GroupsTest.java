@@ -46,6 +46,8 @@ import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.catalog.CatalogHandler;
+import us.kbase.groups.core.catalog.CatalogMethod;
+import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -1601,9 +1603,12 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
-			.thenReturn(WorkspaceIDSet.fromInts(set(96)));
+				.thenReturn(WorkspaceIDSet.fromInts(set(96)));
+		when(mocks.catHandler.getOwnedModules(new UserName("user")))
+				.thenReturn(set(new CatalogModule("mod")));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("user"), WorkspaceIDSet.fromInts(set(96)), null,
+				new UserName("user"), WorkspaceIDSet.fromInts(set(96)), 
+				set(new CatalogModule("mod")),
 				GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
@@ -1627,30 +1632,43 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
 				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
+		when(mocks.catHandler.getOwnedModules(new UserName("target")))
+				.thenReturn(set(new CatalogModule("mod"), new CatalogModule("mod2")));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24)), null,
+				new UserName("target"),
+				WorkspaceIDSet.fromInts(set(96, 24)),
+				set(new CatalogModule("mod"), new CatalogModule("mod2")),
 				GetRequestsParams.getBuilder()
 						.withNullableSortAscending(false)
 						.withNullableExcludeUpTo(inst(10000))
 						.build()))
 				.thenReturn(Arrays.asList(
-					GroupRequest.getBuilder(
-							new RequestID(id1), new GroupID("gid"), new UserName("user"),
-							CreateModAndExpireTimes.getBuilder(
-									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-							.build())
-							.withInviteToGroup(new UserName("target"))
-							.build(),
-					GroupRequest.getBuilder(
-							new RequestID(id2), new GroupID("gid"), new UserName("user"),
-							CreateModAndExpireTimes.getBuilder(
-									Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-									.withModificationTime(Instant.ofEpochMilli(25000))
-									.build())
-							.withInviteWorkspace(new WorkspaceID(24))
-							.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
-							.build()
-					));
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.build())
+								.withInviteToGroup(new UserName("target"))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withInviteWorkspace(new WorkspaceID(24))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withInviteCatalogMethod(new CatalogMethod("mod2.meth"))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						));
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
 				new Token("token"), GetRequestsParams.getBuilder()
@@ -1673,6 +1691,15 @@ public class GroupsTest {
 										.build())
 								.withInviteWorkspace(new WorkspaceID(24))
 								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withInviteCatalogMethod(new CatalogMethod("mod2.meth"))
+								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						)));
 	}
@@ -3351,7 +3378,6 @@ public class GroupsTest {
 		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7100));
 	}
 	
-	//TODO WS find groups where you're an admin or a member
 	@Test
 	public void removeWorkspaceWSAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
