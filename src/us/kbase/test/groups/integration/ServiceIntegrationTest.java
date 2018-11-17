@@ -555,6 +555,7 @@ public class ServiceIntegrationTest {
 				.with("description", desc)
 				.with("id", groupID)
 				.with("workspaces", Collections.emptyList())
+				.with("catmethods", Collections.emptyList())
 				.with("type", type)
 				.with("admins", Collections.emptyList())
 				.with("custom", custom)

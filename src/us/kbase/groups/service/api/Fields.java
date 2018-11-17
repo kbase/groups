@@ -21,6 +21,8 @@ public class Fields {
 	public static final String GROUP_MEMBER = "member";
 	/** The group members. */
 	public static final String GROUP_MEMBERS = "members";
+	/** The group catalog methods. */
+	public static final String GROUP_CATALOG_METHODS = "catmethods";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "createdate";
 	/** The group modification date. */

@@ -22,6 +22,7 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.GroupView.ViewType;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceID;
@@ -50,6 +51,8 @@ public class GroupViewTest {
 					.withType(GroupType.PROJECT)
 					.withWorkspace(new WorkspaceID(45))
 					.withWorkspace(new WorkspaceID(2))
+					.withCatalogMethod(new CatalogMethod("m.n"))
+					.withCatalogMethod(new CatalogMethod("x.y"))
 					.withCustomField(new NumberedCustomField("field"), "val")
 					.build();
 			WS1 = WorkspaceInformation.getBuilder(7, "n1")
@@ -88,9 +91,11 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect methods", gv.getCatalogMethods(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
+		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);
@@ -115,9 +120,12 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.NON_MEMBER));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect methods", gv.getCatalogMethods(),
+				is(set(new CatalogMethod("m.n"), new CatalogMethod("x.y"))));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
+		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);
@@ -143,9 +151,12 @@ public class GroupViewTest {
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MEMBER));
 		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect methods", gv.getCatalogMethods(),
+				is(set(new CatalogMethod("m.n"), new CatalogMethod("x.y"))));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
+		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getWorkspaceInformation(), WS1);

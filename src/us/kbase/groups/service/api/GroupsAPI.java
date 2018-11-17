@@ -5,6 +5,7 @@ import static us.kbase.groups.service.api.APICommon.getToken;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -330,8 +332,11 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));
-			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers()));
-			ret.put(Fields.GROUP_ADMINS, toSortedStringList(g.getAdministrators()));
+			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers(), u -> u.getName()));
+			ret.put(Fields.GROUP_ADMINS, toSortedStringList(
+					g.getAdministrators(), u -> u.getName()));
+			ret.put(Fields.GROUP_CATALOG_METHODS, toSortedStringList(
+					g.getCatalogMethods(), c -> c.getFullMethod()));
 			final List<Map<String, Object>> wslist = new LinkedList<>();
 			ret.put(Fields.GROUP_WORKSPACES, wslist);
 			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
@@ -421,8 +426,10 @@ public class GroupsAPI {
 				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
 	}
 
-	private List<String> toSortedStringList(final Set<UserName> users) {
-		return new TreeSet<>(users).stream().map(n -> n.getName())
+	private <T> List<String> toSortedStringList(
+			final Collection<T> items,
+			final Function<T, String> convert) {
+		return new TreeSet<>(items).stream().map(n -> convert.apply(n))
 				.collect(Collectors.toList());
 	}
 	
