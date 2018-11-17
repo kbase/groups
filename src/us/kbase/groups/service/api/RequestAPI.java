@@ -26,10 +26,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.CatalogHandlerException;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
@@ -62,7 +64,7 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, WorkspaceHandlerException {
+				IllegalParameterException, WorkspaceHandlerException, CatalogHandlerException {
 		final GroupRequestWithActions actions = groups.getRequest(
 							getToken(token, true), new RequestID(requestID));
 		final Map<String, Object> json = toGroupRequestJSON(actions.getRequest());
@@ -133,7 +135,9 @@ public class RequestAPI {
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
 				IllegalParameterException, UserIsMemberException, NoSuchWorkspaceException,
-				WorkspaceExistsException, WorkspaceHandlerException, ClosedRequestException {
+				WorkspaceExistsException, WorkspaceHandlerException, ClosedRequestException,
+				NoSuchCatalogEntryException, CatalogMethodExistsException,
+				CatalogHandlerException {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return toGroupRequestJSON(groups.acceptRequest(
 				getToken(token, true), new RequestID(requestID)));
@@ -159,7 +163,8 @@ public class RequestAPI {
 			final DenyRequestJSON denyJSON)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, WorkspaceHandlerException, ClosedRequestException {
+				IllegalParameterException, WorkspaceHandlerException, ClosedRequestException,
+				CatalogHandlerException {
 		final String reason;
 		if (denyJSON == null) {
 			reason = null;
