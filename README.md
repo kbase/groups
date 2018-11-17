@@ -41,6 +41,7 @@ Represents a group of users and associated data.
     "type": <the type of the group, e.g. Team, Project, etc.>,
     "admins": <an array of usernames of admins of the group>,
     "members": <an array of usernames of members of the group>,
+    "catmethods" <an array of Catalog service methods associated with the group>,
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
@@ -165,7 +166,7 @@ RETURNS:
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, and type fields are included.
+A list of Groups. Only the id, name, owner, custom, and type fields are included.
 ```
 
 A maximum of 100 groups are returned.

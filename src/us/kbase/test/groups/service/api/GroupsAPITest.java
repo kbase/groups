@@ -42,6 +42,7 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -94,6 +95,8 @@ public class GroupsAPITest {
 					.withMember(new UserName("bar"))
 					.withAdministrator(new UserName("whee"))
 					.withAdministrator(new UserName("whoo"))
+					.withCatalogMethod(new CatalogMethod("m.n"))
+					.withCatalogMethod(new CatalogMethod("x.y"))
 					.withType(GroupType.PROJECT)
 					.withCustomField(new NumberedCustomField("field-1"), "my val")
 					.withCustomField(new NumberedCustomField("otherfield"), "fieldval")
@@ -112,6 +115,7 @@ public class GroupsAPITest {
 			.with("moddate", 10000L)
 			.with("type", "Organization")
 			.with("description", null)
+			.with("catmethods", Collections.emptyList())
 			.with("members", Collections.emptyList())
 			.with("admins", Collections.emptyList())
 			.with("workspaces", Collections.emptyList())
@@ -138,6 +142,7 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Arrays.asList("bar", "foo"))
 			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("catmethods", Arrays.asList("m.n", "x.y"))
 			.with("workspaces", Collections.emptyList())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
@@ -153,6 +158,7 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("catmethods", Arrays.asList("m.n", "x.y"))
 			.with("workspaces", Collections.emptyList())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();

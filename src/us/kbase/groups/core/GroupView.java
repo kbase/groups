@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
@@ -43,6 +44,7 @@ public class GroupView {
 	private final Map<NumberedCustomField, String> customFields; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
+	private final Set<CatalogMethod> methods; // standard
 	private final GroupType type; // all views
 	private final Optional<Instant> creationDate; // standard
 	private final Optional<Instant> modificationDate; // standard
@@ -82,10 +84,12 @@ public class GroupView {
 		if (viewType.equals(ViewType.MINIMAL)) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
+			methods = getEmptyImmutableSet();
 			creationDate = Optional.empty();
 			modificationDate = Optional.empty();
 			description = Optional.empty();
 		} else {
+			methods = group.getCatalogMethods();
 			admins = group.getAdministrators();
 			creationDate = Optional.of(group.getCreationDate());
 			modificationDate = Optional.of(group.getModificationDate());
@@ -149,6 +153,14 @@ public class GroupView {
 	 */
 	public Set<UserName> getAdministrators() {
 		return admins;
+	}
+	
+	/** Get the Catalog methods associated with the group. Empty for {@link ViewType#MINIMAL}
+	 * views.
+	 * @return the methods.
+	 */
+	public Set<CatalogMethod> getCatalogMethods() {
+		return methods;
 	}
 
 	/** Get the type of the group.
@@ -214,6 +226,7 @@ public class GroupView {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
+		result = prime * result + ((methods == null) ? 0 : methods.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
@@ -281,6 +294,13 @@ public class GroupView {
 				return false;
 			}
 		} else if (!members.equals(other.members)) {
+			return false;
+		}
+		if (methods == null) {
+			if (other.methods != null) {
+				return false;
+			}
+		} else if (!methods.equals(other.methods)) {
 			return false;
 		}
 		if (modificationDate == null) {
