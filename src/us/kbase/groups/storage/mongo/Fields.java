@@ -54,6 +54,10 @@ public class Fields {
 	public static final String REQUEST_TARGET = "target";
 	/** The workspace the request targets, if any. */
 	public static final String REQUEST_TARGET_WORKSPACE = "wstarg";
+	/** The catalog module the request targets, if any. */
+	public static final String REQUEST_TARGET_CATALOG_MODULE = "modtarg";
+	/** The catalog method the request targets, if any. */
+	public static final String REQUEST_TARGET_CATALOG_METHOD = "methtarg";
 	/** The user that made the request. */
 	public static final String REQUEST_REQUESTER = "requester";
 	/** The type of the request. */

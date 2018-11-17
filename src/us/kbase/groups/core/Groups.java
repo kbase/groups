@@ -441,7 +441,8 @@ public class Groups {
 		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
 		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
-		return storage.getRequestsByTarget(user, ws, params);
+		//TODO REQUESTS pass through owned modules
+		return storage.getRequestsByTarget(user, ws, null, params);
 	}
 
 	/** Get requests where the group is the target of the request.

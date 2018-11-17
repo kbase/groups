@@ -1603,7 +1603,7 @@ public class GroupsTest {
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
 			.thenReturn(WorkspaceIDSet.fromInts(set(96)));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("user"), WorkspaceIDSet.fromInts(set(96)),
+				new UserName("user"), WorkspaceIDSet.fromInts(set(96)), null,
 				GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
@@ -1628,7 +1628,7 @@ public class GroupsTest {
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
 				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
 		when(mocks.storage.getRequestsByTarget(
-				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24)),
+				new UserName("target"), WorkspaceIDSet.fromInts(set(96, 24)), null,
 				GetRequestsParams.getBuilder()
 						.withNullableSortAscending(false)
 						.withNullableExcludeUpTo(inst(10000))
