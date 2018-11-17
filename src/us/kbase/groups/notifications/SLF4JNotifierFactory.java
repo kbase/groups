@@ -46,10 +46,20 @@ public class SLF4JNotifierFactory implements NotificationsFactory {
 					request.getType().getRepresentation(),
 					request.getGroupID().getName(),
 					group.getGroupName().getName(),
-					request.getTarget().isPresent() ? request.getTarget().get().getName() : null,
+					getTarget(request),
 					request.getRequester().getName()));
 		}
 	
+		private String getTarget(final GroupRequest request) {
+			if (request.getTarget().isPresent()) {
+				return request.getTarget().get().getName();
+			}
+			if (request.getWorkspaceTarget().isPresent()) {
+				return request.getWorkspaceTarget().get().getID() + "";
+			}
+			return request.getCatalogMethodTarget().map(m -> m.getFullMethod()).orElse(null);
+		}
+
 		private List<String> userNamesToStrings(final Collection<UserName> targets) {
 			return targets.stream().map(t -> t.getName()).collect(Collectors.toList());
 		}

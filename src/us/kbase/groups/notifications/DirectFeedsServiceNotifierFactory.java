@@ -144,6 +144,9 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
 					request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 				post.put("object", request.getWorkspaceTarget().get().getID());
+			} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD) ||
+					request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
+				post.put("object", request.getCatalogMethodTarget().get().getFullMethod());
 			} else {
 				throw new IllegalStateException();
 			}

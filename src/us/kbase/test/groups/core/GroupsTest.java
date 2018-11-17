@@ -55,6 +55,7 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
@@ -1208,6 +1209,40 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getRequestMethodCreatorOpen() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.meth")),
+				set(GroupRequestUserAction.CANCEL));
+	}
+	
+	@Test
+	public void getRequestMethodCreatorClosed() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+						.withStatus(GroupRequestStatus.canceled()),
+				set());
+	}
+	
+	@Test
+	public void getRequestMethodAdminOpen() throws Exception {
+		getRequest(
+				new UserName("own"),
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.meth")),
+				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+	}
+	
+	@Test
+	public void getRequestMethodAdminClosed() throws Exception {
+		getRequest(
+				new UserName("admin"),
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+						.withStatus(GroupRequestStatus.expired()),
+				set());
+	}
+	
+	@Test
 	public void getRequestInviteCreatorOpen() throws Exception {
 		getRequest(
 				new UserName("user"),
@@ -1275,6 +1310,40 @@ public class GroupsTest {
 				set());
 	}
 	
+	@Test
+	public void getRequestInviteMethodCreatorOpen() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.meth")),
+				set(GroupRequestUserAction.CANCEL));
+	}
+	
+	@Test
+	public void getRequestInviteMethodCreatorClosed() throws Exception {
+		getRequest(
+				new UserName("user"),
+				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+						.withStatus(GroupRequestStatus.canceled()),
+				set());
+	}
+	
+	@Test
+	public void getRequestInviteMethodTargetOpen() throws Exception {
+		getRequest(
+				new UserName("catadmin"),
+				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.meth")),
+				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
+	}
+	
+	@Test
+	public void getRequestInviteMethodTargetClosed() throws Exception {
+		getRequest(
+				new UserName("catadmin"),
+				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+						.withStatus(GroupRequestStatus.expired()),
+				set());
+	}
+	
 	private void getRequest(
 			final UserName user,
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn,
@@ -1299,6 +1368,8 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(87), new UserName("wsadmin")))
+				.thenReturn(true);
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
 				.thenReturn(true);
 		
 		final GroupRequestWithActions req = mocks.groups.getRequest(
@@ -1424,7 +1495,7 @@ public class GroupsTest {
 				new RequestID(id), new GroupID("gid"), new UserName("requester"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-				.withInviteWorkspace(new WorkspaceID(67))
+				.withRequestAddWorkspace(new WorkspaceID(67))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
@@ -1484,6 +1555,82 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(96), new UserName("someuser")))
 				.thenThrow(new NoSuchWorkspaceException("foo"));
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User someuser may not access request " + id));
+	}
+	
+	@Test
+	public void getRequestFailRequestMethodCantView() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("requester"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withRequestAddCatalogMethod(new CatalogMethod("m.m"))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.build());
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User user may not access request " + id));
+	}
+	
+	@Test
+	public void getRequestFailInviteMethodNoSuchModule() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("someuser")))
+				.thenThrow(new NoSuchCatalogEntryException("mod"));
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User someuser may not access request " + id));
+	}
+	
+	
+	@Test
+	public void getRequestFailInviteModuleNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("someuser")))
+				.thenReturn(false);
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User someuser may not access request " + id));
@@ -2016,6 +2163,18 @@ public class GroupsTest {
 	public void denyRequestAdminReasonInviteWS() throws Exception {
 		denyRequestAdmin(" reason  ", "wsadmin", b -> b.withInviteWorkspace(new WorkspaceID(86)));
 	}
+	
+	@Test
+	public void denyRequestAdminRequestMethod() throws Exception {
+		denyRequestAdmin("    \t    ", "admin",
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("cm.meth")));
+	}
+	
+	@Test
+	public void denyRequestAdminInviteMethod() throws Exception {
+		denyRequestAdmin(" reason  ", "catadmin",
+				b -> b.withInviteCatalogMethod(new CatalogMethod("cm.meth2")));
+	}
 
 	private void denyRequestAdmin(
 			final String reason,
@@ -2049,6 +2208,8 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(86), new UserName("wsadmin")))
+				.thenReturn(true);
+		when(mocks.catHandler.isOwner(new CatalogModule("cm"), new UserName("catadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -2210,6 +2371,16 @@ public class GroupsTest {
 		denyRequestFailNotAdmin(b -> b.withInviteWorkspace(new WorkspaceID(56)));
 	}
 	
+	@Test
+	public void denyRequestFailNotAdminRequestMethod() throws Exception {
+		denyRequestFailNotAdmin(b -> b.withRequestAddCatalogMethod(new CatalogMethod("foo.bar")));
+	}
+	
+	@Test
+	public void denyRequestFailNotAdminInviteMethod() throws Exception {
+		denyRequestFailNotAdmin(b -> b.withInviteCatalogMethod(new CatalogMethod("foo.baz")));
+	}
+	
 	private void denyRequestFailNotAdmin(
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn)
 			throws Exception {
@@ -2231,6 +2402,8 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
+				.thenReturn(false);
+		when(mocks.catHandler.isOwner(new CatalogModule("foo"), new UserName("notadmin")))
 				.thenReturn(false);
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2289,6 +2462,33 @@ public class GroupsTest {
 				new UnauthorizedException("User notadmin may not deny request " + id));
 	}
 	
+	@Test
+	public void denyRequestFailNoSuchModule() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("notadmin")))
+				.thenThrow(new NoSuchCatalogEntryException("mod"));
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User notadmin may not deny request " + id));
+	}
+	
 	private void failDenyRequest(
 			final Groups g,
 			final Token t,
@@ -2305,262 +2505,144 @@ public class GroupsTest {
 	@Test
 	public void acceptRequestAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
-		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withRequestGroupMembership()
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withRequestGroupMembership()
-						.withStatus(GroupRequestStatus.accepted(new UserName("own")))
-						.build());
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("a1"))
-				.withAdministrator(new UserName("a3"))
-				.build());
-		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
-		
-		final GroupRequest req = mocks.groups.acceptRequest(
-				new Token("token"), new RequestID(id));
-		
+		acceptRequest(mocks, new UserName("own"),
+				set(new UserName("user"), new UserName("admin"), new UserName("a3")),
+				b -> b.withRequestGroupMembership());
+
 		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("user"), inst(12000));
-		verify(mocks.storage).closeRequest(
-				new RequestID(id),
-				GroupRequestStatus.accepted(new UserName("own")),
-				Instant.ofEpochMilli(15000));
-		verify(mocks.notifs).accept(
-				set(new UserName("user"), new UserName("a1"), new UserName("a3")),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withRequestGroupMembership()
-						.withStatus(GroupRequestStatus.accepted(new UserName("own")))
-						.build());
-		
-		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("user"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withModificationTime(Instant.ofEpochMilli(15000))
-						.build())
-				.withRequestGroupMembership()
-				.withStatus(GroupRequestStatus.accepted(new UserName("own")))
-				.build()));
-	}
-	
-	@Test
-	public void acceptRequestGroupAdminForRequestWS() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withRequestAddWorkspace(new WorkspaceID(56))
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withRequestAddWorkspace(new WorkspaceID(56))
-						.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
-						.build());
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
-				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
-				set(new UserName("u1"), new UserName("u2")));
-		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
-		
-		
-		final GroupRequest req = mocks.groups.acceptRequest(
-				new Token("token"), new RequestID(id));
-		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(12000));
-		verify(mocks.storage).closeRequest(
-				new RequestID(id),
-				GroupRequestStatus.accepted(new UserName("admin")),
-				Instant.ofEpochMilli(15000));
-		verify(mocks.notifs).accept(
-				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
-						new UserName("a3")),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withRequestAddWorkspace(new WorkspaceID(56))
-						.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
-						.build());
-		
-		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("user"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withModificationTime(Instant.ofEpochMilli(15000))
-						.build())
-				.withRequestAddWorkspace(new WorkspaceID(56))
-				.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
-				.build()));
-	}
-	
-	@Test
-	public void acceptRequestWSAdminForInviteWS() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("wsadmin"));
-		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withInviteWorkspace(new WorkspaceID(44))
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withInviteWorkspace(new WorkspaceID(44))
-						.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
-						.build());
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
-				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(44), new UserName("wsadmin")))
-				.thenReturn(true);
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(44))).thenReturn(
-				set(new UserName("wsadmin"), new UserName("u2")));
-		when(mocks.clock.instant()).thenReturn(inst(11000), inst(15000));
-		
-		
-		final GroupRequest req = mocks.groups.acceptRequest(
-				new Token("token"), new RequestID(id));
-		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44), inst(11000));
-		verify(mocks.storage).closeRequest(
-				new RequestID(id),
-				GroupRequestStatus.accepted(new UserName("wsadmin")),
-				Instant.ofEpochMilli(15000));
-		verify(mocks.notifs).accept(
-				set(new UserName("admin"), new UserName("u2"), new UserName("own"),
-						new UserName("a3")),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withInviteWorkspace(new WorkspaceID(44))
-						.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
-						.build());
-		
-		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("user"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withModificationTime(Instant.ofEpochMilli(15000))
-						.build())
-				.withInviteWorkspace(new WorkspaceID(44))
-				.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
-				.build()));
 	}
 	
 	@Test
 	public void acceptRequestTarget() throws Exception {
 		final TestMocks mocks = initTestMocks();
+		acceptRequest(mocks, new UserName("target"),
+				set(new UserName("own"), new UserName("admin"), new UserName("a3")),
+				b -> b.withInviteToGroup(new UserName("target")));
+
+		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"), inst(12000));
+	}
+	
+	@Test
+	public void acceptRequestGroupAdminForRequestWS() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
+				set(new UserName("u1"), new UserName("u2")));
+		acceptRequest(mocks, new UserName("admin"),
+				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
+						new UserName("a3")),
+				b -> b.withRequestAddWorkspace(new WorkspaceID(56)));
+
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(12000));
+	}
+	
+	@Test
+	public void acceptRequestWSAdminForInviteWS() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.wsHandler.isAdministrator(new WorkspaceID(44), new UserName("wsadmin")))
+				.thenReturn(true);
+		when(mocks.wsHandler.getAdministrators(new WorkspaceID(44))).thenReturn(
+					set(new UserName("wsadmin"), new UserName("u2")));
+		acceptRequest(mocks, new UserName("wsadmin"),
+				set(new UserName("admin"), new UserName("u2"), new UserName("own"),
+						new UserName("a3")),
+				b -> b.withInviteWorkspace(new WorkspaceID(44)));
+
+		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44), inst(12000));
+	}
+	
+	@Test
+	public void acceptRequestGroupAdminForRequestMethod() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+				set(new UserName("u1"), new UserName("u8")));
+		acceptRequest(mocks, new UserName("own"),
+				set(new UserName("u1"), new UserName("u8"), new UserName("admin"),
+						new UserName("a3")),
+				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.n")));
+
+		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.n"),
+				inst(12000));
+	}
+	
+	@Test
+	public void acceptRequestWSAdminForInviteMethod() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
+				.thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+				set(new UserName("catadmin"), new UserName("u4")));
+		acceptRequest(mocks, new UserName("catadmin"),
+				set(new UserName("admin"), new UserName("u4"), new UserName("own"),
+						new UserName("a3")),
+				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.n")));
+
+		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.n"),
+				inst(12000));
+	}
+
+	private void acceptRequest(
+			final TestMocks mocks,
+			final UserName tokenUser,
+			final Set<UserName> targets,
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn)
+			throws Exception {
+		
 		final UUID id = UUID.randomUUID();
 		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		final GroupRequest openreq = buildFn.apply(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
+				.build();
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(tokenUser);
 		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withInviteToGroup(new UserName("target"))
-						.build(),
-				GroupRequest.getBuilder(
+				openreq,
+				buildFn.apply(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withInviteToGroup(new UserName("target"))
-						.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+								.build()))
+						.withStatus(GroupRequestStatus.accepted(tokenUser))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("a1"))
+				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.clock.instant()).thenReturn(inst(13000), inst(15000));
+		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
 		
 		final GroupRequest req = mocks.groups.acceptRequest(
 				new Token("token"), new RequestID(id));
 		
-		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"), inst(13000));
 		verify(mocks.storage).closeRequest(
 				new RequestID(id),
-				GroupRequestStatus.accepted(new UserName("target")),
+				GroupRequestStatus.accepted(tokenUser),
 				Instant.ofEpochMilli(15000));
-		verify(mocks.notifs).accept(
-				set(new UserName("own"), new UserName("a1"), new UserName("a3")),
-				GroupRequest.getBuilder(
+		verify(mocks.notifs).accept(targets,
+				buildFn.apply(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(15000))
-								.build())
-						.withInviteToGroup(new UserName("target"))
-						.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+								.build()))
+						.withStatus(GroupRequestStatus.accepted(tokenUser))
 						.build());
 		
-		assertThat("incorrect request", req, is(GroupRequest.getBuilder(
+		assertThat("incorrect request", req, is(buildFn.apply(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("user"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.withModificationTime(Instant.ofEpochMilli(15000))
-						.build())
-				.withInviteToGroup(new UserName("target"))
-				.withStatus(GroupRequestStatus.accepted(new UserName("target")))
+						.build()))
+				.withStatus(GroupRequestStatus.accepted(tokenUser))
 				.build()));
 	}
 	
@@ -2613,6 +2695,16 @@ public class GroupsTest {
 		acceptRequestFailNotAdmin(b -> b.withInviteWorkspace(new WorkspaceID(55)));
 	}
 	
+	@Test
+	public void acceptRequestMethodFailNotAdmin() throws Exception {
+		acceptRequestFailNotAdmin(b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.n")));
+	}
+	
+	@Test
+	public void acceptRequestMethodFailNotModuleAdmin() throws Exception {
+		acceptRequestFailNotAdmin(b -> b.withInviteCatalogMethod(new CatalogMethod("mod.n")));
+	}
+	
 	private void acceptRequestFailNotAdmin(
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> buildFn)
 			throws Exception {
@@ -2634,7 +2726,9 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(55), new UserName("notadmin")))
-			.thenReturn(false);
+				.thenReturn(false);
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("notadmin")))
+				.thenReturn(false);
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not accept request " + id));
@@ -2664,6 +2758,9 @@ public class GroupsTest {
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new ClosedRequestException(id.toString()));
 	}
+	
+	// some of these could probably be merged, although they're not so long as to be
+	// really unwieldy
 	
 	@Test
 	public void acceptRequestFailUserIsMember() throws Exception {
@@ -2804,6 +2901,94 @@ public class GroupsTest {
 		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
 				.addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(4400));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(
+						"Group gid unexpectedly doesn't exist: 50000 No such group: gid"));
+	}
+	
+	@Test
+	public void acceptRequestFailNoSuchModuleOnRequest() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenThrow(
+				new NoSuchCatalogEntryException("mod"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new NoSuchCatalogEntryException("mod"));
+	}
+	
+	@Test
+	public void acceptRequestFailNoSuchModuleOnInvite() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("catadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteCatalogMethod(new CatalogMethod("md.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("md"), new UserName("catadmin")))
+				.thenThrow(new NoSuchCatalogEntryException("md"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new UnauthorizedException("User catadmin may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailNoSuchGroupOnAddMethod() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestAddCatalogMethod(new CatalogMethod("md.n"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.catHandler.getOwners(new CatalogModule("md"))).thenReturn(
+				set(new UserName("u3"), new UserName("u4")));
+		when(mocks.clock.instant()).thenReturn(inst(4400));
+		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
+				.addCatalogMethod(new GroupID("gid"), new CatalogMethod("md.n"), inst(4400));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new RuntimeException(
