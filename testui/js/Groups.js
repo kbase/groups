@@ -543,7 +543,7 @@ export default class {
       if (!this.checkToken()) {
           return;
       }
-      fetch(this.serviceUrl + "group/" + groupid + '/workspace/' + ws,
+      fetch(this.serviceUrl + "group/" + groupid + '/resource/workspace/' + ws,
         {"method": "POST",
          "headers": this.getHeaders()
          }).then( (response) => {
@@ -569,7 +569,7 @@ export default class {
   
   removeWorkspace(groupid, ws) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid + "/workspace/" + ws,
+      fetch(this.serviceUrl + "group/" + groupid + "/resource/workspace/" + ws,
               {"method": "DELETE",
                "headers": this.getHeaders()})
         .then( (response) => {

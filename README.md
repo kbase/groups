@@ -328,7 +328,7 @@ The user must be the group owner.
 
 ```
 AUTHORIZATION REQUIRED
-POST /group/<group id>/workspace/<workspace id>
+POST /group/<group id>/resource/workspace/<workspace id>
 
 RETURNS: Either {"complete": true} or a Request with the additional field "complete"
 with a value of false.
@@ -342,7 +342,7 @@ not an error is returned.
 
 ```
 AUTHORIZATION REQUIRED
-DELETE /group/<group id>/workspace/<workspace id>
+DELETE /group/<group id>/resource/workspace/<workspace id>
 ```
 
 The user must be an administrator of either the group or the workspace.
