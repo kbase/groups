@@ -46,6 +46,11 @@ public class Fields {
 	/** The user's permission for workspace. */
 	public static final String GROUP_WS_PERMISSION = "perm";
 	
+	// catalog fields
+	/** The catalog method name. */
+	public static final String GROUP_CATALOG_METHOD_NAME = "methodname";
+	
+	
 	/** Whether an action is complete or not, ant therefore whether a request object is
 	 * included in the response.
 	 */
@@ -64,6 +69,8 @@ public class Fields {
 	public static final String REQUEST_TARGET = "targetuser";
 	/** The workspace the request targets, if any. */
 	public static final String REQUEST_TARGET_WORKSPACE = "targetws";
+	/** The catalog the request targets, if any. */
+	public static final String REQUEST_TARGET_METHOD = "targetmeth";
 	/** The user that made the request. */
 	public static final String REQUEST_REQUESTER = "requester";
 	/** The type of the request. */
