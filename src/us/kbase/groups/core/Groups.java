@@ -67,8 +67,9 @@ public class Groups {
 	
 	/* could probably abstract the workspace & catalog handling in a
 	 * general resource handling system, where resources and handlers for those resources
-	 * could be specified in a configuration file. Then you could add new resources w/o major
-	 * code changes. Indexing might be tricky but doable.
+	 * could be specified in a configuration file or just hard coded.
+	 * Then you could add new resources w/o major code changes. Indexing might be tricky but
+	 * doable.
 	 * 
 	 * That being said, it's probably only ever going to be workspaces and apps so YAGNI.
 	 */
@@ -854,12 +855,12 @@ public class Groups {
 			throw new WorkspaceExistsException(wsid.getID() + "");
 		}
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
-		final boolean isWSAdmin = wsadmins.contains(user);
-		if (g.isAdministrator(user) && isWSAdmin) {
+		if (g.isAdministrator(user) && wsadmins.contains(user)) {
 			storage.addWorkspace(groupID, wsid, clock.instant());
+			//TODO NNOW notify
 			return Optional.empty();
 		}
-		if (isWSAdmin) {
+		if (wsadmins.contains(user)) {
 			return Optional.of(createRequestStoreAndNotify(
 					g, user, b -> b.withRequestAddWorkspace(wsid), g.getAdministratorsAndOwner()));
 		}
@@ -945,5 +946,63 @@ public class Groups {
 		}
 		ensureIsOpen(r);
 		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
+	}
+	
+	/** Add a catalog method to a group. The method is added immediately if the user is an
+	 * administrator of both the group and the catalog module. Otherwise, a {@link GroupRequest} is
+	 * added to the system and returned.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to be modified.
+	 * @param method the method.
+	 * @return A request if required or {@link Optional#empty()} if the operation is already
+	 * complete.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or an
+	 * owner of the module.
+	 * @throws RequestExistsException if there's already an equivalent request in the system.
+	 * @throws CatalogMethodExistsException if the method is already associated with the group.
+	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
+	 * @throws NoSuchCatalogEntryException if there is no such catalog method.
+	 */
+	public Optional<GroupRequest> addCatalogMethod(
+			final Token userToken,
+			final GroupID groupID,
+			final CatalogMethod method)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, NoSuchWorkspaceException, WorkspaceHandlerException,
+				WorkspaceExistsException, UnauthorizedException, RequestExistsException,
+				CatalogMethodExistsException, NoSuchCatalogEntryException,
+				CatalogHandlerException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(method, "method");
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(groupID);
+		if (g.getCatalogMethods().contains(method)) {
+			throw new CatalogMethodExistsException(method.getFullMethod());
+		}
+		if (!catHandler.isMethodExtant(method)) {
+			throw new NoSuchCatalogEntryException(method.getFullMethod());
+		}
+		final Set<UserName> modowners = catHandler.getOwners(method.getModule());
+		if (g.isAdministrator(user) && modowners.contains(user)) {
+			storage.addCatalogMethod(groupID, method, clock.instant());
+			//TODO NNOW notify
+			return Optional.empty();
+		}
+		if (modowners.contains(user)) {
+			return Optional.of(createRequestStoreAndNotify(g, user,
+					b -> b.withRequestAddCatalogMethod(method), g.getAdministratorsAndOwner()));
+		}
+		if (g.isAdministrator(user)) {
+			return Optional.of(createRequestStoreAndNotify(
+					g, user, b -> b.withInviteCatalogMethod(method), modowners));
+		}
+		throw new UnauthorizedException(String.format(
+				"User %s is not an admin for group %s or catalog module %s",
+				user.getName(), groupID.getName(), method.getModule().getName()));
 	}
 }

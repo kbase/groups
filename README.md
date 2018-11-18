@@ -69,6 +69,7 @@ Represents a request to modify a group in some way.
     "status": <the status of the request>,
     "targetuser": <the user at which the request is targeted, if any>,
     "targetws": <the workspace at which the request is targeted, if any>,
+    "targetmeth": <the Catalog service method at which the request is targeted, if any>,
     "createdate": <the request creation date in epoch ms>,
     "expiredate": <the date the request expires in epoch ms>,
     "moddate": <the last modification date of the request in epoch ms>
@@ -90,6 +91,12 @@ will be added to the group.
 
 `Request add workspace to group` - If accepted by a group administrator, the target workspace
 will be added to the group.
+
+`Invite catalog method to group` - If accepted by a catalog module owner, the target
+catalog method will be added to the group.
+
+`Request add catalog method to group` - If accepted by a group administrator, the target
+catalog method will be added to the group.
 
 The request status is one of `Open`, `Canceled`, `Expired`, `Accepted`, or `Denied`.
 
@@ -414,7 +421,8 @@ RETURNS: A list of Requests.
 ```
 
 Returns requests where the user is a target (including an administrator of the workspace at
-which the request is targeted) of the request.
+which the request is targeted or an owner of a Catalog module at which the request is targeted)
+of the request.
 
 #### Get the list of requests for a group
 
@@ -449,8 +457,8 @@ RETURNS: A Request.
 ```
 
 The user must be the target of the request (including an administrator of the workspace at
-which the request is targeted) or an administrator of the group at which the
-request is targeted.
+which the request is targeted or an owner of a Catalog module at which the request is targeted)
+or an administrator of the group at which the request is targeted.
 
 ### Deny a request
 
@@ -465,8 +473,8 @@ RETURNS: A Request.
 ```
 
 The user must be the target of the request (including an administrator of the workspace at
-which the request is targeted) or an administrator of the group at which the
-request is targeted.
+which the request is targeted or an owner of a Catalog module at which the request is targeted)
+or an administrator of the group at which the request is targeted.
 
 ## Custom fields
 

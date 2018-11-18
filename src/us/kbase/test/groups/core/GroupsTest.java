@@ -49,6 +49,7 @@ import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -3842,6 +3843,259 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.setReadPermissionOnWorkspace(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addCatalogMethod() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("mod.meth"))).thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+				set(new UserName("admin"), new UserName("cat2")));
+		when(mocks.clock.instant()).thenReturn(inst(3400));
+		
+		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("mod.meth"));
+		
+		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.meth"),
+				inst(3400));
+		
+		assertThat("incorrect request", ret, is(Optional.empty()));
+	}
+	
+	
+	@Test
+	public void addCatalogMethodModuleOwner() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+				set(new UserName("catadmin"), new UserName("cat2")));
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		when(mocks.uuidGen.randomUUID()).thenReturn(id);
+		
+		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+		
+		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+						.build())
+				.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
+				.build());
+		
+		verify(mocks.notifs).notify(
+				set(new UserName("own"), new UserName("admin")),
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name"), new UserName("own"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.withMember(new UserName("u1"))
+						.withMember(new UserName("u3"))
+						.withAdministrator(new UserName("admin"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
+						.build()
+				);
+		
+		assertThat("incorrect request", ret, is(Optional.of(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
+						.build())));
+	}
+	
+	@Test
+	public void addCatalogMethodGroupAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+				set(new UserName("catadmin"), new UserName("cat2")));
+		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		when(mocks.uuidGen.randomUUID()).thenReturn(id);
+		
+		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+		
+		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("admin"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+						.build())
+				.withInviteCatalogMethod(new CatalogMethod("m.n"))
+				.build());
+		
+		verify(mocks.notifs).notify(
+				set(new UserName("catadmin"), new UserName("cat2")),
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name"), new UserName("own"),
+						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+						.withMember(new UserName("u1"))
+						.withMember(new UserName("u3"))
+						.withAdministrator(new UserName("admin"))
+						.build(),
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("admin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withInviteCatalogMethod(new CatalogMethod("m.n"))
+						.build()
+				);
+		
+		assertThat("incorrect request", ret, is(Optional.of(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("admin"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
+								.build())
+						.withInviteCatalogMethod(new CatalogMethod("m.n"))
+						.build())));
+	}
+	
+	@Test
+	public void addCatalogMethodFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final CatalogMethod m = new CatalogMethod("m.n");
+		
+		failAddCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
+		failAddCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
+		failAddCatalogMethod(g, t, i, null, new NullPointerException("method"));
+	}
+	
+	@Test
+	public void addCatalogEntryFailNoSuchMethod() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(false);
+		
+		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("m.n"), new NoSuchCatalogEntryException("m.n"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+				set(new UserName("cat1"), new UserName("cat2")));
+		
+		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("m.n"), new UnauthorizedException(
+						"User u1 is not an admin for group gid or catalog module m"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailMethodInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withCatalogMethod(new CatalogMethod("m.n"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("m.n"), new CatalogMethodExistsException("m.n"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailMethodInGroupAtStorage() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isMethodExtant(new CatalogMethod("mod.m"))).thenReturn(true);
+		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+				set(new UserName("admin"), new UserName("cat2")));
+		when(mocks.clock.instant()).thenReturn(inst(7000));
+
+		doThrow(new CatalogMethodExistsException("mod.m")).when(mocks.storage)
+				.addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.m"), inst(7000));
+		
+		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("mod.m"), new CatalogMethodExistsException("mod.m"));
+	}
+	
+	private void failAddCatalogMethod(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final CatalogMethod m,
+			final Exception expected) {
+		try {
+			g.addCatalogMethod(t, i, m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
