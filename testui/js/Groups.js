@@ -364,6 +364,7 @@ export default class {
                             <th scope="col">Narrative Name</th>
                             <th scope="col">Public</th>
                             <th scope="col">Permission</th>
+                            <th scope="col">Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -378,23 +379,53 @@ export default class {
                               <td>
                                 <button id="removews_${s(ws.wsid)}" class="btn btn-primary">Remove
                                       </button>
-                              </td></tr>
+                              </td>
+                            </tr>
+                           `
+                  }
+                  g += `</tbody></table>
+                      <div>Catalog methods</div>
+                      <table class="table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Name</th>
+                          <th scope="col">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                     `;
+                  for (const meth of json.catmethods) {
+                      g += `<tr>
+                              <th>${s(meth)}</th>
+                              <td>
+                                <button id="removemeth_${s(meth.replace('.', '_'))}"
+                                  class="btn btn-primary">Remove</button>
+                              </td>
+                            </tr>
                            `
                   }
                   g +=
                       `
                       </tbody></table>
-                      <button id="requestgroupmembership" class="btn btn-primary">
-                        Request group membership</button>
-                      <button id="grouprequests" class="btn btn-primary">
-                        Requests for group</button>
                       <div>
-                        <input id="addmember"/>
+                        <button id="requestgroupmembership" class="btn btn-primary">
+                          Request group membership</button>
+                      </div>
+                      <div>
+                        <input id="addmember" placeholder="User name"/>
                         <button id="addmemberbtn" class="btn btn-primary">Add member</button>
                       </div>
                       <div>
                         <input id="addws" placeholder="Workspace ID"/>
                         <button id="addwsbtn" class="btn btn-primary">Add workspace</button>
+                      </div>
+                      <div>
+                        <input id="addmeth" placeholder="Module.method"/>
+                        <button id="addmethbtn" class="btn btn-primary">Add catalog method</button>
+                      </div>
+                      <div>
+                        <button id="grouprequests" class="btn btn-primary">
+                          Requests for group</button>
                       </div>
                       `;
                   //TODO CODE inactivate button if group member
@@ -414,7 +445,11 @@ export default class {
                   });
                   $('#addwsbtn').on('click', () => {
                       const ws = $('#addws').val();
-                      this.addWorkspace(groupid, ws);
+                      this.addResource(groupid, "workspace", ws);
+                  });
+                  $('#addmethbtn').on('click', () => {
+                      const meth = $('#addmeth').val();
+                      this.addResource(groupid, "catalogmethod", meth);
                   });
                   if (!priv) {
                       for (const m of members) {
@@ -434,7 +469,13 @@ export default class {
                   for (const ws of json.workspaces) {
                       $(`#removews_${s(ws.wsid)}`).on('click', () => {
                           // TODO only activate button if ws admin or group admin
-                          this.removeWorkspace(groupid, ws.wsid);
+                          this.removeResource(groupid, "workspace", ws.wsid);
+                      });
+                  }
+                  for (const meth of json.catmethods) {
+                      $(`#removemeth_${s(meth.replace('.', '_'))}`).on('click', () => {
+                          // TODO only activate button if ws admin or group admin
+                          this.removeResource(groupid, "catalogmethod", meth);
                       });
                   }
               }).catch( (err) => {
@@ -538,12 +579,12 @@ export default class {
          });
   }
   
-  addWorkspace(groupid, ws) {
+  addResource(groupid, resourcetype, resource) {
       $('#error').text("");
       if (!this.checkToken()) {
           return;
       }
-      fetch(this.serviceUrl + "group/" + groupid + '/resource/workspace/' + ws,
+      fetch(this.serviceUrl + "group/" + groupid + '/resource/' + resourcetype + '/' + resource,
         {"method": "POST",
          "headers": this.getHeaders()
          }).then( (response) => {
@@ -567,9 +608,9 @@ export default class {
          });
   }
   
-  removeWorkspace(groupid, ws) {
+  removeResource(groupid, resourcetype, resource) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid + "/resource/workspace/" + ws,
+      fetch(this.serviceUrl + "group/" + groupid + '/resource/' + resourcetype + '/' + resource,
               {"method": "DELETE",
                "headers": this.getHeaders()})
         .then( (response) => {
@@ -654,6 +695,7 @@ export default class {
                                 <th scope="col">Type</th>
                                 <th scope="col">Group ID</th>
                                 <th scope="col">Target User</th>
+                                <th scope="col">Target Method</th>
                                 <th scope="col">Target Workspace</th>
                               </tr>
                             </thead>
@@ -668,6 +710,7 @@ export default class {
                                 <td>${s(r.type)}</td>
                                 <td>${s(r.groupid)}</td>
                                 <td>${s(r.targetuser)}</td>
+                                <td>${s(r.targetmeth)}</td>
                                 <td>${this.renderViewWSButton(r.targetws)}</td>
                               </tr>
                               `
@@ -755,6 +798,7 @@ export default class {
                           <tr><th>Group ID</th><td>${s(json.groupid)}</td></tr>
                           <tr><th>Requester</th><td>${s(json.requester)}</td></tr>
                           <tr><th>Target user</th><td>${s(json.targetuser)}</td></tr>
+                          <tr><th>Target catalog method</th><td>${s(json.targetmeth)}</td></tr>
                           <tr><th>Target workspace</th>
                               <td>${this.renderViewWSButton(json.targetws)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
