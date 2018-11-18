@@ -49,6 +49,7 @@ import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -4096,6 +4097,144 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.addCatalogMethod(t, i, m);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeCatalogMethodGroupAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("admin")))
+				.thenReturn(false);
+		when(mocks.clock.instant()).thenReturn(inst(7100));
+
+		mocks.groups.removeCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+		
+		verify(mocks.storage).removeCatalogMethod(
+				new GroupID("gid"), new CatalogMethod("m.n"), inst(7100));
+	}
+	
+	@Test
+	public void removeCatalogMethodModuleOwner() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("catadmin")))
+				.thenReturn(true);
+		when(mocks.clock.instant()).thenReturn(inst(7500));
+		
+		mocks.groups.removeCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+		
+		verify(mocks.storage).removeCatalogMethod(
+				new GroupID("gid"), new CatalogMethod("m.n"), inst(7500));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final CatalogMethod m = new CatalogMethod("m.n");
+		
+		failRemoveCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
+		failRemoveCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
+		failRemoveCatalogMethod(g, t, i, null, new NullPointerException("method"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailCommError() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("notadmin")))
+			.thenThrow(new CatalogHandlerException("oops"));
+		
+		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("m.n"), new CatalogHandlerException("oops"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNotEitherAdmin() throws Exception {
+		// this will need changes once requests work
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("notamdin")))
+				.thenReturn(false);
+		
+		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("m.n"), new UnauthorizedException(
+						"User notadmin is not an admin for group gid or catalog module m"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailMethodNotInGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
+				.thenReturn(true);
+		when(mocks.clock.instant()).thenReturn(inst(7000));
+		
+		doThrow(new NoSuchCatalogEntryException("mod not in group")).when(mocks.storage)
+				.removeCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.meth"),
+						inst(7000));
+		
+		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new CatalogMethod("mod.meth"),
+				new NoSuchCatalogEntryException("mod not in group"));
+	}
+	
+	private void failRemoveCatalogMethod(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final CatalogMethod m,
+			final Exception expected) {
+		try {
+			g.removeCatalogMethod(t, i, m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -899,13 +899,14 @@ public class Groups {
 		checkNotNull(wsid, "wsid");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
+		// should check if ws not in group & fail early?
 		if (group.isAdministrator(user) || wsHandler.isAdministrator(wsid, user)) {
 			storage.removeWorkspace(groupID, wsid, clock.instant());
-			return;
+		} else {
+			throw new UnauthorizedException(String.format(
+					"User %s is not an admin for group %s or workspace %s",
+					user.getName(), groupID.getName(), wsid.getID()));
 		}
-		throw new UnauthorizedException(String.format(
-				"User %s is not an admin for group %s or workspace %s",
-				user.getName(), groupID.getName(), wsid.getID()));
 	}
 	
 	/** Set read permissions on a workspace that has been requested to be added to a group
@@ -1004,5 +1005,41 @@ public class Groups {
 		throw new UnauthorizedException(String.format(
 				"User %s is not an admin for group %s or catalog module %s",
 				user.getName(), groupID.getName(), method.getModule().getName()));
+	}
+	
+	/** Remove a catalog method from a group.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to be modified.
+	 * @param method the method.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * catalog module.
+	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
+	 * @throws NoSuchCatalogEntryException if there is no such catalog module or the group
+	 * does not contain the method.
+	 */
+	public void removeCatalogMethod(
+			final Token userToken,
+			final GroupID groupID,
+			final CatalogMethod method)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException,
+				NoSuchCatalogEntryException, CatalogHandlerException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(method, "method");
+		final UserName user = userHandler.getUser(userToken);
+		final Group group = storage.getGroup(groupID);
+		// should check if method not in group & fail early?
+		if (group.isAdministrator(user) || catHandler.isOwner(method.getModule(), user)) {
+			storage.removeCatalogMethod(groupID, method, clock.instant());
+		} else {
+			throw new UnauthorizedException(String.format(
+					"User %s is not an admin for group %s or catalog module %s",
+					user.getName(), groupID.getName(), method.getModule().getName()));
+		}
 	}
 }
