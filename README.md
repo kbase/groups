@@ -347,6 +347,29 @@ DELETE /group/<group id>/resource/workspace/<workspace id>
 
 The user must be an administrator of either the group or the workspace.
 
+### Add a catalog method to a group
+
+```
+AUTHORIZATION REQUIRED
+POST /group/<group id>/resource/catalogmethod/<full method name, e.g. Module.method>
+
+RETURNS: Either {"complete": true} or a Request with the additional field "complete"
+with a value of false.
+```
+
+The method is added immediately if the user is an administrator of both the group and owner
+of the module. A request object is returned if the user is an administrator/owner of at least one;
+if not an error is returned.
+
+### Remove a catalog method from a group
+
+```
+AUTHORIZATION REQUIRED
+DELETE /group/<group id>/resource/catalogmethod/<full method name, e.g. Module.method>
+```
+
+The user must be an administrator or owner of either the group or the catalog module.
+
 ### Get a request
 
 ```
@@ -697,7 +720,6 @@ see /design/*.md
     * Find groups that contain catalog methods I own
     * Find groups that contain catalog method X
 * New features
-  * Associate apps with groups
   * Relations between groups
     * This needs a lot of thought / design if the relations are hierarchical /
       directional.

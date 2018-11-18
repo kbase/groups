@@ -19,6 +19,7 @@ import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
@@ -48,6 +49,7 @@ public class APICommonTest {
 				.with("requester", "n")
 				.with("targetuser", null)
 				.with("targetws", null)
+				.with("targetmeth", null)
 				.with("type", "Request group membership")
 				.with("status", "Open")
 				.with("createdate", 10000L)
@@ -75,6 +77,7 @@ public class APICommonTest {
 				.with("requester", "n")
 				.with("targetuser", "inv")
 				.with("targetws", null)
+				.with("targetmeth", null)
 				.with("type", "Invite to group")
 				.with("status", "Denied")
 				.with("createdate", 10000L)
@@ -102,8 +105,37 @@ public class APICommonTest {
 				.with("requester", "n")
 				.with("targetuser", null)
 				.with("targetws", 42)
+				.with("targetmeth", null)
 				.with("type", "Invite workspace to group")
 				.with("status", "Canceled")
+				.with("createdate", 10000L)
+				.with("moddate", 25000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void toGroupRequestJSONWithMethodTarget() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final GroupRequest r = GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("n"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withModificationTime(Instant.ofEpochMilli(25000))
+						.build())
+				.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+				.withStatus(GroupRequestStatus.expired())
+				.build();
+		
+		assertThat("incorrect request", APICommon.toGroupRequestJSON(r), is(MapBuilder.newHashMap()
+				.with("id", id.toString())
+				.with("groupid", "gid")
+				.with("requester", "n")
+				.with("targetuser", null)
+				.with("targetws", null)
+				.with("targetmeth", "mod.meth")
+				.with("type", "Invite catalog method to group")
+				.with("status", "Expired")
 				.with("createdate", 10000L)
 				.with("moddate", 25000L)
 				.with("expiredate", 20000L)
@@ -161,6 +193,7 @@ public class APICommonTest {
 								.with("requester", "n2")
 								.with("targetuser", "inv")
 								.with("targetws", null)
+								.with("targetmeth", null)
 								.with("type", "Invite to group")
 								.with("status", "Denied")
 								.with("createdate", 11000L)
@@ -173,6 +206,7 @@ public class APICommonTest {
 								.with("requester", "n1")
 								.with("targetuser", null)
 								.with("targetws", null)
+								.with("targetmeth", null)
 								.with("type", "Request group membership")
 								.with("status", "Open")
 								.with("createdate", 10000L)
@@ -185,6 +219,7 @@ public class APICommonTest {
 								.with("requester", "n3")
 								.with("targetuser", null)
 								.with("targetws", 42)
+								.with("targetmeth", null)
 								.with("type", "Request add workspace to group")
 								.with("status", "Canceled")
 								.with("createdate", 12000L)

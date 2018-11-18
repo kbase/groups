@@ -973,8 +973,7 @@ public class Groups {
 			final GroupID groupID,
 			final CatalogMethod method)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, NoSuchWorkspaceException, WorkspaceHandlerException,
-				WorkspaceExistsException, UnauthorizedException, RequestExistsException,
+				GroupsStorageException, UnauthorizedException, RequestExistsException,
 				CatalogMethodExistsException, NoSuchCatalogEntryException,
 				CatalogHandlerException {
 		checkNotNull(userToken, "userToken");

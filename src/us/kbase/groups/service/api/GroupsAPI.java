@@ -44,11 +44,15 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.AuthenticationException;
+import us.kbase.groups.core.exceptions.CatalogHandlerException;
+import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
@@ -399,16 +403,8 @@ public class GroupsAPI {
 				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
 				UnauthorizedException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException, WorkspaceHandlerException, RequestExistsException {
-		final Optional<GroupRequest> req = groups.addWorkspace(
-				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
-		final Map<String, Object> ret;
-		if (req.isPresent()) {
-			ret = APICommon.toGroupRequestJSON(req.get());
-		} else {
-			ret = new HashMap<>();
-		}
-		ret.put(Fields.GROUP_COMPLETE, !req.isPresent());
-		return ret;
+		return toGroupRequestJSON(groups.addWorkspace(
+				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID)));
 	}
 	
 	@DELETE
@@ -424,6 +420,48 @@ public class GroupsAPI {
 				WorkspaceHandlerException {
 		groups.removeWorkspace(
 				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
+	}
+	
+	@POST
+	@Path(ServicePaths.GROUP_CATALOG_METHOD_NAME)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> addCatalogMethod(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchCatalogEntryException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				RequestExistsException, CatalogMethodExistsException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException, CatalogHandlerException {
+		return toGroupRequestJSON(groups.addCatalogMethod(
+				getToken(token, true), new GroupID(groupID), new CatalogMethod(method)));
+	}
+	
+	@DELETE
+	@Path(ServicePaths.GROUP_CATALOG_METHOD_NAME)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void removeCatalogMethod(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchCatalogEntryException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				MissingParameterException, IllegalParameterException, GroupsStorageException,
+				CatalogHandlerException {
+		groups.removeCatalogMethod(
+				getToken(token, true), new GroupID(groupID), new CatalogMethod(method));
+		
+	}
+	
+	private Map<String, Object> toGroupRequestJSON(final Optional<GroupRequest> req) {
+		final Map<String, Object> ret;
+		if (req.isPresent()) {
+			ret = APICommon.toGroupRequestJSON(req.get());
+		} else {
+			ret = new HashMap<>();
+		}
+		ret.put(Fields.GROUP_COMPLETE, !req.isPresent());
+		return ret;
 	}
 
 	private <T> List<String> toSortedStringList(

@@ -41,6 +41,11 @@ public class ServicePaths {
 	/** The location to add or remove a workspace from a group. */
 	public static final String GROUP_WORKSPACE_ID = GROUP_ID + GROUP_RESOURCE + 
 			"workspace" + SEP + "{" + Fields.GROUP_WS_ID + "}";
+	/** The location to add or remove a catalog method from a group. */
+	public static final String GROUP_CATALOG_METHOD_NAME = GROUP_ID + GROUP_RESOURCE + 
+			"catalogmethod" + SEP + "{" + Fields.GROUP_CATALOG_METHOD_NAME + "}";
+	
+	
 	
 	/* Request endpoints */
 	

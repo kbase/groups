@@ -48,6 +48,7 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
@@ -715,6 +716,7 @@ public class GroupsAPITest {
 				.with("type", "Request group membership")
 				.with("targetuser", null)
 				.with("targetws", null)
+				.with("targetmeth", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -783,6 +785,7 @@ public class GroupsAPITest {
 				.with("type", "Invite to group")
 				.with("targetuser", "bar")
 				.with("targetws", null)
+				.with("targetmeth", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -922,6 +925,7 @@ public class GroupsAPITest {
 						.with("type", "Request group membership")
 						.with("targetuser", null)
 						.with("targetws", null)
+						.with("targetmeth", null)
 						.with("status", "Open")
 						.with("createdate", 10000L)
 						.with("moddate", 10000L)
@@ -934,6 +938,7 @@ public class GroupsAPITest {
 						.with("type", "Invite to group")
 						.with("targetuser", "baz")
 						.with("targetws", null)
+						.with("targetmeth", null)
 						.with("status", "Canceled")
 						.with("createdate", 20000L)
 						.with("moddate", 25000L)
@@ -1185,6 +1190,7 @@ public class GroupsAPITest {
 				.with("type", "Request add workspace to group")
 				.with("targetuser", null)
 				.with("targetws", 42)
+				.with("targetmeth", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -1218,6 +1224,7 @@ public class GroupsAPITest {
 				.with("type", "Invite workspace to group")
 				.with("targetuser", null)
 				.with("targetws", 42)
+				.with("targetmeth", null)
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -1302,6 +1309,176 @@ public class GroupsAPITest {
 			final Exception expected) {
 		try {
 			new GroupsAPI(g).removeWorkspace(t, i, w);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void addCatalogMethodNoRequest() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.addCatalogMethod(
+				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.n")))
+				.thenReturn(Optional.empty());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).addCatalogMethod(
+				"my token", "foo", "m.n");
+		
+		assertThat("incorrect ret", ret, is(ImmutableMap.of("complete", true)));
+	}
+	
+	@Test
+	public void addCatalogMethodWithRequest() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(g.addCatalogMethod(
+				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.x")))
+				.thenReturn(Optional.of(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("u"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+									.build())
+						.withRequestAddCatalogMethod(new CatalogMethod("m.x"))
+						.build()));
+		
+		final Map<String, Object> ret = new GroupsAPI(g)
+				.addCatalogMethod("my token", "foo", "m.x");
+		
+		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
+				.with("complete", false)
+				.with("id", id.toString())
+				.with("groupid", "foo")
+				.with("requester", "u")
+				.with("type", "Request add catalog method to group")
+				.with("targetuser", null)
+				.with("targetws", null)
+				.with("targetmeth", "m.x")
+				.with("status", "Open")
+				.with("createdate", 10000L)
+				.with("moddate", 10000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void addCatalogMethodWithRequestInvite() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(g.addCatalogMethod(
+				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.y")))
+				.thenReturn(Optional.of(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("foo"), new UserName("u"),
+							CreateModAndExpireTimes.getBuilder(
+									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+									.build())
+						.withInviteCatalogMethod(new CatalogMethod("m.y"))
+						.build()));
+		
+		final Map<String, Object> ret = new GroupsAPI(g)
+				.addCatalogMethod("my token", "foo", "m.y");
+		
+		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
+				.with("complete", false)
+				.with("id", id.toString())
+				.with("groupid", "foo")
+				.with("requester", "u")
+				.with("type", "Invite catalog method to group")
+				.with("targetuser", null)
+				.with("targetws", null)
+				.with("targetmeth", "m.y")
+				.with("status", "Open")
+				.with("createdate", 10000L)
+				.with("moddate", 10000L)
+				.with("expiredate", 20000L)
+				.build()));
+	}
+	
+	@Test
+	public void addCatalogMethodFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		failAddCatalogMethod(g, null, "id", "m.n",
+				new NoTokenProvidedException("No token provided"));
+		failAddCatalogMethod(g, "  \t  ", "id", "m.n",
+				new NoTokenProvidedException("No token provided"));
+		failAddCatalogMethod(g, "t", "illegal*id", "m.n",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id illegal*id: *"));
+		failAddCatalogMethod(g, "t", "id", "m.n.f",
+				new IllegalParameterException("Illegal catalog method name: m.n.f"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailNoSuchMethod() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.addCatalogMethod(new Token("t"), new GroupID("i"), new CatalogMethod("m.n")))
+				.thenThrow(new NoSuchCatalogEntryException("m.n"));
+		
+		failAddCatalogMethod(g, "t", "i", "m.n", new NoSuchCatalogEntryException("m.n"));
+	}
+	
+	private void failAddCatalogMethod(
+			final Groups g,
+			final String t,
+			final String i,
+			final String m,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).addCatalogMethod(t, i, m);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeCatalogMethod() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).removeCatalogMethod("t", "gid", "m.n");
+		
+		verify(g).removeCatalogMethod(
+				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		failRemoveCatalogMethod(g, null, "id", "m.n",
+				new NoTokenProvidedException("No token provided"));
+		failRemoveCatalogMethod(g, "  \t  ", "id", "m.n",
+				new NoTokenProvidedException("No token provided"));
+		failRemoveCatalogMethod(g, "t", "illegal*id", "m.n",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id illegal*id: *"));
+		failRemoveCatalogMethod(g, "t", "id", "m.n.f",
+				new IllegalParameterException("Illegal catalog method name: m.n.f"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailNoSuchGroup() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchGroupException("i")).when(g)
+				.removeCatalogMethod(new Token("t"), new GroupID("i"), new CatalogMethod("m.n"));
+		
+		failRemoveCatalogMethod(g, "t", "i", "m.n", new NoSuchGroupException("i"));
+	}
+	
+	private void failRemoveCatalogMethod(
+			final Groups g,
+			final String t,
+			final String i,
+			final String m,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).removeCatalogMethod(t, i, m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
