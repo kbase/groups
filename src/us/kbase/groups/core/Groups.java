@@ -85,6 +85,8 @@ public class Groups {
 	 * That being said, it's probably only ever going to be workspaces and apps so YAGNI.
 	 */
 	
+	// TODO NNOW mimimize info sent to notifications. Don't send request ID on deny/accept/cancel
+	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
@@ -657,12 +659,10 @@ public class Groups {
 				WorkspaceHandlerException, WorkspaceExistsException, NoSuchCatalogEntryException,
 				CatalogHandlerException, CatalogMethodExistsException {
 		final Collection<UserName> toNotify;
-		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-			addMemberToKnownGoodGroup(groupID, request.getRequester());
-			toNotify = Arrays.asList(request.getRequester());
-		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
+		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
+				request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			addMemberToKnownGoodGroup(groupID, request.getTarget().get());
-			toNotify = Collections.emptySet();
+			toNotify = Arrays.asList(request.getTarget().get());
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
 				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
@@ -694,7 +694,8 @@ public class Groups {
 			final UserName user,
 			final String actionVerb)
 			throws UnauthorizedException, WorkspaceHandlerException, CatalogHandlerException {
-		if (user.equals(request.getTarget().orElse(null))) {
+		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP) &&
+				user.equals(request.getTarget().get())) {
 			return;
 		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||

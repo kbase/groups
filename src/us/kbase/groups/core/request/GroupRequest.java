@@ -74,7 +74,8 @@ public class GroupRequest {
 	}
 
 	/** Get the user targeted by the request, if any. The target is present when the request
-	 * type is {@link GroupRequestType#INVITE_TO_GROUP}. In this case the user is added to the
+	 * type is {@link GroupRequestType#INVITE_TO_GROUP} or
+	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}. In this case the user is added to the
 	 * group if the request is accepted.
 	 * @return the target user.
 	 */
@@ -102,9 +103,7 @@ public class GroupRequest {
 		return catTarget;
 	}
 
-	/** Get the user that created the request. If the request type is
-	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}, the user is added to the group if
-	 * the request is accepted.
+	/** Get the user that created the request.
 	 * @return the user that made the request.
 	 */
 	public UserName getRequester() {
@@ -303,8 +302,7 @@ public class GroupRequest {
 	}
 
 	/** Get a builder for a {@link GroupRequest}. By default, the type is
-	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and the target user is
-	 * {@link Optional#empty()}.
+	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP} and the target user is the requester.
 	 * @param id the request ID.
 	 * @param groupID the ID of the group at which the request is targeted.
 	 * @param requester the user making the request.
@@ -329,7 +327,7 @@ public class GroupRequest {
 		private final GroupID groupID;
 		private final UserName requester;
 		private final CreateModAndExpireTimes times;
-		private Optional<UserName> target = Optional.empty();
+		private Optional<UserName> target;
 		private Optional<WorkspaceID> wsTarget = Optional.empty();
 		private Optional<CatalogMethod> catTarget = Optional.empty();
 		private GroupRequestType type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
@@ -350,6 +348,7 @@ public class GroupRequest {
 			this.groupID = groupID;
 			this.requester = requester;
 			this.times = times;
+			this.target = Optional.ofNullable(requester);
 		}
 		
 		/** Request membership to a group.
@@ -360,7 +359,7 @@ public class GroupRequest {
 		 * @return this builder.
 		 */
 		public Builder withRequestGroupMembership() {
-			this.target = Optional.empty();
+			this.target = Optional.of(requester);
 			this.wsTarget = Optional.empty();
 			this.catTarget = Optional.empty();
 			this.type = GroupRequestType.REQUEST_GROUP_MEMBERSHIP;
