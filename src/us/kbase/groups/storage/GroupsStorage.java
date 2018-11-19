@@ -222,7 +222,8 @@ public interface GroupsStorage {
 
 	/** Get the open requests that target a group, sorted by the modification time of the request.
 	 * At most 100 requests are returned.
-	 * Requests that target a group are {@link GroupRequestType#REQUEST_ADD_WORKSPACE} and
+	 * Requests that target a group are {@link GroupRequestType#REQUEST_ADD_WORKSPACE},
+	 * {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD} and
 	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}.
 	 * @param groupID the targeted group.
 	 * @param params the parameters for getting the requests.

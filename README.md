@@ -80,8 +80,8 @@ The type of the request dictates what fields are populated and what changes will
 request is accepted. The types are:
 
 `Request group membership` - If accepted by a group administrator, the user that created
-the request will be added to the group membership. The target user is absent for this request
-type.
+the request will be added to the group membership. The target user is the requester for this
+request type.
 
 `Invite to group` - If accepted by the target user, the target user will be added to the
 group membership.

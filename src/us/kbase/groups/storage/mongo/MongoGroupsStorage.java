@@ -962,7 +962,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		checkNotNull(wsids, "wsids");
 		checkNoNullsInCollection(modules, "modules");
 		final List<Document> or = Arrays.asList(
-				new Document(Fields.REQUEST_TARGET, target.getName()),
+				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_TO_GROUP.name())
+						.append(Fields.REQUEST_TARGET, target.getName()),
 				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
 						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
 								"$in", wsids.getIDs())),
