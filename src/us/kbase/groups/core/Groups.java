@@ -65,6 +65,17 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
+	//TODO NNOW major refactor. See below.
+	/* A request is 3 things
+	 * invite to group vs. request addition to group (invite vs. request)
+	 * The type of resource (user, ws, catalog method)
+	 * The resource.
+	 * Right now there's a lot of redundant code between ws and method. Refactor into a general
+	 * typed resource system (including user where possible, but users are a little different).
+	 * 
+	 * Always include users as the target of requests though. Generalize the target.
+	 */
+	
 	/* could probably abstract the workspace & catalog handling in a
 	 * general resource handling system, where resources and handlers for those resources
 	 * could be specified in a configuration file or just hard coded.
