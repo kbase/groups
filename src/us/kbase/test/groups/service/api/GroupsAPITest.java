@@ -116,10 +116,11 @@ public class GroupsAPITest {
 			.with("moddate", 10000L)
 			.with("type", "Organization")
 			.with("description", null)
-			.with("catmethods", Collections.emptyList())
+			.with("resources", ImmutableMap.of(
+					"workspace", Collections.emptyList(),
+					"catalogmethod", Collections.emptyList()))
 			.with("members", Collections.emptyList())
 			.with("admins", Collections.emptyList())
-			.with("workspaces", Collections.emptyList())
 			.with("custom", Collections.emptyMap())
 			.build();
 	
@@ -143,8 +144,12 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Arrays.asList("bar", "foo"))
 			.with("admins", Arrays.asList("whee", "whoo"))
-			.with("catmethods", Arrays.asList("m.n", "x.y"))
-			.with("workspaces", Collections.emptyList())
+			.with("resources", ImmutableMap.of(
+					"workspace", Collections.emptyList(),
+					"catalogmethod", Arrays.asList(
+							ImmutableMap.of("rid", "m.n"),
+							ImmutableMap.of("rid", "x.y"))))
+
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -159,8 +164,11 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
-			.with("catmethods", Arrays.asList("m.n", "x.y"))
-			.with("workspaces", Collections.emptyList())
+			.with("resources", ImmutableMap.of(
+					"workspace", Collections.emptyList(),
+					"catalogmethod", Arrays.asList(
+							ImmutableMap.of("rid", "m.n"),
+							ImmutableMap.of("rid", "x.y"))))
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -607,22 +615,27 @@ public class GroupsAPITest {
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		final Map<String, Object> expected = new HashMap<>();
 		expected.putAll(GROUP_MAX_JSON_STD);
-		expected.put("workspaces", Arrays.asList(
-				MapBuilder.newHashMap()
-						.with("wsid", 45)
-						.with("name", "name45")
-						.with("narrname", null)
-						.with("public", false)
-						.with("perm", "None")
-						.build(),
-				MapBuilder.newHashMap()
-						.with("wsid", 82)
-						.with("name", "name82")
-						.with("narrname", "narrname")
-						.with("public", true)
-						.with("perm", "Admin")
-						.build()
-				));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> resources =
+				(Map<String, Object>) GROUP_MAX_JSON_STD.get("resources");
+		expected.put("resources", ImmutableMap.of(
+				"catalogmethod", resources.get("catalogmethod"),
+				"workspace", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("rid", 45)
+								.with("name", "name45")
+								.with("narrname", null)
+								.with("public", false)
+								.with("perm", "None")
+								.build(),
+						MapBuilder.newHashMap()
+								.with("rid", 82)
+								.with("name", "name82")
+								.with("narrname", "narrname")
+								.with("public", true)
+								.with("perm", "Admin")
+								.build()
+						)));
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
