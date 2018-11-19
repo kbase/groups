@@ -554,8 +554,9 @@ public class ServiceIntegrationTest {
 				.with("name", name)
 				.with("description", desc)
 				.with("id", groupID)
-				.with("workspaces", Collections.emptyList())
-				.with("catmethods", Collections.emptyList())
+				.with("resources", ImmutableMap.of(
+						"workspace", Collections.emptyList(),
+						"catalogmethod", Collections.emptyList()))
 				.with("type", type)
 				.with("admins", Collections.emptyList())
 				.with("custom", custom)

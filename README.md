@@ -6,30 +6,9 @@ Build status (master):
 [![Build Status](https://travis-ci.org/kbase/groups.svg?branch=master)](https://travis-ci.org/kbase/groups)
 [![codecov](https://codecov.io/gh/kbase/groups/branch/master/graph/badge.svg)](https://codecov.io/gh/kbase/groups)
 
-## API
+## API Data structures
 
-Endpoints that require authorization are noted below. To authorize a request, include an
-`authorization` header with a KBase token as the value.
-
-### Data structures
-
-#### WorkspaceInformation
-
-Represents information about a workspace.
-
-```
-{
-    "wsid": <the workspace ID>,
-    "name": <the workspace name>,
-    "narrname": <the name of the narrative contained in the workspace or null>
-    "public": <true if the workspace is public, false otherwise>
-    "perm": <the user's permission for the workspace>
-}
-```
-
-`perm` is one of `None`, `Read`, `Write`, `Admin`, or `Own`.
-
-#### Group
+### Group
 
 Represents a group of users and associated data.
 
@@ -41,11 +20,14 @@ Represents a group of users and associated data.
     "type": <the type of the group, e.g. Team, Project, etc.>,
     "admins": <an array of usernames of admins of the group>,
     "members": <an array of usernames of members of the group>,
-    "catmethods" <an array of Catalog service methods associated with the group>,
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
-    "workspaces": <a list of WorkspaceInformation>
+    "resources":
+        {<resource type 1>: [<resource entry 1-1>, ..., <resource entry 1-N>],
+         ...
+         <resource type N>: [<resource entry N-1>, ..., <resource entry N-N>]
+         },
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -54,9 +36,41 @@ Represents a group of users and associated data.
 }
 ```
 
-See `Custom fields` below.
+See `Resources` and `Custom fields` below.
 
-#### Request
+### Resources
+
+Resources are items external to the groups service that may be associated with groups. All
+resource entries have a `rid` field for the resource ID. The contents of this ID field depend
+on the resource. The other fields in the resource entry depend on the resource type.
+
+The currently supported resource types are:
+
+#### catalogmethod
+
+Represents a KBase catalog service method.
+
+```
+{"rid": <the catalog method ID, e.g. Module.method>}
+```
+
+### workspace
+
+Represents information about a workspace.
+
+```
+{
+    "rid": <the workspace ID>,
+    "name": <the workspace name>,
+    "narrname": <the name of the narrative contained in the workspace or null>
+    "public": <true if the workspace is public, false otherwise>
+    "perm": <the user's permission for the workspace>
+}
+```
+
+`perm` is one of `None`, `Read`, `Write`, `Admin`, or `Own`.
+
+### Request
 
 Represents a request to modify a group in some way.
 
@@ -100,7 +114,7 @@ catalog method will be added to the group.
 
 The request status is one of `Open`, `Canceled`, `Expired`, `Accepted`, or `Denied`.
 
-#### Error
+### Error
 
 This data structure is returned for all service errors.
 
@@ -151,6 +165,11 @@ Current error types are:
 60000	Request closed
 70000	Unsupported operation
 ```
+
+## API
+
+Endpoints that require authorization are noted below. To authorize a request, include an
+`authorization` header with a KBase token as the value.
 
 ### Root
 
@@ -258,15 +277,15 @@ GET /group/<group id>
 RETURNS: A Group.
 ```
 
-If no authorization is provided, the members list is empty and only public workspaces associated
+If no authorization is provided, the members list is empty and only public resources associated
 with the group are returned.
 
 If authorization is provided and the user is not a member of the group, the members list is
-empty and only group-associated public workspaces and workspaces the user administrates are
+empty and only group-associated public resources and resources the user administrates are
 returned.
 
 If authorization is provided and the user is a member of the group, the members list is populated
-and all group-associated workspaces are returned.
+and all group-associated resources are returned.
 
 ### Check if a group ID exists
 
@@ -443,9 +462,8 @@ GET /request/targeted[?parameters]
 RETURNS: A list of Requests.
 ```
 
-Returns requests where the user is a target (including an administrator of the workspace at
-which the request is targeted or an owner of a Catalog module at which the request is targeted)
-of the request.
+Returns requests where the user is a target (including an administrator of the resource at
+which the request is targeted) of the request.
 
 #### Get the list of requests for a group
 
@@ -479,9 +497,8 @@ PUT /request/id/<request id>/accept
 RETURNS: A Request.
 ```
 
-The user must be the target of the request (including an administrator of the workspace at
-which the request is targeted or an owner of a Catalog module at which the request is targeted)
-or an administrator of the group at which the request is targeted.
+The user must be the target of the request (including an administrator of the resource at
+which the request is targeted) or an administrator of the group at which the request is targeted.
 
 ### Deny a request
 
@@ -495,9 +512,8 @@ PUT /request/id/<request id>/deny
 RETURNS: A Request.
 ```
 
-The user must be the target of the request (including an administrator of the workspace at
-which the request is targeted or an owner of a Catalog module at which the request is targeted)
-or an administrator of the group at which the request is targeted.
+The user must be the target of the request (including an administrator of the resource at
+which the request is targeted) or an administrator of the group at which the request is targeted.
 
 ## Custom fields
 

@@ -339,14 +339,20 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers(), u -> u.getName()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(
 					g.getAdministrators(), u -> u.getName()));
-			ret.put(Fields.GROUP_CATALOG_METHODS, toSortedStringList(
-					g.getCatalogMethods(), c -> c.getFullMethod()));
+			final Map<String, Object> resources = new HashMap<>();
+			ret.put(Fields.GROUP_RESOURCES, resources);
+			//TODO NNOW handle resources generically
+			//TODO NNOW replace with resource type
+			resources.put("catalogmethod", new TreeSet<>(g.getCatalogMethods()).stream()
+					.map(m -> ImmutableMap.of(Fields.GROUP_RESOURCE_ID, m.getFullMethod()))
+					.collect(Collectors.toList()));
 			final List<Map<String, Object>> wslist = new LinkedList<>();
-			ret.put(Fields.GROUP_WORKSPACES, wslist);
+			//TODO NNOW replace with resource type
+			resources.put("workspace", wslist);
 			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
 				final Map<String, Object> ws = new HashMap<>();
 				wslist.add(ws);
-				ws.put(Fields.GROUP_WS_ID, wsi.getID());
+				ws.put(Fields.GROUP_RESOURCE_ID, wsi.getID());
 				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
 				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
 				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
