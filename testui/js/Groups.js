@@ -369,15 +369,15 @@ export default class {
                         </thead>
                         <tbody>
                        `;
-                  for (const ws of json.workspaces) {
+                  for (const ws of json.resources.workspace) {
                       g += `<tr>
-                              <th>${s(ws.wsid)}</th>
+                              <th>${s(ws.rid)}</th>
                               <td>${s(ws.name)}</td>
                               <td>${s(ws.narrname)}</td>
                               <td>${s(ws.public)}</td>
                               <td>${s(ws.perm)}</td>
                               <td>
-                                <button id="removews_${s(ws.wsid)}" class="btn btn-primary">Remove
+                                <button id="removews_${s(ws.rid)}" class="btn btn-primary">Remove
                                       </button>
                               </td>
                             </tr>
@@ -394,11 +394,11 @@ export default class {
                       </thead>
                       <tbody>
                      `;
-                  for (const meth of json.catmethods) {
+                  for (const meth of json.resources.catalogmethod) {
                       g += `<tr>
-                              <th>${s(meth)}</th>
+                              <th>${s(meth.rid)}</th>
                               <td>
-                                <button id="removemeth_${s(meth.replace('.', '_'))}"
+                                <button id="removemeth_${s(meth.rid.replace('.', '_'))}"
                                   class="btn btn-primary">Remove</button>
                               </td>
                             </tr>
@@ -466,16 +466,16 @@ export default class {
                           this.demoteAdmin(groupid, a);
                       });
                   }
-                  for (const ws of json.workspaces) {
-                      $(`#removews_${s(ws.wsid)}`).on('click', () => {
+                  for (const ws of json.resources.workspace) {
+                      $(`#removews_${s(ws.rid)}`).on('click', () => {
                           // TODO only activate button if ws admin or group admin
-                          this.removeResource(groupid, "workspace", ws.wsid);
+                          this.removeResource(groupid, "workspace", ws.rid);
                       });
                   }
-                  for (const meth of json.catmethods) {
-                      $(`#removemeth_${s(meth.replace('.', '_'))}`).on('click', () => {
+                  for (const meth of json.resources.catalogmethod) {
+                      $(`#removemeth_${s(meth.rid.replace('.', '_'))}`).on('click', () => {
                           // TODO only activate button if ws admin or group admin
-                          this.removeResource(groupid, "catalogmethod", meth);
+                          this.removeResource(groupid, "catalogmethod", meth.rid);
                       });
                   }
               }).catch( (err) => {
