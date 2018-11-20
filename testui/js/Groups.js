@@ -692,11 +692,10 @@ export default class {
                               <tr>
                                 <th scope="col">Requester</th>
                                 <th scope="col">Status</th>
-                                <th scope="col">Type</th>
                                 <th scope="col">Group ID</th>
-                                <th scope="col">Target User</th>
-                                <th scope="col">Target Method</th>
-                                <th scope="col">Target Workspace</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Resource Type</th>
+                                <th scope="col">Resource ID</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -707,11 +706,11 @@ export default class {
                               <tr id="${s(r.id)}">
                                 <td>${s(r.requester)}</td>
                                 <td>${s(r.status)}</td>
-                                <td>${s(r.type)}</td>
                                 <td>${s(r.groupid)}</td>
-                                <td>${s(r.targetuser)}</td>
-                                <td>${s(r.targetmeth)}</td>
-                                <td>${this.renderViewWSButton(r.targetws)}</td>
+                                <td>${s(r.type)}</td>
+                                <td>${s(r.resourcetype)}</td>
+                                <td>${s(r.resource)}
+                                  ${this.renderViewButton(r.resourcetype, r.resource)}</td>
                               </tr>
                               `
                       }
@@ -730,10 +729,10 @@ export default class {
                           $(`#${s(r.id)}`).on('click', () => {
                               this.renderRequest(r.id);
                           });
-                          if (r.targetws) {
-                              $(`#viewws_${s(r.targetws)}`).on('click', (e) => {
+                          if (r.resourcetype === "workspace") {
+                              $(`#view_${s(r.resource)}`).on('click', (e) => {
                                   e.stopPropagation();
-                                  this.viewWS(r.id, r.targetws); 
+                                  this.view(r.id, r.resource); 
                               });
                           }
                       }
@@ -750,22 +749,23 @@ export default class {
       });
   }
   
-  renderViewWSButton(wsid) {
-      if (!wsid) {
-          return '';
+  //TODO Need to namespace resource by resource type & map resource type to linkout url
+  renderViewButton(resourcetype, resource) {
+      if (resourcetype !== "workspace") {
+          return `<button class="btn btn-primary">No worky</button>`;
       }
       const s = this.sanitize;
-      return `<button id="viewws_${s(wsid)}" class="btn btn-primary">View Workspace</button>`
+      return `<button id="view_${s(resource)}" class="btn btn-primary">View Resource</button>`
   }
   
-  viewWS(requestid, wsid) {
+  view(requestid, resource) {
       $('#error').text("");
       fetch(this.serviceUrl + "request/id/" + requestid + "/getperm",
        {"method": "POST",
         "headers": this.getHeaders()
         }).then( (response) => {
           if (response.ok) {
-              window.open($("#linkout").val() + '/' + wsid, '_blank');
+              window.open($("#linkout").val() + '/' + resource, '_blank');
           } else {
               response.text().then( (err) => {
                   this.handleError(err);
@@ -797,11 +797,10 @@ export default class {
                           <tr><th>ID</th><td>${s(json.id)}</td></tr>
                           <tr><th>Group ID</th><td>${s(json.groupid)}</td></tr>
                           <tr><th>Requester</th><td>${s(json.requester)}</td></tr>
-                          <tr><th>Target user</th><td>${s(json.targetuser)}</td></tr>
-                          <tr><th>Target catalog method</th><td>${s(json.targetmeth)}</td></tr>
-                          <tr><th>Target workspace</th>
-                              <td>${this.renderViewWSButton(json.targetws)}</td></tr>
                           <tr><th>Type</th><td>${s(json.type)}</td></tr>
+                          <tr><th>Resource type</th><td>${s(json.resourcetype)}</td></tr>
+                          <tr><th>Resource</th><td>${s(json.resource)}
+                              ${this.renderViewButton(json.resourcetype, json.resource)}</td></tr>
                           <tr><th>Status</th><td>${s(json.status)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
@@ -852,9 +851,9 @@ export default class {
                           this.denyRequest(requestid, denyReason);
                       });
                   }
-                  if (json.targetws) {
-                      $(`#viewws_${s(json.targetws)}`).on('click', () => {
-                          this.viewWS(json.id, json.targetws); 
+                  if (json.resourcetype === "workspace") {
+                      $(`#view_${s(json.resource)}`).on('click', () => {
+                          this.view(json.id, json.resource); 
                       });
                   }
               }).catch( (err) => {

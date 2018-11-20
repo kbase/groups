@@ -55,7 +55,7 @@ Represents a KBase catalog service method.
 {"rid": <the catalog method ID, e.g. Module.method>}
 ```
 
-### workspace
+#### workspace
 
 Represents information about a workspace.
 
@@ -401,7 +401,7 @@ AUTHORIZATION REQUIRED
 POST /request/id/<request id>/getperm
 ```
 
-The request type must be `Request add workspace to group` and the user must be a group
+The request type must be `Request`, the resource type `workspace`, and the user must be a group
 administrator.
 
 ### Listing requests
