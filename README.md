@@ -144,17 +144,20 @@ Current error types are:
 30001	Illegal input parameter
 30010	Illegal user name
 30020	Illegal group ID
+30030	Illegal resource ID
 40000	Group already exists
 40010	Request already exists
 40020	User already group member
-40030	Workspace already in group
-40040	Catalog method already in group
+40030	Resource already in group
+40040	Workspace already in group (DEPRECATED)
+40050	Catalog method already in group (DEPRECATED)
 50000	No such group
 50010	No such request
 50020	No such user
 50030	No such custom field
-50040	No such workspace
-50050	No such catalog entry
+50040	No such resource
+50050	No such workspace (DEPRECATED)
+50060	No such catalog entry (DEPRECATED)
 60000	Request closed
 70000	Unsupported operation
 ```
