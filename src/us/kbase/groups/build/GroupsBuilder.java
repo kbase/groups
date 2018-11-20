@@ -22,17 +22,17 @@ import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserHandler;
-import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
+import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -139,13 +139,13 @@ public class GroupsBuilder {
 		}
 	}
 
-	private CatalogHandler getCatalogHandler(final GroupsConfig c)
+	private ResourceHandler getCatalogHandler(final GroupsConfig c)
 			throws GroupsConfigurationException {
 		try {
 			final CatalogClient client = new CatalogClient(c.getCatalogURL());
 			client.setIsInsecureHttpConnectionAllowed(c.isAllowInsecureURLs());
 			return new SDKClientCatalogHandler(client);
-		} catch (CatalogHandlerException e) {
+		} catch (ResourceHandlerException e) {
 			throw new GroupsConfigurationException(
 					"Failed to create catalog handler: " + e.getMessage(), e);
 		}

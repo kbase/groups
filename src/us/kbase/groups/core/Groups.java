@@ -18,24 +18,26 @@ import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
 import us.kbase.groups.core.GroupView.ViewType;
-import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
@@ -50,6 +52,10 @@ import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceHandler;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
@@ -91,7 +97,7 @@ public class Groups {
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final WorkspaceHandler wsHandler;
-	private final CatalogHandler catHandler;
+	private final ResourceHandler catHandler;
 	private final FieldValidators validators;
 	private final Notifications notifications;
 	private final UUIDGenerator uuidGen;
@@ -112,7 +118,7 @@ public class Groups {
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
-			final CatalogHandler catHandler,
+			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications) {
 		this(storage, userHandler, wsHandler, catHandler, validators, notifications,
@@ -124,7 +130,7 @@ public class Groups {
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
-			final CatalogHandler catHandler,
+			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final UUIDGenerator uuidGen,
@@ -394,12 +400,12 @@ public class Groups {
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user may not view the request.
 	 * @throws WorkspaceHandlerException if the workspace could not be contacted.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
+	 * @throws ResourceHandlerException  if an error occurs contacting the resource service.
 	 */
 	public GroupRequestWithActions getRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException,
-				CatalogHandlerException {
+				ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -451,18 +457,26 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException, CatalogHandlerException {
+				WorkspaceHandlerException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
 		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
-		final Set<CatalogModule> mods = catHandler.getOwnedModules(user);
+		final Set<ResourceAdministrativeID> adIDs = catHandler.getAdministratedResources(user);
+		final Set<CatalogModule> mods = new HashSet<>();
+		for (final ResourceAdministrativeID id: adIDs) {
+			try {
+				mods.add(new CatalogModule(id.getName()));
+			} catch (MissingParameterException | IllegalParameterException e) {
+				throw new RuntimeException("Impossible", e); //TODO NNOW remove
+			}
+		}
 		return storage.getRequestsByTarget(user, ws, mods, params);
 	}
 
@@ -580,7 +594,7 @@ public class Groups {
 	 * administrator of the group targeted in the request, if a group is targeted.
 	 * @throws WorkspaceHandlerException if the workspace service could not be contacted.
 	 * @throws ClosedRequestException if the request is closed.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 */
 	public GroupRequest denyRequest(
 			final Token userToken,
@@ -588,7 +602,7 @@ public class Groups {
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException,
-				ClosedRequestException, CatalogHandlerException {
+				ClosedRequestException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -621,11 +635,11 @@ public class Groups {
 	 * @throws WorkspaceHandlerException if there is an error contacting the workspace service.
 	 * @throws NoSuchWorkspaceException if the workspace to be added to a group does not exist.
 	 * @throws ClosedRequestException if the request is closed.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
-	 * @throws NoSuchCatalogEntryException if the catalog method to be added to a group does not
-	 * exist.
 	 * @throws CatalogMethodExistsException if the method to be added to the group is already
 	 * part of the group.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceException if the resource associated with the request no longer
+	 * exists.
 	 */ 
 	public GroupRequest acceptRequest(
 			final Token userToken,
@@ -633,8 +647,8 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, UserIsMemberException,
 				WorkspaceExistsException, NoSuchWorkspaceException, WorkspaceHandlerException,
-				ClosedRequestException, CatalogHandlerException, NoSuchCatalogEntryException,
-				CatalogMethodExistsException {
+				ClosedRequestException, CatalogMethodExistsException, ResourceHandlerException,
+				NoSuchResourceException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -656,8 +670,8 @@ public class Groups {
 			final GroupID groupID,
 			final GroupRequest request)
 			throws GroupsStorageException, UserIsMemberException, NoSuchWorkspaceException,
-				WorkspaceHandlerException, WorkspaceExistsException, NoSuchCatalogEntryException,
-				CatalogHandlerException, CatalogMethodExistsException {
+				WorkspaceHandlerException, WorkspaceExistsException,
+				NoSuchResourceException, ResourceHandlerException, CatalogMethodExistsException {
 		final Collection<UserName> toNotify;
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
@@ -673,13 +687,27 @@ public class Groups {
 				request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
 			final CatalogMethod m = request.getCatalogMethodTarget().get();
 			// do this first in case the catalog ever allows module deletion
-			toNotify = catHandler.getOwners(m.getModule());
+			try {
+				toNotify = catHandler.getAdminstrators(toResourceID(m));
+			} catch (IllegalResourceIDException e) {
+				throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
+						request.getID().getID(), e.getMessage()), e);
+			}
 			addMethodToKnownGoodGroup(groupID, m);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
 		}
 		return new HashSet<>(toNotify);
+	}
+
+	//TODO NNOW remove
+	private ResourceID toResourceID(final CatalogMethod m) {
+		try {
+			return new ResourceID(m.getFullMethod());
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("Impossible", e);
+		}
 	}
 	
 	private void ensureIsOpen(final GroupRequest request) throws ClosedRequestException {
@@ -693,7 +721,7 @@ public class Groups {
 			final boolean isGroupAdmin,
 			final UserName user,
 			final String actionVerb)
-			throws UnauthorizedException, WorkspaceHandlerException, CatalogHandlerException {
+			throws UnauthorizedException, WorkspaceHandlerException, ResourceHandlerException {
 		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP) &&
 				user.equals(request.getTarget().get())) {
 			return;
@@ -703,7 +731,7 @@ public class Groups {
 				isWSAdministrator(user, request.getWorkspaceTarget().get())) {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD) &&
-				isCatModuleOwner(user, request.getCatalogMethodTarget().get())) {
+				isCatModuleOwner(user, request)) {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
@@ -713,12 +741,16 @@ public class Groups {
 	
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
 	// returns false if missing / deleted
-	private boolean isCatModuleOwner(final UserName user, final CatalogMethod method)
-			throws CatalogHandlerException {
+	private boolean isCatModuleOwner(final UserName user, final GroupRequest request)
+			throws ResourceHandlerException {
 		try {
-			return catHandler.isOwner(method.getModule(), user);
-		} catch (NoSuchCatalogEntryException e) {
+			return catHandler.isAdministrator(
+					toResourceID(request.getCatalogMethodTarget().get()), user);
+		} catch (NoSuchResourceException e) {
 			return false;
+		} catch (IllegalResourceIDException e) {
+			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
+					request.getID().getID(), e.getMessage()), e);
 		}
 	}
 
@@ -964,7 +996,7 @@ public class Groups {
 	 * added to the system and returned.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param method the method.
+	 * @param resource the method.
 	 * @return A request if required or {@link Optional#empty()} if the operation is already
 	 * complete.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -974,81 +1006,99 @@ public class Groups {
 	 * @throws UnauthorizedException if the user is not an administrator of the group or an
 	 * owner of the module.
 	 * @throws RequestExistsException if there's already an equivalent request in the system.
-	 * @throws CatalogMethodExistsException if the method is already associated with the group.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
-	 * @throws NoSuchCatalogEntryException if there is no such catalog method.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws ResourceExistsException  if the resource is already associated with the group.
 	 */
 	public Optional<GroupRequest> addCatalogMethod(
 			final Token userToken,
 			final GroupID groupID,
-			final CatalogMethod method)
+			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, RequestExistsException,
-				CatalogMethodExistsException, NoSuchCatalogEntryException,
-				CatalogHandlerException {
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException,
+				ResourceExistsException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
-		checkNotNull(method, "method");
+		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
-		if (g.getCatalogMethods().contains(method)) {
-			throw new CatalogMethodExistsException(method.getFullMethod());
+		final ResourceDescriptor d = catHandler.getDescriptor(resource);
+		final CatalogMethod m; // TODO NNOW remove
+		try {
+			m = new CatalogMethod(d.getResourceID().getName());
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("impossible", e);
 		}
-		if (!catHandler.isMethodExtant(method)) {
-			throw new NoSuchCatalogEntryException(method.getFullMethod());
+		if (g.getCatalogMethods().contains(m)) {
+			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> modowners = catHandler.getOwners(method.getModule());
+		final Set<UserName> modowners = catHandler.getAdminstrators(resource);
 		if (g.isAdministrator(user) && modowners.contains(user)) {
-			storage.addCatalogMethod(groupID, method, clock.instant());
+			try {
+				storage.addCatalogMethod(groupID, m, clock.instant());
+			} catch (CatalogMethodExistsException e) { // TODO NNOW remove
+				throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
+			}
 			//TODO NNOW notify
 			return Optional.empty();
 		}
 		if (modowners.contains(user)) {
 			return Optional.of(createRequestStoreAndNotify(g, user,
-					b -> b.withRequestAddCatalogMethod(method), g.getAdministratorsAndOwner()));
+					b -> b.withRequestAddCatalogMethod(m), g.getAdministratorsAndOwner()));
 		}
 		if (g.isAdministrator(user)) {
 			return Optional.of(createRequestStoreAndNotify(
-					g, user, b -> b.withInviteCatalogMethod(method), modowners));
+					g, user, b -> b.withInviteCatalogMethod(m), modowners));
 		}
 		throw new UnauthorizedException(String.format(
-				"User %s is not an admin for group %s or catalog module %s",
-				user.getName(), groupID.getName(), method.getModule().getName()));
+				"User %s is not an admin for group %s or resource %s",
+				user.getName(), groupID.getName(), resource.getName()));
 	}
 	
 	/** Remove a catalog method from a group.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param method the method.
+	 * @param resource the method.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no such group.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * catalog module.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog service.
-	 * @throws NoSuchCatalogEntryException if there is no such catalog module or the group
-	 * does not contain the method.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
 	 */
 	public void removeCatalogMethod(
 			final Token userToken,
 			final GroupID groupID,
-			final CatalogMethod method)
+			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, UnauthorizedException,
-				NoSuchCatalogEntryException, CatalogHandlerException {
+				GroupsStorageException, UnauthorizedException, NoSuchResourceException,
+				IllegalResourceIDException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
-		checkNotNull(method, "method");
+		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
 		// should check if method not in group & fail early?
-		if (group.isAdministrator(user) || catHandler.isOwner(method.getModule(), user)) {
-			storage.removeCatalogMethod(groupID, method, clock.instant());
+		final ResourceDescriptor d = catHandler.getDescriptor(resource);
+		if (group.isAdministrator(user) || catHandler.isAdministrator(resource, user)) {
+			final CatalogMethod m; // TODO NNOW remove
+			try {
+				m = new CatalogMethod(d.getResourceID().getName());
+				storage.removeCatalogMethod(groupID, m, clock.instant());
+			} catch (MissingParameterException | IllegalParameterException e) {
+				throw new RuntimeException("impossible", e);
+			} catch (NoSuchCatalogEntryException e) { // TODO NNOW remove
+				throw new NoSuchResourceException(e.getMessage().split(":", 2)[1].trim(), e);
+			}
 		} else {
 			throw new UnauthorizedException(String.format(
-					"User %s is not an admin for group %s or catalog module %s",
-					user.getName(), groupID.getName(), method.getModule().getName()));
+					"User %s is not an admin for group %s or resource %s",
+					user.getName(), groupID.getName(), resource.getName()));
 		}
 	}
 }

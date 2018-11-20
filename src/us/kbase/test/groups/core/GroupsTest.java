@@ -45,25 +45,27 @@ import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.FieldItem.StringField;
-import us.kbase.groups.core.catalog.CatalogHandler;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
@@ -76,6 +78,10 @@ import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceHandler;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
@@ -112,7 +118,7 @@ public class GroupsTest {
 		final GroupsStorage storage = mock(GroupsStorage.class);
 		final UserHandler uh = mock(UserHandler.class);
 		final WorkspaceHandler wh = mock(WorkspaceHandler.class);
-		final CatalogHandler ch = mock(CatalogHandler.class);
+		final ResourceHandler ch = mock(ResourceHandler.class);
 		final FieldValidators val = mock(FieldValidators.class);
 		final Notifications notis = mock(Notifications.class);
 		final UUIDGenerator uuidGen = mock(UUIDGenerator.class);
@@ -121,7 +127,7 @@ public class GroupsTest {
 		
 		final Constructor<Groups> c = Groups.class.getDeclaredConstructor(
 				GroupsStorage.class, UserHandler.class, WorkspaceHandler.class,
-				CatalogHandler.class, FieldValidators.class, Notifications.class,
+				ResourceHandler.class, FieldValidators.class, Notifications.class,
 				UUIDGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Groups instance = c.newInstance(storage, uh, wh, ch, val, notis, uuidGen, clock);
@@ -134,7 +140,7 @@ public class GroupsTest {
 		public final GroupsStorage storage;
 		public final UserHandler userHandler;
 		public final WorkspaceHandler wsHandler;
-		public final CatalogHandler catHandler;
+		public final ResourceHandler catHandler;
 		public final FieldValidators validators;
 		public final Notifications notifs;
 		public final UUIDGenerator uuidGen;
@@ -145,7 +151,7 @@ public class GroupsTest {
 				final GroupsStorage storage,
 				final UserHandler userHandler,
 				final WorkspaceHandler wsHandler,
-				final CatalogHandler catHandler,
+				final ResourceHandler catHandler,
 				final FieldValidators validators,
 				final Notifications notifs,
 				final UUIDGenerator uuidGen,
@@ -167,7 +173,7 @@ public class GroupsTest {
 		final GroupsStorage s = mock(GroupsStorage.class);
 		final UserHandler u = mock(UserHandler.class);
 		final WorkspaceHandler w = mock(WorkspaceHandler.class);
-		final CatalogHandler c = mock(CatalogHandler.class);
+		final ResourceHandler c = mock(ResourceHandler.class);
 		final FieldValidators v = mock(FieldValidators.class);
 		final Notifications n = mock(Notifications.class);
 		
@@ -183,7 +189,7 @@ public class GroupsTest {
 			final GroupsStorage storage,
 			final UserHandler userHandler,
 			final WorkspaceHandler wsHandler,
-			final CatalogHandler catHandler,
+			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final Exception expected) {
@@ -1371,7 +1377,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(87), new UserName("wsadmin")))
 				.thenReturn(true);
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
+		when(mocks.catHandler.isAdministrator(new ResourceID("mod.meth"), new UserName("catadmin")))
 				.thenReturn(true);
 		
 		final GroupRequestWithActions req = mocks.groups.getRequest(
@@ -1604,13 +1610,42 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("someuser")))
-				.thenThrow(new NoSuchCatalogEntryException("mod"));
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("someuser")))
+				.thenThrow(new NoSuchResourceException("mod"));
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User someuser may not access request " + id));
 	}
 	
+	@Test
+	public void getRequestFailInviteMethodIllegalValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("gid"), new UserName("user"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+				.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+				.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("someuser")))
+				.thenThrow(new IllegalResourceIDException("foo"));
+		
+		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Illegal value stored in request %s: 30030 Illegal resource ID: foo",
+						id.toString())));
+	}
 	
 	@Test
 	public void getRequestFailInviteModuleNotAdmin() throws Exception {
@@ -1631,7 +1666,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("someuser")))
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("someuser")))
 				.thenReturn(false);
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1753,8 +1789,8 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
 				.thenReturn(WorkspaceIDSet.fromInts(set(96)));
-		when(mocks.catHandler.getOwnedModules(new UserName("user")))
-				.thenReturn(set(new CatalogModule("mod")));
+		when(mocks.catHandler.getAdministratedResources(new UserName("user")))
+				.thenReturn(set(new ResourceAdministrativeID("mod")));
 		when(mocks.storage.getRequestsByTarget(
 				new UserName("user"), WorkspaceIDSet.fromInts(set(96)), 
 				set(new CatalogModule("mod")),
@@ -1781,8 +1817,9 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
 		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
 				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
-		when(mocks.catHandler.getOwnedModules(new UserName("target")))
-				.thenReturn(set(new CatalogModule("mod"), new CatalogModule("mod2")));
+		when(mocks.catHandler.getAdministratedResources(new UserName("target")))
+				.thenReturn(set(new ResourceAdministrativeID("mod"),
+						new ResourceAdministrativeID("mod2")));
 		when(mocks.storage.getRequestsByTarget(
 				new UserName("target"),
 				WorkspaceIDSet.fromInts(set(96, 24)),
@@ -2211,7 +2248,8 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(86), new UserName("wsadmin")))
 				.thenReturn(true);
-		when(mocks.catHandler.isOwner(new CatalogModule("cm"), new UserName("catadmin")))
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("cm.meth2"), new UserName("catadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -2405,9 +2443,11 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
 				.thenReturn(false);
-		when(mocks.catHandler.isOwner(new CatalogModule("foo"), new UserName("notadmin")))
+		when(mocks.catHandler.isAdministrator(new ResourceID("foo.bar"), new UserName("notadmin")))
 				.thenReturn(false);
-		
+		when(mocks.catHandler.isAdministrator(new ResourceID("foo.baz"), new UserName("notadmin")))
+				.thenReturn(false);
+				
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not deny request " + id));
 	}
@@ -2484,11 +2524,42 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("notadmin")))
-				.thenThrow(new NoSuchCatalogEntryException("mod"));
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("notadmin")))
+				.thenThrow(new NoSuchResourceException("mod.meth"));
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not deny request " + id));
+	}
+	
+	@Test
+	public void denyRequestFailIllegalValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("notadmin")))
+				.thenThrow(new IllegalResourceIDException("bar"));
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Illegal value stored in request %s: 30030 Illegal resource ID: bar",
+						id.toString())));
 	}
 	
 	private void failDenyRequest(
@@ -2558,7 +2629,7 @@ public class GroupsTest {
 	public void acceptRequestGroupAdminForRequestMethod() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.n"))).thenReturn(
 				set(new UserName("u1"), new UserName("u8")));
 		acceptRequest(mocks, new UserName("own"),
 				set(new UserName("u1"), new UserName("u8"), new UserName("admin"),
@@ -2573,9 +2644,9 @@ public class GroupsTest {
 	public void acceptRequestWSAdminForInviteMethod() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
+		when(mocks.catHandler.isAdministrator(new ResourceID("mod.n"), new UserName("catadmin")))
 				.thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("u4")));
 		acceptRequest(mocks, new UserName("catadmin"),
 				set(new UserName("admin"), new UserName("u4"), new UserName("own"),
@@ -2729,7 +2800,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.wsHandler.isAdministrator(new WorkspaceID(55), new UserName("notadmin")))
 				.thenReturn(false);
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("notadmin")))
+		when(mocks.catHandler.isAdministrator(new ResourceID("mod.n"), new UserName("notadmin")))
 				.thenReturn(false);
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2930,11 +3001,41 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenThrow(
-				new NoSuchCatalogEntryException("mod"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenThrow(
+				new NoSuchResourceException("mod.meth"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
-				new NoSuchCatalogEntryException("mod"));
+				new NoSuchResourceException("mod.meth"));
+	}
+	
+	@Test
+	public void acceptRequestFailIllegalValueOnRequest() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenThrow(
+				new IllegalResourceIDException("foo"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Illegal value stored in request %s: 30030 Illegal resource ID: foo",
+						id.toString())));
 	}
 	
 	@Test
@@ -2958,11 +3059,41 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("md"), new UserName("catadmin")))
-				.thenThrow(new NoSuchCatalogEntryException("md"));
+		when(mocks.catHandler.isAdministrator(new ResourceID("md.meth"), new UserName("catadmin")))
+				.thenThrow(new NoSuchResourceException("md.meth"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User catadmin may not accept request " + id));
+	}
+	
+	@Test
+	public void acceptRequestFailIllegalValueOnInvite() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("catadmin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withInviteCatalogMethod(new CatalogMethod("md.meth"))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("a3"))
+				.build());
+		when(mocks.catHandler.isAdministrator(new ResourceID("md.meth"), new UserName("catadmin")))
+				.thenThrow(new IllegalResourceIDException("foo"));
+		
+		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Illegal value stored in request %s: 30030 Illegal resource ID: foo",
+						id.toString())));
 	}
 	
 	@Test
@@ -2986,7 +3117,7 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.getOwners(new CatalogModule("md"))).thenReturn(
+		when(mocks.catHandler.getAdminstrators(new ResourceID("md.n"))).thenReturn(
 				set(new UserName("u3"), new UserName("u4")));
 		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
@@ -3862,13 +3993,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("mod.meth"))).thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
+				.thenReturn(getResDesc("mod", "mod.meth"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenReturn(
 				set(new UserName("admin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(inst(3400));
 		
 		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("mod.meth"));
+				new Token("t"), new GroupID("gid"), new ResourceID("mod.meth"));
 		
 		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.meth"),
 				inst(3400));
@@ -3877,6 +4009,10 @@ public class GroupsTest {
 	}
 	
 	
+	private ResourceDescriptor getResDesc(final String aid, final String rid) throws Exception {
+		return new ResourceDescriptor(new ResourceAdministrativeID(aid), new ResourceID(rid));
+	}
+
 	@Test
 	public void addCatalogMethodModuleOwner() throws Exception {
 		final TestMocks mocks = initTestMocks();
@@ -3891,14 +4027,15 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
 		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
@@ -3950,14 +4087,15 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
 		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("admin"),
@@ -4001,11 +4139,11 @@ public class GroupsTest {
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
-		final CatalogMethod m = new CatalogMethod("m.n");
+		final ResourceID m = new ResourceID("m.n");
 		
 		failAddCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
 		failAddCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
-		failAddCatalogMethod(g, t, i, null, new NullPointerException("method"));
+		failAddCatalogMethod(g, t, i, null, new NullPointerException("resource"));
 	}
 	
 	@Test
@@ -4020,10 +4158,13 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(false);
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n")))
+				.thenThrow(new NoSuchResourceException("m.n"));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("m.n"), new NoSuchCatalogEntryException("m.n"));
+				new ResourceID("m.n"), new NoSuchResourceException("m.n"));
 	}
 	
 	@Test
@@ -4038,13 +4179,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("m.n"))).thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("m"))).thenReturn(
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("cat1"), new UserName("cat2")));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("m.n"), new UnauthorizedException(
-						"User u1 is not an admin for group gid or catalog module m"));
+				new ResourceID("m.n"), new UnauthorizedException(
+						"User u1 is not an admin for group gid or resource m.n"));
 	}
 	
 	@Test
@@ -4061,8 +4203,32 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("m.n"), new CatalogMethodExistsException("m.n"));
+				new ResourceID("m.n"), new ResourceExistsException("m.n"));
+	}
+	
+	@Test
+	public void addCatalogMethodFailIllegalValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withCatalogMethod(new CatalogMethod("m.n"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenThrow(new IllegalResourceIDException("bar"));
+		
+		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceID("m.n"), new IllegalResourceIDException("bar"));
 	}
 	
 	@Test
@@ -4077,8 +4243,9 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isMethodExtant(new CatalogMethod("mod.m"))).thenReturn(true);
-		when(mocks.catHandler.getOwners(new CatalogModule("mod"))).thenReturn(
+		when(mocks.catHandler.getDescriptor(new ResourceID("mod.m")))
+				.thenReturn(getResDesc("mod", "mod.m"));
+		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.m"))).thenReturn(
 				set(new UserName("admin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 
@@ -4086,14 +4253,14 @@ public class GroupsTest {
 				.addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.m"), inst(7000));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("mod.m"), new CatalogMethodExistsException("mod.m"));
+				new ResourceID("mod.m"), new ResourceExistsException("mod.m"));
 	}
 	
 	private void failAddCatalogMethod(
 			final Groups g,
 			final Token t,
 			final GroupID i,
-			final CatalogMethod m,
+			final ResourceID m,
 			final Exception expected) {
 		try {
 			g.addCatalogMethod(t, i, m);
@@ -4115,12 +4282,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("admin")))
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("admin")))
 				.thenReturn(false);
 		when(mocks.clock.instant()).thenReturn(inst(7100));
 
 		mocks.groups.removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
 		verify(mocks.storage).removeCatalogMethod(
 				new GroupID("gid"), new CatalogMethod("m.n"), inst(7100));
@@ -4138,12 +4307,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("catadmin")))
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("catadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7500));
 		
 		mocks.groups.removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
 		verify(mocks.storage).removeCatalogMethod(
 				new GroupID("gid"), new CatalogMethod("m.n"), inst(7500));
@@ -4155,11 +4326,30 @@ public class GroupsTest {
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
-		final CatalogMethod m = new CatalogMethod("m.n");
+		final ResourceID m = new ResourceID("m.n");
 		
 		failRemoveCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
 		failRemoveCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
-		failRemoveCatalogMethod(g, t, i, null, new NullPointerException("method"));
+		failRemoveCatalogMethod(g, t, i, null, new NullPointerException("resource"));
+	}
+	
+	@Test
+	public void removeCatalogMethodFailIllegalResourceValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenThrow(new IllegalResourceIDException("bleah"));
+		
+		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceID("m.n"), new IllegalResourceIDException("bleah"));
 	}
 	
 	@Test
@@ -4174,11 +4364,13 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("notadmin")))
-			.thenThrow(new CatalogHandlerException("oops"));
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(getResDesc("m", "m.n"));
+		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("notadmin")))
+			.thenThrow(new ResourceHandlerException("oops"));
 		
 		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("m.n"), new CatalogHandlerException("oops"));
+				new ResourceID("m.n"), new ResourceHandlerException("oops"));
 	}
 	
 	@Test
@@ -4194,12 +4386,12 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("m"), new UserName("notamdin")))
+		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("notamdin")))
 				.thenReturn(false);
 		
 		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("m.n"), new UnauthorizedException(
-						"User notadmin is not an admin for group gid or catalog module m"));
+				new ResourceID("m.n"), new UnauthorizedException(
+						"User notadmin is not an admin for group gid or resource m.n"));
 	}
 	
 	@Test
@@ -4214,7 +4406,10 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.catHandler.isOwner(new CatalogModule("mod"), new UserName("catadmin")))
+		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
+				.thenReturn(getResDesc("mod", "mod.meth"));
+		when(mocks.catHandler.isAdministrator(
+				new ResourceID("mod.meth"), new UserName("catadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
@@ -4223,15 +4418,15 @@ public class GroupsTest {
 						inst(7000));
 		
 		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new CatalogMethod("mod.meth"),
-				new NoSuchCatalogEntryException("mod not in group"));
+				new ResourceID("mod.meth"),
+				new NoSuchResourceException("mod not in group"));
 	}
 	
 	private void failRemoveCatalogMethod(
 			final Groups g,
 			final Token t,
 			final GroupID i,
-			final CatalogMethod m,
+			final ResourceID m,
 			final Exception expected) {
 		try {
 			g.removeCatalogMethod(t, i, m);

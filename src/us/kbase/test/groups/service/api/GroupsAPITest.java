@@ -48,8 +48,8 @@ import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
@@ -60,6 +60,7 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
@@ -1327,7 +1328,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.n")))
+				new Token("my token"), new GroupID("foo"), new ResourceID("m.n")))
 				.thenReturn(Optional.empty());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).addCatalogMethod(
@@ -1343,7 +1344,7 @@ public class GroupsAPITest {
 		final UUID id = UUID.randomUUID();
 		
 		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.x")))
+				new Token("my token"), new GroupID("foo"), new ResourceID("m.x")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
@@ -1377,7 +1378,7 @@ public class GroupsAPITest {
 		final UUID id = UUID.randomUUID();
 		
 		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new CatalogMethod("m.y")))
+				new Token("my token"), new GroupID("foo"), new ResourceID("m.y")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
@@ -1414,18 +1415,18 @@ public class GroupsAPITest {
 		failAddCatalogMethod(g, "t", "illegal*id", "m.n",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failAddCatalogMethod(g, "t", "id", "m.n.f",
-				new IllegalParameterException("Illegal catalog method name: m.n.f"));
+		failAddCatalogMethod(g, "t", "id", "   \t    ",
+				new MissingParameterException("resource ID"));
 	}
 	
 	@Test
 	public void addCatalogMethodFailNoSuchMethod() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.addCatalogMethod(new Token("t"), new GroupID("i"), new CatalogMethod("m.n")))
-				.thenThrow(new NoSuchCatalogEntryException("m.n"));
+		when(g.addCatalogMethod(new Token("t"), new GroupID("i"), new ResourceID("m.n")))
+				.thenThrow(new NoSuchResourceException("m.n"));
 		
-		failAddCatalogMethod(g, "t", "i", "m.n", new NoSuchCatalogEntryException("m.n"));
+		failAddCatalogMethod(g, "t", "i", "m.n", new NoSuchResourceException("m.n"));
 	}
 	
 	private void failAddCatalogMethod(
@@ -1449,7 +1450,7 @@ public class GroupsAPITest {
 		new GroupsAPI(g).removeCatalogMethod("t", "gid", "m.n");
 		
 		verify(g).removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new CatalogMethod("m.n"));
+				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 	}
 	
 	@Test
@@ -1462,8 +1463,8 @@ public class GroupsAPITest {
 		failRemoveCatalogMethod(g, "t", "illegal*id", "m.n",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failRemoveCatalogMethod(g, "t", "id", "m.n.f",
-				new IllegalParameterException("Illegal catalog method name: m.n.f"));
+		failRemoveCatalogMethod(g, "t", "id", "   \t   ",
+				new MissingParameterException("resource ID"));
 	}
 	
 	@Test
@@ -1471,7 +1472,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		doThrow(new NoSuchGroupException("i")).when(g)
-				.removeCatalogMethod(new Token("t"), new GroupID("i"), new CatalogMethod("m.n"));
+				.removeCatalogMethod(new Token("t"), new GroupID("i"), new ResourceID("m.n"));
 		
 		failRemoveCatalogMethod(g, "t", "i", "m.n", new NoSuchGroupException("i"));
 	}

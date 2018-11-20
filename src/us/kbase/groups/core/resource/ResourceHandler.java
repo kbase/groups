@@ -64,6 +64,7 @@ public interface ResourceHandler {
 		throws ResourceHandlerException;
 
 	/** Get information about a set of resources.
+	 * This method is not guaranteed to check if the resources exist.
 	 * @param user the user at which any user-specific fields should be targeted. If null,
 	 * indicating an anonymous user, only public resources are returned.
 	 * @param resources the resources to retrieve.
@@ -81,6 +82,8 @@ public interface ResourceHandler {
 
 	/** Grant a user permission to view or read a resource, if the user does not already have
 	 * permissions (including public permissions) for the resource.
+	 * 
+	 * The implementation of this method may be a no-op when resources are all public.
 	 * @param resource the resource for which permissions will be added.
 	 * @param user the user.
 	 * @throws IllegalResourceIDException if the resource ID is not in a legal format.
