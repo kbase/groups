@@ -21,6 +21,8 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequestType;
+import us.kbase.groups.core.request.RequestType;
 
 public class APICommon {
 	
@@ -35,12 +37,9 @@ public class APICommon {
 		ret.put(Fields.REQUEST_ID, request.getID().getID());
 		ret.put(Fields.REQUEST_GROUP_ID, request.getGroupID().getName());
 		ret.put(Fields.REQUEST_REQUESTER, request.getRequester().getName());
-		ret.put(Fields.REQUEST_TARGET, request.getTarget().map(u -> u.getName()).orElse(null));
-		ret.put(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget()
-				.map(m -> m.getID()).orElse(null));
-		ret.put(Fields.REQUEST_TARGET_METHOD, request.getCatalogMethodTarget()
-				.map(m -> m.getFullMethod()).orElse(null));
-		ret.put(Fields.REQUEST_TYPE, request.getType().getRepresentation());
+		ret.put(Fields.REQUEST_TYPE, getType(request));
+		ret.put(Fields.REQUEST_RESOURCE_TYPE, getResourceType(request));
+		ret.put(Fields.REQUEST_RESOURCE, getResource(request));
 		ret.put(Fields.REQUEST_STATUS, request.getStatusType().getRepresentation());
 		ret.put(Fields.REQUEST_CREATION, request.getCreationDate().toEpochMilli());
 		ret.put(Fields.REQUEST_MODIFICATION, request.getModificationDate().toEpochMilli());
@@ -48,6 +47,36 @@ public class APICommon {
 		return ret;
 	}
 	
+	private static String getResource(GroupRequest request) {
+		// TODO NNOW return actual resource
+		if (request.getTarget().isPresent()) {
+			return request.getTarget().get().getName();
+		} else if (request.getCatalogMethodTarget().isPresent()) {
+			return request.getCatalogMethodTarget().get().getFullMethod();
+		} else {
+			return request.getWorkspaceTarget().get().getID() + "";
+		}
+	}
+
+	private static String getResourceType(final GroupRequest request) {
+		// TODO NNOW return actual resource types
+		final GroupRequestType t = request.getType();
+		if (t.equals(GroupRequestType.INVITE_TO_GROUP)
+				|| t.equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
+			return "user";
+		} else if (t.equals(GroupRequestType.INVITE_CATALOG_METHOD) ||
+				t.equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD)) {
+			return "catalogmethod";
+		} else {
+			return "workspace";
+		}
+	}
+
+	private static String getType(final GroupRequest r) {
+		return r.isInvite() ? RequestType.INVITE.getRepresentation() :
+			RequestType.REQUEST.getRepresentation();
+	}
+
 	/** Transform {@link GroupRequest} objects into a list of  Map/List structures suitable for
 	 * serializing to JSON.
 	 * @param requests the request objects.

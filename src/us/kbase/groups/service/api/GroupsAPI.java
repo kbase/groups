@@ -352,7 +352,7 @@ public class GroupsAPI {
 			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
 				final Map<String, Object> ws = new HashMap<>();
 				wslist.add(ws);
-				ws.put(Fields.GROUP_RESOURCE_ID, wsi.getID());
+				ws.put(Fields.GROUP_RESOURCE_ID, wsi.getID() + "");
 				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
 				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
 				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
