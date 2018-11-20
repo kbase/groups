@@ -941,6 +941,7 @@ public class Groups {
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, NoSuchWorkspaceException,
 				WorkspaceHandlerException, ClosedRequestException {
+		//TODO NNOW generalize this method to all resources
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
