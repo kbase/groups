@@ -69,16 +69,14 @@ public class Fields {
 	public static final String REQUEST_ID = "id";
 	/** The group ID for the request */
 	public static final String REQUEST_GROUP_ID = "groupid";
-	/** The user the request targets, if any. */
-	public static final String REQUEST_TARGET = "targetuser";
-	/** The workspace the request targets, if any. */
-	public static final String REQUEST_TARGET_WORKSPACE = "targetws";
-	/** The catalog the request targets, if any. */
-	public static final String REQUEST_TARGET_METHOD = "targetmeth";
 	/** The user that made the request. */
 	public static final String REQUEST_REQUESTER = "requester";
 	/** The type of the request. */
 	public static final String REQUEST_TYPE = "type";
+	/** The type of the resource targeted by the request. */
+	public static final String REQUEST_RESOURCE_TYPE = "resourcetype";
+	/** The resource targeted by the request. */
+	public static final String REQUEST_RESOURCE = "resource";
 	/** The the status of the request. */
 	public static final String REQUEST_STATUS = "status";
 	/** The creation date of the request. */

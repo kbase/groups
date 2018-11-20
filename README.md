@@ -42,7 +42,8 @@ See `Resources` and `Custom fields` below.
 
 Resources are items external to the groups service that may be associated with groups. All
 resource entries have a `rid` field for the resource ID. The contents of this ID field depend
-on the resource. The other fields in the resource entry depend on the resource type.
+on the resource, but are always a string. The other fields in the resource entry depend on the
+resource type.
 
 The currently supported resource types are:
 
@@ -80,37 +81,29 @@ Represents a request to modify a group in some way.
     "groupid": <the ID of the group that will be modified if the request is accepted>,
     "requester": <the username of the user that created the request>,
     "type": <the type of the request>,
+    "resourcetype": <the type of the resource that is the target of the request>,
+    "resource": <the ID of the resource that is the target of the request>,
     "status": <the status of the request>,
-    "targetuser": <the user at which the request is targeted, if any>,
-    "targetws": <the workspace at which the request is targeted, if any>,
-    "targetmeth": <the Catalog service method at which the request is targeted, if any>,
     "createdate": <the request creation date in epoch ms>,
     "expiredate": <the date the request expires in epoch ms>,
     "moddate": <the last modification date of the request in epoch ms>
 }
 ```
 
-The type of the request dictates what fields are populated and what changes will occur if the
-request is accepted. The types are:
+The type of the request is either `Request` or `Invite`:
 
-`Request group membership` - If accepted by a group administrator, the user that created
-the request will be added to the group membership. The target user is the requester for this
-request type.
+* `Request`s designate requests where a user that is not an administrator of a group is
+  requesting that the group add a resource.
+* `Invite`s designate requests where a group administrator is inviting a resource to join the
+  group.
 
-`Invite to group` - If accepted by the target user, the target user will be added to the
-group membership.
+The `resourcetype` designates what kind of resource will be added to the group if the
+request is accepted.
+The resource types are the same as listed in `Resources` above, plus a built-in type, `user`,
+that designates that accepting the request will add a user.
 
-`Invite workspace to group` - If accepted by a workspace administrator, the target workspace
-will be added to the group.
-
-`Request add workspace to group` - If accepted by a group administrator, the target workspace
-will be added to the group.
-
-`Invite catalog method to group` - If accepted by a catalog module owner, the target
-catalog method will be added to the group.
-
-`Request add catalog method to group` - If accepted by a group administrator, the target
-catalog method will be added to the group.
+The `resource` is the ID of the resource to be added to the group - this is the same as the
+`rid` field in `Resources`, or the user name for a user to be added.
 
 The request status is one of `Open`, `Canceled`, `Expired`, `Accepted`, or `Denied`.
 

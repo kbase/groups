@@ -697,10 +697,7 @@ public class Groups {
 		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP) &&
 				user.equals(request.getTarget().get())) {
 			return;
-		} else if ((request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
-				request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
-				request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD)) &&
-				isGroupAdmin) {
+		} else if (!request.isInvite() && isGroupAdmin) {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
 				isWSAdministrator(user, request.getWorkspaceTarget().get())) {
