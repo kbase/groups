@@ -297,6 +297,8 @@
         <test name="us.kbase.test.groups.core.request.GroupRequestWithActionsTest"/>
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
         <test name="us.kbase.test.groups.core.request.RequestTypeTest"/>
+        <test name="us.kbase.test.groups.core.resource.ResourceIDTest"/>
+        <test name="us.kbase.test.groups.core.resource.ResourceInformationSetTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceInformationTest"/>
