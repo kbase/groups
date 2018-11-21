@@ -301,9 +301,6 @@
         <test name="us.kbase.test.groups.core.resource.ResourceInformationSetTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
-        <test name="us.kbase.test.groups.core.workspace.WorkspaceInformationTest"/>
-        <test name="us.kbase.test.groups.core.workspace.WorkspaceInfoSetTest"/>
-        <test name="us.kbase.test.groups.core.workspace.WorkspacePermissionTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.SimpleFieldValidatorFactoryTest"/>
@@ -318,6 +315,7 @@
         <test name="us.kbase.test.groups.service.exceptions.ExceptionHandlerTest"/>
         <test name="us.kbase.test.groups.util.UtilTest"/>
         <test name="us.kbase.test.groups.workspacehandler.SDKClientWorkspaceHandlerTest"/>
+        <test name="us.kbase.test.groups.workspacehandler.WorkspacePermissionTest"/>
       </junit>
     </jacoco:coverage>
     <fail message="Test failure detected, check test results." if="test.failed" />

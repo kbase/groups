@@ -1,4 +1,4 @@
-package us.kbase.groups.core.workspace;
+package us.kbase.groups.workspacehandler;
 
 import java.util.HashMap;
 import java.util.Map;

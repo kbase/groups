@@ -47,6 +47,19 @@ public class ResourceIDTest {
 	}
 	
 	@Test
+	public void adminFrom() throws Exception {
+		final ResourceAdministrativeID r = ResourceAdministrativeID.from(34);
+		assertThat("incorrect groupname", r.getName(), is("34"));
+		assertThat("incorrect toString", r.toString(),
+				is("ResourceAdministrativeID [name=34]"));
+		
+		final ResourceAdministrativeID r2 = ResourceAdministrativeID.from(82L);
+		assertThat("incorrect groupname", r2.getName(), is("82"));
+		assertThat("incorrect toString", r2.toString(),
+				is("ResourceAdministrativeID [name=82]"));
+	}
+	
+	@Test
 	public void constructFail() throws Exception {
 		failConstruct(null, new MissingParameterException("resource ID"));
 		failConstruct("   \n  ", new MissingParameterException("resource ID"));

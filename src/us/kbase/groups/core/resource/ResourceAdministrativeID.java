@@ -24,5 +24,24 @@ public class ResourceAdministrativeID extends Name {
 			throws MissingParameterException, IllegalParameterException {
 		super(rid, "administrative resource ID", -1);
 	}
+	
+	/** Create the administrative resource ID from a long.
+	 * @param rid the ID.
+	 */
+	public static ResourceAdministrativeID from(final long rid) {
+		try {
+			return new ResourceAdministrativeID(rid + "");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This is impossible", e);
+		}
+	}
+	
+	/** Create the administrative resource ID from an int.
+	 * @param rid the ID.
+	 */
+	public static ResourceAdministrativeID from(final int rid) {
+		return from((long) rid);
+	}
+
 
 }

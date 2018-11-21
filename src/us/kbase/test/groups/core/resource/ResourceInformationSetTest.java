@@ -134,7 +134,6 @@ public class ResourceInformationSetTest {
 				"field cannot be null or whitespace only"));
 		failWithResourceField(d, "  \t   ", 1, new IllegalArgumentException(
 				"field cannot be null or whitespace only"));
-		failWithResourceField(d, "f", null, new NullPointerException("value"));
 	}
 	
 	@Test

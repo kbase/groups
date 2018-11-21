@@ -25,18 +25,17 @@ import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupViewTest {
 	
 	private static final Group GROUP;
-	private static final WorkspaceInformation WS1;
-	private static final WorkspaceInformation WS2;
-	private static final WorkspaceInfoSet WIS;
+	private static final ResourceInformationSet RIS;
 	static {
 		try {
 			GROUP = Group.getBuilder(
@@ -55,16 +54,11 @@ public class GroupViewTest {
 					.withCatalogMethod(new CatalogMethod("x.y"))
 					.withCustomField(new NumberedCustomField("field"), "val")
 					.build();
-			WS1 = WorkspaceInformation.getBuilder(7, "n1")
-					.withIsPublic(true)
-					.withNullableNarrativeName("narr1")
-					.build();
-			WS2 = WorkspaceInformation.getBuilder(22, "n2").build();
-			WIS = WorkspaceInfoSet.getBuilder(new UserName("foo"))
-					.withNonexistentWorkspace(5)
-					.withNonexistentWorkspace(8)
-					.withWorkspaceInformation(WS1, WorkspacePermission.READ)
-					.withWorkspaceInformation(WS2, WorkspacePermission.ADMIN)
+
+			RIS = ResourceInformationSet.getBuilder(new UserName("foo"))
+					.withNonexistentResource(new ResourceDescriptor(
+							new ResourceAdministrativeID("5"),
+							new ResourceID("5")))
 					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -78,7 +72,7 @@ public class GroupViewTest {
 	
 	@Test
 	public void minimalView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, WIS, ViewType.MINIMAL);
+		final GroupView gv = new GroupView(GROUP, RIS, ViewType.MINIMAL);
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -90,7 +84,7 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
 		assertThat("incorrect methods", gv.getCatalogMethods(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
@@ -98,13 +92,12 @@ public class GroupViewTest {
 		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
-		assertImmutable(gv.getWorkspaceInformation(), WS1);
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 
 	@Test
 	public void nonMemberView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, WIS, ViewType.NON_MEMBER);
+		final GroupView gv = new GroupView(GROUP, RIS, ViewType.NON_MEMBER);
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -119,7 +112,7 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.NON_MEMBER));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
 		assertThat("incorrect methods", gv.getCatalogMethods(),
 				is(set(new CatalogMethod("m.n"), new CatalogMethod("x.y"))));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
@@ -128,13 +121,12 @@ public class GroupViewTest {
 		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
-		assertImmutable(gv.getWorkspaceInformation(), WS1);
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 	
 	@Test
 	public void memberView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, WIS, ViewType.MEMBER);
+		final GroupView gv = new GroupView(GROUP, RIS, ViewType.MEMBER);
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -150,7 +142,7 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MEMBER));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(set(WS1, WS2)));
+		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
 		assertThat("incorrect methods", gv.getCatalogMethods(),
 				is(set(new CatalogMethod("m.n"), new CatalogMethod("x.y"))));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
@@ -159,7 +151,6 @@ public class GroupViewTest {
 		assertImmutable(gv.getCatalogMethods(), new CatalogMethod("m.n"));
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
-		assertImmutable(gv.getWorkspaceInformation(), WS1);
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 	}
 	
@@ -185,44 +176,18 @@ public class GroupViewTest {
 	public void constructFail() throws Exception {
 		final ViewType v = ViewType.MEMBER;
 		
-		failConstruct(null, WIS, v, new NullPointerException("group"));
+		failConstruct(null, RIS, v, new NullPointerException("group"));
 		failConstruct(GROUP, null, v, new NullPointerException("workspaceSet"));
-		failConstruct(GROUP, WIS, null, new NullPointerException("viewType"));
+		failConstruct(GROUP, RIS, null, new NullPointerException("viewType"));
 	}
 	
 	private void failConstruct(
 			final Group g,
-			final WorkspaceInfoSet wis,
+			final ResourceInformationSet wis,
 			final ViewType v,
 			final Exception expected) {
 		try {
 			new GroupView(g, wis, v);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void getPermission() throws Exception {
-		final GroupView gv = new GroupView(GROUP, WIS, ViewType.MINIMAL);
-		
-		assertThat("incorrect admin", gv.getPermission(WS1), is(WorkspacePermission.READ));
-		assertThat("incorrect admin", gv.getPermission(WS2), is(WorkspacePermission.ADMIN));
-	}
-	
-	@Test
-	public void isAdministratorFail() throws Exception {
-		failIsAdministrator(null, new NullPointerException("wsInfo"));
-		failIsAdministrator(WorkspaceInformation.getBuilder(86, "j").build(),
-				new IllegalArgumentException("Provided workspace info not included in view"));
-	}
-
-	private void failIsAdministrator(
-			final WorkspaceInformation wi,
-			final Exception expected) {
-		try {
-			new GroupView(GROUP, WIS, ViewType.MEMBER).getPermission(wi);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -12,7 +12,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -54,21 +53,18 @@ import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -256,7 +252,7 @@ public class GroupsAPI {
 			@PathParam(Fields.GROUP_ID) final String groupID)
 			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException, WorkspaceHandlerException {
+				GroupsStorageException, ResourceHandlerException {
 		return toGroupJSON(groups.getGroup(getToken(token, false), new GroupID(groupID)));
 	}
 	
@@ -350,14 +346,11 @@ public class GroupsAPI {
 			final List<Map<String, Object>> wslist = new LinkedList<>();
 			//TODO NNOW replace with resource type
 			resources.put("workspace", wslist);
-			for (final WorkspaceInformation wsi: sorted(g.getWorkspaceInformation())) {
+			for (final ResourceDescriptor rd: sorted(g.getWorkspaceInformation())) {
 				final Map<String, Object> ws = new HashMap<>();
 				wslist.add(ws);
-				ws.put(Fields.GROUP_RESOURCE_ID, wsi.getID() + "");
-				ws.put(Fields.GROUP_WS_NAME, wsi.getName());
-				ws.put(Fields.GROUP_WS_NARRATIVE_NAME, wsi.getNarrativeName().orNull());
-				ws.put(Fields.GROUP_WS_IS_PUBLIC, wsi.isPublic());
-				ws.put(Fields.GROUP_WS_PERMISSION, g.getPermission(wsi).getRepresentation());
+				ws.putAll(g.getWorkspaceInformation().getFields(rd));
+				ws.put(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName());
 			}
 		}
 		return ret;
@@ -368,9 +361,13 @@ public class GroupsAPI {
 				k -> k.getField(), k -> g.getCustomFields().get(k)));
 	}
 
-	private List<WorkspaceInformation> sorted(final Set<WorkspaceInformation> wsi) {
-		final List<WorkspaceInformation> ret = new ArrayList<>(wsi);
-		Collections.sort(ret, (wsi1, wsi2) -> wsi1.getID() - wsi2.getID());
+	// may want to subclass the descriptors to allow for resource type specific sorts
+	// specifically for workspaces
+	// or associated a comparator with a resource type
+	private List<ResourceDescriptor> sorted(final ResourceInformationSet resources) {
+		final List<ResourceDescriptor> ret = new ArrayList<>(resources.getResources());
+		
+		Collections.sort(ret, (r1, r2) -> r1.getResourceID().compareTo(r2.getResourceID()));
 		return ret;
 	}
 
@@ -406,12 +403,13 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
-			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
-				NoTokenProvidedException, AuthenticationException, WorkspaceExistsException,
-				UnauthorizedException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException, WorkspaceHandlerException, RequestExistsException {
+			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException, RequestExistsException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceExistsException,
+				ResourceHandlerException {
 		return toGroupRequestJSON(groups.addWorkspace(
-				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID)));
+				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID)));
 	}
 	
 	@DELETE
@@ -421,12 +419,12 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
-			throws InvalidTokenException, NoSuchGroupException, NoSuchWorkspaceException,
-				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
-				MissingParameterException, IllegalParameterException, GroupsStorageException,
-				WorkspaceHandlerException {
+			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException, NoSuchResourceException,
+				IllegalResourceIDException, ResourceHandlerException {
 		groups.removeWorkspace(
-				getToken(token, true), new GroupID(groupID), new WorkspaceID(workspaceID));
+				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID));
 	}
 	
 	@POST

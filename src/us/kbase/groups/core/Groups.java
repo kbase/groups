@@ -41,7 +41,6 @@ import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -56,10 +55,9 @@ import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
-import us.kbase.groups.core.workspace.WorkspaceHandler;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -68,6 +66,8 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  *
  */
 public class Groups {
+	
+	//TODO NNOW limits on resource IDs (both)
 	
 	//TODO LOGGING for all actions
 	
@@ -96,7 +96,7 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
-	private final WorkspaceHandler wsHandler;
+	private final ResourceHandler wsHandler;
 	private final ResourceHandler catHandler;
 	private final FieldValidators validators;
 	private final Notifications notifications;
@@ -117,7 +117,7 @@ public class Groups {
 			// getting to the point where a builder might be useful, but everything's required.
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final WorkspaceHandler wsHandler,
+			final ResourceHandler wsHandler,
 			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications) {
@@ -129,7 +129,7 @@ public class Groups {
 	private Groups(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final WorkspaceHandler wsHandler,
+			final ResourceHandler wsHandler,
 			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
@@ -178,7 +178,7 @@ public class Groups {
 		try {
 			return new GroupView(
 					storage.getGroup(createParams.getGroupID()),
-					WorkspaceInfoSet.getBuilder(owner).build(),
+					ResourceInformationSet.getBuilder(owner).build(),
 					ViewType.MEMBER);
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
@@ -245,11 +245,11 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws WorkspaceHandlerException if there was an error contacting the workspace.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 */
 	public GroupView getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, WorkspaceHandlerException {
+				GroupsStorageException, ResourceHandlerException {
 		final Group g = storage.getGroup(groupID);
 		final UserName user;
 		if (userToken != null) {
@@ -257,19 +257,54 @@ public class Groups {
 		} else {
 			user = null;
 		}
-		final WorkspaceInfoSet wis = wsHandler.getWorkspaceInformation(
-				user, g.getWorkspaceIDs(), !g.isMember(user));
-		for (final int wsid: wis.getNonexistentWorkspaces()) {
+		final ResourceInformationSet ris;
+		try {
+			ris = wsHandler.getResourceInformation(
+					user, toResIDs(g.getWorkspaceIDs()), !g.isMember(user));
+		} catch (IllegalResourceIDException e) {
+			throw new RuntimeException(String.format("Illegal data associated with group %s: %s",
+					g.getGroupID().getName(), e.getMessage()), e);
+		}
+		for (final ResourceDescriptor wsid: ris.getNonexistentResources()) {
 			try {
-				storage.removeWorkspace(g.getGroupID(), new WorkspaceID(wsid), clock.instant());
-			} catch (NoSuchWorkspaceException | IllegalParameterException e) {
+				storage.removeWorkspace(g.getGroupID(), toWSID(wsid), clock.instant());
+			} catch (NoSuchWorkspaceException e) {
 				// do nothing, if the workspace isn't there fine.
-				// The IPE is impossible, the WIS won't allow it
 			}
 		}
-		return new GroupView(g, wis, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
+		return new GroupView(g, ris, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
+	// TODO NNOW remove
+	private WorkspaceID toWSID(final ResourceDescriptor wsid) {
+		try {
+			return new WorkspaceID(Integer.parseInt(wsid.getResourceID().getName()));
+		} catch (NumberFormatException | IllegalParameterException e) {
+			throw new RuntimeException("impossible", e);
+		}
+	}
+
+	//TODO NNOW remove
+	private Set<ResourceID> toResIDs(final WorkspaceIDSet workspaceIDs) {
+		return workspaceIDs.getIDs().stream().map(i -> toResID(i)).collect(Collectors.toSet());
+	}
+
+	//TODO NNOW remove
+	private ResourceID toResID(final WorkspaceID id) {
+		return toResID(id.getID());
+	}
+	
+	//TODO NNOW remove
+	private ResourceID toResID(final int id) {
+		final ResourceID r;
+		try {
+			r = new ResourceID(id + "");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("Impossible", e);
+		}
+		return r;
+	}
+
 	/** Check if a group exists based on the group ID.
 	 * @param groupID the group ID.
 	 * @return true if the group exists, false otherwise.
@@ -292,7 +327,7 @@ public class Groups {
 		checkNotNull(params, "params");
 		return storage.getGroups(params).stream()
 				.map(g -> new GroupView(
-						g, WorkspaceInfoSet.getBuilder(null).build(), ViewType.MINIMAL))
+						g, ResourceInformationSet.getBuilder(null).build(), ViewType.MINIMAL))
 				.collect(Collectors.toList());
 	}
 	
@@ -399,13 +434,11 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user may not view the request.
-	 * @throws WorkspaceHandlerException if the workspace could not be contacted.
 	 * @throws ResourceHandlerException  if an error occurs contacting the resource service.
 	 */
 	public GroupRequestWithActions getRequest(final Token userToken, final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException,
-				ResourceHandlerException {
+				GroupsStorageException, UnauthorizedException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -456,19 +489,26 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException, ResourceHandlerException {
+				ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
-		final WorkspaceIDSet ws = wsHandler.getAdministratedWorkspaces(user);
+		final Set<ResourceAdministrativeID> ws = wsHandler.getAdministratedResources(user);
 		final Set<ResourceAdministrativeID> adIDs = catHandler.getAdministratedResources(user);
+		final Set<Integer> wsids = new HashSet<>();
+		for (final ResourceAdministrativeID id: ws) {
+			try {
+				wsids.add(Integer.parseInt(id.getName()));
+			} catch (NumberFormatException e) {
+				throw new RuntimeException("Impossible", e); // TODO NNOW remove
+			}
+		}
 		final Set<CatalogModule> mods = new HashSet<>();
 		for (final ResourceAdministrativeID id: adIDs) {
 			try {
@@ -477,7 +517,7 @@ public class Groups {
 				throw new RuntimeException("Impossible", e); //TODO NNOW remove
 			}
 		}
-		return storage.getRequestsByTarget(user, ws, mods, params);
+		return storage.getRequestsByTarget(user, WorkspaceIDSet.fromInts(wsids), mods, params);
 	}
 
 	/** Get requests where the group is the target of the request.
@@ -534,22 +574,26 @@ public class Groups {
 	}
 	
 	private void addWorkspaceToKnownGoodGroup(final GroupID groupID, final WorkspaceID wsid)
-			throws GroupsStorageException, WorkspaceExistsException {
+			throws GroupsStorageException, ResourceExistsException {
 		try {
 			storage.addWorkspace(groupID, wsid, clock.instant());
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
 					groupID.getName(), e.getMessage()), e);
+		} catch (WorkspaceExistsException e) {
+			throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
 		}
 	}
 	
 	private void addMethodToKnownGoodGroup(final GroupID groupID, final CatalogMethod method)
-			throws GroupsStorageException, CatalogMethodExistsException {
+			throws GroupsStorageException, ResourceExistsException {
 		try {
 			storage.addCatalogMethod(groupID, method, clock.instant());
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
 					groupID.getName(), e.getMessage()), e);
+		} catch (CatalogMethodExistsException e) {
+			throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
 		}
 	}
 	
@@ -592,7 +636,6 @@ public class Groups {
 	 * @throws NoSuchRequestException if there is no such request.
 	 * @throws UnauthorizedException if the user is not the target of the request or an
 	 * administrator of the group targeted in the request, if a group is targeted.
-	 * @throws WorkspaceHandlerException if the workspace service could not be contacted.
 	 * @throws ClosedRequestException if the request is closed.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 */
@@ -601,8 +644,8 @@ public class Groups {
 			final RequestID requestID,
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
-				GroupsStorageException, UnauthorizedException, WorkspaceHandlerException,
-				ClosedRequestException, ResourceHandlerException {
+				GroupsStorageException, UnauthorizedException, ClosedRequestException,
+				ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -630,25 +673,19 @@ public class Groups {
 	 * administrator of the group targeted in the request, if a group is targeted.
 	 * @throws UserIsMemberException if the user to be added to a group is already a member of
 	 * the group.
-	 * @throws WorkspaceExistsException if the workspace to be added to a group is already part
-	 * of the group.
-	 * @throws WorkspaceHandlerException if there is an error contacting the workspace service.
-	 * @throws NoSuchWorkspaceException if the workspace to be added to a group does not exist.
 	 * @throws ClosedRequestException if the request is closed.
-	 * @throws CatalogMethodExistsException if the method to be added to the group is already
-	 * part of the group.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 * @throws NoSuchResourceException if the resource associated with the request no longer
 	 * exists.
+	 * @throws ResourceExistsException if the resource is already associated with the group.
 	 */ 
 	public GroupRequest acceptRequest(
 			final Token userToken,
 			final RequestID requestID)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, UserIsMemberException,
-				WorkspaceExistsException, NoSuchWorkspaceException, WorkspaceHandlerException,
-				ClosedRequestException, CatalogMethodExistsException, ResourceHandlerException,
-				NoSuchResourceException {
+				ClosedRequestException, ResourceHandlerException, NoSuchResourceException,
+				ResourceExistsException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -669,36 +706,44 @@ public class Groups {
 	private Set<UserName> processRequest(
 			final GroupID groupID,
 			final GroupRequest request)
-			throws GroupsStorageException, UserIsMemberException, NoSuchWorkspaceException,
-				WorkspaceHandlerException, WorkspaceExistsException,
-				NoSuchResourceException, ResourceHandlerException, CatalogMethodExistsException {
+			throws GroupsStorageException, UserIsMemberException, NoSuchResourceException,
+				ResourceHandlerException, ResourceExistsException {
 		final Collection<UserName> toNotify;
 		if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP) ||
 				request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
 			addMemberToKnownGoodGroup(groupID, request.getTarget().get());
 			toNotify = Arrays.asList(request.getTarget().get());
+		// TODO NNOW combine next 2
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
 				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
 			// do this first in case the ws has been deleted
-			toNotify = wsHandler.getAdministrators(wsid);
+			toNotify = getAdmins(wsHandler, toResID(wsid), request);
 			addWorkspaceToKnownGoodGroup(groupID, wsid);
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD) ||
 				request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
 			final CatalogMethod m = request.getCatalogMethodTarget().get();
 			// do this first in case the catalog ever allows module deletion
-			try {
-				toNotify = catHandler.getAdminstrators(toResourceID(m));
-			} catch (IllegalResourceIDException e) {
-				throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
-						request.getID().getID(), e.getMessage()), e);
-			}
+			toNotify = getAdmins(catHandler, toResourceID(m), request);
 			addMethodToKnownGoodGroup(groupID, m);
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
 		}
 		return new HashSet<>(toNotify);
+	}
+
+	private Collection<UserName> getAdmins(
+			final ResourceHandler handler,
+			final ResourceID resource, //TODO NNOW get from request
+			final GroupRequest request)
+			throws NoSuchResourceException, ResourceHandlerException {
+		try {
+			return handler.getAdministrators(resource);
+		} catch (IllegalResourceIDException e) {
+			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
+					request.getID().getID(), e.getMessage()), e);
+		}
 	}
 
 	//TODO NNOW remove
@@ -721,17 +766,20 @@ public class Groups {
 			final boolean isGroupAdmin,
 			final UserName user,
 			final String actionVerb)
-			throws UnauthorizedException, WorkspaceHandlerException, ResourceHandlerException {
-		if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP) &&
+			throws UnauthorizedException, ResourceHandlerException {
+		if (!request.isInvite() && isGroupAdmin) {
+			return;
+		} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP) &&
 				user.equals(request.getTarget().get())) {
 			return;
-		} else if (!request.isInvite() && isGroupAdmin) {
-			return;
+		// TODO NNOW combine next 2
 		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
-				isWSAdministrator(user, request.getWorkspaceTarget().get())) {
+				isAdministrator(wsHandler, user, request,
+						toResID(request.getWorkspaceTarget().get()))) {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD) &&
-				isCatModuleOwner(user, request)) {
+				isAdministrator(catHandler, user, request,
+						toResourceID(request.getCatalogMethodTarget().get()))) {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
@@ -740,28 +788,20 @@ public class Groups {
 	}
 	
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
-	// returns false if missing / deleted
-	private boolean isCatModuleOwner(final UserName user, final GroupRequest request)
+	// returns false if ws is missing / deleted
+	private boolean isAdministrator(
+			final ResourceHandler handler,
+			final UserName user,
+			final GroupRequest request,
+			final ResourceID resource) // TODO NNOW get from request
 			throws ResourceHandlerException {
 		try {
-			return catHandler.isAdministrator(
-					toResourceID(request.getCatalogMethodTarget().get()), user);
+			return handler.isAdministrator(resource, user);
 		} catch (NoSuchResourceException e) {
 			return false;
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
 					request.getID().getID(), e.getMessage()), e);
-		}
-	}
-
-	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
-	// returns false if ws is missing / deleted
-	private boolean isWSAdministrator(final UserName user, final WorkspaceID wsid)
-			throws WorkspaceHandlerException {
-		try {
-			return wsHandler.isAdministrator(wsid, user);
-		} catch (NoSuchWorkspaceException e) {
-			return false;
 		}
 	}
 
@@ -866,38 +906,46 @@ public class Groups {
 	 * added to the system and returned.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param wsid the workspace ID.
+	 * @param resource the workspace ID.
 	 * @return A request if required or {@link Optional#empty()} if the operation is already
 	 * complete.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no such group.
-	 * @throws NoSuchWorkspaceException if the workspace does not exist or is deleted.
-	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
-	 * @throws WorkspaceExistsException if the workspace is already part of the group.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * workspace.
 	 * @throws RequestExistsException if there's already an equivalent request in the system.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws ResourceExistsException  if the resource is already associated with the group.
 	 */
 	public Optional<GroupRequest> addWorkspace(
 			final Token userToken,
 			final GroupID groupID,
-			final WorkspaceID wsid)
+			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, NoSuchWorkspaceException, WorkspaceHandlerException,
-				WorkspaceExistsException, UnauthorizedException, RequestExistsException {
+				GroupsStorageException, UnauthorizedException, RequestExistsException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException,
+				ResourceExistsException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
-		checkNotNull(wsid, "wsid");
+		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
+		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
+		final WorkspaceID wsid = toWSID(d); // TODO NNOW remove
 		if (g.getWorkspaceIDs().contains(wsid)) {
-			throw new WorkspaceExistsException(wsid.getID() + "");
+			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> wsadmins = wsHandler.getAdministrators(wsid);
+		final Set<UserName> wsadmins = wsHandler.getAdministrators(resource);
 		if (g.isAdministrator(user) && wsadmins.contains(user)) {
-			storage.addWorkspace(groupID, wsid, clock.instant());
+			try {
+				storage.addWorkspace(groupID, wsid, clock.instant());
+			} catch (WorkspaceExistsException e) { // TODO NNOW remove
+				throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
+			}
 			//TODO NNOW notify
 			return Optional.empty();
 		}
@@ -910,43 +958,49 @@ public class Groups {
 					g, user, b -> b.withInviteWorkspace(wsid), wsadmins));
 		}
 		throw new UnauthorizedException(String.format(
-				"User %s is not an admin for group %s or workspace %s",
-				user.getName(), groupID.getName(), wsid.getID()));
+				"User %s is not an admin for group %s or resource %s",
+				user.getName(), groupID.getName(), resource.getName()));
 	}
 	
 	/** Remove a workspace from a group.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param wsid the workspace ID.
+	 * @param resource the workspace ID.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no such group.
-	 * @throws NoSuchWorkspaceException if the workspace does not exist, is deleted, or is
-	 * not included in the group.
-	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * workspace.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
 	 */
 	public void removeWorkspace(
 			final Token userToken,
 			final GroupID groupID,
-			final WorkspaceID wsid)
+			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, UnauthorizedException, NoSuchWorkspaceException,
-				WorkspaceHandlerException {
+				GroupsStorageException, UnauthorizedException, NoSuchResourceException,
+				IllegalResourceIDException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
-		checkNotNull(wsid, "wsid");
+		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
+		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
 		// should check if ws not in group & fail early?
-		if (group.isAdministrator(user) || wsHandler.isAdministrator(wsid, user)) {
-			storage.removeWorkspace(groupID, wsid, clock.instant());
+		if (group.isAdministrator(user) || wsHandler.isAdministrator(resource, user)) {
+			try {
+				final WorkspaceID wsid = toWSID(d); //TODO NNOW remove
+				storage.removeWorkspace(groupID, wsid, clock.instant());
+			} catch (NoSuchWorkspaceException e) { // TODO NNOW remove
+				throw new NoSuchResourceException(e.getMessage().split(":", 2)[1].trim(), e);
+			}
 		} else {
 			throw new UnauthorizedException(String.format(
-					"User %s is not an admin for group %s or workspace %s",
-					user.getName(), groupID.getName(), wsid.getID()));
+					"User %s is not an admin for group %s or resource %s",
+					user.getName(), groupID.getName(), resource.getName()));
 		}
 	}
 	
@@ -960,19 +1014,19 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws NoSuchWorkspaceException if the workspace does not exist, is deleted, or is
-	 * not included in the group.
-	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
 	 * request type is not correct.
 	 * @throws ClosedRequestException if the request is closed.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
 	 */
 	public void setReadPermissionOnWorkspace(
 			final Token userToken,
 			final RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
-				AuthenticationException, UnauthorizedException, NoSuchWorkspaceException,
-				WorkspaceHandlerException, ClosedRequestException {
+				AuthenticationException, UnauthorizedException, ClosedRequestException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
 		//TODO NNOW generalize this method to all resources
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
@@ -988,7 +1042,8 @@ public class Groups {
 					"Only workspace add requests allow for workspace permissions changes.");
 		}
 		ensureIsOpen(r);
-		wsHandler.setReadPermission(r.getWorkspaceTarget().get(), user);
+		final ResourceID rid = toResID(r.getWorkspaceTarget().get()); //TODO NNOW remove
+		wsHandler.setReadPermission(rid, user);
 	}
 	
 	/** Add a catalog method to a group. The method is added immediately if the user is an
@@ -1034,7 +1089,7 @@ public class Groups {
 		if (g.getCatalogMethods().contains(m)) {
 			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> modowners = catHandler.getAdminstrators(resource);
+		final Set<UserName> modowners = catHandler.getAdministrators(resource);
 		if (g.isAdministrator(user) && modowners.contains(user)) {
 			try {
 				storage.addCatalogMethod(groupID, m, clock.instant());

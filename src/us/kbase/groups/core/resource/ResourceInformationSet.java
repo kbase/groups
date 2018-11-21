@@ -166,7 +166,6 @@ public class ResourceInformationSet {
 				final Object value) {
 			checkNotNull(resource, "resource");
 			exceptOnEmpty(field, "field");
-			checkNotNull(value, "value");
 			withResourceDescriptor(resource);
 			resources.get(resource).put(field, value);
 			return this;

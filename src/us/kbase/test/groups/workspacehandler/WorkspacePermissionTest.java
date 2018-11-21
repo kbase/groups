@@ -1,4 +1,4 @@
-package us.kbase.test.groups.core.workspace;
+package us.kbase.test.groups.workspacehandler;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import org.junit.Test;
 
-import us.kbase.groups.core.workspace.WorkspacePermission;
+import us.kbase.groups.workspacehandler.WorkspacePermission;
 import us.kbase.test.groups.TestCommon;
 
 public class WorkspacePermissionTest {

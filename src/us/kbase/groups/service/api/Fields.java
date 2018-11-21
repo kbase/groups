@@ -41,14 +41,6 @@ public class Fields {
 	// workspace fields
 	/** The workspace ID. */
 	public static final String GROUP_WS_ID = "wid"; //TODO NNOW remove 
-	/** The workspace name. */
-	public static final String GROUP_WS_NAME = "name";
-	/** The narrative name. */
-	public static final String GROUP_WS_NARRATIVE_NAME = "narrname";
-	/** The public state of the workspace. */
-	public static final String GROUP_WS_IS_PUBLIC = "public";
-	/** The user's permission for workspace. */
-	public static final String GROUP_WS_PERMISSION = "perm";
 	
 	// catalog fields
 	/** The catalog method name. */

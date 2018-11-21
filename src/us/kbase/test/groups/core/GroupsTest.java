@@ -69,7 +69,6 @@ import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.notifications.Notifications;
@@ -82,12 +81,9 @@ import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
-import us.kbase.groups.core.workspace.WorkspaceHandler;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.test.groups.TestCommon;
 
@@ -106,18 +102,18 @@ public class GroupsTest {
 		}
 	}
 	
-	private static WorkspaceInfoSet wsis() {
+	private static ResourceInformationSet wsis() {
 		return wsis(null);
 	}
 
-	private static WorkspaceInfoSet wsis(final UserName user) {
-		return WorkspaceInfoSet.getBuilder(user).build();
+	private static ResourceInformationSet wsis(final UserName user) {
+		return ResourceInformationSet.getBuilder(user).build();
 	}
 
 	private static TestMocks initTestMocks() throws Exception {
 		final GroupsStorage storage = mock(GroupsStorage.class);
 		final UserHandler uh = mock(UserHandler.class);
-		final WorkspaceHandler wh = mock(WorkspaceHandler.class);
+		final ResourceHandler wh = mock(ResourceHandler.class);
 		final ResourceHandler ch = mock(ResourceHandler.class);
 		final FieldValidators val = mock(FieldValidators.class);
 		final Notifications notis = mock(Notifications.class);
@@ -126,7 +122,7 @@ public class GroupsTest {
 		
 		
 		final Constructor<Groups> c = Groups.class.getDeclaredConstructor(
-				GroupsStorage.class, UserHandler.class, WorkspaceHandler.class,
+				GroupsStorage.class, UserHandler.class, ResourceHandler.class,
 				ResourceHandler.class, FieldValidators.class, Notifications.class,
 				UUIDGenerator.class, Clock.class);
 		c.setAccessible(true);
@@ -139,7 +135,7 @@ public class GroupsTest {
 		public final Groups groups;
 		public final GroupsStorage storage;
 		public final UserHandler userHandler;
-		public final WorkspaceHandler wsHandler;
+		public final ResourceHandler wsHandler;
 		public final ResourceHandler catHandler;
 		public final FieldValidators validators;
 		public final Notifications notifs;
@@ -150,7 +146,7 @@ public class GroupsTest {
 				final Groups groups,
 				final GroupsStorage storage,
 				final UserHandler userHandler,
-				final WorkspaceHandler wsHandler,
+				final ResourceHandler wsHandler,
 				final ResourceHandler catHandler,
 				final FieldValidators validators,
 				final Notifications notifs,
@@ -172,7 +168,7 @@ public class GroupsTest {
 	public void constructFail() throws Exception {
 		final GroupsStorage s = mock(GroupsStorage.class);
 		final UserHandler u = mock(UserHandler.class);
-		final WorkspaceHandler w = mock(WorkspaceHandler.class);
+		final ResourceHandler w = mock(ResourceHandler.class);
 		final ResourceHandler c = mock(ResourceHandler.class);
 		final FieldValidators v = mock(FieldValidators.class);
 		final Notifications n = mock(Notifications.class);
@@ -188,7 +184,7 @@ public class GroupsTest {
 	private void failConstruct(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final WorkspaceHandler wsHandler,
+			final ResourceHandler wsHandler,
 			final ResourceHandler catHandler,
 			final FieldValidators validators,
 			final Notifications notifications,
@@ -509,6 +505,11 @@ public class GroupsTest {
 		}
 	}
 	
+	private ResourceDescriptor getWSRD(final int wsid) throws Exception {
+		return new ResourceDescriptor(ResourceAdministrativeID.from(wsid),
+				new ResourceID(wsid + ""));
+	}
+	
 	@Test
 	public void getGroupNoToken() throws Exception {
 		// can get public ws
@@ -524,14 +525,11 @@ public class GroupsTest {
 				.withWorkspace(new WorkspaceID(86))
 				.build());
 
-		when(mocks.wsHandler.getWorkspaceInformation(
-				null, WorkspaceIDSet.fromInts(set(92, 86)), true))
-				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narr")
-								.build(),
-								WorkspacePermission.WRITE)
+		when(mocks.wsHandler.getResourceInformation(
+				null, set(new ResourceID("92"), new ResourceID("86")), true))
+				.thenReturn(ResourceInformationSet.getBuilder(null)
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(92), "public", true)
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
@@ -542,12 +540,9 @@ public class GroupsTest {
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.build(),
-				WorkspaceInfoSet.getBuilder(new UserName("baz"))
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narr")
-								.build(),
-								WorkspacePermission.WRITE)
+				ResourceInformationSet.getBuilder(null)
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(92), "public", true)
 						.build(),
 				NON_MEMBER)));
 	}
@@ -568,17 +563,12 @@ public class GroupsTest {
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 
-		when(mocks.wsHandler.getWorkspaceInformation(
-				new UserName("whee"), WorkspaceIDSet.fromInts(set(92, 57, 86)), true))
-				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narr")
-								.build(),
-								WorkspacePermission.READ)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
-								.build(),
-								WorkspacePermission.ADMIN)
+		when(mocks.wsHandler.getResourceInformation(
+				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
+						new ResourceID("86")), true))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(57), "name", "my ws2")
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
@@ -588,15 +578,9 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withAdministrator(new UserName("whoo"))
 				.build(),
-				WorkspaceInfoSet.getBuilder(new UserName("baz"))
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narr")
-								.build(),
-								WorkspacePermission.READ)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
-								.build(),
-								WorkspacePermission.ADMIN)
+				ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(57), "name", "my ws2")
 						.build(),
 				NON_MEMBER)));
 	}
@@ -618,22 +602,15 @@ public class GroupsTest {
 				.withWorkspace(new WorkspaceID(57))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
-		when(mocks.wsHandler.getWorkspaceInformation(
-				new UserName("baz"), WorkspaceIDSet.fromInts(set(92, 6, 57)), false))
-				.thenReturn(WorkspaceInfoSet.getBuilder(new UserName("baz"))
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narr")
-								.build(),
-								WorkspacePermission.NONE)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
-								.build(),
-								WorkspacePermission.NONE)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
-								.build(),
-								WorkspacePermission.ADMIN)
-						.withNonexistentWorkspace(34)
-						.withNonexistentWorkspace(86) // will throw error, should be ignored
+		when(mocks.wsHandler.getResourceInformation(
+				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
+						new ResourceID("57")), false))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(6), "name", "my other ws")
+						.withResourceField(getWSRD(57), "name", "my ws2")
+						.withNonexistentResource(getWSRD(34))
+						.withNonexistentResource(getWSRD(86)) // will throw error, should ignore
 						.build());
 		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchWorkspaceException("86")).when(mocks.storage)
@@ -651,19 +628,14 @@ public class GroupsTest {
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
 				.build(),
-				WorkspaceInfoSet.getBuilder(new UserName("baz"))
-					.withWorkspaceInformation(WorkspaceInformation.getBuilder(92, "my ws")
-							.withIsPublic(true)
-							.withNullableNarrativeName("narr")
-							.build(),
-							WorkspacePermission.NONE)
-					.withWorkspaceInformation(WorkspaceInformation.getBuilder(6, "my other ws")
-							.build(),
-							WorkspacePermission.NONE)
-					.withWorkspaceInformation(WorkspaceInformation.getBuilder(57, "my ws2")
-							.build(),
-							WorkspacePermission.ADMIN)
-					.build(),
+				ResourceInformationSet.getBuilder(new UserName("baz"))
+						.withResourceField(getWSRD(92), "name", "my ws")
+						.withResourceField(getWSRD(6), "name", "my other ws")
+						.withResourceField(getWSRD(57), "name", "my ws2")
+						//TODO NNOW remove nonexistant resources from view
+						.withNonexistentResource(getWSRD(34))
+						.withNonexistentResource(getWSRD(86))
+						.build(),
 				MEMBER)));
 	}
 	
@@ -691,6 +663,25 @@ public class GroupsTest {
 		
 		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"),
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "oh hecky darn"));
+	}
+	
+	@Test
+	public void getGroupFailIllegalResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("baz"))
+				.withWorkspace(new WorkspaceID(92)) // no way to realistically trigger this for now
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
+		when(mocks.wsHandler.getResourceInformation(
+				new UserName("baz"), set(new ResourceID("92")), false))
+				.thenThrow(new IllegalResourceIDException("oh heck"));
+		
+		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"), new RuntimeException(
+				"Illegal data associated with group bar: 30030 Illegal resource ID: oh heck"));
 	}
 	
 	private void failGetGroup(
@@ -1375,7 +1366,7 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(87), new UserName("wsadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("87"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.catHandler.isAdministrator(new ResourceID("mod.meth"), new UserName("catadmin")))
 				.thenReturn(true);
@@ -1535,7 +1526,7 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(96), new UserName("someuser")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("96"), new UserName("someuser")))
 				.thenReturn(false);
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1561,8 +1552,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(96), new UserName("someuser")))
-				.thenThrow(new NoSuchWorkspaceException("foo"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("96"), new UserName("someuser")))
+				.thenThrow(new NoSuchResourceException("foo"));
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User someuser may not access request " + id));
@@ -1787,8 +1778,8 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
-		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("user")))
-				.thenReturn(WorkspaceIDSet.fromInts(set(96)));
+		when(mocks.wsHandler.getAdministratedResources(new UserName("user")))
+				.thenReturn(set(ResourceAdministrativeID.from(96)));
 		when(mocks.catHandler.getAdministratedResources(new UserName("user")))
 				.thenReturn(set(new ResourceAdministrativeID("mod")));
 		when(mocks.storage.getRequestsByTarget(
@@ -1815,8 +1806,8 @@ public class GroupsTest {
 		final UUID id2 = UUID.randomUUID();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
-		when(mocks.wsHandler.getAdministratedWorkspaces(new UserName("target")))
-				.thenReturn(WorkspaceIDSet.fromInts(set(96, 24)));
+		when(mocks.wsHandler.getAdministratedResources(new UserName("target"))).thenReturn(
+				set(ResourceAdministrativeID.from(96), ResourceAdministrativeID.from(24)));
 		when(mocks.catHandler.getAdministratedResources(new UserName("target")))
 				.thenReturn(set(new ResourceAdministrativeID("mod"),
 						new ResourceAdministrativeID("mod2")));
@@ -2246,7 +2237,7 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(86), new UserName("wsadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("86"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.catHandler.isAdministrator(
 				new ResourceID("cm.meth2"), new UserName("catadmin")))
@@ -2441,7 +2432,7 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("notadmin")))
 				.thenReturn(false);
 		when(mocks.catHandler.isAdministrator(new ResourceID("foo.bar"), new UserName("notadmin")))
 				.thenReturn(false);
@@ -2497,8 +2488,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("notadmin")))
-				.thenThrow(new NoSuchWorkspaceException("foo"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("notadmin")))
+				.thenThrow(new NoSuchResourceException("foo"));
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User notadmin may not deny request " + id));
@@ -2599,7 +2590,7 @@ public class GroupsTest {
 	public void acceptRequestGroupAdminForRequestWS() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
+		when(mocks.wsHandler.getAdministrators(new ResourceID("56"))).thenReturn(
 				set(new UserName("u1"), new UserName("u2")));
 		acceptRequest(mocks, new UserName("admin"),
 				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
@@ -2613,9 +2604,9 @@ public class GroupsTest {
 	public void acceptRequestWSAdminForInviteWS() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(44), new UserName("wsadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("44"), new UserName("wsadmin")))
 				.thenReturn(true);
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(44))).thenReturn(
+		when(mocks.wsHandler.getAdministrators(new ResourceID("44"))).thenReturn(
 					set(new UserName("wsadmin"), new UserName("u2")));
 		acceptRequest(mocks, new UserName("wsadmin"),
 				set(new UserName("admin"), new UserName("u2"), new UserName("own"),
@@ -2629,7 +2620,7 @@ public class GroupsTest {
 	public void acceptRequestGroupAdminForRequestMethod() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.n"))).thenReturn(
 				set(new UserName("u1"), new UserName("u8")));
 		acceptRequest(mocks, new UserName("own"),
 				set(new UserName("u1"), new UserName("u8"), new UserName("admin"),
@@ -2646,7 +2637,7 @@ public class GroupsTest {
 		
 		when(mocks.catHandler.isAdministrator(new ResourceID("mod.n"), new UserName("catadmin")))
 				.thenReturn(true);
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("u4")));
 		acceptRequest(mocks, new UserName("catadmin"),
 				set(new UserName("admin"), new UserName("u4"), new UserName("own"),
@@ -2798,7 +2789,7 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(55), new UserName("notadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("55"), new UserName("notadmin")))
 				.thenReturn(false);
 		when(mocks.catHandler.isAdministrator(new ResourceID("mod.n"), new UserName("notadmin")))
 				.thenReturn(false);
@@ -2913,11 +2904,11 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenThrow(
-				new NoSuchWorkspaceException("56"));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("56"))).thenThrow(
+				new NoSuchResourceException("56"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
-				new NoSuchWorkspaceException("56"));
+				new NoSuchResourceException("56"));
 	}
 	
 	@Test
@@ -2941,8 +2932,8 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(56), new UserName("wsadmin")))
-				.thenThrow(new NoSuchWorkspaceException("foo"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("wsadmin")))
+				.thenThrow(new NoSuchResourceException("foo"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UnauthorizedException("User wsadmin may not accept request " + id));
@@ -2969,7 +2960,7 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(56))).thenReturn(
+		when(mocks.wsHandler.getAdministrators(new ResourceID("56"))).thenReturn(
 				set(new UserName("u1"), new UserName("u2")));
 		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
@@ -3001,7 +2992,7 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenThrow(
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.meth"))).thenThrow(
 				new NoSuchResourceException("mod.meth"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3019,7 +3010,7 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+						.withRequestAddWorkspace(new WorkspaceID(4))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
@@ -3029,7 +3020,7 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenThrow(
+		when(mocks.wsHandler.getAdministrators(new ResourceID("4"))).thenThrow(
 				new IllegalResourceIDException("foo"));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3117,7 +3108,7 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.withAdministrator(new UserName("a3"))
 				.build());
-		when(mocks.catHandler.getAdminstrators(new ResourceID("md.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("md.n"))).thenReturn(
 				set(new UserName("u3"), new UserName("u4")));
 		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
@@ -3440,12 +3431,13 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(inst(3400));
 		
 		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+				new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
 		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(3400));
 		
@@ -3466,13 +3458,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("wsadmin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
 		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+				new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
@@ -3524,13 +3517,14 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("ws1"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
 		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+				new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("admin"),
@@ -3574,11 +3568,32 @@ public class GroupsTest {
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
-		final WorkspaceID w = new WorkspaceID(1);
+		final ResourceID w = new ResourceID("1");
 		
 		failAddWorkspace(g, null, i, w, new NullPointerException("userToken"));
 		failAddWorkspace(g, t, null, w, new NullPointerException("groupID"));
-		failAddWorkspace(g, t, i, null, new NullPointerException("wsid"));
+		failAddWorkspace(g, t, i, null, new NullPointerException("resource"));
+	}
+	
+	@Test
+	public void addWorkspaceFailIllegalValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withCatalogMethod(new CatalogMethod("m.n"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		when(mocks.wsHandler.getDescriptor(new ResourceID("4")))
+				.thenThrow(new IllegalResourceIDException("bar"));
+		
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceID("4"), new IllegalResourceIDException("bar"));
 	}
 	
 	@Test
@@ -3593,11 +3608,12 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34)))
-				.thenThrow(new NoSuchWorkspaceException("34"));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34")))
+				.thenThrow(new NoSuchResourceException("34"));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
-				new NoSuchWorkspaceException("34"));
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+				new NoSuchResourceException("34"));
 	}
 	
 	@Test
@@ -3612,12 +3628,13 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("ws1"), new UserName("ws2")));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
 				new UnauthorizedException(
-						"User u1 is not an admin for group gid or workspace 34"));
+						"User u1 is not an admin for group gid or resource 34"));
 	}
 	
 	@Test
@@ -3633,9 +3650,10 @@ public class GroupsTest {
 				.withWorkspace(new WorkspaceID(34))
 				.withAdministrator(new UserName("admin"))
 				.build());
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
-				new WorkspaceExistsException("34"));
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+				new ResourceExistsException("34"));
 	}
 	
 	@Test
@@ -3650,22 +3668,23 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getAdministrators(new WorkspaceID(34))).thenReturn(
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
 		doThrow(new WorkspaceExistsException("34")).when(mocks.storage)
 				.addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
-				new WorkspaceExistsException("34"));
+		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+				new ResourceExistsException("34"));
 	}
 	
 	private void failAddWorkspace(
 			final Groups g,
 			final Token t,
 			final GroupID i,
-			final WorkspaceID w,
+			final ResourceID w,
 			final Exception expected) {
 		try {
 			g.addWorkspace(t, i, w);
@@ -3687,11 +3706,12 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("admin")))
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("admin")))
 				.thenReturn(false);
 		when(mocks.clock.instant()).thenReturn(inst(7100));
 		
-		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
 		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7100));
 	}
@@ -3708,11 +3728,12 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7500));
 		
-		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(34));
+		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
 		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7500));
 	}
@@ -3723,11 +3744,30 @@ public class GroupsTest {
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
-		final WorkspaceID w = new WorkspaceID(1);
+		final ResourceID w = new ResourceID("1");
 		
 		failRemoveWorkspace(g, null, i, w, new NullPointerException("userToken"));
 		failRemoveWorkspace(g, t, null, w, new NullPointerException("groupID"));
-		failRemoveWorkspace(g, t, i, null, new NullPointerException("wsid"));
+		failRemoveWorkspace(g, t, i, null, new NullPointerException("resource"));
+	}
+	
+	@Test
+	public void removeWorkspaceFailIllegalResourceValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		when(mocks.wsHandler.getDescriptor(new ResourceID("6")))
+				.thenThrow(new IllegalResourceIDException("bleah"));
+		
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceID("6"), new IllegalResourceIDException("bleah"));
 	}
 	
 	@Test
@@ -3742,11 +3782,11 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("notadmin")))
-				.thenThrow(new WorkspaceHandlerException("bork"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
+				.thenThrow(new ResourceHandlerException("bork"));
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
-				new WorkspaceHandlerException("bork"));
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+				new ResourceHandlerException("bork"));
 	}
 	
 	@Test
@@ -3762,12 +3802,12 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("notadmin")))
+		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
 				.thenReturn(false);
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
 				new UnauthorizedException(
-						"User notadmin is not an admin for group gid or workspace 34"));
+						"User notadmin is not an admin for group gid or resource 34"));
 	}
 	
 	@Test
@@ -3782,22 +3822,23 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.isAdministrator(new WorkspaceID(34), new UserName("wsadmin")))
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
 		doThrow(new NoSuchWorkspaceException("34 not in group")).when(mocks.storage)
 				.removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new WorkspaceID(34),
-				new NoSuchWorkspaceException("34 not in group"));
+		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+				new NoSuchResourceException("34 not in group"));
 	}
 	
 	private void failRemoveWorkspace(
 			final Groups g,
 			final Token t,
 			final GroupID i,
-			final WorkspaceID w,
+			final ResourceID w,
 			final Exception expected) {
 		try {
 			g.removeWorkspace(t, i, w);
@@ -3841,7 +3882,7 @@ public class GroupsTest {
 		
 		mocks.groups.setReadPermissionOnWorkspace(new Token("token"), new RequestID(id));
 		
-		verify(mocks.wsHandler).setReadPermission(new WorkspaceID(43), user);
+		verify(mocks.wsHandler).setReadPermission(new ResourceID("43"), user);
 	}
 	
 	@Test
@@ -3995,7 +4036,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
 				.thenReturn(getResDesc("mod", "mod.meth"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.meth"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.meth"))).thenReturn(
 				set(new UserName("admin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(inst(3400));
 		
@@ -4029,7 +4070,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
 				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -4089,7 +4130,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
 				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("catadmin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -4160,7 +4201,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
 				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n")))
+		when(mocks.catHandler.getAdministrators(new ResourceID("m.n")))
 				.thenThrow(new NoSuchResourceException("m.n"));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
@@ -4181,7 +4222,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
 				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("m.n"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
 				set(new UserName("cat1"), new UserName("cat2")));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
@@ -4245,7 +4286,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("mod.m")))
 				.thenReturn(getResDesc("mod", "mod.m"));
-		when(mocks.catHandler.getAdminstrators(new ResourceID("mod.m"))).thenReturn(
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.m"))).thenReturn(
 				set(new UserName("admin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 
