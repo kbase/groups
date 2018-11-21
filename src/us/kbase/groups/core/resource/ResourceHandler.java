@@ -25,15 +25,6 @@ public interface ResourceHandler {
 	ResourceDescriptor getDescriptor(ResourceID resource)
 			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException;
 	
-	/** Check if a resource exists.
-	 * @param resource the resource to check.
-	 * @return true if the resource exists, false otherwise.
-	 * @throws IllegalResourceIDException if the resource ID is not in a legal format.
-	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
-	 */
-	boolean isResourceExtant(ResourceID resource)
-			throws IllegalResourceIDException, ResourceHandlerException;
-
 	/** Check if a user is an administrator for a resource.
 	 * @param resource the resource to check.
 	 * @param user the user.
