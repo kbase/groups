@@ -34,17 +34,33 @@ import us.kbase.common.service.JsonClientException;
 import us.kbase.common.test.TestException;
 import us.kbase.groups.cataloghandler.SDKClientCatalogHandler;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
-import us.kbase.groups.core.catalog.CatalogModule;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
 
 public class SDKClientCatalogHandlerTest {
 
+	private static boolean DEBUG = true;
+
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
-	private static boolean DEBUG = true;
+	private static final Map<String, String> BAD_NAMES = MapBuilder.<String, String>newHashMap()
+			.with("m.   \t  ", "m.")
+			.with(" \t  .n", ".n")
+			.with("m  .n", "m  .n" )
+			.with("m.    n", "m.    n")
+			.with("m  .    n", "m  .    n" )
+			.with("m.n.o", "m.n.o")
+			.with("m", "m")
+			.with(".", ".")
+			.build();
+	
 	
 	private static class SelectOneModuleParamsMatcher implements
 			ArgumentMatcher<SelectOneModuleParams> {
@@ -169,7 +185,7 @@ public class SDKClientCatalogHandlerTest {
 		when(c.getURL()).thenReturn(new URL("http://foo.com"));
 		when(c.version()).thenThrow(e);
 		
-		failConstruct(c, new CatalogHandlerException(
+		failConstruct(c, new ResourceHandlerException(
 				"Error contacting catalog service at http://foo.com"));
 	}
 	
@@ -183,51 +199,57 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
-	public void isOwnerTrue() throws Exception {
-		isOwner("u1", true);
+	public void isAdministratorTrue() throws Exception {
+		isAdministrator("u1", true);
 	}
 	
 	@Test
-	public void isOwnerFalse() throws Exception {
-		isOwner("u3", false);
+	public void isAdministratorFalse() throws Exception {
+		isAdministrator("u3", false);
 	}
 
-	private void isOwner(final String name, final boolean expected) throws Exception {
+	private void isAdministrator(final String name, final boolean expected) throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
 				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2")));
 		
 		assertThat("incorrect is owner", new SDKClientCatalogHandler(c)
-				.isOwner(new CatalogModule("modname"), new UserName(name)), is(expected));
+				.isAdministrator(new ResourceID("modname.mod"), new UserName(name)), is(expected));
 	}
 	
 	@Test
-	public void isOwnerFailNulls() throws Exception {
+	public void isAdministratorFailBadArgs() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
-		failIsOwner(c, null, new UserName("u"), new NullPointerException("module"));
-		failIsOwner(c, new CatalogModule("m"), null, new NullPointerException("user"));
+		failIsAdministrator(c, null, new UserName("u"), new NullPointerException("resource"));
+		failIsAdministrator(c, new ResourceID("m.n"), null, new NullPointerException("user"));
+		
+		for (final String n: BAD_NAMES.keySet()) {
+			failIsAdministrator(c, new ResourceID(n), new UserName("u"),
+					new IllegalResourceIDException("Illegal catalog method name: " +
+							BAD_NAMES.get(n)));
+		}
 	}
 	
 	@Test
-	public void isOwnerFailIOException() throws Exception {
-		failIsOwner(new IOException("foo"), new CatalogHandlerException(
+	public void isAdministratorFailIOException() throws Exception {
+		failIsAdministrator(new IOException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://foo.com"));
 	}
 	
 	@Test
-	public void isOwnerFailJsonClientException() throws Exception {
-		failIsOwner(new JsonClientException("foo"), new CatalogHandlerException(
+	public void isAdministratorFailJsonClientException() throws Exception {
+		failIsAdministrator(new JsonClientException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://foo.com"));
 	}
 	
 	@Test
-	public void isOwnerFailNoModule() throws Exception {
-		failIsOwner(new JsonClientException("foo module/repo is not registered bar"),
-				new NoSuchCatalogEntryException("modname"));
+	public void isAdministratorFailNoModule() throws Exception {
+		failIsAdministrator(new JsonClientException("foo module/repo is not registered bar"),
+				new NoSuchResourceException("modname.mod"));
 	}
 
-	private void failIsOwner(final Exception e, final Exception expected)
+	private void failIsAdministrator(final Exception e, final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -236,16 +258,16 @@ public class SDKClientCatalogHandlerTest {
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
 				.thenThrow(e);
 
-		failIsOwner(c, new CatalogModule("modname"), new UserName("foo"), expected);
+		failIsAdministrator(c, new ResourceID("modname.mod"), new UserName("foo"), expected);
 	}
 	
-	private void failIsOwner(
+	private void failIsAdministrator(
 			final CatalogClient cli,
-			final CatalogModule mod,
+			final ResourceID mod,
 			final UserName u,
 			final Exception expected) {
 		try {
-			new SDKClientCatalogHandler(cli).isOwner(mod, u);
+			new SDKClientCatalogHandler(cli).isAdministrator(mod, u);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -253,16 +275,16 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
-	public void getOwnersEmpty() throws Exception {
-		getOwners(Collections.emptyList(), set());
+	public void getAdministratorsEmpty() throws Exception {
+		getAdministrators(Collections.emptyList(), set());
 	}
 	
 	@Test
-	public void getOwners() throws Exception {
-		getOwners(Arrays.asList("u1", "u2"), set(new UserName("u1"), new UserName("u2")));
+	public void getAdministrators() throws Exception {
+		getAdministrators(Arrays.asList("u1", "u2"), set(new UserName("u1"), new UserName("u2")));
 	}
 
-	private void getOwners(final List<String> returned, final Set<UserName> expected)
+	private void getAdministrators(final List<String> returned, final Set<UserName> expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -270,58 +292,66 @@ public class SDKClientCatalogHandlerTest {
 				.thenReturn(new ModuleInfo().withOwners(returned));
 		
 		assertThat("incorrect owners", new SDKClientCatalogHandler(c)
-				.getOwners(new CatalogModule("modname")),
+				.getAdminstrators(new ResourceID("modname.m")),
 				is(expected));
 	}
 	
 	@Test
-	public void getOwnersFailNull() throws Exception {
+	public void getAdministratorsFailBadArgs() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
-		failGetOwners(c, null, new NullPointerException("module"));
+		failGetAdministrators(c, null, new NullPointerException("resource"));
+		
+		for (final String n: BAD_NAMES.keySet()) {
+			failGetAdministrators(c, new ResourceID(n),
+					new IllegalResourceIDException("Illegal catalog method name: " +
+							BAD_NAMES.get(n)));
+		}
 	}
 	
 	@Test
-	public void getOwnersFailIOException() throws Exception {
-		failGetOwners(new IOException("foo"), new CatalogHandlerException(
+	public void getAdministratorsFailIOException() throws Exception {
+		failGetAdministrators(new IOException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://bar.com"));
 	}
 	
 	@Test
-	public void getOwnersFailJsonClientException() throws Exception {
-		failGetOwners(new JsonClientException("foo"), new CatalogHandlerException(
+	public void getAdministratorsFailJsonClientException() throws Exception {
+		failGetAdministrators(new JsonClientException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://bar.com"));
 	}
 	
 	@Test
-	public void getOwnersFailNoModule() throws Exception {
-		failGetOwners(new JsonClientException("foo module/repo is not registered bar"),
-				new NoSuchCatalogEntryException("modname2"));
+	public void getAdministratorsFailNoModule() throws Exception {
+		failGetAdministrators(new JsonClientException("foo module/repo is not registered bar"),
+				new NoSuchResourceException("modname2.m"));
 	}
 	
 	@Test
-	public void getOwnersFailBadUserNull() throws Exception {
-		getOwnersFailBadUser(null, new CatalogHandlerException(
+	public void getAdministratorsFailBadUserNull() throws Exception {
+		getAdministratorsFailBadUser(null, new ResourceHandlerException(
 				"Illegal user name returned from catalog: null"));
 	}
 	
 	@Test
-	public void getOwnersFailBadUserControlChars() throws Exception {
-		getOwnersFailBadUser("foo\tbar", new CatalogHandlerException(
+	public void getAdministratorsFailBadUserControlChars() throws Exception {
+		getAdministratorsFailBadUser("foo\tbar", new ResourceHandlerException(
 				"Illegal user name returned from catalog: foo\tbar"));
 	}
 
-	private void getOwnersFailBadUser(final String badUser, final CatalogHandlerException expected)
+	private void getAdministratorsFailBadUser(
+			final String badUser,
+			final ResourceHandlerException expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname2"))))
 				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("foo", badUser)));
 		
-		failGetOwners(c, new CatalogModule("modname2"), expected);
+		failGetAdministrators(c, new ResourceID("modname2.m"), expected);
 	}
 	
-	private void failGetOwners(final Exception e, final Exception expected)
+	private void failGetAdministrators(final Exception e, final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -330,15 +360,15 @@ public class SDKClientCatalogHandlerTest {
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname2"))))
 				.thenThrow(e);
 
-		failGetOwners(c, new CatalogModule("modname2"), expected);
+		failGetAdministrators(c, new ResourceID("modname2.m"), expected);
 	}
 	
-	private void failGetOwners(
+	private void failGetAdministrators(
 			final CatalogClient cli,
-			final CatalogModule mod,
+			final ResourceID mod,
 			final Exception expected) {
 		try {
-			new SDKClientCatalogHandler(cli).getOwners(mod);
+			new SDKClientCatalogHandler(cli).getAdminstrators(mod);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -346,27 +376,27 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
-	public void isMethodExtantNarrative() throws Exception {
-		isMethodExtant("modname.n2", true);
+	public void isResourceExtantNarrative() throws Exception {
+		isResourceExtant("modname.n2", true);
 	}
 	
 	@Test
-	public void isMethodExtantNarrativeFalse() throws Exception {
-		isMethodExtant("modname.n3", false);
+	public void isResourceExtantNarrativeFalse() throws Exception {
+		isResourceExtant("modname.n3", false);
 	}
 	
 	@Test
-	public void isMethodExtantLocal() throws Exception {
-		isMethodExtant("modname.f1", true);
+	public void isResourceExtantLocal() throws Exception {
+		isResourceExtant("modname.f1", true);
 	}
 	
 	@Test
-	public void isMethodExtantLocalFalse() throws Exception {
-		isMethodExtant("modname.f4", false);
+	public void isResourceExtantLocalFalse() throws Exception {
+		isResourceExtant("modname.f4", false);
 	}
 	
 	@Test
-	public void isMethodExtantFailNoModule() throws Exception {
+	public void isResourceExtantFailNoModule() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleVersion(argThat(
@@ -374,10 +404,10 @@ public class SDKClientCatalogHandlerTest {
 				.thenThrow(new JsonClientException("foo Module cannot be found bar"));
 
 		assertThat("incorrect extant", new SDKClientCatalogHandler(c)
-				.isMethodExtant(new CatalogMethod("modname5.yay")), is(false));
+				.isResourceExtant(new ResourceID("modname5.yay")), is(false));
 	}
 
-	private void isMethodExtant(final String method, final boolean expected) throws Exception {
+	private void isResourceExtant(final String method, final boolean expected) throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		final ModuleVersion mv = new ModuleVersion();
@@ -388,28 +418,28 @@ public class SDKClientCatalogHandlerTest {
 				new SelectModuleVersionParamsMatcher("modname", "release")))).thenReturn(mv);
 		
 		assertThat("incorrect extant", new SDKClientCatalogHandler(c)
-				.isMethodExtant(new CatalogMethod(method)), is(expected));
+				.isResourceExtant(new ResourceID(method)), is(expected));
 	}
 
 	@Test
-	public void isMethodExtantFailNull() throws Exception {
+	public void isResourceExtantFailNull() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
-		failIsMethodExtant(c, null, new NullPointerException("method"));
+		failIsResourceExtant(c, null, new NullPointerException("resource"));
 	}
 	
 	@Test
-	public void isMethodExtantFailIOException() throws Exception {
-		failIsMethodExtant(new IOException("foo"), new CatalogHandlerException(
+	public void isResourceExtantFailIOException() throws Exception {
+		failIsResourceExtant(new IOException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://whee.com"));
 	}
 	
 	@Test
-	public void isMethodExtantFailJsonClientException() throws Exception {
-		failIsMethodExtant(new JsonClientException("foo"), new CatalogHandlerException(
+	public void isResourceExtantFailJsonClientException() throws Exception {
+		failIsResourceExtant(new JsonClientException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://whee.com"));
 	}
 	
-	private void failIsMethodExtant(final Exception e, final Exception expected)
+	private void failIsResourceExtant(final Exception e, final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -418,15 +448,15 @@ public class SDKClientCatalogHandlerTest {
 		when(c.getModuleVersion(argThat(
 				new SelectModuleVersionParamsMatcher("modname4", "release")))).thenThrow(e);
 
-		failIsMethodExtant(c, new CatalogMethod("modname4.foo"), expected);
+		failIsResourceExtant(c, new ResourceID("modname4.foo"), expected);
 	}
 	
-	private void failIsMethodExtant(
+	private void failIsResourceExtant(
 			final CatalogClient c,
-			final CatalogMethod m,
+			final ResourceID m,
 			final Exception expected) {
 		try {
-			new SDKClientCatalogHandler(c).isMethodExtant(m);
+			new SDKClientCatalogHandler(c).isResourceExtant(m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -434,18 +464,18 @@ public class SDKClientCatalogHandlerTest {
 	}
 
 	@Test
-	public void getOwnedModulesEmpty() throws Exception {
+	public void getAdministratedResourcesEmpty() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.listBasicModuleInfo(argThat(new ListModuleParamsMatcher("u1", 1))))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect modules", new SDKClientCatalogHandler(c)
-				.getOwnedModules(new UserName("u1")), is(set()));
+				.getAdministratedResources(new UserName("u1")), is(set()));
 	}
 	
 	@Test
-	public void getOwnedModules() throws Exception {
+	public void getAdministratedResources() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.listBasicModuleInfo(argThat(new ListModuleParamsMatcher("u1", 1))))
@@ -455,42 +485,43 @@ public class SDKClientCatalogHandlerTest {
 						new BasicModuleInfo().withModuleName("m3")));
 		
 		assertThat("incorrect modules", new SDKClientCatalogHandler(c)
-				.getOwnedModules(new UserName("u1")), is(set(new CatalogModule("m1"),
-						new CatalogModule("m2"), new CatalogModule("m3"))));
+				.getAdministratedResources(new UserName("u1")), is(set(
+						new ResourceAdministrativeID("m1"), new ResourceAdministrativeID("m2"),
+						new ResourceAdministrativeID("m3"))));
 	}
 	
 	@Test
-	public void getOwnedModulesFailNull() throws Exception {
+	public void getAdministratedResourcesFailNull() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
-		failGetOwnedModules(c, null, new NullPointerException("user"));
+		failGetAdministratedResources(c, null, new NullPointerException("user"));
 	}
 	
 	@Test
-	public void getOwnedModulesFailNullModule() throws Exception {
-		failGetOwnedModules((String) null, new CatalogHandlerException(
+	public void getAdministratedResourcesFailNullModule() throws Exception {
+		failGetAdministratedResources((String) null, new ResourceHandlerException(
 				"Illegal module name returned from catalog: null"));
 	}
 	
 	@Test
-	public void getOwnedModulesFailModuleControlChars() throws Exception {
-		failGetOwnedModules("foo\tbar", new CatalogHandlerException(
+	public void getAdministratedResourcesFailModuleControlChars() throws Exception {
+		failGetAdministratedResources("foo\tbar", new ResourceHandlerException(
 				"Illegal module name returned from catalog: foo\tbar"));
 	}
 	
 	@Test
-	public void getOwnedModulesFailIOException() throws Exception {
-		failGetOwnedModules(new IOException("foo"), new CatalogHandlerException(
+	public void getAdministratedResourcesFailIOException() throws Exception {
+		failGetAdministratedResources(new IOException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://whoo.com"));
 	}
 	
 	@Test
-	public void getOwnedModulesFailJsonClientException() throws Exception {
-		failGetOwnedModules(new JsonClientException("foo"), new CatalogHandlerException(
+	public void getAdministratedResourcesFailJsonClientException() throws Exception {
+		failGetAdministratedResources(new JsonClientException("foo"), new ResourceHandlerException(
 				"Error contacting catalog service at http://whoo.com"));
 	}
 
-	private void failGetOwnedModules(final Exception thrown, final Exception expected)
+	private void failGetAdministratedResources(final Exception thrown, final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -499,10 +530,10 @@ public class SDKClientCatalogHandlerTest {
 		when(c.listBasicModuleInfo(argThat(new ListModuleParamsMatcher("u1", 1))))
 				.thenThrow(thrown);
 		
-		failGetOwnedModules(c, new UserName("u1"), expected);
+		failGetAdministratedResources(c, new UserName("u1"), expected);
 	}
 	
-	private void failGetOwnedModules(final String badModule, final Exception expected)
+	private void failGetAdministratedResources(final String badModule, final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
@@ -511,15 +542,110 @@ public class SDKClientCatalogHandlerTest {
 						new BasicModuleInfo().withModuleName("m1"),
 						new BasicModuleInfo().withModuleName(badModule)));
 		
-		failGetOwnedModules(c, new UserName("u1"), expected);
+		failGetAdministratedResources(c, new UserName("u1"), expected);
 	}
 	
-	private void failGetOwnedModules(
+	private void failGetAdministratedResources(
 			final CatalogClient c,
 			final UserName n,
 			final Exception expected) {
 		try {
-			new SDKClientCatalogHandler(c).getOwnedModules(n);
+			new SDKClientCatalogHandler(c).getAdministratedResources(n);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void setReadPermission() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		new SDKClientCatalogHandler(c).setReadPermission(null, null);
+		// nothing to test other than it doesn't fail
+	}
+	
+	@Test
+	public void getDescriptor() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		final ResourceDescriptor d = new SDKClientCatalogHandler(c)
+				.getDescriptor(new ResourceID(" \t  mod.meth2     \t "));
+		
+		assertThat("incorrect descriptor", d,
+				is(new ResourceDescriptor(
+						new ResourceAdministrativeID("mod"),
+						new ResourceID("mod.meth2"))));
+		
+	}
+	
+	@Test
+	public void getDescriptorFailBadArgs() throws Exception {
+		failGetDescriptor(null, new NullPointerException("resource"));
+	
+		for (final String n: BAD_NAMES.keySet()) {
+			failGetDescriptor(new ResourceID(n),
+					new IllegalResourceIDException("Illegal catalog method name: " +
+							BAD_NAMES.get(n)));
+		}
+	}
+
+	private void failGetDescriptor(final ResourceID r, final Exception expected) {
+		final CatalogClient c = mock(CatalogClient.class);
+		try {
+			new SDKClientCatalogHandler(c).getDescriptor(r);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getResourceInformationMinimal() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
+				.getResourceInformation(null, set(), true);
+		
+		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(null).build()));
+	}
+	
+	@Test
+	public void getResourceInformationMaximal() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
+				.getResourceInformation(new UserName("foo"),
+						set(new ResourceID("foo.bar"), new ResourceID("x.y")),
+						false);
+		
+		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(
+				new UserName("foo"))
+				.withResourceDescriptor(new ResourceDescriptor(
+						new ResourceAdministrativeID("foo"), new ResourceID("foo.bar")))
+				.withResourceDescriptor(new ResourceDescriptor(
+						new ResourceAdministrativeID("x"), new ResourceID("x.y")))
+				.build()));
+	}
+	
+	@Test
+	public void getResourceInformationFailBadArgs() throws Exception {
+		failGetResourceInformation(null, new NullPointerException("resources"));
+		failGetResourceInformation(set(new ResourceID("i"), null),
+				new NullPointerException("Null item in collection resources"));
+		
+		for (final String n: BAD_NAMES.keySet()) {
+			failGetResourceInformation(set(new ResourceID("x.y"), new ResourceID(n)),
+					new IllegalResourceIDException("Illegal catalog method name: " +
+							BAD_NAMES.get(n)));
+		}
+	}
+	
+	private void failGetResourceInformation(
+			final Set<ResourceID> resources,
+			final Exception expected) {
+		final CatalogClient c = mock(CatalogClient.class);
+		try {
+			new SDKClientCatalogHandler(c).getResourceInformation(null, resources, true);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

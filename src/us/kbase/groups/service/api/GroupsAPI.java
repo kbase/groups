@@ -44,21 +44,21 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.exceptions.WorkspaceExistsException;
@@ -66,6 +66,7 @@ import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -435,12 +436,13 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
-			throws InvalidTokenException, NoSuchGroupException, NoSuchCatalogEntryException,
-				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
-				RequestExistsException, CatalogMethodExistsException, MissingParameterException,
-				IllegalParameterException, GroupsStorageException, CatalogHandlerException {
+			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, RequestExistsException,
+				MissingParameterException, IllegalParameterException, GroupsStorageException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceExistsException,
+				ResourceHandlerException {
 		return toGroupRequestJSON(groups.addCatalogMethod(
-				getToken(token, true), new GroupID(groupID), new CatalogMethod(method)));
+				getToken(token, true), new GroupID(groupID), new ResourceID(method)));
 	}
 	
 	@DELETE
@@ -450,12 +452,12 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
-			throws InvalidTokenException, NoSuchGroupException, NoSuchCatalogEntryException,
-				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
-				MissingParameterException, IllegalParameterException, GroupsStorageException,
-				CatalogHandlerException {
+			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException, NoSuchResourceException,
+				IllegalResourceIDException, ResourceHandlerException {
 		groups.removeCatalogMethod(
-				getToken(token, true), new GroupID(groupID), new CatalogMethod(method));
+				getToken(token, true), new GroupID(groupID), new ResourceID(method));
 		
 	}
 	

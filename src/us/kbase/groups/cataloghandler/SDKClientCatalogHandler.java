@@ -1,6 +1,7 @@
 package us.kbase.groups.cataloghandler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -17,20 +18,24 @@ import us.kbase.catalog.SelectModuleVersion;
 import us.kbase.catalog.SelectOneModuleParams;
 import us.kbase.common.service.JsonClientException;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogHandler;
-import us.kbase.groups.core.catalog.CatalogMethod;
-import us.kbase.groups.core.catalog.CatalogModule;
-import us.kbase.groups.core.exceptions.CatalogHandlerException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceHandler;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceInformationSet.Builder;
 
 /** A handler implementation that uses a provided SDK workspace client to communicate with the 
  * catalog.
  * @author gaprice@lbl.gov
  *
  */
-public class SDKClientCatalogHandler implements CatalogHandler {
+public class SDKClientCatalogHandler implements ResourceHandler {
 	
 	// TODO CACHE may help to cache all or some of the results. YAGNI for now.
 	// TODO TEST integration tests, general. Not sure how painful it's gonna be to run the catalog in tests. Docker?
@@ -46,9 +51,9 @@ public class SDKClientCatalogHandler implements CatalogHandler {
 	/** Create the handler.
 	 * @param client the catalog client to use to communicate with the catalog. No token is
 	 * necessary.
-	 * @throws CatalogHandlerException if an error occurs contacting the catalog.
+	 * @throws ResourceHandlerException if an error occurs contacting the catalog.
 	 */
-	public SDKClientCatalogHandler(final CatalogClient client) throws CatalogHandlerException {
+	public SDKClientCatalogHandler(final CatalogClient client) throws ResourceHandlerException {
 		checkNotNull(client, "client");
 		this.client = client;
 		try {
@@ -58,42 +63,81 @@ public class SDKClientCatalogHandler implements CatalogHandler {
 		}
 	}
 
-	private CatalogHandlerException wrapGeneralCatalogException(Exception e) {
-		return new CatalogHandlerException("Error contacting catalog service at " +
+	private ResourceHandlerException wrapGeneralCatalogException(Exception e) {
+		return new ResourceHandlerException("Error contacting catalog service at " +
 				client.getURL(), e);
 	}
 	
-	@Override
-	public boolean isOwner(final CatalogModule module, final UserName user)
-			throws CatalogHandlerException, NoSuchCatalogEntryException {
-		checkNotNull(module, "module");
-		checkNotNull(user, "user");
-		return getModuleOwners(module).contains(user.getName());
+	private static class ModMeth {
+		private final String mod;
+		private final String meth;
+		
+		private ModMeth(String mod, String meth) {
+			this.mod = mod;
+			this.meth = meth;
+		}
+	}
+	
+	private ModMeth getModMeth(final ResourceID resource) throws IllegalResourceIDException {
+		final String[] split = resource.getName().split("\\.");
+		if (split.length != 2) {
+			throw new IllegalResourceIDException("Illegal catalog method name: " +
+					resource.getName());
+		}
+		final String mod = split[0].trim();
+		final String meth = split[1].trim();
+		// meth cannot be empty at this point
+		if (mod.isEmpty() || mod.length() + meth.length() + 1 != resource.getName().length()) {
+			throw new IllegalResourceIDException("Illegal catalog method name: " +
+					resource.getName());
+		}
+		return new ModMeth(mod, meth);
 	}
 
-	private List<String> getModuleOwners(final CatalogModule module)
-			throws CatalogHandlerException, NoSuchCatalogEntryException {
+	private ResourceDescriptor getDescriptorInternal(final ResourceID resource)
+			throws IllegalResourceIDException {
+		final ModMeth m = getModMeth(resource);
+		try {
+			return new ResourceDescriptor(new ResourceAdministrativeID(m.mod), resource);
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	@Override
+	public boolean isAdministrator(final ResourceID resource, final UserName user)
+			throws ResourceHandlerException, NoSuchResourceException, IllegalResourceIDException {
+		checkNotNull(resource, "resource");
+		checkNotNull(user, "user");
+		return getModuleOwners(resource).contains(user.getName());
+	}
+
+	private List<String> getModuleOwners(final ResourceID module)
+			throws ResourceHandlerException, NoSuchResourceException, IllegalResourceIDException {
 		try {
 			return client.getModuleInfo(new SelectOneModuleParams()
-					.withModuleName(module.getName())).getOwners();
+					.withModuleName(getModMeth(module).mod)).getOwners();
 		} catch (IOException e) {
 			throw wrapGeneralCatalogException(e);
 		} catch (JsonClientException e) {
 			if (e.getMessage().contains("module/repo is not registered")) {
-				throw new NoSuchCatalogEntryException(module.getName(), e);
+				throw new NoSuchResourceException(module.getName(), e);
 			} else {
 				throw wrapGeneralCatalogException(e);
 			}
 		}
 	}
 
+	//TODO NNOW remove from api & check existence in getModuleowners.
 	@Override
-	public boolean isMethodExtant(final CatalogMethod method) throws CatalogHandlerException {
-		checkNotNull(method, "method");
+	public boolean isResourceExtant(final ResourceID resource)
+			throws ResourceHandlerException, IllegalResourceIDException {
+		checkNotNull(resource, "resource");
 		final ModuleVersion modver;
+		final ModMeth modMeth = getModMeth(resource);
 		try {
 			modver = client.getModuleVersion(new SelectModuleVersion()
-					.withModuleName(method.getModule().getName())
+					.withModuleName(modMeth.mod)
 					//TODO TEST need an integration test for this where beta has method but release doesn't
 					.withVersion("release"));
 		} catch (IOException e) {
@@ -113,12 +157,12 @@ public class SDKClientCatalogHandler implements CatalogHandler {
 		@SuppressWarnings("unchecked")
 		final List<String> narrMethods = (List<String>) addl.get("narrative_methods");
 		
-		return localMethods.contains(method.getMethod()) ||
-				narrMethods.contains(method.getMethod());
+		return localMethods.contains(modMeth.meth) || narrMethods.contains(modMeth.meth);
 	}
 
 	@Override
-	public Set<CatalogModule> getOwnedModules(final UserName user) throws CatalogHandlerException {
+	public Set<ResourceAdministrativeID> getAdministratedResources(final UserName user)
+			throws ResourceHandlerException {
 		checkNotNull(user, "user");
 		final List<BasicModuleInfo> mods;
 		try {
@@ -130,12 +174,12 @@ public class SDKClientCatalogHandler implements CatalogHandler {
 		} catch (IOException | JsonClientException e) {
 			throw wrapGeneralCatalogException(e);
 		}
-		final Set<CatalogModule> ret = new HashSet<>();
+		final Set<ResourceAdministrativeID> ret = new HashSet<>();
 		for (final BasicModuleInfo m: mods) {
 			try {
-				ret.add(new CatalogModule(m.getModuleName()));
+				ret.add(new ResourceAdministrativeID(m.getModuleName()));
 			} catch (MissingParameterException | IllegalParameterException e) {
-				throw new CatalogHandlerException(
+				throw new ResourceHandlerException(
 						"Illegal module name returned from catalog: " + m.getModuleName());
 			}
 		}
@@ -143,18 +187,46 @@ public class SDKClientCatalogHandler implements CatalogHandler {
 	}
 
 	@Override
-	public Set<UserName> getOwners(final CatalogModule module)
-			throws NoSuchCatalogEntryException, CatalogHandlerException {
-		checkNotNull(module, "module");
+	public Set<UserName> getAdminstrators(final ResourceID resource)
+			throws NoSuchResourceException, ResourceHandlerException, IllegalResourceIDException {
+		checkNotNull(resource, "resource");
 		final Set<UserName> users = new HashSet<>();
-		for (final String u: getModuleOwners(module)) {
+		for (final String u: getModuleOwners(resource)) {
 			try {
 				users.add(new UserName(u));
 			} catch (IllegalParameterException | MissingParameterException e) {
-				throw new CatalogHandlerException("Illegal user name returned from catalog: " + u);
+				throw new ResourceHandlerException(
+						"Illegal user name returned from catalog: " + u);
 			}
 		}
 		return users;
+	}
+
+	@Override
+	public ResourceDescriptor getDescriptor(final ResourceID resource)
+			throws IllegalResourceIDException, ResourceHandlerException {
+		checkNotNull(resource, "resource");
+		return getDescriptorInternal(resource);
+	}
+
+	@Override
+	public ResourceInformationSet getResourceInformation(
+			final UserName user,
+			final Set<ResourceID> resources,
+			final boolean administratedResourcesOnly)
+			throws IllegalResourceIDException, ResourceHandlerException {
+		checkNoNullsInCollection(resources, "resources");
+		final Builder b = ResourceInformationSet.getBuilder(user);
+		
+		for (final ResourceID r: resources) {
+			b.withResourceDescriptor(getDescriptorInternal(r));
+		}
+		return b.build();
+	}
+
+	@Override
+	public void setReadPermission(ResourceID resource, UserName user) {
+		return; // nothing to do, catalog methods are all public
 	}
 
 }
