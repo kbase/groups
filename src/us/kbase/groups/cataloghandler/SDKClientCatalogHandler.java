@@ -13,8 +13,7 @@ import java.util.Set;
 import us.kbase.catalog.BasicModuleInfo;
 import us.kbase.catalog.CatalogClient;
 import us.kbase.catalog.ListModuleParams;
-import us.kbase.catalog.ModuleVersion;
-import us.kbase.catalog.SelectModuleVersion;
+import us.kbase.catalog.ModuleInfo;
 import us.kbase.catalog.SelectOneModuleParams;
 import us.kbase.common.service.JsonClientException;
 import us.kbase.groups.core.UserName;
@@ -114,9 +113,11 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 
 	private List<String> getModuleOwners(final ResourceID module)
 			throws ResourceHandlerException, NoSuchResourceException, IllegalResourceIDException {
+		final ModMeth modmeth = getModMeth(module);
+		final ModuleInfo mod;
 		try {
-			return client.getModuleInfo(new SelectOneModuleParams()
-					.withModuleName(getModMeth(module).mod)).getOwners();
+			mod = client.getModuleInfo(new SelectOneModuleParams()
+					.withModuleName(modmeth.mod));
 		} catch (IOException e) {
 			throw wrapGeneralCatalogException(e);
 		} catch (JsonClientException e) {
@@ -126,38 +127,21 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 				throw wrapGeneralCatalogException(e);
 			}
 		}
-	}
-
-	//TODO NNOW remove from api & check existence in getModuleowners.
-	@Override
-	public boolean isResourceExtant(final ResourceID resource)
-			throws ResourceHandlerException, IllegalResourceIDException {
-		checkNotNull(resource, "resource");
-		final ModuleVersion modver;
-		final ModMeth modMeth = getModMeth(resource);
-		try {
-			modver = client.getModuleVersion(new SelectModuleVersion()
-					.withModuleName(modMeth.mod)
-					//TODO TEST need an integration test for this where beta has method but release doesn't
-					.withVersion("release"));
-		} catch (IOException e) {
-			throw wrapGeneralCatalogException(e);
-		} catch (JsonClientException e) {
-			if (e.getMessage().contains("Module cannot be found")) {
-				return false;  // <----- NOTE VERY NAUGHTY RETURN RIGHT HERE
-			} else {
-				throw wrapGeneralCatalogException(e);
-			}
+		if (mod.getRelease() == null) {
+			throw new NoSuchResourceException(module.getName());
 		}
 		// wow this is some shit right here, the catalog spec is wrong
 		// https://github.com/kbase/catalog/issues/100
-		final Map<String, Object> addl = modver.getAdditionalProperties();
+		final Map<String, Object> addl = mod.getRelease().getAdditionalProperties();
 		@SuppressWarnings("unchecked")
 		final List<String> localMethods = (List<String>) addl.get("local_functions");
 		@SuppressWarnings("unchecked")
 		final List<String> narrMethods = (List<String>) addl.get("narrative_methods");
 		
-		return localMethods.contains(modMeth.meth) || narrMethods.contains(modMeth.meth);
+		if (!localMethods.contains(modmeth.meth) && !narrMethods.contains(modmeth.meth)) {
+			throw new NoSuchResourceException(module.getName());
+		}
+		return mod.getOwners();
 	}
 
 	@Override
@@ -228,5 +212,4 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 	public void setReadPermission(ResourceID resource, UserName user) {
 		return; // nothing to do, catalog methods are all public
 	}
-
 }

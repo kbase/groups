@@ -27,8 +27,7 @@ import us.kbase.catalog.BasicModuleInfo;
 import us.kbase.catalog.CatalogClient;
 import us.kbase.catalog.ListModuleParams;
 import us.kbase.catalog.ModuleInfo;
-import us.kbase.catalog.ModuleVersion;
-import us.kbase.catalog.SelectModuleVersion;
+import us.kbase.catalog.ModuleVersionInfo;
 import us.kbase.catalog.SelectOneModuleParams;
 import us.kbase.common.service.JsonClientException;
 import us.kbase.common.test.TestException;
@@ -81,42 +80,6 @@ public class SDKClientCatalogHandlerTest {
 				throw new TestException(e.getMessage(), e);
 			}
 			final Map<String, String> expected = ImmutableMap.of("module_name", moduleName);
-			if (params.equals(expected)) {
-				return true;
-			} else {
-				if (DEBUG) {
-					System.out.println(String.format("Expected:\n%s\nGot:\n%s\n",
-							expected, params));
-				}
-				return false;
-			}
-		}
-	}
-	
-	// pretty similar w/ the above, maybe factor together
-	private static class SelectModuleVersionParamsMatcher implements
-			ArgumentMatcher<SelectModuleVersion> {
-		
-		private final String moduleName;
-		private final String version;
-		
-		public SelectModuleVersionParamsMatcher(final String moduleName, final String version) {
-			this.moduleName = moduleName;
-			this.version = version;
-		}
-		
-		@Override
-		public boolean matches(final SelectModuleVersion smv) {
-			final Map<String, Object> params;
-			try {
-				final String p = MAPPER.writeValueAsString(smv);
-				params = MAPPER.readValue(p, new TypeReference<Map<String, Object>>() {});
-			} catch (IOException e) {
-				throw new TestException(e.getMessage(), e);
-			}
-			final Map<String, String> expected = ImmutableMap.of(
-					"module_name", moduleName,
-					"version", version);
 			if (params.equals(expected)) {
 				return true;
 			} else {
@@ -200,22 +163,35 @@ public class SDKClientCatalogHandlerTest {
 	
 	@Test
 	public void isAdministratorTrue() throws Exception {
-		isAdministrator("u1", true);
+		isAdministrator("u1", true, Collections.emptyList(), Arrays.asList("mod", "v"));
 	}
 	
 	@Test
 	public void isAdministratorFalse() throws Exception {
-		isAdministrator("u3", false);
+		isAdministrator("u3", false, Arrays.asList("x", "mod"), Collections.emptyList());
 	}
 
-	private void isAdministrator(final String name, final boolean expected) throws Exception {
+	private void isAdministrator(
+			final String name,
+			final boolean expected,
+			final List<String> narrmethods,
+			final List<String> localmethods)
+			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
-				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2")));
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2"))
+						.withRelease(getMVI(narrmethods, localmethods)));
 		
 		assertThat("incorrect is owner", new SDKClientCatalogHandler(c)
 				.isAdministrator(new ResourceID("modname.mod"), new UserName(name)), is(expected));
+	}
+	
+	public ModuleVersionInfo getMVI(final List<String> narrs, final List<String> locals) {
+		final ModuleVersionInfo mvi = new ModuleVersionInfo();
+		mvi.setAdditionalProperties("local_functions", locals);
+		mvi.setAdditionalProperties("narrative_methods", narrs);
+		return mvi;
 	}
 	
 	@Test
@@ -248,6 +224,31 @@ public class SDKClientCatalogHandlerTest {
 		failIsAdministrator(new JsonClientException("foo module/repo is not registered bar"),
 				new NoSuchResourceException("modname.mod"));
 	}
+	
+	@Test
+	public void isAdminstratorFailNotReleased() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2")));
+		
+		failIsAdministrator(c, new ResourceID("modname.methname"), new UserName("u1"),
+				new NoSuchResourceException("modname.methname"));
+	}
+	
+	@Test
+	public void isAdminstratorFailNoMethod() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2"))
+						.withRelease(getMVI(
+								Arrays.asList("methname2", "m"),
+								Arrays.asList("methnam", "methname3"))));
+		
+		failIsAdministrator(c, new ResourceID("modname.methname"), new UserName("u1"),
+				new NoSuchResourceException("modname.methname"));
+	}
 
 	private void failIsAdministrator(final Exception e, final Exception expected)
 			throws Exception {
@@ -276,20 +277,27 @@ public class SDKClientCatalogHandlerTest {
 	
 	@Test
 	public void getAdministratorsEmpty() throws Exception {
-		getAdministrators(Collections.emptyList(), set());
+		getAdministrators(Collections.emptyList(), set(),
+				Arrays.asList("m", "x"), Arrays.asList("v"));
 	}
 	
 	@Test
 	public void getAdministrators() throws Exception {
-		getAdministrators(Arrays.asList("u1", "u2"), set(new UserName("u1"), new UserName("u2")));
+		getAdministrators(Arrays.asList("u1", "u2"), set(new UserName("u1"), new UserName("u2")),
+				Arrays.asList("n", "x"), Arrays.asList("m"));
 	}
 
-	private void getAdministrators(final List<String> returned, final Set<UserName> expected)
+	private void getAdministrators(
+			final List<String> returned,
+			final Set<UserName> expected,
+			final List<String> narrmeths,
+			final List<String> localmeths)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
-				.thenReturn(new ModuleInfo().withOwners(returned));
+				.thenReturn(new ModuleInfo().withOwners(returned)
+						.withRelease(getMVI(narrmeths, localmeths)));
 		
 		assertThat("incorrect owners", new SDKClientCatalogHandler(c)
 				.getAdminstrators(new ResourceID("modname.m")),
@@ -328,6 +336,31 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
+	public void getAdminstratorsFailNotReleased() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2")));
+		
+		failGetAdministrators(c, new ResourceID("modname.methname"),
+				new NoSuchResourceException("modname.methname"));
+	}
+	
+	@Test
+	public void getAdminstratorsFailNoMethod() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname"))))
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("u1", "u2"))
+						.withRelease(getMVI(
+								Arrays.asList("methname2", "m"),
+								Arrays.asList("methnam", "methname3"))));
+		
+		failGetAdministrators(c, new ResourceID("modname.methname"),
+				new NoSuchResourceException("modname.methname"));
+	}
+	
+	@Test
 	public void getAdministratorsFailBadUserNull() throws Exception {
 		getAdministratorsFailBadUser(null, new ResourceHandlerException(
 				"Illegal user name returned from catalog: null"));
@@ -341,12 +374,13 @@ public class SDKClientCatalogHandlerTest {
 
 	private void getAdministratorsFailBadUser(
 			final String badUser,
-			final ResourceHandlerException expected)
+			final Exception expected)
 			throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		when(c.getModuleInfo(argThat(new SelectOneModuleParamsMatcher("modname2"))))
-				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("foo", badUser)));
+				.thenReturn(new ModuleInfo().withOwners(Arrays.asList("foo", badUser))
+						.withRelease(getMVI(Collections.emptyList(), Arrays.asList("m"))));
 		
 		failGetAdministrators(c, new ResourceID("modname2.m"), expected);
 	}
@@ -375,94 +409,6 @@ public class SDKClientCatalogHandlerTest {
 		}
 	}
 	
-	@Test
-	public void isResourceExtantNarrative() throws Exception {
-		isResourceExtant("modname.n2", true);
-	}
-	
-	@Test
-	public void isResourceExtantNarrativeFalse() throws Exception {
-		isResourceExtant("modname.n3", false);
-	}
-	
-	@Test
-	public void isResourceExtantLocal() throws Exception {
-		isResourceExtant("modname.f1", true);
-	}
-	
-	@Test
-	public void isResourceExtantLocalFalse() throws Exception {
-		isResourceExtant("modname.f4", false);
-	}
-	
-	@Test
-	public void isResourceExtantFailNoModule() throws Exception {
-		final CatalogClient c = mock(CatalogClient.class);
-		
-		when(c.getModuleVersion(argThat(
-				new SelectModuleVersionParamsMatcher("modname5", "release"))))
-				.thenThrow(new JsonClientException("foo Module cannot be found bar"));
-
-		assertThat("incorrect extant", new SDKClientCatalogHandler(c)
-				.isResourceExtant(new ResourceID("modname5.yay")), is(false));
-	}
-
-	private void isResourceExtant(final String method, final boolean expected) throws Exception {
-		final CatalogClient c = mock(CatalogClient.class);
-		
-		final ModuleVersion mv = new ModuleVersion();
-		mv.setAdditionalProperties("narrative_methods", Arrays.asList("n1", "n2"));
-		mv.setAdditionalProperties("local_functions", Arrays.asList("f1", "f2"));
-		
-		when(c.getModuleVersion(argThat(
-				new SelectModuleVersionParamsMatcher("modname", "release")))).thenReturn(mv);
-		
-		assertThat("incorrect extant", new SDKClientCatalogHandler(c)
-				.isResourceExtant(new ResourceID(method)), is(expected));
-	}
-
-	@Test
-	public void isResourceExtantFailNull() throws Exception {
-		final CatalogClient c = mock(CatalogClient.class);
-		failIsResourceExtant(c, null, new NullPointerException("resource"));
-	}
-	
-	@Test
-	public void isResourceExtantFailIOException() throws Exception {
-		failIsResourceExtant(new IOException("foo"), new ResourceHandlerException(
-				"Error contacting catalog service at http://whee.com"));
-	}
-	
-	@Test
-	public void isResourceExtantFailJsonClientException() throws Exception {
-		failIsResourceExtant(new JsonClientException("foo"), new ResourceHandlerException(
-				"Error contacting catalog service at http://whee.com"));
-	}
-	
-	private void failIsResourceExtant(final Exception e, final Exception expected)
-			throws Exception {
-		final CatalogClient c = mock(CatalogClient.class);
-		
-		when(c.getURL()).thenReturn(new URL("http://whee.com"));
-		
-		when(c.getModuleVersion(argThat(
-				new SelectModuleVersionParamsMatcher("modname4", "release")))).thenThrow(e);
-
-		failIsResourceExtant(c, new ResourceID("modname4.foo"), expected);
-	}
-	
-	private void failIsResourceExtant(
-			final CatalogClient c,
-			final ResourceID m,
-			final Exception expected) {
-		try {
-			new SDKClientCatalogHandler(c).isResourceExtant(m);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-
 	@Test
 	public void getAdministratedResourcesEmpty() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
