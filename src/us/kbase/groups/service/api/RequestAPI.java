@@ -25,20 +25,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -64,7 +62,7 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, WorkspaceHandlerException, ResourceHandlerException {
+				IllegalParameterException, ResourceHandlerException {
 		final GroupRequestWithActions actions = groups.getRequest(
 							getToken(token, true), new RequestID(requestID));
 		final Map<String, Object> json = toGroupRequestJSON(actions.getRequest());
@@ -78,10 +76,10 @@ public class RequestAPI {
 	public void getPerms(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.REQUEST_ID) final String requestID)
-			throws NoSuchRequestException, InvalidTokenException, NoSuchWorkspaceException,
-				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
-				IllegalParameterException, MissingParameterException, GroupsStorageException,
-				WorkspaceHandlerException, ClosedRequestException {
+			throws NoSuchRequestException, InvalidTokenException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, IllegalParameterException,
+				MissingParameterException, GroupsStorageException, ClosedRequestException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
 		groups.setReadPermissionOnWorkspace(getToken(token, true), new RequestID(requestID));
 	}
 	
@@ -108,7 +106,7 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				WorkspaceHandlerException, IllegalParameterException, ResourceHandlerException {
+				IllegalParameterException, ResourceHandlerException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
@@ -134,9 +132,8 @@ public class RequestAPI {
 			@PathParam(Fields.REQUEST_ID) final String requestID)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, UserIsMemberException, NoSuchWorkspaceException,
-				WorkspaceExistsException, WorkspaceHandlerException, ClosedRequestException,
-				NoSuchResourceException, CatalogMethodExistsException, ResourceHandlerException {
+				IllegalParameterException, UserIsMemberException, ClosedRequestException,
+				NoSuchResourceException, ResourceHandlerException, ResourceExistsException {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return toGroupRequestJSON(groups.acceptRequest(
 				getToken(token, true), new RequestID(requestID)));
@@ -162,7 +159,7 @@ public class RequestAPI {
 			final DenyRequestJSON denyJSON)
 			throws InvalidTokenException, NoSuchRequestException, AuthenticationException,
 				UnauthorizedException, MissingParameterException, GroupsStorageException,
-				IllegalParameterException, WorkspaceHandlerException, ClosedRequestException,
+				IllegalParameterException, ClosedRequestException,
 				ResourceHandlerException {
 		final String reason;
 		if (denyJSON == null) {

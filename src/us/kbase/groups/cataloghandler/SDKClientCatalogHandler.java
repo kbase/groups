@@ -171,7 +171,7 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 	}
 
 	@Override
-	public Set<UserName> getAdminstrators(final ResourceID resource)
+	public Set<UserName> getAdministrators(final ResourceID resource)
 			throws NoSuchResourceException, ResourceHandlerException, IllegalResourceIDException {
 		checkNotNull(resource, "resource");
 		final Set<UserName> users = new HashSet<>();

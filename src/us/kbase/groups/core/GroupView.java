@@ -4,16 +4,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 
 /** A view of a {@link Group}. A view consists of a subset of the full information in a
  * {@link Group}.
@@ -51,7 +48,7 @@ public class GroupView {
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
-	private final Map<WorkspaceInformation, WorkspacePermission> workspaceSet;
+	private final ResourceInformationSet workspaceSet;
 	
 	// not part of the view, just describes the view
 	private final ViewType viewType;
@@ -63,17 +60,13 @@ public class GroupView {
 	 */
 	public GroupView(
 			final Group group,
-			final WorkspaceInfoSet workspaceSet,
+			final ResourceInformationSet workspaceSet,
 			final ViewType viewType) {
 		checkNotNull(group, "group");
 		checkNotNull(workspaceSet, "workspaceSet");
 		checkNotNull(viewType, "viewType");
 		this.viewType = viewType;
-		final Map<WorkspaceInformation, WorkspacePermission> wsSet = new HashMap<>();
-		for (final WorkspaceInformation wsi: workspaceSet.getWorkspaceInformation()) {
-			wsSet.put(wsi, workspaceSet.getPermission(wsi));
-		}
-		this.workspaceSet = Collections.unmodifiableMap(wsSet);
+		this.workspaceSet = workspaceSet;
 		
 		// group properties
 		this.groupID = group.getGroupID();
@@ -197,22 +190,8 @@ public class GroupView {
 	/** Get any workspaces included in the view.
 	 * @return the workspace information for the workspaces.
 	 */
-	public Set<WorkspaceInformation> getWorkspaceInformation() {
-		return workspaceSet.keySet();
-	}
-	
-	/** Get the permission of the user for whom this view was created to a
-	 * workspace included in the view.
-	 * @param wsInfo the workspace.
-	 * @return the user's permission.
-	 */
-	public WorkspacePermission getPermission(final WorkspaceInformation wsInfo) {
-		checkNotNull(wsInfo, "wsInfo");
-		if (!workspaceSet.containsKey(wsInfo)) {
-			throw new IllegalArgumentException("Provided workspace info not included in view");
-		} else {
-			return workspaceSet.get(wsInfo);
-		}
+	public ResourceInformationSet getWorkspaceInformation() {
+		return workspaceSet;
 	}
 
 	@Override

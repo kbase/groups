@@ -1,9 +1,11 @@
 package us.kbase.groups.workspacehandler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,15 +24,15 @@ import us.kbase.common.service.Tuple9;
 import us.kbase.common.service.UObject;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
-import us.kbase.groups.core.workspace.WorkspaceHandler;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceHandler;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.workspace.GetPermissionsMassParams;
 import us.kbase.workspace.ListWorkspaceIDsParams;
 import us.kbase.workspace.ListWorkspaceIDsResults;
@@ -43,7 +45,7 @@ import us.kbase.workspace.WorkspaceIdentity;
  * @author gaprice@lbl.gov
  *
  */
-public class SDKClientWorkspaceHandler implements WorkspaceHandler {
+public class SDKClientWorkspaceHandler implements ResourceHandler {
 	
 	// TODO CACHE may help to cache all or some of the results. YAGNI for now.
 
@@ -57,11 +59,11 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	/** Create the handler.
 	 * @param client the workspace client to use to communicate with the workspace. The
 	 * client must be initialized with a token with administrative write privileges.
-	 * @throws WorkspaceHandlerException if an error occurs contacting the workspace or
+	 * @throws ResourceHandlerException if an error occurs contacting the workspace or
 	 * the workspace version is less than 0.8.0.
 	 */
 	public SDKClientWorkspaceHandler(final WorkspaceClient client)
-			throws WorkspaceHandlerException {
+			throws ResourceHandlerException {
 		checkNotNull(client, "client");
 		this.client = client;
 		final String ver;
@@ -75,21 +77,29 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		}
 		
 		if (Version.valueOf(ver).lessThan(Version.forIntegers(0, 8))) {
-			throw new WorkspaceHandlerException("Workspace version 0.8.0 or greater is required");
+			throw new ResourceHandlerException("Workspace version 0.8.0 or greater is required");
 		}
 	}
 
-	private WorkspaceHandlerException getGeneralWSException(final Exception e) {
-		return new WorkspaceHandlerException(String.format(
+	private ResourceHandlerException getGeneralWSException(final Exception e) {
+		return new ResourceHandlerException(String.format(
 				"Error contacting workspace at %s", client.getURL()), e);
 	}
 
+	private long getWSID(final ResourceID id) throws IllegalResourceIDException {
+		try {
+			return Long.parseLong(id.getName());
+		} catch (NumberFormatException e) {
+			throw new IllegalResourceIDException(id.getName());
+		}
+	}
+	
 	@Override
-	public boolean isAdministrator(final WorkspaceID wsid, final UserName user)
-			throws WorkspaceHandlerException, NoSuchWorkspaceException {
-		checkNotNull(wsid, "wsid");
+	public boolean isAdministrator(final ResourceID resource, final UserName user)
+			throws NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
+		checkNotNull(resource, "resource");
 		checkNotNull(user, "user");
-		final Perms perms = getPermissions(Arrays.asList(wsid.getID()), true);
+		final Perms perms = getPermissions(Arrays.asList(getWSID(resource)), true);
 		return new Perm(user, perms.perms.get(0)).perm.isAdmin();
 	}
 	
@@ -125,21 +135,21 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		}
 	}
 			
-	private Perms getPermissions(final List<Integer> ids, final boolean throwNoWorkspaceException)
-			throws NoSuchWorkspaceException, WorkspaceHandlerException {
+	private Perms getPermissions(final List<Long> ids, final boolean throwNoWorkspaceException)
+			throws NoSuchResourceException, ResourceHandlerException {
 		final List<Map<String, String>> perms;
 		try {
 			perms = client.administer(new UObject(ImmutableMap.of(
 					"command", "getPermissionsMass",
 					"params", new GetPermissionsMassParams().withWorkspaces(
-							ids.stream().map(id -> new WorkspaceIdentity().withId((long) id))
+							ids.stream().map(id -> new WorkspaceIdentity().withId(id))
 									.collect(Collectors.toList())))))
 					.asClassInstance(TR_GET_PERMS).get("perms");
 		} catch (ServerException e) {
 			final Integer errorid = getWorkspaceID(e);
 			if (errorid != null) {
 				if (throwNoWorkspaceException) {
-					throw new NoSuchWorkspaceException(errorid + "", e);
+					throw new NoSuchResourceException(errorid + "", e);
 				} else {
 					return new Perms(errorid);
 				}
@@ -170,45 +180,58 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	}
 
 	@Override
-	public WorkspaceInfoSet getWorkspaceInformation(
+	public ResourceInformationSet getResourceInformation(
 			final UserName user,
-			final WorkspaceIDSet ids,
-			boolean administratedWorkspacesOnly)
-			throws WorkspaceHandlerException {
-		checkNotNull(ids, "ids");
+			final Set<ResourceID> resources,
+			boolean administratedResourcesOnly)
+			throws ResourceHandlerException, IllegalResourceIDException {
+		checkNoNullsInCollection(resources, "resources");
 		if (user == null) {
-			administratedWorkspacesOnly = true; // only return public workspaces
+			administratedResourcesOnly = true; // only return public workspaces
 		}
 		//TODO WS make a bulk ws method for getwsinfo that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
 		//TODO WS for get perms mass make ignore error option that returns error state (DELETED, MISSING, INACCESSIBLE etc.) and use here instead of going one at a time
-		final WorkspaceInfoSet.Builder b = WorkspaceInfoSet.getBuilder(user);
-		for (final Integer wsid: ids.getIDs()) {
+		final ResourceInformationSet.Builder b = ResourceInformationSet.getBuilder(user);
+		for (final ResourceID rid: resources) {
+			final long wsid = getWSID(rid);
+			final ResourceDescriptor desc = getDesc(rid);
 			final Perms perms;
 			try {
 				perms = getPermissions(Arrays.asList(wsid), false);
-			} catch (NoSuchWorkspaceException e) {
+			} catch (NoSuchResourceException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
 			if (perms.perms == null) {
-				b.withNonexistentWorkspace(wsid);
+				b.withNonexistentResource(desc);
 			} else {
 				final Perm perm = new Perm(user, perms.perms.get(0));
-				if (!administratedWorkspacesOnly || perm.perm.isAdmin() || perm.isPublic) {
+				if (!administratedResourcesOnly || perm.perm.isAdmin() || perm.isPublic) {
 					final WSInfoOwner wi = getWSInfo(wsid);
 					if (wi == null) {
 						// should almost never happen since we checked for inaccessible ws above
-						b.withNonexistentWorkspace(wsid);
+						b.withNonexistentResource(desc);
 					} else {
 						if (user != null && wi.owner.equals(user.getName())) {
-							b.withWorkspaceInformation(wi.wi, WorkspacePermission.OWN);
+							wi.wi.put("perm", WorkspacePermission.OWN.getRepresentation());
 						} else {
-							b.withWorkspaceInformation(wi.wi, perm.perm);
+							wi.wi.put("perm", perm.perm.getRepresentation());
 						}
+						wi.wi.keySet().stream()
+								.forEach(s -> b.withResourceField(desc, s, wi.wi.get(s)));
 					}
 				}
 			}
 		}
 		return b.build();
+	}
+
+	// assumes good RID
+	private ResourceDescriptor getDesc(final ResourceID rid) {
+		try {
+			return new ResourceDescriptor(new ResourceAdministrativeID(rid.getName()), rid);
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This is impossible", e);
+		}
 	}
 
 	private static final TypeReference<Tuple9<Long, String, String, String, Long, String,
@@ -217,17 +240,17 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 						String,Map<String,String>>>() {};
 
 	private static class WSInfoOwner {
-		private final WorkspaceInformation wi;
+		private final Map<String, Object> wi;
 		private final String owner;
 		
-		private WSInfoOwner(WorkspaceInformation wi, String owner) {
+		private WSInfoOwner(Map<String, Object> wi, String owner) {
 			this.wi = wi;
 			this.owner = owner;
 		}
 	}
 						
 	// returns null if missing or deleted
-	private WSInfoOwner getWSInfo(final int wsid) throws WorkspaceHandlerException {
+	private WSInfoOwner getWSInfo(final long wsid) throws ResourceHandlerException {
 		final Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>> wsinfo;
 		try {
@@ -244,12 +267,11 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		} catch (IOException | JsonClientException | IllegalStateException e) {
 			throw getGeneralWSException(e);
 		}
-		final WorkspaceInformation wi = WorkspaceInformation
-				.getBuilder(Math.toIntExact(wsinfo.getE1()), wsinfo.getE2())
-				.withNullableNarrativeName(getNarrativeName(wsinfo.getE9()))
-				.withIsPublic(PERM_READ.equals(wsinfo.getE7()))
-				.build();
-		return new WSInfoOwner(wi, wsinfo.getE3());
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("name", wsinfo.getE2());
+		ret.put("narrname", getNarrativeName(wsinfo.getE9()));
+		ret.put("public", PERM_READ.equals(wsinfo.getE7()));
+		return new WSInfoOwner(ret, wsinfo.getE3());
 	}
 
 	private String getNarrativeName(final Map<String, String> meta) {
@@ -262,8 +284,8 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 	}
 	
 	@Override
-	public WorkspaceIDSet getAdministratedWorkspaces(final UserName user)
-			throws WorkspaceHandlerException {
+	public Set<ResourceAdministrativeID> getAdministratedResources(final UserName user)
+			throws ResourceHandlerException {
 		checkNotNull(user, "user");
 		final List<Long> ids;
 		try {
@@ -276,16 +298,14 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 		} catch (IOException | JsonClientException e) {
 			throw getGeneralWSException(e);
 		}
-		
-		return WorkspaceIDSet.fromInts(ids.stream().map(i -> Math.toIntExact(i))
-				.collect(Collectors.toSet()));
+		return ids.stream().map(i -> ResourceAdministrativeID.from(i)).collect(Collectors.toSet());
 	}
 	
 	@Override
-	public Set<UserName> getAdministrators(final WorkspaceID wsid)
-			throws NoSuchWorkspaceException, WorkspaceHandlerException {
-		checkNotNull(wsid, "wsid");
-		final Map<String, String> perms = getPermissions(Arrays.asList(wsid.getID()), true)
+	public Set<UserName> getAdministrators(final ResourceID resource)
+			throws NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
+		checkNotNull(resource, "resource");
+		final Map<String, String> perms = getPermissions(Arrays.asList(getWSID(resource)), true)
 				.perms.get(0);
 		final Set<UserName> ret = new HashSet<>();
 		for (final String user: perms.keySet()) {
@@ -306,11 +326,12 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 			PERM_READ, PERM_WRITE, PERM_ADMIN));
 	
 	@Override
-	public void setReadPermission(final WorkspaceID wsid, final UserName user)
-			throws NoSuchWorkspaceException, WorkspaceHandlerException {
-		checkNotNull(wsid, "wsid");
+	public void setReadPermission(final ResourceID resource, final UserName user)
+			throws IllegalResourceIDException, NoSuchResourceException, ResourceHandlerException {
+		checkNotNull(resource, "resource");
 		checkNotNull(user, "user");
-		final Map<String, String> perms = getPermissions(Arrays.asList(wsid.getID()), true)
+		final long wsid = getWSID(resource);
+		final Map<String, String> perms = getPermissions(Arrays.asList(wsid), true)
 				.perms.get(0);
 		if (!READ_PERMS.contains(perms.get(user.getName())) &&
 				!PERM_READ.equals(perms.get(GLOBAL_READ_USER))) {
@@ -320,12 +341,20 @@ public class SDKClientWorkspaceHandler implements WorkspaceHandler {
 				client.administer(new UObject(ImmutableMap.of(
 						"command", "setPermissions",
 						"params", new SetPermissionsParams()
-								.withId((long) wsid.getID())
+								.withId(wsid)
 								.withNewPermission("r")
 								.withUsers(Arrays.asList(user.getName())))));
 			} catch (IOException | JsonClientException e) {
 				throw getGeneralWSException(e);
 			}
 		}
+	}
+
+	@Override
+	public ResourceDescriptor getDescriptor(final ResourceID resource) 
+			throws IllegalResourceIDException {
+		checkNotNull(resource, "resource");
+		getWSID(resource); // check for bad id
+		return getDesc(resource);
 	}
 }

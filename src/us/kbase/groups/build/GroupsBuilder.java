@@ -26,14 +26,12 @@ import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.resource.ResourceHandler;
-import us.kbase.groups.core.workspace.WorkspaceHandler;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -125,7 +123,7 @@ public class GroupsBuilder {
 				getValidators(c), getNotifier(c));
 	}
 
-	private WorkspaceHandler getWorkspaceHandler(final GroupsConfig c)
+	private ResourceHandler getWorkspaceHandler(final GroupsConfig c)
 			throws GroupsConfigurationException {
 		try {
 			final WorkspaceClient client = new WorkspaceClient(
@@ -133,7 +131,7 @@ public class GroupsBuilder {
 					new AuthToken(c.getWorkspaceAdminToken().getToken(), "<fake>"));
 			client.setIsInsecureHttpConnectionAllowed(c.isAllowInsecureURLs());
 			return new SDKClientWorkspaceHandler(client);
-		} catch (IOException | UnauthorizedException | WorkspaceHandlerException e) {
+		} catch (IOException | UnauthorizedException | ResourceHandlerException e) {
 			throw new GroupsConfigurationException(
 					"Failed to create workspace handler: " + e.getMessage(), e);
 		}

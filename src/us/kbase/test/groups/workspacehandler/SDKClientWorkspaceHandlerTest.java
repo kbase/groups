@@ -17,6 +17,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -28,13 +29,13 @@ import us.kbase.common.service.ServerException;
 import us.kbase.common.service.Tuple9;
 import us.kbase.common.service.UObject;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
-import us.kbase.groups.core.exceptions.WorkspaceHandlerException;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
+import us.kbase.groups.core.exceptions.IllegalResourceIDException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.workspacehandler.SDKClientWorkspaceHandler;
 import us.kbase.test.groups.TestCommon;
 import us.kbase.workspace.WorkspaceClient;
@@ -42,6 +43,40 @@ import us.kbase.workspace.WorkspaceClient;
 public class SDKClientWorkspaceHandlerTest {
 	
 	private static boolean DEBUG = false;
+	
+	private static final ResourceDescriptor RD3;
+	private static final ResourceDescriptor RD5;
+	private static final ResourceDescriptor RD7;
+	private static final ResourceDescriptor RD8;
+	private static final ResourceDescriptor RD9;
+	private static final ResourceDescriptor RD10;
+	private static final ResourceDescriptor RD11;
+	private static final ResourceDescriptor RD20;
+	private static final ResourceDescriptor RD21;
+	static {
+		try {
+			RD3 = new ResourceDescriptor(
+					new ResourceAdministrativeID("3"), new ResourceID("3"));
+			RD5 = new ResourceDescriptor(
+					new ResourceAdministrativeID("5"), new ResourceID("5"));
+			RD7 = new ResourceDescriptor(
+					new ResourceAdministrativeID("7"), new ResourceID("7"));
+			RD8 = new ResourceDescriptor(
+					new ResourceAdministrativeID("8"), new ResourceID("8"));
+			RD9 = new ResourceDescriptor(
+					new ResourceAdministrativeID("9"), new ResourceID("9"));
+			RD10 = new ResourceDescriptor(
+					new ResourceAdministrativeID("10"), new ResourceID("10"));
+			RD11 = new ResourceDescriptor(
+					new ResourceAdministrativeID("11"), new ResourceID("11"));
+			RD20 = new ResourceDescriptor(
+					new ResourceAdministrativeID("20"), new ResourceID("20"));
+			RD21 = new ResourceDescriptor(
+					new ResourceAdministrativeID("21"), new ResourceID("21"));
+		} catch (Exception e) {
+			throw new RuntimeException("Fix yer tests", e);
+		}
+	}
 	
 	private static class UObjectArgumentMatcher implements ArgumentMatcher<UObject> {
 
@@ -74,7 +109,7 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.ver()).thenReturn("0.7.999999");
 		
-		failConstruct(c, new WorkspaceHandlerException(
+		failConstruct(c, new ResourceHandlerException(
 				"Workspace version 0.8.0 or greater is required"));
 	}
 	
@@ -99,7 +134,7 @@ public class SDKClientWorkspaceHandlerTest {
 				ImmutableMap.of("command", "listAdmins")))))
 				.thenThrow(exception);
 		
-		failConstruct(c, new WorkspaceHandlerException(
+		failConstruct(c, new ResourceHandlerException(
 				"Error contacting workspace at http://bar.com"));
 	}
 	
@@ -139,7 +174,7 @@ public class SDKClientWorkspaceHandlerTest {
 						ImmutableMap.of("user1", "a", "user2", "w")))));
 		
 		assertThat("incorrect admin", h.isAdministrator(
-				new WorkspaceID(24), new UserName(user)), is(expected));
+				new ResourceID("24"), new UserName(user)), is(expected));
 	}
 
 	private UObjectArgumentMatcher getPermissionsCommandMatcher(final int wsid) {
@@ -162,51 +197,53 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void isAdminFailNulls() throws Exception {
+	public void isAdminFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		failIsAdmin(h, null, new UserName("u"), new NullPointerException("wsid"));
-		failIsAdmin(h, new WorkspaceID(1), null, new NullPointerException("user"));
+		failIsAdmin(h, null, new UserName("u"), new NullPointerException("resource"));
+		failIsAdmin(h, new ResourceID("yay"), new UserName("u"),
+				new IllegalResourceIDException("yay"));
+		failIsAdmin(h, new ResourceID("1"), null, new NullPointerException("user"));
 	}
 	
 	@Test
 	public void isAdminFailDeletedWS() throws Exception {
 		isAdminFail(new ServerException("Workspace 24 is deleted", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	@Test
 	public void isAdminFailMissingWS() throws Exception {
 		isAdminFail(new ServerException("No workspace with id 24 exists", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	@Test
 	public void isAdminFailOtherServerException() throws Exception {
 		isAdminFail(new ServerException("You pootied real bad I can smell it", -1, "n"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void isAdminFailJsonClientException() throws Exception {
 		isAdminFail(new JsonClientException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void isAdminFailIOException() throws Exception {
 		isAdminFail(new IOException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void isAdminFailIllegalStateException() throws Exception {
 		isAdminFail(new IllegalStateException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 
 	private void isAdminFail(final Exception exception, final Exception expected)
@@ -220,12 +257,12 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(exception);
 		
-		failIsAdmin(h, new WorkspaceID(24), new UserName("user"), expected);
+		failIsAdmin(h, new ResourceID("24"), new UserName("user"), expected);
 	}
 	
 	private void failIsAdmin(
 			final SDKClientWorkspaceHandler h,
-			final WorkspaceID id,
+			final ResourceID id,
 			final UserName user,
 			final Exception expected) {
 		try {
@@ -237,106 +274,115 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getWorkspaceInformationNoWS() throws Exception {
+	public void getResourceInformationNoWS() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		final WorkspaceInfoSet wi = h.getWorkspaceInformation(
-				new UserName("u"),
-				WorkspaceIDSet.fromInts(set()),
-				false);
+		final ResourceInformationSet wi = h.getResourceInformation(
+				new UserName("u"), set(), false);
 		
-		assertThat("incorrect wsi", wi, is(WorkspaceInfoSet.getBuilder(new UserName("u"))
+		assertThat("incorrect wsi", wi, is(ResourceInformationSet.getBuilder(new UserName("u"))
 				.build()));
 	}
 
 	@Test
-	public void getWorkspaceInformationFull() throws Exception {
-		getWorkspaceInformation(
+	public void getResourceInformationFull() throws Exception {
+		getResourceInformation(
 				new UserName("user1"),
 				false,
-				WorkspaceInfoSet.getBuilder(new UserName("user1"))
-						.withNonexistentWorkspace(8)
-						.withNonexistentWorkspace(9)
-						.withNonexistentWorkspace(20)
-						.withNonexistentWorkspace(21)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(3, "name3")
-								.build(),
-								WorkspacePermission.OWN)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(5, "name5")
-								.withNullableNarrativeName("narr_name").build(),
-								WorkspacePermission.ADMIN)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(7, "name7")
-								.build(),
-								WorkspacePermission.WRITE)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
-								.withIsPublic(true).build(),
-								WorkspacePermission.READ)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
-								.withIsPublic(true).build(),
-								WorkspacePermission.NONE)
+				ResourceInformationSet.getBuilder(new UserName("user1"))
+						.withNonexistentResource(RD8)
+						.withNonexistentResource(RD9)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.withResourceField(RD3, "name", "name3")
+						.withResourceField(RD3, "public", false)
+						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD5, "name", "name5")
+						.withResourceField(RD5, "public", false)
+						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD7, "name", "name7")
+						.withResourceField(RD7, "public", false)
+						.withResourceField(RD7, "narrname", null)
+						.withResourceField(RD7, "perm", "Write")
+						.withResourceField(RD10, "name", "name10")
+						.withResourceField(RD10, "public", true)
+						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD11, "name", "name11")
+						.withResourceField(RD11, "public", true)
+						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "perm", "None")
 						.build());
 	}
 	
 	@Test
-	public void getWorkspaceInformationAdministratedOnly() throws Exception {
-		getWorkspaceInformation(
+	public void getResourceInformationAdministratedOnly() throws Exception {
+		getResourceInformation(
 				new UserName("user1"),
 				true,
-				WorkspaceInfoSet.getBuilder(new UserName("user1"))
-						.withNonexistentWorkspace(9)
-						.withNonexistentWorkspace(20)
-						.withNonexistentWorkspace(21)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(3, "name3")
-								.build(),
-								WorkspacePermission.OWN)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(5, "name5")
-								.withNullableNarrativeName("narr_name").build(),
-								WorkspacePermission.ADMIN)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
-								.withIsPublic(true).build(),
-								WorkspacePermission.READ)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
-								.withIsPublic(true).build(),
-								WorkspacePermission.NONE)
+				ResourceInformationSet.getBuilder(new UserName("user1"))
+						.withNonexistentResource(RD9)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.withResourceField(RD3, "name", "name3")
+						.withResourceField(RD3, "public", false)
+						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD5, "name", "name5")
+						.withResourceField(RD5, "public", false)
+						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD10, "name", "name10")
+						.withResourceField(RD10, "public", true)
+						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD11, "name", "name11")
+						.withResourceField(RD11, "public", true)
+						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "perm", "None")
 						.build());
 	}
 	
 	@Test
-	public void getWorkspaceInformationAnonUser() throws Exception {
-		getWorkspaceInformationAnonUser(false);
+	public void getResourceInformationAnonUser() throws Exception {
+		getResourceInformationAnonUser(false);
 	}
 	
 	@Test
-	public void getWorkspaceInformationAnonUserAdministratedWSOnly() throws Exception {
-		getWorkspaceInformationAnonUser(true);
+	public void getResourceInformationAnonUserAdministratedWSOnly() throws Exception {
+		getResourceInformationAnonUser(true);
 	}
 
-	private void getWorkspaceInformationAnonUser(final boolean administratedWorkspacesOnly)
+	private void getResourceInformationAnonUser(final boolean administratedWorkspacesOnly)
 			throws Exception {
-		getWorkspaceInformation(
+		getResourceInformation(
 				null,
 				administratedWorkspacesOnly,
-				WorkspaceInfoSet.getBuilder(null)
-						.withNonexistentWorkspace(9)
-						.withNonexistentWorkspace(20)
-						.withNonexistentWorkspace(21)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(10, "name10")
-								.withIsPublic(true).build(),
-								WorkspacePermission.NONE)
-						.withWorkspaceInformation(WorkspaceInformation.getBuilder(11, "name11")
-								.withIsPublic(true).build(),
-								WorkspacePermission.NONE)
+				ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(RD9)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.withResourceField(RD10, "name", "name10")
+						.withResourceField(RD10, "public", true)
+						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "perm", "None")
+						.withResourceField(RD11, "name", "name11")
+						.withResourceField(RD11, "public", true)
+						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "perm", "None")
 						.build());
 	}
 
-	private void getWorkspaceInformation(
+	private void getResourceInformation(
 			final UserName user,
-			final boolean administratedWorkspacesOnly,
-			final WorkspaceInfoSet expected)
+			final boolean administratedResourcesOnly,
+			final ResourceInformationSet expected)
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
@@ -402,12 +448,14 @@ public class SDKClientWorkspaceHandlerTest {
 		doReturn(getWorkspaceInfoResponse(11, "name11", "user3", true, Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(11)));
 		
-		final WorkspaceInfoSet wi = h.getWorkspaceInformation(
+		final ResourceInformationSet ri = h.getResourceInformation(
 				user,
-				WorkspaceIDSet.fromInts(set(3, 5, 7, 8, 9, 10, 11, 20, 21)),
-				administratedWorkspacesOnly);
+				set(new ResourceID("3"), new ResourceID("5"), new ResourceID("7"),
+						new ResourceID("8"), new ResourceID("9"), new ResourceID("10"),
+						new ResourceID("11"), new ResourceID("20"), new ResourceID("21")),
+				administratedResourcesOnly);
 		
-		assertThat("incorrect wsinfo", wi, is(expected));
+		assertThat("incorrect resources", ri, is(expected));
 	}
 
 	private UObjectArgumentMatcher getWSInfoCommandMatcher(final int wsid) {
@@ -433,45 +481,49 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getWorkspaceInfoFailNull() throws Exception {
+	public void getResourceInformationFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		failGetWorkspaceInfo(h, null, new NullPointerException("ids"));
+		failGetResourceInfo(h, null, new NullPointerException("resources"));
+		failGetResourceInfo(h, set(new ResourceID("1"), null),
+				new NullPointerException("Null item in collection resources"));
+		failGetResourceInfo(h, set(new ResourceID("bar")),
+				new IllegalResourceIDException("bar"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailPermsOtherServerException() throws Exception {
-		failGetWorkspaceInfoOnPermissionsCall(
+	public void getResourceInformationFailPermsOtherServerException() throws Exception {
+		failGetResourceInfoOnPermissionsCall(
 				new ServerException("You pootied real bad I can smell it", -1, "n"),
-				new WorkspaceHandlerException("Error contacting workspace at http://baz.com"));
+				new ResourceHandlerException("Error contacting workspace at http://baz.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailPermsJsonClientException() throws Exception {
-		failGetWorkspaceInfoOnPermissionsCall(
+	public void getResourceInformationFailPermsJsonClientException() throws Exception {
+		failGetResourceInfoOnPermissionsCall(
 				new JsonClientException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://baz.com"));
+				new ResourceHandlerException("Error contacting workspace at http://baz.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailPermsIOException() throws Exception {
-		failGetWorkspaceInfoOnPermissionsCall(
+	public void getResourceInformationFailPermsIOException() throws Exception {
+		failGetResourceInfoOnPermissionsCall(
 				new IOException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://baz.com"));
+				new ResourceHandlerException("Error contacting workspace at http://baz.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailPermsIllegalStateException() throws Exception {
-		failGetWorkspaceInfoOnPermissionsCall(
+	public void getResourceInformationFailPermsIllegalStateException() throws Exception {
+		failGetResourceInfoOnPermissionsCall(
 				new IllegalStateException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://baz.com"));
+				new ResourceHandlerException("Error contacting workspace at http://baz.com"));
 	}
 	
-	private void failGetWorkspaceInfoOnPermissionsCall(
+	private void failGetResourceInfoOnPermissionsCall(
 			final Exception thrown,
 			final Exception expected)
 			throws Exception {
@@ -484,38 +536,38 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(thrown);
 		
-		failGetWorkspaceInfo(h, WorkspaceIDSet.fromInts(set(24)), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), expected);
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailGetWSOtherServerException() throws Exception {
-		failGetWorkspaceInfoOnGetWSCall(
+	public void getResourceInformationFailGetWSOtherServerException() throws Exception {
+		failGetResourceInfoOnGetWSCall(
 				new ServerException("You pootied real bad I can smell it", -1, "n"),
-				new WorkspaceHandlerException("Error contacting workspace at http://bat.com"));
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailGetWSJsonClientException() throws Exception {
-		failGetWorkspaceInfoOnGetWSCall(
+	public void getResourceInformationFailGetWSJsonClientException() throws Exception {
+		failGetResourceInfoOnGetWSCall(
 				new JsonClientException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://bat.com"));
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailGetWSIOException() throws Exception {
-		failGetWorkspaceInfoOnGetWSCall(
+	public void getResourceInformationFailGetWSIOException() throws Exception {
+		failGetResourceInfoOnGetWSCall(
 				new IOException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://bat.com"));
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
 	}
 	
 	@Test
-	public void getWorkspaceInformationFailGetWSIllegalStateException() throws Exception {
-		failGetWorkspaceInfoOnGetWSCall(
+	public void getResourceInformationFailGetWSIllegalStateException() throws Exception {
+		failGetResourceInfoOnGetWSCall(
 				new IllegalStateException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://bat.com"));
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
 	}
 	
-	private void failGetWorkspaceInfoOnGetWSCall(
+	private void failGetResourceInfoOnGetWSCall(
 			final Exception thrown,
 			final Exception expected)
 			throws Exception {
@@ -532,16 +584,16 @@ public class SDKClientWorkspaceHandlerTest {
 
 		doThrow(thrown).when(c).administer(argThat(getWSInfoCommandMatcher(24)));
 		
-		failGetWorkspaceInfo(h, WorkspaceIDSet.fromInts(set(24)), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), expected);
 	}
 	
-	private void failGetWorkspaceInfo(
+	private void failGetResourceInfo(
 			final SDKClientWorkspaceHandler h,
-			final WorkspaceIDSet ids,
+			final Set<ResourceID> ids,
 			final Exception expected) {
 		try {
 			// no way to cause a fail via user or adminOnly param
-			h.getWorkspaceInformation(null, ids, false);
+			h.getResourceInformation(null, ids, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -549,7 +601,7 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getAdministratedWorkspaces() throws Exception {
+	public void getAdministratedResources() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
@@ -558,38 +610,39 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getListWorkspaceIDsCommandMatcher("user"))))
 				.thenReturn(new UObject(ImmutableMap.of("workspaces", Arrays.asList(
-						4L, 6L, 8L, 42L, 86L))));
+						4L, 8L, 86L))));
 
-		assertThat("incorrect ids", h.getAdministratedWorkspaces(new UserName("user")),
-				is(WorkspaceIDSet.fromInts(set(4, 6, 8, 42, 86))));
+		assertThat("incorrect ids", h.getAdministratedResources(new UserName("user")),
+				is(set(new ResourceAdministrativeID("4"), new ResourceAdministrativeID("8"),
+						new ResourceAdministrativeID("86"))));
 	}
 	
 	@Test
-	public void getAdministratedWorkspacesFailNull() throws Exception {
+	public void getAdministratedResourcesFailNull() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		failGetAdministratedWorkspaces(h, null, new NullPointerException("user"));
+		failGetAdministratedResources(h, null, new NullPointerException("user"));
 	}
 	
 	@Test
-	public void getAdministratedWorkspacesFailIOException() throws Exception {
-		getAdministratedWorkspacesFail(new IOException("oh dookybutts"),
-				new WorkspaceHandlerException(
+	public void getAdministratedResourcesFailIOException() throws Exception {
+		getAdministratedResourcesFail(new IOException("oh dookybutts"),
+				new ResourceHandlerException(
 						"Error contacting workspace at http://nudewombats.com"));
 	}
 
 	@Test
-	public void getAdministratedWorkspacesFailJSONClientException() throws Exception {
-		getAdministratedWorkspacesFail(new JsonClientException("oh dookybutts"),
-				new WorkspaceHandlerException(
+	public void getAdministratedResourcesFailJSONClientException() throws Exception {
+		getAdministratedResourcesFail(new JsonClientException("oh dookybutts"),
+				new ResourceHandlerException(
 						"Error contacting workspace at http://nudewombats.com"));
 	}
 
-	private void getAdministratedWorkspacesFail(final Exception thrown, final Exception expected)
+	private void getAdministratedResourcesFail(final Exception thrown, final Exception expected)
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
@@ -601,15 +654,15 @@ public class SDKClientWorkspaceHandlerTest {
 		when(c.administer(argThat(getListWorkspaceIDsCommandMatcher("user"))))
 				.thenThrow(thrown);
 
-		failGetAdministratedWorkspaces(h, new UserName("user"), expected);
+		failGetAdministratedResources(h, new UserName("user"), expected);
 	}
 	
-	private void failGetAdministratedWorkspaces(
+	private void failGetAdministratedResources(
 			final SDKClientWorkspaceHandler h,
 			final UserName user,
 			final Exception expected) {
 		try {
-			h.getAdministratedWorkspaces(user);
+			h.getAdministratedResources(user);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -635,55 +688,56 @@ public class SDKClientWorkspaceHandlerTest {
 				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
 						"user1", "a", "user2", "w", "user3", "r", "user4", "a", "*", "r")))));
 		
-		assertThat("incorrect admins", h.getAdministrators(new WorkspaceID(24)), is(
+		assertThat("incorrect admins", h.getAdministrators(new ResourceID("24")), is(
 				set(new UserName("user1"), new UserName("user4"))));
 	}
 	
 	@Test
-	public void getAdministratorsFailNulls() throws Exception {
+	public void getAdministratorsFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		failGetAdministrators(h, null, new NullPointerException("wsid"));
+		failGetAdministrators(h, null, new NullPointerException("resource"));
+		failGetAdministrators(h, new ResourceID("foo"), new IllegalResourceIDException("foo"));
 	}
 	
 	@Test
 	public void getAdministratorsFailDeletedWS() throws Exception {
 		failGetAdministrators(new ServerException("Workspace 24 is deleted", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	@Test
 	public void getAdministratorsFailMissingWS() throws Exception {
 		failGetAdministrators(new ServerException("No workspace with id 24 exists", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	@Test
 	public void getAdministratorsFailOtherServerException() throws Exception {
 		failGetAdministrators(new ServerException("You pootied real bad I can smell it", -1, "n"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void getAdministratorsFailJsonClientException() throws Exception {
 		failGetAdministrators(new JsonClientException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void getAdministratorsFailIOException() throws Exception {
 		failGetAdministrators(new IOException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
 	public void getAdministratorsFailIllegalStateException() throws Exception {
 		failGetAdministrators(new IllegalStateException("You pootied real bad I can smell it"),
-				new WorkspaceHandlerException("Error contacting workspace at http://foo.com"));
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
 	}
 	
 	@Test
@@ -713,7 +767,7 @@ public class SDKClientWorkspaceHandlerTest {
 				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
 						user, "a", "user2", "w", "user3", "r", "user4", "a", "*", "r")))));
 		
-		failGetAdministrators(h, new WorkspaceID(24), expected);
+		failGetAdministrators(h, new ResourceID("24"), expected);
 	}
 	
 	private void failGetAdministrators(final Exception exception, final Exception expected)
@@ -727,12 +781,12 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(exception);
 		
-		failGetAdministrators(h, new WorkspaceID(24), expected);
+		failGetAdministrators(h, new ResourceID("24"), expected);
 	}
 	
 	private void failGetAdministrators(
 			final SDKClientWorkspaceHandler h,
-			final WorkspaceID id,
+			final ResourceID id,
 			final Exception expected) {
 		try {
 			h.getAdministrators(id);
@@ -753,7 +807,7 @@ public class SDKClientWorkspaceHandlerTest {
 				"user1", "a", "user2", "w", "user3", "r", "user4", "a")))));
 		
 		new SDKClientWorkspaceHandler(c).setReadPermission(
-				new WorkspaceID(56), new UserName("user5"));
+				new ResourceID("56"), new UserName("user5"));
 		
 		verify(c).administer(argThat(setPermissionsCommandMatcher(56, "user5", "r")));
 	}
@@ -788,21 +842,23 @@ public class SDKClientWorkspaceHandlerTest {
 				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(returnedPerms))));
 		
 		new SDKClientWorkspaceHandler(c).setReadPermission(
-				new WorkspaceID(56), new UserName(user));
+				new ResourceID("56"), new UserName(user));
 		
 		verify(c, never()).administer(argThat(setPermissionsCommandMatcher(56, user, "r")));
 	}
 	
 	@Test
-	public void setReadPermissionFailNulls() throws Exception {
+	public void setReadPermissionFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
 		when(c.ver()).thenReturn("0.8.0");
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
-		failSetReadPermission(h, null, new UserName("n"), new NullPointerException("wsid"));
-		failSetReadPermission(h, new WorkspaceID(5), null, new NullPointerException("user"));
+		failSetReadPermission(h, null, new UserName("n"), new NullPointerException("resource"));
+		failSetReadPermission(h, new ResourceID("24"), null, new NullPointerException("user"));
+		failSetReadPermission(h, new ResourceID("whoo"), new UserName("n"),
+				new IllegalResourceIDException("whoo"));
 	}
 	
 	// I'm not bothering to test all the getPermissionsMass failure modes again, they're identical
@@ -814,13 +870,13 @@ public class SDKClientWorkspaceHandlerTest {
 	@Test
 	public void setReadPermissionsFailDeletedWS() throws Exception {
 		failSetReadPermissionAtGet(new ServerException("Workspace 24 is deleted", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	@Test
 	public void setReadPermissionsFailMissingWS() throws Exception {
 		failSetReadPermissionAtGet(new ServerException("No workspace with id 24 exists", -1, "n"),
-				new NoSuchWorkspaceException("24"));
+				new NoSuchResourceException("24"));
 	}
 	
 	private void failSetReadPermissionAtGet(final Exception exception, final Exception expected)
@@ -834,19 +890,19 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(exception);
 		
-		failSetReadPermission(h, new WorkspaceID(24), new UserName("foo"), expected);
+		failSetReadPermission(h, new ResourceID("24"), new UserName("foo"), expected);
 	}
 	
 	
 	@Test
 	public void setReadPermissionFailIOException() throws Exception {
-		setReadPermissionFail(new IOException("foo"), new WorkspaceHandlerException(
+		setReadPermissionFail(new IOException("foo"), new ResourceHandlerException(
 				"Error contacting workspace at http://hotchacha.com"));
 	}
 	
 	@Test
 	public void setReadPermissionFailJsonClientException() throws Exception {
-		setReadPermissionFail(new JsonClientException("foo"), new WorkspaceHandlerException(
+		setReadPermissionFail(new JsonClientException("foo"), new ResourceHandlerException(
 				"Error contacting workspace at http://hotchacha.com"));
 	}
 
@@ -864,17 +920,48 @@ public class SDKClientWorkspaceHandlerTest {
 		doThrow(thrown).when(c)
 				.administer(argThat(setPermissionsCommandMatcher(56, "user5", "r")));
 		
-		failSetReadPermission(new SDKClientWorkspaceHandler(c), new WorkspaceID(56),
+		failSetReadPermission(new SDKClientWorkspaceHandler(c), new ResourceID("56"),
 				new UserName("user5"), expected);
 	}
 	
 	private void failSetReadPermission(
 			final SDKClientWorkspaceHandler h,
-			final WorkspaceID id,
+			final ResourceID id,
 			final UserName n,
 			final Exception expected) {
 		try {
 			h.setReadPermission(id, n);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getDescriptor() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		when(c.ver()).thenReturn("0.8.0");
+		
+		final ResourceDescriptor d = new SDKClientWorkspaceHandler(c)
+				.getDescriptor(new ResourceID("82"));
+		
+		assertThat("incorrect descriptor", d, is(new ResourceDescriptor(
+				new ResourceAdministrativeID("82"), new ResourceID("82"))));
+	}
+	
+	@Test
+	public void getDecriptorFailBadArgs() throws Exception {
+		failGetDescriptor(null, new NullPointerException("resource"));
+		failGetDescriptor(new ResourceID("foo"), new IllegalResourceIDException("foo"));
+		
+	}
+	
+	private void failGetDescriptor(final ResourceID rid, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		when(c.ver()).thenReturn("0.8.0");
+		try {
+			new SDKClientWorkspaceHandler(c).getDescriptor(rid);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -300,7 +300,7 @@ public class SDKClientCatalogHandlerTest {
 						.withRelease(getMVI(narrmeths, localmeths)));
 		
 		assertThat("incorrect owners", new SDKClientCatalogHandler(c)
-				.getAdminstrators(new ResourceID("modname.m")),
+				.getAdministrators(new ResourceID("modname.m")),
 				is(expected));
 	}
 	
@@ -402,7 +402,7 @@ public class SDKClientCatalogHandlerTest {
 			final ResourceID mod,
 			final Exception expected) {
 		try {
-			new SDKClientCatalogHandler(cli).getAdminstrators(mod);
+			new SDKClientCatalogHandler(cli).getAdministrators(mod);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

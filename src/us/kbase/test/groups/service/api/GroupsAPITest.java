@@ -51,7 +51,6 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
@@ -60,11 +59,11 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceInfoSet;
-import us.kbase.groups.core.workspace.WorkspaceInformation;
-import us.kbase.groups.core.workspace.WorkspacePermission;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -72,8 +71,8 @@ import us.kbase.test.groups.TestCommon;
 
 public class GroupsAPITest {
 
-	private static WorkspaceInfoSet wsis() {
-		return WorkspaceInfoSet.getBuilder(null).build();
+	private static ResourceInformationSet rsis() {
+		return ResourceInformationSet.getBuilder(null).build();
 	}
 	
 	private static <T> Optional<T> op(T item) {
@@ -212,8 +211,8 @@ public class GroupsAPITest {
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		when(g.getGroups(expected)).thenReturn(Arrays.asList(
-				new GroupView(GROUP_MAX, wsis(), MINIMAL),
-				new GroupView(GROUP_MIN, wsis(), MINIMAL)));
+				new GroupView(GROUP_MAX, rsis(), MINIMAL),
+				new GroupView(GROUP_MIN, rsis(), MINIMAL)));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
 				.getGroups("unused for now", excludeUpTo, order);
 		
@@ -258,7 +257,7 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, noInput, custom));
@@ -281,7 +280,7 @@ public class GroupsAPITest {
 						.build())
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(new GroupView(GROUP_MIN, wsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MIN, rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup("toke", "gid",
 				new CreateOrUpdateGroupJSON(op("name"), op("Team"), op("my desc"),
@@ -577,7 +576,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(expected, new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
@@ -589,7 +588,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, wsis(), NON_MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), NON_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
@@ -600,18 +599,25 @@ public class GroupsAPITest {
 	public void getGroupWithWorkspaces() throws Exception {
 		final Groups g = mock(Groups.class);
 		
+		final ResourceDescriptor d1 = new ResourceDescriptor(
+				new ResourceAdministrativeID("82"), new ResourceID("82"));
+		final ResourceDescriptor d2 = new ResourceDescriptor(
+				new ResourceAdministrativeID("45"), new ResourceID("45"));
+		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, WorkspaceInfoSet.getBuilder(new UserName("u"))
-						.withWorkspaceInformation(
-								WorkspaceInformation.getBuilder(82, "name82")
-								.withIsPublic(true)
-								.withNullableNarrativeName("narrname")
+				.thenReturn(new GroupView(GROUP_MAX,
+						//TODO NNOW remove non-existant
+						ResourceInformationSet.getBuilder(new UserName("u"))
+								.withResourceField(d1, "name", "name82")
+								.withResourceField(d1, "public", true)
+								.withResourceField(d1, "narrname", "narrname")
+								.withResourceField(d1, "perm", "Admin")
+								.withResourceField(d2, "name", "name45")
+								.withResourceField(d2, "public", false)
+								.withResourceField(d2, "narrname", null)
+								.withResourceField(d2, "perm", "None")
 								.build(),
-								WorkspacePermission.ADMIN)
-						.withWorkspaceInformation(
-								WorkspaceInformation.getBuilder(45, "name45").build(),
-								WorkspacePermission.NONE)
-						.build(), MEMBER));
+								MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		final Map<String, Object> expected = new HashMap<>();
@@ -1165,7 +1171,7 @@ public class GroupsAPITest {
 	public void addWorkspaceNoRequest() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
 				.thenReturn(Optional.empty());
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1180,7 +1186,7 @@ public class GroupsAPITest {
 		
 		final UUID id = UUID.randomUUID();
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
@@ -1213,7 +1219,7 @@ public class GroupsAPITest {
 		
 		final UUID id = UUID.randomUUID();
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new WorkspaceID(34)))
+		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
@@ -1249,18 +1255,18 @@ public class GroupsAPITest {
 		failAddWorkspace(g, "t", "illegal*id", "45",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failAddWorkspace(g, "t", "id", "4f",
-				new IllegalParameterException("Illegal workspace ID: 4f"));
+		failAddWorkspace(g, "t", "id", "   \t   ",
+				new MissingParameterException("resource ID"));
 	}
 	
 	@Test
 	public void addWorkspaceFailNoSuchWorkspace() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.addWorkspace(new Token("t"), new GroupID("i"), new WorkspaceID(34)))
-				.thenThrow(new NoSuchWorkspaceException("34"));
+		when(g.addWorkspace(new Token("t"), new GroupID("i"), new ResourceID("34")))
+				.thenThrow(new NoSuchResourceException("34"));
 		
-		failAddWorkspace(g, "t", "i", "34", new NoSuchWorkspaceException("34"));
+		failAddWorkspace(g, "t", "i", "34", new NoSuchResourceException("34"));
 	}
 	
 	private void failAddWorkspace(
@@ -1283,7 +1289,7 @@ public class GroupsAPITest {
 		
 		new GroupsAPI(g).removeWorkspace("t", "gid", "99");
 		
-		verify(g).removeWorkspace(new Token("t"), new GroupID("gid"), new WorkspaceID(99));
+		verify(g).removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("99"));
 	}
 	
 	@Test
@@ -1295,8 +1301,8 @@ public class GroupsAPITest {
 		failRemoveWorkspace(g, "t", "illegal*id", "45",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failRemoveWorkspace(g, "t", "id", "4f",
-				new IllegalParameterException("Illegal workspace ID: 4f"));
+		failRemoveWorkspace(g, "t", "id", "   foo\nbar    ",
+				new IllegalParameterException("resource ID contains control characters"));
 	}
 	
 	@Test
@@ -1304,7 +1310,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		doThrow(new NoSuchGroupException("i")).when(g)
-				.removeWorkspace(new Token("t"), new GroupID("i"), new WorkspaceID(34));
+				.removeWorkspace(new Token("t"), new GroupID("i"), new ResourceID("34"));
 		
 		failRemoveWorkspace(g, "t", "i", "34", new NoSuchGroupException("i"));
 	}

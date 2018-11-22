@@ -43,7 +43,7 @@ public interface ResourceHandler {
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 * @throws NoSuchResourceException if there is no such resource.
 	 */
-	Set<UserName> getAdminstrators(ResourceID resource)
+	Set<UserName> getAdministrators(ResourceID resource)
 			throws IllegalResourceIDException, NoSuchResourceException, ResourceHandlerException;
 
 	/** Get the set of resource administrative IDs for which the user is an administrator.
