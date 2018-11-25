@@ -4,12 +4,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 
 /** A view of a {@link Group}. A view consists of a subset of the full information in a
  * {@link Group}.
@@ -46,31 +48,18 @@ public class GroupView {
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
-	// TODO NNOW don't hardcode these, make a builder 
 	//TODO NNOW remove non-existant
-	private final ResourceInformationSet workspaceSet;
-	private final ResourceInformationSet catalogSet;
+	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
 	
 	// not part of the view, just describes the view
 	private final ViewType viewType;
 	
-	/** Create a view.
-	 * @param group the group upon which the view will be based.
-	 * @param workspaceSet the workspaces that the user that requested the view can view.
-	 * @param viewType the type of the view.
-	 */
-	public GroupView(
+	private GroupView(
 			final Group group,
-			final ResourceInformationSet workspaceSet,
-			final ResourceInformationSet catalogSet,
-			final ViewType viewType) {
-		checkNotNull(group, "group");
-		checkNotNull(workspaceSet, "workspaceSet");
-		checkNotNull(catalogSet, "catalogSet");
-		checkNotNull(viewType, "viewType");
+			final ViewType viewType,
+			final Map<ResourceType, ResourceInformationSet> resourceInfo) {
 		this.viewType = viewType;
-		this.workspaceSet = workspaceSet;
-		this.catalogSet = catalogSet;
+		this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 		
 		// group properties
 		this.groupID = group.getGroupID();
@@ -180,27 +169,30 @@ public class GroupView {
 	public Optional<String> getDescription() {
 		return description;
 	}
-
-	/** Get any workspaces included in the view.
-	 * @return the information for the workspaces.
+	
+	/** Get the types of the resources included in this view.
+	 * @return
 	 */
-	public ResourceInformationSet getWorkspaceInformation() {
-		return workspaceSet;
-	}
-
-	/** Get any catalog methods included in the view.
-	 * @return the information for the catalog methods.
-	 */
-	public ResourceInformationSet getCatalogInformation() {
-		return catalogSet;
+	public Set<ResourceType> getResourceTypes() {
+		return resourceInfo.keySet();
 	}
 	
+	/** Get information about a particular resource type.
+	 * @param type the resource type.
+	 * @return information about the resources for that type included in this view.
+	 */
+	public ResourceInformationSet getResourceInformation(final ResourceType type) {
+		if (!resourceInfo.containsKey(type)) {
+			throw new IllegalArgumentException("No such resource type " + type.getName());
+		}
+		return resourceInfo.get(type);
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
-		result = prime * result + ((catalogSet == null) ? 0 : catalogSet.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
@@ -209,9 +201,9 @@ public class GroupView {
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
+		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((viewType == null) ? 0 : viewType.hashCode());
-		result = prime * result + ((workspaceSet == null) ? 0 : workspaceSet.hashCode());
 		return result;
 	}
 
@@ -232,13 +224,6 @@ public class GroupView {
 				return false;
 			}
 		} else if (!admins.equals(other.admins)) {
-			return false;
-		}
-		if (catalogSet == null) {
-			if (other.catalogSet != null) {
-				return false;
-			}
-		} else if (!catalogSet.equals(other.catalogSet)) {
 			return false;
 		}
 		if (creationDate == null) {
@@ -297,19 +282,91 @@ public class GroupView {
 		} else if (!owner.equals(other.owner)) {
 			return false;
 		}
+		if (resourceInfo == null) {
+			if (other.resourceInfo != null) {
+				return false;
+			}
+		} else if (!resourceInfo.equals(other.resourceInfo)) {
+			return false;
+		}
 		if (type != other.type) {
 			return false;
 		}
 		if (viewType != other.viewType) {
 			return false;
 		}
-		if (workspaceSet == null) {
-			if (other.workspaceSet != null) {
-				return false;
-			}
-		} else if (!workspaceSet.equals(other.workspaceSet)) {
-			return false;
-		}
 		return true;
+	}
+	
+	/** Get a builder for a {@link GroupView}.
+	 * @param group the group for the view.
+	 * @return a new builder.
+	 */
+	public static Builder getBuilder(final Group group) {
+		return new Builder(group);
+	}
+	
+	/** A builder for {@link GroupView}s.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public static class Builder {
+		
+		//TODO CODE check all user names are the same?
+		
+		private final Group group;
+		private ViewType viewType = ViewType.MINIMAL;
+		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
+		
+		private Builder(final Group group) {
+			checkNotNull(group, "group");
+			this.group = group;
+		}
+		
+		/** Change the type of the view. The default is {@link ViewType#MINIMAL}.
+		 * @param viewType the view type.
+		 * @return this builder.
+		 */
+		public Builder withViewType(final ViewType viewType) {
+			checkNotNull(viewType, "viewType");
+			this.viewType = viewType;
+			return this;
+		}
+		
+		/** Add resource information to the view.
+		 * Calling this method will overwrite any previous information for the type.
+		 * @param type the type of the resource.
+		 * @param info the information for the resource.
+		 * @return this builder.
+		 */
+		public Builder withResource(final ResourceType type, final ResourceInformationSet info) {
+			checkNotNull(type, "type");
+			checkNotNull(info, "info");
+			resourceInfo.put(type, info);
+			return this;
+		}
+		
+		/** Add an empty {@link ResourceInformationSet} to the builder. This is useful to
+		 * maintain a consistent set of types available in a view, regardless of the types
+		 * available in the group.
+		 * Calling this method will overwrite any previous information for the type.
+		 * @param type the type of the resource.
+		 * @param user the user to provide to {@link ResourceInformationSet#getBuilder(UserName)}.
+		 * May be null.
+		 * @return this builder.
+		 */
+		public Builder withResourceType(final ResourceType type, final UserName user) {
+			checkNotNull(type, "type");
+			resourceInfo.put(type, ResourceInformationSet.getBuilder(user).build());
+			return this;
+		}
+		
+		/** Build a new {@link GroupView}.
+		 * @return the view.
+		 */
+		public GroupView build() {
+			return new GroupView(group, viewType, resourceInfo);
+		}
+		
 	}
 }

@@ -1,6 +1,5 @@
 package us.kbase.test.groups.core;
 
-import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
 import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
 import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
 
@@ -21,11 +20,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
@@ -99,14 +101,6 @@ public class GroupsTest {
 		}
 	}
 	
-	private static ResourceInformationSet rsis() {
-		return rsis(null);
-	}
-
-	private static ResourceInformationSet rsis(final UserName user) {
-		return ResourceInformationSet.getBuilder(user).build();
-	}
-
 	private static TestMocks initTestMocks() throws Exception {
 		final GroupsStorage storage = mock(GroupsStorage.class);
 		final UserHandler uh = mock(UserHandler.class);
@@ -119,11 +113,19 @@ public class GroupsTest {
 		
 		
 		final Constructor<Groups> c = Groups.class.getDeclaredConstructor(
-				GroupsStorage.class, UserHandler.class, ResourceHandler.class,
-				ResourceHandler.class, FieldValidators.class, Notifications.class,
-				UUIDGenerator.class, Clock.class);
+				GroupsStorage.class, UserHandler.class, Map.class, FieldValidators.class,
+				Notifications.class, UUIDGenerator.class, Clock.class);
 		c.setAccessible(true);
-		final Groups instance = c.newInstance(storage, uh, wh, ch, val, notis, uuidGen, clock);
+		final Groups instance = c.newInstance(
+				storage,
+				uh,
+				ImmutableMap.of(
+						new ResourceType("workspace"), wh,
+						new ResourceType("catalogmethod"), ch),
+				val,
+				notis,
+				uuidGen,
+				clock);
 		return new TestMocks(instance, storage, uh, wh, ch, val, notis, uuidGen, clock);
 	}
 	
@@ -165,29 +167,34 @@ public class GroupsTest {
 	public void constructFail() throws Exception {
 		final GroupsStorage s = mock(GroupsStorage.class);
 		final UserHandler u = mock(UserHandler.class);
-		final ResourceHandler w = mock(ResourceHandler.class);
-		final ResourceHandler c = mock(ResourceHandler.class);
+		final ResourceHandler rh = mock(ResourceHandler.class);
+		final Map<ResourceType, ResourceHandler> h = Collections.emptyMap();
 		final FieldValidators v = mock(FieldValidators.class);
 		final Notifications n = mock(Notifications.class);
 		
-		failConstruct(null, u, w, c, v, n, new NullPointerException("storage"));
-		failConstruct(s, null, w, c, v, n, new NullPointerException("userHandler"));
-		failConstruct(s, u, null, c, v, n, new NullPointerException("wsHandler"));
-		failConstruct(s, u, w, null, v, n, new NullPointerException("catHandler"));
-		failConstruct(s, u, w, c, null, n, new NullPointerException("validators"));
-		failConstruct(s, u, w, c, v, null, new NullPointerException("notifications"));
+		failConstruct(null, u, h, v, n, new NullPointerException("storage"));
+		failConstruct(s, null, h, v, n, new NullPointerException("userHandler"));
+		failConstruct(s, u, null, v, n, new NullPointerException("resourceHandlers"));
+		failConstruct(s, u, h, null, n, new NullPointerException("validators"));
+		failConstruct(s, u, h, v, null, new NullPointerException("notifications"));
+		
+		failConstruct(s, u, ImmutableMap.of(
+				new ResourceType("ws"), rh,
+				new ResourceType("user"), rh),
+				v, n,
+				new IllegalArgumentException(
+						"resourceHandlers cannot contain built in type user"));
 	}
 	
 	private void failConstruct(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final ResourceHandler wsHandler,
-			final ResourceHandler catHandler,
+			final Map<ResourceType, ResourceHandler> handlers,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final Exception expected) {
 		try {
-			new Groups(storage, userHandler, wsHandler, catHandler, validators, notifications);
+			new Groups(storage, userHandler, handlers, validators, notifications);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -215,13 +222,14 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
-		assertThat("incorrect group", ret, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.build(),
-				rsis(new UserName("foo")),
-				rsis(new UserName("foo")),
-				MEMBER)));
+				.build())
+				.withViewType(MEMBER)
+				.withResourceType(new ResourceType("workspace"), new UserName("foo"))
+				.withResourceType(new ResourceType("catalogmethod"), new UserName("foo"))
+				.build()));
 	}
 	
 	@Test
@@ -261,16 +269,17 @@ public class GroupsTest {
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
-		assertThat("incorrect group", ret, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
-				.build(),
-				rsis(new UserName("foo")),
-				rsis(new UserName("foo")),
-				MEMBER)));
+				.build())
+				.withViewType(MEMBER)
+				.withResourceType(new ResourceType("workspace"), new UserName("foo"))
+				.withResourceType(new ResourceType("catalogmethod"), new UserName("foo"))
+				.build()));
 	}
 	
 	@Test
@@ -525,20 +534,22 @@ public class GroupsTest {
 
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build(),
-				rsis(),
-				rsis(),
-				NON_MEMBER)));
+				.build())
+				.withViewType(NON_MEMBER)
+				.withResourceType(new ResourceType("workspace"), null)
+				.withResourceType(new ResourceType("catalogmethod"), null)
+				.build()));
 	}
 	
 	@Test
 	public void getGroupNoToken() throws Exception {
 		// can get public resources
+		// tests that there's still a resource entry in the group view if missing from the group
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -551,14 +562,6 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("86")))
-				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod1"),
-								new ResourceID("mod1.meth1")))
-				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
 				.build());
 
 		when(mocks.wsHandler.getResourceInformation(
@@ -570,40 +573,30 @@ public class GroupsTest {
 								"public", true)
 						.build());
 		
-		when(mocks.catHandler.getResourceInformation(
-				null, set(new ResourceID("mod1.meth1"), new ResourceID("mod2.meth2")), true))
-				.thenReturn(ResourceInformationSet.getBuilder(null)
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
-						.build());
-		
-		
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build(),
-				ResourceInformationSet.getBuilder(null)
+				.build())
+				.withViewType(NON_MEMBER)
+				.withResourceType(new ResourceType("catalogmethod"), null)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet
+						.getBuilder(null)
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
 								"name", "my ws")
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
 								"public", true)
-						.build(),
-				ResourceInformationSet.getBuilder(null)
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
-						.build(),
-				NON_MEMBER)));
+						.build())
+				.build()));
 	}
 	
 	@Test
 	public void getGroupNonMemberToken() throws Exception {
 		// can get public and admin'd resources
+		// tests that there's still a resource entry in the group view if missing from the group
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -617,14 +610,6 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("57")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("86")))
-				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod1"),
-								new ResourceID("mod1.meth1")))
-				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 
@@ -637,34 +622,24 @@ public class GroupsTest {
 						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
 								"name", "my ws2")
 						.build());
-		when(mocks.catHandler.getResourceInformation(
-				new UserName("whee"), set(new ResourceID("mod1.meth1"),
-						new ResourceID("mod2.meth2")), true))
-				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
-						.build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
-		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withAdministrator(new UserName("whoo"))
-				.build(),
-				ResourceInformationSet.getBuilder(new UserName("whee"))
+				.build())
+				.withViewType(NON_MEMBER)
+				.withResourceType(new ResourceType("catalogmethod"), new UserName("whee"))
+				.withResource(new ResourceType("workspace"), ResourceInformationSet
+						.getBuilder(new UserName("whee"))
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
 								"name", "my ws")
 						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
 								"name", "my ws2")
-						.build(),
-				ResourceInformationSet.getBuilder(new UserName("whee"))
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
-						.build(),
-				NON_MEMBER)));
+						.build())
+				.build()));
 	}
 	
 	@Test
@@ -728,14 +703,16 @@ public class GroupsTest {
 		verify(mocks.storage).removeResource(new GroupID("bar"), new ResourceType("workspace"),
 				new ResourceDescriptor(new ResourceID("34")), inst(5600));
 		
-		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
-				.build(),
-				ResourceInformationSet.getBuilder(new UserName("baz"))
+				.build())
+				.withViewType(MEMBER)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet
+						.getBuilder(new UserName("baz"))
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
 								"name", "my ws")
 						.withResourceField(new ResourceDescriptor(new ResourceID("6")),
@@ -745,13 +722,14 @@ public class GroupsTest {
 						//TODO NNOW remove nonexistant resources from view
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("34")))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("86")))
-						.build(),
-				ResourceInformationSet.getBuilder(new UserName("baz"))
+						.build())
+				.withResource(new ResourceType("catalogmethod"), ResourceInformationSet
+						.getBuilder(new UserName("baz"))
 						.withResourceDescriptor(new ResourceDescriptor(
 								new ResourceAdministrativeID("mod2"),
 								new ResourceID("mod2.meth2")))
-						.build(),
-				MEMBER)));
+						.build())
+				.build()));
 	}
 	
 	@Test
@@ -778,6 +756,23 @@ public class GroupsTest {
 		
 		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"),
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "oh hecky darn"));
+	}
+	
+	@Test
+	public void getGroupFailMissingResourceType() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("baz"))
+				.withResource(new ResourceType("workspyce"),
+						new ResourceDescriptor(new ResourceID("not a ws id")))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
+		
+		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"), new RuntimeException(
+				"Group bar has workspyce data without a configured handler"));
 	}
 	
 	@Test
@@ -880,25 +875,21 @@ public class GroupsTest {
 				.withNullableExcludeUpTo("someex")
 				.build()),
 				is(Arrays.asList(
-						new GroupView(Group.getBuilder(
+						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
 								new CreateAndModTimes(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.build())
 								.build(),
-								rsis(),
-								rsis(),
-								MINIMAL),
-						new GroupView(Group.getBuilder(
+						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 								.withDescription("desc")
 								.withType(GroupType.PROJECT)
 								.withAdministrator(new UserName("whoo"))
-								.build(),
-								rsis(),
-								rsis(),
-								MINIMAL)
-						)));
+								.build())
+								.build())
+						));
 	}
 
 	@Test

@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoCredential;
@@ -32,6 +33,7 @@ import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.resource.ResourceHandler;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -48,6 +50,17 @@ import us.kbase.workspace.WorkspaceClient;
 public class GroupsBuilder {
 
 	//TODO TEST
+	
+	private static final ResourceType RTWS;
+	private static final ResourceType RTCAT;
+	static {
+		try {
+			RTWS = new ResourceType("workspace");
+			RTCAT = new ResourceType("catalogmethod");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("impossible", e);
+		}
+	}
 	
 	private static final int MAX_FIELD_SIZE = 5000;
 	
@@ -119,8 +132,12 @@ public class GroupsBuilder {
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
 		
-		return new Groups(storage, uh, getWorkspaceHandler(c), getCatalogHandler(c),
-				getValidators(c), getNotifier(c));
+		return new Groups(
+				storage,
+				uh,
+				ImmutableMap.of(RTWS, getWorkspaceHandler(c), RTCAT, getCatalogHandler(c)),
+				getValidators(c),
+				getNotifier(c));
 	}
 
 	private ResourceHandler getWorkspaceHandler(final GroupsConfig c)

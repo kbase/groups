@@ -33,8 +33,6 @@ import us.kbase.test.groups.TestCommon;
 public class GroupViewTest {
 	
 	private static final Group GROUP;
-	private static final ResourceInformationSet RIS;
-	private static final ResourceInformationSet CIS;
 	static {
 		try {
 			final ResourceType ws = new ResourceType("workspace");
@@ -55,13 +53,6 @@ public class GroupViewTest {
 					.withResource(cat, new ResourceDescriptor(new ResourceID("x.y")))
 					.withCustomField(new NumberedCustomField("field"), "val")
 					.build();
-
-			RIS = ResourceInformationSet.getBuilder(new UserName("foo"))
-					.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
-					.build();
-			CIS = ResourceInformationSet.getBuilder(new UserName("foo"))
-					.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
-					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -74,7 +65,7 @@ public class GroupViewTest {
 	
 	@Test
 	public void minimalView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, RIS, CIS, ViewType.MINIMAL);
+		final GroupView gv = GroupView.getBuilder(GROUP).build();
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -86,19 +77,28 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
-		assertThat("incorrect wsinfo", gv.getCatalogInformation(), is(CIS));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
 	}
 
 	@Test
 	public void nonMemberView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, RIS, CIS, ViewType.NON_MEMBER);
+		final GroupView gv = GroupView.getBuilder(GROUP)
+				.withViewType(ViewType.NON_MEMBER)
+				.withResourceType(new ResourceType("bar"), null)
+				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.build())
+				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.build())
+				.build();
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -113,19 +113,41 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.NON_MEMBER));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
-		assertThat("incorrect wsinfo", gv.getCatalogInformation(), is(CIS));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
+				new ResourceType("ws"), new ResourceType("cat"))));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
+				is(ResourceInformationSet.getBuilder(null).build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
+				is(ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
+				is(ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
 	}
 	
 	@Test
 	public void memberView() throws Exception {
-		final GroupView gv = new GroupView(GROUP, RIS, CIS, ViewType.MEMBER);
+		final GroupView gv = GroupView.getBuilder(GROUP)
+				.withViewType(ViewType.MEMBER)
+				.withResourceType(new ResourceType("bar"), new UserName("u"))
+				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
+						new UserName("u"))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.build())
+				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(
+						new UserName("u"))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.build())
+				.build();
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -141,14 +163,23 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MEMBER));
-		assertThat("incorrect wsinfo", gv.getWorkspaceInformation(), is(RIS));
-		assertThat("incorrect wsinfo", gv.getCatalogInformation(), is(CIS));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
+				is(ResourceInformationSet.getBuilder(new UserName("u")).build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
+				is(ResourceInformationSet.getBuilder(new UserName("u"))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
+				is(ResourceInformationSet.getBuilder(new UserName("u"))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
 	}
 	
 	private <T> void assertImmutable(final Collection<T> set, final T add) {
@@ -170,26 +201,69 @@ public class GroupViewTest {
 	}
 
 	@Test
-	public void constructFail() throws Exception {
-		final ViewType v = ViewType.MEMBER;
-		
-		failConstruct(null, RIS, CIS, v, new NullPointerException("group"));
-		failConstruct(GROUP, null, CIS, v, new NullPointerException("workspaceSet"));
-		failConstruct(GROUP, RIS, null, v, new NullPointerException("catalogSet"));
-		failConstruct(GROUP, RIS, CIS, null, new NullPointerException("viewType"));
+	public void getBuilderFail() throws Exception {
+		try {
+			GroupView.getBuilder(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("group"));
+		}
 	}
 	
-	private void failConstruct(
-			final Group g,
-			final ResourceInformationSet wis,
-			final ResourceInformationSet cis,
-			final ViewType v,
+	@Test
+	public void withViewTypeFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP).withViewType(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("viewType"));
+		}
+	}
+	
+	@Test
+	public void withResourceFail() throws Exception {
+		failWithResource(null, ResourceInformationSet.getBuilder(null).build(),
+				new NullPointerException("type"));
+		failWithResource(new ResourceType("t"), null, new NullPointerException("info"));
+	}
+	
+	private void failWithResource(
+			final ResourceType type,
+			final ResourceInformationSet info,
 			final Exception expected) {
 		try {
-			new GroupView(g, wis, cis, v);
+			GroupView.getBuilder(GROUP).withResource(type, info);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	} 
+	
+	@Test
+	public void withResourceTypeFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP).withResourceType(null, new UserName("n"));
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("type"));
+		}
+	}
+	
+	@Test
+	public void getResourceInfoFail() throws Exception {
+		final GroupView gv = GroupView.getBuilder(GROUP)
+				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
+						new UserName("u"))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.build())
+				.build();
+		try {
+			gv.getResourceInformation(new ResourceType("cat"));
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
+					"No such resource type cat"));
+		}
+		
 	}
 }
