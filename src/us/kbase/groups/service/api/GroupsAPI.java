@@ -38,7 +38,6 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
-import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
@@ -330,7 +329,7 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
 		ret.put(Fields.GROUP_TYPE, g.getType().getRepresentation());
 		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g));
-		if (!g.getViewType().equals(ViewType.MINIMAL)) {
+		if (g.isStandardView()) {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));

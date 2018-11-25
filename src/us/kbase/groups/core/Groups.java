@@ -19,7 +19,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
-import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -164,7 +163,7 @@ public class Groups {
 	/** Create a new group.
 	 * @param userToken the token of the user that will be creating the group.
 	 * @param createParams the paramaters describing how the group will be created.
-	 * @return a view of the new group where the view type is {@link ViewType#MEMBER}.
+	 * @return a view of the new group.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupExistsException if the group already exists.
@@ -240,11 +239,10 @@ public class Groups {
 	}
 	
 	/** Get a view of a group.
-	 * A null token or a non-member gets a {@link ViewType#NON_MEMBER} view.
+	 * A null token or a non-member gets a non-member view.
 	 * A null token will result in only public group workspaces being included in the view.
 	 * A non-member token will also include workspaces the user administrates.
-	 * A member will get a {@link ViewType#MEMBER} view and all group 
-	 * workspaces will be included.
+	 * A member will get a full view and all group workspaces will be included.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to get.
 	 * @return a view of the group.
@@ -272,10 +270,9 @@ public class Groups {
 	}
 
 	private GroupView.Builder startViewBuild(final Group g, final UserName user) {
-		final GroupView.Builder b = GroupView.getBuilder(g).withViewType(
-				g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
+		final GroupView.Builder b = GroupView.getBuilder(g, user).withStandardView(true);
 		for (final ResourceType type: resourceHandlers.keySet()) {
-			b.withResourceType(type, user);
+			b.withResourceType(type);
 		}
 		return b;
 	}
@@ -354,8 +351,7 @@ public class Groups {
 		return storage.getGroupExists(groupID);
 	}
 	
-	/** Get views of the groups in the system, where the view type is
-	 * {@link ViewType#MINIMAL}.
+	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
 	 * @param params the parameters for getting the groups.
 	 * @return the groups.
@@ -365,7 +361,7 @@ public class Groups {
 			throws GroupsStorageException {
 		checkNotNull(params, "params");
 		return storage.getGroups(params).stream()
-				.map(g -> GroupView.getBuilder(g).build())
+				.map(g -> GroupView.getBuilder(g, null).build())
 				.collect(Collectors.toList());
 	}
 	

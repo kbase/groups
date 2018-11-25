@@ -21,7 +21,6 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
-import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceDescriptor;
@@ -65,7 +64,7 @@ public class GroupViewTest {
 	
 	@Test
 	public void minimalView() throws Exception {
-		final GroupView gv = GroupView.getBuilder(GROUP).build();
+		final GroupView gv = GroupView.getBuilder(GROUP, null).build();
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -76,7 +75,8 @@ public class GroupViewTest {
 		assertThat("incorrect mod", gv.getModificationDate(), is(Optional.empty()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
-		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MINIMAL));
+		assertThat("incorrect view type", gv.isStandardView(), is(false));
+		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
@@ -89,9 +89,9 @@ public class GroupViewTest {
 
 	@Test
 	public void nonMemberView() throws Exception {
-		final GroupView gv = GroupView.getBuilder(GROUP)
-				.withViewType(ViewType.NON_MEMBER)
-				.withResourceType(new ResourceType("bar"), null)
+		final GroupView gv = GroupView.getBuilder(GROUP, null)
+				.withStandardView(true)
+				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(null)
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
 						.build())
@@ -112,7 +112,8 @@ public class GroupViewTest {
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
-		assertThat("incorrect view type", gv.getViewType(), is(ViewType.NON_MEMBER));
+		assertThat("incorrect view type", gv.isStandardView(), is(true));
+		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
 				new ResourceType("ws"), new ResourceType("cat"))));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
@@ -136,15 +137,15 @@ public class GroupViewTest {
 	
 	@Test
 	public void memberView() throws Exception {
-		final GroupView gv = GroupView.getBuilder(GROUP)
-				.withViewType(ViewType.MEMBER)
-				.withResourceType(new ResourceType("bar"), new UserName("u"))
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("m1"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
-						new UserName("u"))
+						new UserName("m1"))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
 						.build())
 				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(
-						new UserName("u"))
+						new UserName("m1"))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
 						.build())
 				.build();
@@ -162,15 +163,16 @@ public class GroupViewTest {
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
-		assertThat("incorrect view type", gv.getViewType(), is(ViewType.MEMBER));
+		assertThat("incorrect view type", gv.isStandardView(), is(true));
+		assertThat("incorrect view type", gv.isMember(), is(true));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
-				is(ResourceInformationSet.getBuilder(new UserName("u")).build()));
+				is(ResourceInformationSet.getBuilder(new UserName("m1")).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
-				is(ResourceInformationSet.getBuilder(new UserName("u"))
+				is(ResourceInformationSet.getBuilder(new UserName("m1"))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
-				is(ResourceInformationSet.getBuilder(new UserName("u"))
+				is(ResourceInformationSet.getBuilder(new UserName("m1"))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
@@ -203,7 +205,7 @@ public class GroupViewTest {
 	@Test
 	public void getBuilderFail() throws Exception {
 		try {
-			GroupView.getBuilder(null);
+			GroupView.getBuilder(null, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("group"));
@@ -211,28 +213,29 @@ public class GroupViewTest {
 	}
 	
 	@Test
-	public void withViewTypeFail() throws Exception {
-		try {
-			GroupView.getBuilder(GROUP).withViewType(null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("viewType"));
-		}
-	}
-	
-	@Test
 	public void withResourceFail() throws Exception {
-		failWithResource(null, ResourceInformationSet.getBuilder(null).build(),
+		final UserName u = new UserName("u");
+		failWithResource(u, null, ResourceInformationSet.getBuilder(null).build(),
 				new NullPointerException("type"));
-		failWithResource(new ResourceType("t"), null, new NullPointerException("info"));
+		failWithResource(u, new ResourceType("t"), null, new NullPointerException("info"));
+		
+		failWithResource(u, new ResourceType("t"), ResourceInformationSet.getBuilder(null).build(),
+				new IllegalArgumentException("User in info does not match user in builder"));
+		failWithResource(u, new ResourceType("t"),
+				ResourceInformationSet.getBuilder(new UserName("v")).build(),
+				new IllegalArgumentException("User in info does not match user in builder"));
+		failWithResource(null, new ResourceType("t"),
+				ResourceInformationSet.getBuilder(new UserName("v")).build(),
+				new IllegalArgumentException("User in info does not match user in builder"));
 	}
 	
 	private void failWithResource(
+			final UserName buildUser,
 			final ResourceType type,
 			final ResourceInformationSet info,
 			final Exception expected) {
 		try {
-			GroupView.getBuilder(GROUP).withResource(type, info);
+			GroupView.getBuilder(GROUP, buildUser).withResource(type, info);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -242,7 +245,7 @@ public class GroupViewTest {
 	@Test
 	public void withResourceTypeFail() throws Exception {
 		try {
-			GroupView.getBuilder(GROUP).withResourceType(null, new UserName("n"));
+			GroupView.getBuilder(GROUP, null).withResourceType(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("type"));
@@ -251,7 +254,7 @@ public class GroupViewTest {
 	
 	@Test
 	public void getResourceInfoFail() throws Exception {
-		final GroupView gv = GroupView.getBuilder(GROUP)
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("u"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
 						new UserName("u"))
 						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
