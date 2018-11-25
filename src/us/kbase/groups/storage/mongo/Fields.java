@@ -29,10 +29,6 @@ public class Fields {
 	public static final String GROUP_ADMINS = "admin";
 	/** The group members. */
 	public static final String GROUP_MEMBERS = "memb";
-	/** The IDs of the workspaces associated with the group. */
-	public static final String GROUP_WORKSPACES = "ws";
-	/** The IDs of the catalog methods associated with the group. */
-	public static final String GROUP_CATALOG_METHODS = "catmeth";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "create";
 	/** The group modification date. */
@@ -42,8 +38,17 @@ public class Fields {
 	/** The group custom fields. */
 	public static final String GROUP_CUSTOM_FIELDS = "custom";
 	
+	// resources fields
+	/** Resources associated with the group. */
+	public static final String GROUP_RESOURCES = "resources";
+	/** A resource ID. */
+	public static final String GROUP_RESOURCE_ID = "rid";
+	/** A resource administrative ID. */
+	public static final String GROUP_RESOURCE_ADMINISTRATIVE_ID = "aid";
+	
 	/* ***********************
 	 * request fields
+	 * ***********************
 	 */
 	
 	/** The request ID */

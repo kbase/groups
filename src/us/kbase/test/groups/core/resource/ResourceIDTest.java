@@ -102,6 +102,13 @@ public class ResourceIDTest {
 				is(new ResourceAdministrativeID("aid")));
 		assertThat("incorrect rid", d.getResourceID(),
 				is(new ResourceID("rid")));
+		
+		final ResourceDescriptor d2 = new ResourceDescriptor(new ResourceID("rid"));
+		
+		assertThat("incorrect aid", d2.getAdministrativeID(),
+				is(new ResourceAdministrativeID("rid")));
+		assertThat("incorrect rid", d2.getResourceID(),
+				is(new ResourceID("rid")));
 	}
 
 	@Test

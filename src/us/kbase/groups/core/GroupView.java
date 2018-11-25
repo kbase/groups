@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 
@@ -41,14 +40,16 @@ public class GroupView {
 	private final Map<NumberedCustomField, String> customFields; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
-	private final Set<CatalogMethod> methods; // standard
 	private final GroupType type; // all views
 	private final Optional<Instant> creationDate; // standard
 	private final Optional<Instant> modificationDate; // standard
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
+	// TODO NNOW don't hardcode these, make a builder 
+	//TODO NNOW remove non-existant
 	private final ResourceInformationSet workspaceSet;
+	private final ResourceInformationSet catalogSet;
 	
 	// not part of the view, just describes the view
 	private final ViewType viewType;
@@ -61,12 +62,15 @@ public class GroupView {
 	public GroupView(
 			final Group group,
 			final ResourceInformationSet workspaceSet,
+			final ResourceInformationSet catalogSet,
 			final ViewType viewType) {
 		checkNotNull(group, "group");
 		checkNotNull(workspaceSet, "workspaceSet");
+		checkNotNull(catalogSet, "catalogSet");
 		checkNotNull(viewType, "viewType");
 		this.viewType = viewType;
 		this.workspaceSet = workspaceSet;
+		this.catalogSet = catalogSet;
 		
 		// group properties
 		this.groupID = group.getGroupID();
@@ -77,12 +81,10 @@ public class GroupView {
 		if (viewType.equals(ViewType.MINIMAL)) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
-			methods = getEmptyImmutableSet();
 			creationDate = Optional.empty();
 			modificationDate = Optional.empty();
 			description = Optional.empty();
 		} else {
-			methods = group.getCatalogMethods();
 			admins = group.getAdministrators();
 			creationDate = Optional.of(group.getCreationDate());
 			modificationDate = Optional.of(group.getModificationDate());
@@ -148,14 +150,6 @@ public class GroupView {
 		return admins;
 	}
 	
-	/** Get the Catalog methods associated with the group. Empty for {@link ViewType#MINIMAL}
-	 * views.
-	 * @return the methods.
-	 */
-	public Set<CatalogMethod> getCatalogMethods() {
-		return methods;
-	}
-
 	/** Get the type of the group.
 	 * @return the group type.
 	 */
@@ -188,24 +182,31 @@ public class GroupView {
 	}
 
 	/** Get any workspaces included in the view.
-	 * @return the workspace information for the workspaces.
+	 * @return the information for the workspaces.
 	 */
 	public ResourceInformationSet getWorkspaceInformation() {
 		return workspaceSet;
 	}
 
+	/** Get any catalog methods included in the view.
+	 * @return the information for the catalog methods.
+	 */
+	public ResourceInformationSet getCatalogInformation() {
+		return catalogSet;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
+		result = prime * result + ((catalogSet == null) ? 0 : catalogSet.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
-		result = prime * result + ((methods == null) ? 0 : methods.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
@@ -231,6 +232,13 @@ public class GroupView {
 				return false;
 			}
 		} else if (!admins.equals(other.admins)) {
+			return false;
+		}
+		if (catalogSet == null) {
+			if (other.catalogSet != null) {
+				return false;
+			}
+		} else if (!catalogSet.equals(other.catalogSet)) {
 			return false;
 		}
 		if (creationDate == null) {
@@ -273,13 +281,6 @@ public class GroupView {
 				return false;
 			}
 		} else if (!members.equals(other.members)) {
-			return false;
-		}
-		if (methods == null) {
-			if (other.methods != null) {
-				return false;
-			}
-		} else if (!methods.equals(other.methods)) {
 			return false;
 		}
 		if (modificationDate == null) {

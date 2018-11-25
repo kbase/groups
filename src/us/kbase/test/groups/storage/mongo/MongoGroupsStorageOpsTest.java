@@ -42,22 +42,24 @@ import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
@@ -136,10 +138,14 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("bar"))
 				.withAdministrator(new UserName("a1"))
 				.withAdministrator(new UserName("a3"))
-				.withWorkspace(new WorkspaceID(31415))
-				.withWorkspace(new WorkspaceID(602))
-				.withCatalogMethod(new CatalogMethod("yay.boo"))
-				.withCatalogMethod(new CatalogMethod("futz.batz"))
+				.withResource(new ResourceType("t"), new ResourceDescriptor(new ResourceID("r")))
+				.withResource(new ResourceType("t"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.withResource(new ResourceType("x"), new ResourceDescriptor(new ResourceID("y")))
+				.withResource(new ResourceType("x"), new ResourceDescriptor(
+						new ResourceAdministrativeID("b"),
+						new ResourceID("z")))
 				.withCustomField(new NumberedCustomField("foo-83"), "bar")
 				.withCustomField(new NumberedCustomField("whoo"), "whee")
 				.build());
@@ -155,10 +161,16 @@ public class MongoGroupsStorageOpsTest {
 						.withMember(new UserName("bar"))
 						.withAdministrator(new UserName("a1"))
 						.withAdministrator(new UserName("a3"))
-						.withWorkspace(new WorkspaceID(31415))
-						.withWorkspace(new WorkspaceID(602))
-						.withCatalogMethod(new CatalogMethod("yay.boo"))
-						.withCatalogMethod(new CatalogMethod("futz.batz"))
+						.withResource(new ResourceType("t"), new ResourceDescriptor(
+								new ResourceID("r")))
+						.withResource(new ResourceType("t"), new ResourceDescriptor(
+								new ResourceAdministrativeID("a"),
+								new ResourceID("b")))
+						.withResource(new ResourceType("x"), new ResourceDescriptor(
+								new ResourceID("y")))
+						.withResource(new ResourceType("x"), new ResourceDescriptor(
+								new ResourceAdministrativeID("b"),
+								new ResourceID("z")))
 						.withCustomField(new NumberedCustomField("foo-83"), "bar")
 						.withCustomField(new NumberedCustomField("whoo"), "whee")
 						.build()));
@@ -704,7 +716,8 @@ public class MongoGroupsStorageOpsTest {
 				.withMember(new UserName("foo1"))
 				.withMember(new UserName("bar1"))
 				.withAdministrator(new UserName("admin"))
-				.withWorkspace(new WorkspaceID(42))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("42")))
 				.build());
 		
 		manager.storage.createGroup(Group.getBuilder(
@@ -726,7 +739,8 @@ public class MongoGroupsStorageOpsTest {
 								.withMember(new UserName("foo1"))
 								.withMember(new UserName("bar1"))
 								.withAdministrator(new UserName("admin"))
-								.withWorkspace(new WorkspaceID(42))
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("42")))
 								.build(),
 						Group.getBuilder(
 								new GroupID("fid"), new GroupName("name2"), new UserName("uname2"),
@@ -1187,151 +1201,23 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void addWorkspace() throws Exception {
+	public void addResource() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withWorkspace(new WorkspaceID(24))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b")))
 				.build());
 		
-		manager.storage.addWorkspace(new GroupID("gid"), new WorkspaceID(42), inst(65000));
-		
-		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(65000)))
-						.withWorkspace(new WorkspaceID(24))
-						.withWorkspace(new WorkspaceID(42))
-						.build()));
-	}
-	
-	@Test
-	public void addWorkspaceFailNulls() throws Exception {
-		failAddWorkspace(null, new WorkspaceID(1), inst(1), new NullPointerException("groupID"));
-		failAddWorkspace(new GroupID("g"), null, inst(1), new NullPointerException("wsid"));
-		failAddWorkspace(new GroupID("g"), new WorkspaceID(1), null,
-				new NullPointerException("modDate"));
-	}
-	
-	@Test
-	public void addWorkspaceFailNoGroup() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.build());
-		
-		failAddWorkspace(new GroupID("gid1"), new WorkspaceID(1), inst(60000),
-				new NoSuchGroupException("gid1"));
-		
-		assertModificationTimeIs(new GroupID("gid"), inst(50000));
-	}
-	
-	@Test
-	public void addWorkspaceFailWorkspaceExists() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withWorkspace(new WorkspaceID(70))
-				.build());
-		
-		failAddWorkspace(new GroupID("gid"), new WorkspaceID(70), inst(32),
-				new WorkspaceExistsException("70"));
-		
-		assertModificationTimeIs(new GroupID("gid"), inst(50000));
-	}
-	
-	private void failAddWorkspace(
-			final GroupID g,
-			final WorkspaceID ws,
-			final Instant modDate,
-			final Exception expected) {
-		try {
-			manager.storage.addWorkspace(g, ws, modDate);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void removeWorkspace() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withWorkspace(new WorkspaceID(24))
-				.withWorkspace(new WorkspaceID(42))
-				.build());
-		
-		manager.storage.removeWorkspace(new GroupID("gid"), new WorkspaceID(42), inst(109200));
-		
-		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-						new CreateAndModTimes(Instant.ofEpochMilli(40000),
-								Instant.ofEpochMilli(109200)))
-						.withWorkspace(new WorkspaceID(24))
-						.build()));
-	}
-	
-	@Test
-	public void removeWorkspaceFailNulls() throws Exception {
-		failRemoveWorkspace(null, new WorkspaceID(1), inst(1),
-				new NullPointerException("groupID"));
-		failRemoveWorkspace(new GroupID("g"), null, inst(1), new NullPointerException("wsid"));
-		failRemoveWorkspace(new GroupID("g"), new WorkspaceID(1), null,
-				new NullPointerException("modDate"));
-	}
-	
-	@Test
-	public void removeWorkspaceFailNoGroup() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.build());
-		
-		failRemoveWorkspace(new GroupID("gid1"), new WorkspaceID(1), inst(1),
-				new NoSuchGroupException("gid1"));
-		
-		assertModificationTimeIs(new GroupID("gid"), inst(50000));
-	}
-	
-	@Test
-	public void removeWorkspaceFailNoWorkspace() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withWorkspace(new WorkspaceID(70))
-				.build());
-		
-		failRemoveWorkspace(new GroupID("gid"), new WorkspaceID(71), inst(1),
-				new NoSuchWorkspaceException("Group gid does not include workspace 71"));
-		
-		assertModificationTimeIs(new GroupID("gid"), inst(50000));
-	}
-	
-	private void failRemoveWorkspace(
-			final GroupID g,
-			final WorkspaceID ws,
-			final Instant modDate,
-			final Exception expected) {
-		try {
-			manager.storage.removeWorkspace(g, ws, modDate);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void addCatalogMethod() throws Exception {
-		manager.storage.createGroup(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
-				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withCatalogMethod(new CatalogMethod("mod.meth"))
-				.build());
-		
-		manager.storage.addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod2.meth2"),
+		manager.storage.addResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(new ResourceAdministrativeID("a"), new ResourceID("c")),
+				inst(55000));
+		manager.storage.addResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(new ResourceAdministrativeID("b"), new ResourceID("b")),
 				inst(65000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
@@ -1339,54 +1225,74 @@ public class MongoGroupsStorageOpsTest {
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
 								Instant.ofEpochMilli(65000)))
-						.withCatalogMethod(new CatalogMethod("mod.meth"))
-						.withCatalogMethod(new CatalogMethod("mod2.meth2"))
+						.withResource(new ResourceType("ws"), new ResourceDescriptor(
+								new ResourceAdministrativeID("a"), new ResourceID("b")))
+						.withResource(new ResourceType("ws"), new ResourceDescriptor(
+								new ResourceAdministrativeID("a"), new ResourceID("c")))
+						// note this should never happen. There should be a 1:M mapping from
+						// RAI to RI
+						.withResource(new ResourceType("ws"), new ResourceDescriptor(
+								new ResourceAdministrativeID("b"), new ResourceID("b")))
 						.build()));
 	}
 	
 	@Test
-	public void addCatalogMethodFailNulls() throws Exception {
-		failAddCatalogMethod(null, new CatalogMethod("m.m"), inst(1),
-				new NullPointerException("groupID"));
-		failAddCatalogMethod(new GroupID("g"), null, inst(1), new NullPointerException("method"));
-		failAddCatalogMethod(new GroupID("g"), new CatalogMethod("m.m"), null,
-				new NullPointerException("modDate"));
+	public void addResourceFailNulls() throws Exception {
+		final GroupID g = new GroupID("g");
+		final ResourceType t = new ResourceType("t");
+		final ResourceDescriptor d = new ResourceDescriptor(new ResourceID("i"));
+		
+		failAddResource(null, t, d, inst(1), new NullPointerException("groupID"));
+		failAddResource(g, null, d, inst(1), new NullPointerException("type"));
+		failAddResource(g, t, null, inst(1), new NullPointerException("resource"));
+		failAddResource(g, t, d, null, new NullPointerException("modDate"));
 	}
 	
 	@Test
-	public void addCatalogMethodFailNoGroup() throws Exception {
+	public void addResourceFailNoGroup() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failAddCatalogMethod(new GroupID("gid1"), new CatalogMethod("m.m"), inst(60000),
+		failAddResource(
+				new GroupID("gid1"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("a")),
+				inst(60000),
 				new NoSuchGroupException("gid1"));
 		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
-	public void addCatalogMethodFailMethodExists() throws Exception {
+	public void addResourceFailResourceExists() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withCatalogMethod(new CatalogMethod("m.m"))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b")))
 				.build());
 		
-		failAddCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m"), inst(32),
-				new CatalogMethodExistsException("m.m"));
+		failAddResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b")),
+				inst(32),
+				new ResourceExistsException("ws b"));
 		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
-	private void failAddCatalogMethod(
+	private void failAddResource(
 			final GroupID g,
-			final CatalogMethod m,
+			final ResourceType t,
+			final ResourceDescriptor d,
 			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.addCatalogMethod(g, m, modDate);
+			manager.storage.addResource(g, t, d, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -1394,15 +1300,21 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void removeCatalogMethod() throws Exception {
+	public void removeResource() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withCatalogMethod(new CatalogMethod("m.m"))
-				.withCatalogMethod(new CatalogMethod("m2.m2"))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b")))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("c")))
 				.build());
 		
-		manager.storage.removeCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m"),
+		manager.storage.removeResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("c")),
 				inst(109200));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
@@ -1410,54 +1322,76 @@ public class MongoGroupsStorageOpsTest {
 						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 						new CreateAndModTimes(Instant.ofEpochMilli(40000),
 								Instant.ofEpochMilli(109200)))
-						.withCatalogMethod(new CatalogMethod("m2.m2"))
+						.withResource(new ResourceType("ws"), new ResourceDescriptor(
+								new ResourceAdministrativeID("a"), new ResourceID("b")))
 						.build()));
 	}
 	
 	@Test
-	public void removeCatalogMethodFailNulls() throws Exception {
-		failRemoveCatalogMethod(null, new CatalogMethod("m.m"), inst(1),
-				new NullPointerException("groupID"));
-		failRemoveCatalogMethod(new GroupID("g"), null, inst(1),
-				new NullPointerException("method"));
-		failRemoveCatalogMethod(new GroupID("g"), new CatalogMethod("m.m"), null,
-				new NullPointerException("modDate"));
+	public void removeResourceFailNulls() throws Exception {
+		final GroupID g = new GroupID("g");
+		final ResourceType t = new ResourceType("t");
+		final ResourceDescriptor d = new ResourceDescriptor(new ResourceID("i"));
+		
+		failRemoveResource(null, t, d, inst(1), new NullPointerException("groupID"));
+		failRemoveResource(g, null, d, inst(1), new NullPointerException("type"));
+		failRemoveResource(g, t, null, inst(1), new NullPointerException("resource"));
+		failRemoveResource(g, t, d, null, new NullPointerException("modDate"));
 	}
 	
 	@Test
-	public void removeCatalogMethodFailNoGroup() throws Exception {
+	public void removeResourceFailNoGroup() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
 				.build());
 		
-		failRemoveCatalogMethod(new GroupID("gid1"), new CatalogMethod("m.m"), inst(60000),
+		failRemoveResource(
+				new GroupID("gid1"),
+				new ResourceType("t"),
+				new ResourceDescriptor(new ResourceID("id")),
+				inst(1),
 				new NoSuchGroupException("gid1"));
 		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
 	@Test
-	public void removeCatalogMethodFailNoMethod() throws Exception {
+	public void removeResourceFailNoResource() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
 				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
-				.withCatalogMethod(new CatalogMethod("m.m"))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b")))
 				.build());
 		
-		failRemoveCatalogMethod(new GroupID("gid"), new CatalogMethod("m.m2"), inst(1),
-				new NoSuchCatalogEntryException("Group gid does not include catalog method m.m2"));
+		failRemoveResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("c")),
+				inst(1),
+				new NoSuchResourceException("Group gid does not include ws c"));
+		failRemoveResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						// b should really only have one RAI mapped to it
+						new ResourceAdministrativeID("z"), new ResourceID("b")),
+				inst(1),
+				new NoSuchResourceException("Group gid does not include ws b"));
 		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
-	private void failRemoveCatalogMethod(
+	private void failRemoveResource(
 			final GroupID g,
-			final CatalogMethod m,
+			final ResourceType t,
+			final ResourceDescriptor d,
 			final Instant modDate,
 			final Exception expected) {
 		try {
-			manager.storage.removeCatalogMethod(g, m, modDate);
+			manager.storage.removeResource(g, t, d, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

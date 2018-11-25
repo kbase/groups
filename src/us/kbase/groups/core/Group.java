@@ -12,10 +12,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceType;
 
 /** Represents a group consisting primarily of a set of users and set of workspaces associated
  * with those users.
@@ -33,8 +32,7 @@ public class Group {
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
 	private final GroupType type;
-	private final Set<CatalogMethod> methods;
-	private final WorkspaceIDSet workspaceIDs;
+	private final Map<ResourceType, Set<ResourceDescriptor>> resources;
 	private final Instant creationDate;
 	private final Instant modificationDate;
 	private final Optional<String> description;
@@ -47,8 +45,7 @@ public class Group {
 			final Set<UserName> members,
 			final Set<UserName> admins,
 			final GroupType type,
-			final Set<Integer> workspaceIDs,
-			final Set<CatalogMethod> methods,
+			final Map<ResourceType, Set<ResourceDescriptor>> resources,
 			final CreateAndModTimes times,
 			final Optional<String> description,
 			final Map<NumberedCustomField, String> customFields) {
@@ -58,8 +55,7 @@ public class Group {
 		this.members = Collections.unmodifiableSet(members);
 		this.admins = Collections.unmodifiableSet(admins);
 		this.type = type;
-		this.workspaceIDs = WorkspaceIDSet.fromInts(workspaceIDs);
-		this.methods = Collections.unmodifiableSet(methods);
+		this.resources = Collections.unmodifiableMap(resources);
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
 		this.description = description;
@@ -109,18 +105,31 @@ public class Group {
 		return type;
 	}
 	
-	/** Get the workspace IDs associated with the group.
-	 * @return the IDs.
+	/** Get the types of resources associated with this group.
+	 * @return the types.
 	 */
-	public WorkspaceIDSet getWorkspaceIDs() {
-		return workspaceIDs;
+	public Set<ResourceType> getResourceTypes() {
+		return resources.keySet();
 	}
 	
-	/** Get the catalog service methods associated with this group.
-	 * @return the methods.
+	/** Get the resources associated with the group for a given type.
+	 * @param type the type of resources to get.
+	 * @return the resources.
 	 */
-	public Set<CatalogMethod> getCatalogMethods() {
-		return methods;
+	public Set<ResourceDescriptor> getResources(final ResourceType type) {
+		if (!resources.containsKey(type)) {
+			throw new IllegalArgumentException("Type not found in group: " + type.getName());
+		}
+		return Collections.unmodifiableSet(resources.get(type));
+	}
+	
+	/** Determine whether this group contains a resource.
+	 * @param type the type of the resource.
+	 * @param descriptor the resource descriptor.
+	 * @return true if the group contains the resource, false otherwise.
+	 */
+	public boolean containsResource(final ResourceType type, final ResourceDescriptor descriptor) {
+		return resources.containsKey(type) && resources.get(type).contains(descriptor);
 	}
 
 	/** Get the date the group was created.
@@ -189,11 +198,10 @@ public class Group {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
-		result = prime * result + ((methods == null) ? 0 : methods.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
+		result = prime * result + ((resources == null) ? 0 : resources.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
-		result = prime * result + ((workspaceIDs == null) ? 0 : workspaceIDs.hashCode());
 		return result;
 	}
 
@@ -258,13 +266,6 @@ public class Group {
 		} else if (!members.equals(other.members)) {
 			return false;
 		}
-		if (methods == null) {
-			if (other.methods != null) {
-				return false;
-			}
-		} else if (!methods.equals(other.methods)) {
-			return false;
-		}
 		if (modificationDate == null) {
 			if (other.modificationDate != null) {
 				return false;
@@ -279,14 +280,14 @@ public class Group {
 		} else if (!owner.equals(other.owner)) {
 			return false;
 		}
-		if (type != other.type) {
-			return false;
-		}
-		if (workspaceIDs == null) {
-			if (other.workspaceIDs != null) {
+		if (resources == null) {
+			if (other.resources != null) {
 				return false;
 			}
-		} else if (!workspaceIDs.equals(other.workspaceIDs)) {
+		} else if (!resources.equals(other.resources)) {
+			return false;
+		}
+		if (type != other.type) {
 			return false;
 		}
 		return true;
@@ -320,8 +321,7 @@ public class Group {
 		private final Set<UserName> members = new HashSet<>();
 		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
-		private final Set<Integer> workspaceIDs = new HashSet<>();
-		private final Set<CatalogMethod> methods = new HashSet<>();
+		private final Map<ResourceType, Set<ResourceDescriptor>> resources = new HashMap<>();
 		private Optional<String> description = Optional.empty();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
@@ -402,23 +402,18 @@ public class Group {
 			return this;
 		}
 		
-		/** Add a workspace to the group.
-		 * @param wsid the workspace.
+		/** Add a resource to the group.
+		 * @param type the type of the resource.
+		 * @param descriptor the resource descriptor.
 		 * @return this builder.
 		 */
-		public Builder withWorkspace(final WorkspaceID wsid) {
-			checkNotNull(wsid, "wsid");
-			workspaceIDs.add(wsid.getID());
-			return this;
-		}
-		
-		/** Add a catalog service method to the group.
-		 * @param method the method.
-		 * @return this builder.
-		 */
-		public Builder withCatalogMethod(final CatalogMethod method) {
-			checkNotNull(method, "method");
-			methods.add(method);
+		public Builder withResource(final ResourceType type, final ResourceDescriptor descriptor) {
+			checkNotNull(type, "type");
+			checkNotNull(descriptor, "descriptor");
+			if (!resources.containsKey(type)) {
+				resources.put(type, new HashSet<>());
+			}
+			resources.get(type).add(descriptor);
 			return this;
 		}
 		
@@ -439,8 +434,8 @@ public class Group {
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, members, admins, type, workspaceIDs,
-					methods, times, description, customFields);
+			return new Group(groupID, groupName, owner, members, admins, type, resources,
+					times, description, customFields);
 		}
 	}
 	

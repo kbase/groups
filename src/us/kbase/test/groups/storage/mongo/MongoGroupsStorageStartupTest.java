@@ -214,10 +214,6 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "own_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("ws", 1))
-						.append("name", "ws_1")
-						.append("ns", col),
-				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", col)

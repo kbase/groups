@@ -11,24 +11,22 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
-import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -129,49 +127,37 @@ public interface GroupsStorage {
 	void demoteAdmin(GroupID groupID, UserName member, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	
-	/** Add a workspace to a group.
+	/** Add a resource to a group.
 	 * @param groupID the group ID.
-	 * @param wsid the workspace ID.
+	 * @param type the resource type.
+	 * @param resource the resource descriptor.
 	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws WorkspaceExistsException if the workspace already exists in the group.
+	 * @throws ResourceExistsException if the resource already exists in the group.
 	 */
-	void addWorkspace(GroupID groupID, WorkspaceID wsid, Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException;
+	void addResource(
+			GroupID groupID,
+			ResourceType type,
+			ResourceDescriptor resource,
+			Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, ResourceExistsException;
 	
-	/** Remove a workspace from a group.
+	/** Remove a resource from a group.
 	 * @param groupID the group ID.
-	 * @param wsid the workspace ID.
+	 * @param type the resource type.
+	 * @param resource the resource descriptor.
 	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws NoSuchWorkspaceException if the group does not contain the workspace.
+	 * @throws NoSuchResourceException if the group does not contain the resource.
 	 */
-	void removeWorkspace(GroupID groupID, WorkspaceID wsid, Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException;
-	
-	/** Add a catalog method to a group.
-	 * @param groupID the group ID.
-	 * @param method the method.
-	 * @param modDate the modification date to apply to the group.
-	 * @throws NoSuchGroupException if there is no group with the given ID.
-	 * @throws CatalogMethodExistsException if the method already exists in the group.
-	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 */
-	void addCatalogMethod(GroupID groupID, CatalogMethod method, Instant modDate)
-			throws NoSuchGroupException, CatalogMethodExistsException, GroupsStorageException;
-	
-	/** Remove a catalog method from a group.
-	 * @param groupID the group ID.
-	 * @param method the method.
-	 * @param modDate the modification date to apply to the group.
-	 * @throws NoSuchGroupException if there is no group with the given ID.
-	 * @throws NoSuchCatalogEntryException if the group does not contain the method.
-	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 */
-	void removeCatalogMethod(GroupID groupID, CatalogMethod method, Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchCatalogEntryException;
+	void removeResource(
+			GroupID groupID,
+			ResourceType type,
+			ResourceDescriptor resource,
+			Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchResourceException;
 	
 	/** Store a new request. The request ID must not already be present in the system.
 	 * @param request the new request.

@@ -32,10 +32,6 @@ public enum ErrorType {
 	USER_IS_MEMBER			(40020, "User already group member"),
 	/** The resource is already included in the group. */
 	RESOURCE_IN_GROUP		(40030, "Resource already in group"),
-	/** The workspace is already a member of the group. */
-	WORKSPACE_IN_GROUP		(40040, "Workspace already in group"),
-	/** The catalog method is already a member of the group. */
-	CATALOG_METHOD_IN_GROUP	(40050, "Catalog method already in group"),
 	/** The requested group does not exist. */
 	NO_SUCH_GROUP			(50000, "No such group"),
 	/** The requested request does not exist. */
@@ -46,10 +42,6 @@ public enum ErrorType {
 	NO_SUCH_CUSTOM_FIELD	(50030, "No such custom field"),
 	/** The resource does not exist. */
 	NO_SUCH_RESOURCE		(50040, "No such resource"),
-	/** The workspace does not exist. */
-	NO_SUCH_WORKSPACE		(50050, "No such workspace"),
-	/** The catalog module or method does not exist. */
-	NO_SUCH_CATALOG_ENTRY	(50060, "No such catalog entry"),
 	/** The request is closed. */
 	REQUEST_CLOSED			(60000, "Request closed"),
 	/** The requested operation is not supported. */

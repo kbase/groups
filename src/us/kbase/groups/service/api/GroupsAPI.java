@@ -340,20 +340,21 @@ public class GroupsAPI {
 			ret.put(Fields.GROUP_RESOURCES, resources);
 			//TODO NNOW handle resources generically
 			//TODO NNOW replace with resource type
-			resources.put("catalogmethod", new TreeSet<>(g.getCatalogMethods()).stream()
-					.map(m -> ImmutableMap.of(Fields.GROUP_RESOURCE_ID, m.getFullMethod()))
-					.collect(Collectors.toList()));
-			final List<Map<String, Object>> wslist = new LinkedList<>();
-			//TODO NNOW replace with resource type
-			resources.put("workspace", wslist);
-			for (final ResourceDescriptor rd: sorted(g.getWorkspaceInformation())) {
-				final Map<String, Object> ws = new HashMap<>();
-				wslist.add(ws);
-				ws.putAll(g.getWorkspaceInformation().getFields(rd));
-				ws.put(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName());
-			}
+			resources.put("catalogmethod", getResourceList(g.getCatalogInformation()));
+			resources.put("workspace", getResourceList(g.getWorkspaceInformation()));
 		}
 		return ret;
+	}
+
+	private List<Map<String, Object>> getResourceList(final ResourceInformationSet resourceInfo) {
+		final List<Map<String, Object>> rlist = new LinkedList<>();
+		for (final ResourceDescriptor rd: sorted(resourceInfo)) {
+			final Map<String, Object> resource = new HashMap<>();
+			rlist.add(resource);
+			resource.putAll(resourceInfo.getFields(rd));
+			resource.put(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName());
+		}
+		return rlist;
 	}
 	
 	private Map<String, String> getCustomFields(final GroupView g) {
@@ -408,6 +409,7 @@ public class GroupsAPI {
 				IllegalParameterException, GroupsStorageException, RequestExistsException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceExistsException,
 				ResourceHandlerException {
+		//TODO NNOW generalize this method
 		return toGroupRequestJSON(groups.addWorkspace(
 				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID)));
 	}
@@ -423,6 +425,7 @@ public class GroupsAPI {
 				AuthenticationException, UnauthorizedException, MissingParameterException,
 				IllegalParameterException, GroupsStorageException, NoSuchResourceException,
 				IllegalResourceIDException, ResourceHandlerException {
+		//TODO NNOW generalize this method
 		groups.removeWorkspace(
 				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID));
 	}

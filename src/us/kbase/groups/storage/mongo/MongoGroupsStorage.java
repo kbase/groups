@@ -51,24 +51,26 @@ import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
+import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
+import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
@@ -119,8 +121,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
 		// find by owner
 		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
-		// find by wsid
-		groups.put(Arrays.asList(Fields.GROUP_WORKSPACES), null);
 		INDEXES.put(COL_GROUPS, groups);
 		
 		// requests indexes
@@ -386,6 +386,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public void createGroup(final Group group)
 			throws GroupExistsException, GroupsStorageException {
 		checkNotNull(group, "group");
+		final Map<String, List<Document>> resources = new HashMap<>();
 		final Document u = new Document(
 				Fields.GROUP_ID, group.getGroupID().getName())
 				.append(Fields.GROUP_NAME, group.getGroupName().getName())
@@ -393,18 +394,19 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_TYPE, group.getType().name())
-				.append(Fields.GROUP_WORKSPACES, group.getWorkspaceIDs().getIDs())
-				/* this might not be the best way to store them. Can still search by module
-				 * by using a regex, but if we need to add more fields in future it'll be a pain.
-				 * I'm guessing we won't, so YAGNI for now.
-				 * I might regret that decision.
-				 */
-				.append(Fields.GROUP_CATALOG_METHODS, group.getCatalogMethods().stream()
-						.map(m -> m.getFullMethod()).collect(Collectors.toList()))
+				.append(Fields.GROUP_RESOURCES, resources)
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
 				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null))
 				.append(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
+		for (final ResourceType t: group.getResourceTypes()) {
+			resources.put(t.getName(), group.getResources(t).stream()
+					.map(rd -> new Document(
+							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, rd.getAdministrativeID()
+									.getName())
+							.append(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName()))
+					.collect(Collectors.toList()));
+		}
 		try {
 			db.getCollection(COL_GROUPS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -570,10 +572,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 			addList(u -> b.withMember(new UserName(u)), grp, Fields.GROUP_MEMBERS, String.class);
 			addList(u -> b.withAdministrator(new UserName(u)), grp, Fields.GROUP_ADMINS,
 					String.class);
-			addList(w -> b.withWorkspace(new WorkspaceID(w)), grp, Fields.GROUP_WORKSPACES,
-					Integer.class);
-			addList(m -> b.withCatalogMethod(new CatalogMethod(m)), grp,
-					Fields.GROUP_CATALOG_METHODS, String.class);
+			@SuppressWarnings("unchecked")
+			final Map<String, List<Document>> resources =
+					(Map<String, List<Document>>) grp.get(Fields.GROUP_RESOURCES);
+			for (final String restype: resources.keySet()) {
+				final ResourceType t = new ResourceType(restype);
+				for (final Document rd: resources.get(restype)) {
+					b.withResource(t, new ResourceDescriptor(
+							new ResourceAdministrativeID(
+									rd.getString(Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID)),
+							new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))));
+				}
+			}
 			addCustomFields(b, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
@@ -744,71 +754,52 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public void addWorkspace(final GroupID groupID, final WorkspaceID wsid, final Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, WorkspaceExistsException {
-		checkNotNull(wsid, "wsid");
-		if (!alterListFieldInGroup(groupID, modDate, true, Fields.GROUP_WORKSPACES,
-				wsid.getID())) {
-			throw new WorkspaceExistsException(wsid.getID() + "");
+	public void addResource(
+			final GroupID groupID,
+			final ResourceType type,
+			final ResourceDescriptor resource,
+			final Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, ResourceExistsException {
+		if (!modifyResourceInGroup(groupID, type, resource, modDate, true)) {
+			throw new ResourceExistsException(String.format("%s %s",
+					type.getName(), resource.getResourceID().getName()));
 		}
 	}
 	
 	@Override
-	public void removeWorkspace(
+	public void removeResource(
 			final GroupID groupID,
-			final WorkspaceID wsid,
+			final ResourceType type,
+			final ResourceDescriptor resource,
 			final Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchWorkspaceException {
-		checkNotNull(wsid, "wsid");
-		if (!alterListFieldInGroup(groupID, modDate, false, Fields.GROUP_WORKSPACES,
-				wsid.getID())) {
-			throw new NoSuchWorkspaceException(String.format(
-					"Group %s does not include workspace %s", groupID.getName(), wsid.getID()));
-		}
-	}
-
-	@Override
-	public void addCatalogMethod(
-			final GroupID groupID,
-			final CatalogMethod method,
-			final Instant modDate)
-			throws NoSuchGroupException, CatalogMethodExistsException, GroupsStorageException {
-		checkNotNull(method, "method");
-		if (!alterListFieldInGroup(groupID, modDate, true, Fields.GROUP_CATALOG_METHODS,
-				method.getFullMethod())) {
-			throw new CatalogMethodExistsException(method.getFullMethod());
+			throws NoSuchGroupException, GroupsStorageException, NoSuchResourceException {
+		if (!modifyResourceInGroup(groupID, type, resource, modDate, false)) {
+			throw new NoSuchResourceException(String.format(
+					"Group %s does not include %s %s",
+					groupID.getName(), type.getName(), resource.getResourceID().getName()));
 		}
 	}
 	
-	@Override
-	public void removeCatalogMethod(
+	// returns true if modified, false otherwise.
+	private boolean modifyResourceInGroup(
 			final GroupID groupID,
-			final CatalogMethod method,
-			final Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchCatalogEntryException {
-		checkNotNull(method, "method");
-		if (!alterListFieldInGroup(groupID, modDate, false, Fields.GROUP_CATALOG_METHODS,
-				method.getFullMethod())) {
-			throw new NoSuchCatalogEntryException(String.format(
-					"Group %s does not include catalog method %s",
-					groupID.getName(), method.getFullMethod()));
-		}
-	}
-	
-	// true if modified, false otherwise.
-	private boolean alterListFieldInGroup(
-			final GroupID groupID,
+			final ResourceType type,
+			final ResourceDescriptor resource,
 			final Instant modDate,
-			final boolean add,
-			final String field,
-			final Object item)
+			final boolean add)
 			throws GroupsStorageException, NoSuchGroupException {
 		checkNotNull(groupID, "groupID");
+		checkNotNull(type, "type");
+		checkNotNull(resource, "resource");
 		checkNotNull(modDate, "modDate");
+		final String field = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + type.getName();
+		final Document resdoc = new Document(
+				Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, resource.getAdministrativeID().getName())
+				.append(Fields.GROUP_RESOURCE_ID, resource.getResourceID().getName());
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				.append(field, add ? new Document("$ne", item) : item);
+				.append(field, add ? new Document("$ne", resdoc) : resdoc);
 		final Document update = new Document(add ? "$addToSet" : "$pull",
-				new Document(field, item))
+				new Document(field, resdoc))
 				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
