@@ -20,21 +20,6 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class GroupView {
 
-	/** The type of the view.
-	 * @author gaprice@lbl.gov
-	 *
-	 */
-	public static enum ViewType {
-		/** A minimal view, consisting of the group ID, name, owner, and type. */
-		MINIMAL,
-		/** A view for a user that is not a member of the group. Includes all fields except
-		 * for the members list, which is empty.
-		 */
-		NON_MEMBER,
-		/** A full view for a member of the group. */
-		MEMBER;
-	}
-	
 	// group fields
 	private final GroupID groupID; // all views
 	private final GroupName groupName; // all views
@@ -52,13 +37,16 @@ public class GroupView {
 	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
 	
 	// not part of the view, just describes the view
-	private final ViewType viewType;
+	private final boolean standardView;
+	private final boolean isMember;
 	
 	private GroupView(
 			final Group group,
-			final ViewType viewType,
+			final boolean standardView,
+			final boolean isMember,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo) {
-		this.viewType = viewType;
+		this.standardView = standardView;
+		this.isMember = isMember;
 		this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 		
 		// group properties
@@ -67,7 +55,7 @@ public class GroupView {
 		this.owner = group.getOwner();
 		this.type = group.getType();
 		this.customFields = group.getCustomFields();
-		if (viewType.equals(ViewType.MINIMAL)) {
+		if (!standardView) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
 			creationDate = Optional.empty();
@@ -78,7 +66,7 @@ public class GroupView {
 			creationDate = Optional.of(group.getCreationDate());
 			modificationDate = Optional.of(group.getModificationDate());
 			description = group.getDescription();
-			if (viewType.equals(ViewType.NON_MEMBER)) {
+			if (!isMember) {
 				members = getEmptyImmutableSet();
 			} else {
 				members = group.getMembers();
@@ -91,10 +79,17 @@ public class GroupView {
 	}
 
 	/** Get the type of the view.
-	 * @return the view type.
+	 * @return true if the view is a standard view, false if the view is minimal.
 	 */
-	public ViewType getViewType() {
-		return viewType;
+	public boolean isStandardView() {
+		return standardView;
+	}
+	
+	/** Get whether the user is a member of the group.
+	 * @return true if the user is a member.
+	 */
+	public boolean isMember() {
+		return isMember;
 	}
 
 	/** Get the group ID.
@@ -125,14 +120,14 @@ public class GroupView {
 		return owner;
 	}
 
-	/** Get the members of the group. Empty for all views except {@link ViewType#MEMBER}.
+	/** Get the members of the group. Empty for minimal and non-member views.
 	 * @return the group members.
 	 */
 	public Set<UserName> getMembers() {
 		return members;
 	}
 
-	/** Get the administrators of the group. Empty for {@link ViewType#MINIMAL} views.
+	/** Get the administrators of the group. Empty for minimal views.
 	 * @return the group administrators.
 	 */
 	public Set<UserName> getAdministrators() {
@@ -146,16 +141,14 @@ public class GroupView {
 		return type;
 	}
 
-	/** Get the creation date of the group. {@link Optional#empty()} for {@link ViewType#MINIMAL}
-	 * views.
+	/** Get the creation date of the group. {@link Optional#empty()} for minimal views.
 	 * @return the creation date.
 	 */
 	public Optional<Instant> getCreationDate() {
 		return creationDate;
 	}
 
-	/** Get the modification date of the group. {@link Optional#empty()} for
-	 * {@link ViewType#MINIMAL} views.
+	/** Get the modification date of the group. {@link Optional#empty()} for minimal views.
 	 * @return the modification date.
 	 */
 	public Optional<Instant> getModificationDate() {
@@ -163,7 +156,7 @@ public class GroupView {
 	}
 
 	/** Get the optional description of the group. {@link Optional#empty()} if not provided
-	 * or the view is {@link ViewType#MINIMAL}.
+	 * or the view is minimal
 	 * @return the description.
 	 */
 	public Optional<String> getDescription() {
@@ -198,12 +191,13 @@ public class GroupView {
 		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + (isMember ? 1231 : 1237);
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
+		result = prime * result + (standardView ? 1231 : 1237);
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
-		result = prime * result + ((viewType == null) ? 0 : viewType.hashCode());
 		return result;
 	}
 
@@ -261,6 +255,9 @@ public class GroupView {
 		} else if (!groupName.equals(other.groupName)) {
 			return false;
 		}
+		if (isMember != other.isMember) {
+			return false;
+		}
 		if (members == null) {
 			if (other.members != null) {
 				return false;
@@ -289,10 +286,10 @@ public class GroupView {
 		} else if (!resourceInfo.equals(other.resourceInfo)) {
 			return false;
 		}
-		if (type != other.type) {
+		if (standardView != other.standardView) {
 			return false;
 		}
-		if (viewType != other.viewType) {
+		if (type != other.type) {
 			return false;
 		}
 		return true;
@@ -300,10 +297,14 @@ public class GroupView {
 	
 	/** Get a builder for a {@link GroupView}.
 	 * @param group the group for the view.
+	 * @param user the user for whom the view is being constructed. May be null. Any
+	 * {@link ResourceInformationSet}s added to the builder via
+	 * {@link Builder#withResource(ResourceType, ResourceInformationSet)} must have the same
+	 * user.
 	 * @return a new builder.
 	 */
-	public static Builder getBuilder(final Group group) {
-		return new Builder(group);
+	public static Builder getBuilder(final Group group, final UserName user) {
+		return new Builder(group, user);
 	}
 	
 	/** A builder for {@link GroupView}s.
@@ -312,24 +313,24 @@ public class GroupView {
 	 */
 	public static class Builder {
 		
-		//TODO CODE check all user names are the same?
-		
 		private final Group group;
-		private ViewType viewType = ViewType.MINIMAL;
+		private final Optional<UserName> user;
+		private boolean standardView = false;
 		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
 		
-		private Builder(final Group group) {
+		private Builder(final Group group, final UserName user) {
 			checkNotNull(group, "group");
 			this.group = group;
+			this.user = Optional.ofNullable(user);
 		}
 		
-		/** Change the type of the view. The default is {@link ViewType#MINIMAL}.
-		 * @param viewType the view type.
+		/** Set the type of the view - false for a minimal view (the default), true for a
+		 * standard view.
+		 * @param standardView the view type.
 		 * @return this builder.
 		 */
-		public Builder withViewType(final ViewType viewType) {
-			checkNotNull(viewType, "viewType");
-			this.viewType = viewType;
+		public Builder withStandardView(final boolean standardView) {
+			this.standardView = standardView;
 			return this;
 		}
 		
@@ -342,6 +343,9 @@ public class GroupView {
 		public Builder withResource(final ResourceType type, final ResourceInformationSet info) {
 			checkNotNull(type, "type");
 			checkNotNull(info, "info");
+			if (!info.getUser().equals(user)) {
+				throw new IllegalArgumentException("User in info does not match user in builder");
+			}
 			resourceInfo.put(type, info);
 			return this;
 		}
@@ -351,13 +355,11 @@ public class GroupView {
 		 * available in the group.
 		 * Calling this method will overwrite any previous information for the type.
 		 * @param type the type of the resource.
-		 * @param user the user to provide to {@link ResourceInformationSet#getBuilder(UserName)}.
-		 * May be null.
 		 * @return this builder.
 		 */
-		public Builder withResourceType(final ResourceType type, final UserName user) {
+		public Builder withResourceType(final ResourceType type) {
 			checkNotNull(type, "type");
-			resourceInfo.put(type, ResourceInformationSet.getBuilder(user).build());
+			resourceInfo.put(type, ResourceInformationSet.getBuilder(user.orElse(null)).build());
 			return this;
 		}
 		
@@ -365,7 +367,8 @@ public class GroupView {
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, viewType, resourceInfo);
+			return new GroupView(group, standardView, group.isMember(user.orElse(null)),
+					resourceInfo);
 		}
 		
 	}

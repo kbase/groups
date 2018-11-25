@@ -19,7 +19,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import us.kbase.common.exceptions.UnimplementedException;
-import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -272,10 +271,9 @@ public class Groups {
 	}
 
 	private GroupView.Builder startViewBuild(final Group g, final UserName user) {
-		final GroupView.Builder b = GroupView.getBuilder(g).withViewType(
-				g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
+		final GroupView.Builder b = GroupView.getBuilder(g, user).withStandardView(true);
 		for (final ResourceType type: resourceHandlers.keySet()) {
-			b.withResourceType(type, user);
+			b.withResourceType(type);
 		}
 		return b;
 	}
@@ -365,7 +363,7 @@ public class Groups {
 			throws GroupsStorageException {
 		checkNotNull(params, "params");
 		return storage.getGroups(params).stream()
-				.map(g -> GroupView.getBuilder(g).build())
+				.map(g -> GroupView.getBuilder(g, null).build())
 				.collect(Collectors.toList());
 	}
 	

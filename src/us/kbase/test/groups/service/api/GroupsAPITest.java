@@ -1,7 +1,5 @@
 package us.kbase.test.groups.service.api;
 
-import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
-import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
 import static us.kbase.test.groups.TestCommon.inst;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -194,8 +192,8 @@ public class GroupsAPITest {
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		when(g.getGroups(expected)).thenReturn(Arrays.asList(
-				GroupView.getBuilder(GROUP_MAX).build(),
-				GroupView.getBuilder(GROUP_MIN).build()));
+				GroupView.getBuilder(GROUP_MAX, null).build(),
+				GroupView.getBuilder(GROUP_MIN, null).build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
 				.getGroups("unused for now", excludeUpTo, order);
 		
@@ -240,7 +238,8 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(MEMBER).build());
+				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("u2"))
+						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, noInput, custom));
@@ -263,7 +262,8 @@ public class GroupsAPITest {
 						.build())
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(GroupView.getBuilder(GROUP_MIN).withViewType(MEMBER).build());
+				.thenReturn(GroupView.getBuilder(GROUP_MIN, new UserName("u"))
+						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup("toke", "gid",
 				new CreateOrUpdateGroupJSON(op("name"), op("Team"), op("my desc"),
@@ -559,7 +559,8 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(expected, new GroupID("id")))
-				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(MEMBER).build());
+				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("bar"))
+						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
@@ -571,7 +572,8 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(NON_MEMBER).build());
+				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("nonmember"))
+						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
@@ -591,11 +593,11 @@ public class GroupsAPITest {
 				new ResourceAdministrativeID("mod"), new ResourceID("mod.meth"));
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(GroupView.getBuilder(GROUP_MAX)
-						.withViewType(MEMBER)
-						.withResourceType(new ResourceType("foo"), new UserName("bar"))
+				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("whee"))
+						.withStandardView(true)
+						.withResourceType(new ResourceType("foo"))
 						.withResource(new ResourceType("workspace"),
-								ResourceInformationSet.getBuilder(new UserName("u"))
+								ResourceInformationSet.getBuilder(new UserName("whee"))
 										.withResourceField(d1, "name", "name82")
 										.withResourceField(d1, "public", true)
 										.withResourceField(d1, "narrname", "narrname")
@@ -606,7 +608,7 @@ public class GroupsAPITest {
 										.withResourceField(d2, "perm", "None")
 										.build())
 						.withResource(new ResourceType("catalogmethod"),
-								ResourceInformationSet.getBuilder(new UserName("u"))
+								ResourceInformationSet.getBuilder(new UserName("whee"))
 										.withResourceDescriptor(c1)
 										.build())
 						.build());

@@ -1,8 +1,5 @@
 package us.kbase.test.groups.core;
 
-import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
-import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -225,10 +222,10 @@ public class GroupsTest {
 		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.build())
-				.withViewType(MEMBER)
-				.withResourceType(new ResourceType("workspace"), new UserName("foo"))
-				.withResourceType(new ResourceType("catalogmethod"), new UserName("foo"))
+				.build(), new UserName("foo"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("workspace"))
+				.withResourceType(new ResourceType("catalogmethod"))
 				.build()));
 	}
 	
@@ -275,10 +272,10 @@ public class GroupsTest {
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
-				.build())
-				.withViewType(MEMBER)
-				.withResourceType(new ResourceType("workspace"), new UserName("foo"))
-				.withResourceType(new ResourceType("catalogmethod"), new UserName("foo"))
+				.build(), new UserName("foo"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("workspace"))
+				.withResourceType(new ResourceType("catalogmethod"))
 				.build()));
 	}
 	
@@ -539,10 +536,10 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build())
-				.withViewType(NON_MEMBER)
-				.withResourceType(new ResourceType("workspace"), null)
-				.withResourceType(new ResourceType("catalogmethod"), null)
+				.build(), null)
+				.withStandardView(true)
+				.withResourceType(new ResourceType("workspace"))
+				.withResourceType(new ResourceType("catalogmethod"))
 				.build()));
 	}
 	
@@ -580,9 +577,9 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
-				.build())
-				.withViewType(NON_MEMBER)
-				.withResourceType(new ResourceType("catalogmethod"), null)
+				.build(), null)
+				.withStandardView(true)
+				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(null)
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
@@ -629,9 +626,9 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withAdministrator(new UserName("whoo"))
-				.build())
-				.withViewType(NON_MEMBER)
-				.withResourceType(new ResourceType("catalogmethod"), new UserName("whee"))
+				.build(), new UserName("whee"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("whee"))
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
@@ -709,8 +706,8 @@ public class GroupsTest {
 				.withDescription("other desc")
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
-				.build())
-				.withViewType(MEMBER)
+				.build(), new UserName("baz"))
+				.withStandardView(true)
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("baz"))
 						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
@@ -879,7 +876,7 @@ public class GroupsTest {
 								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
 								new CreateAndModTimes(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-								.build())
+								.build(), null)
 								.build(),
 						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
@@ -887,7 +884,7 @@ public class GroupsTest {
 								.withDescription("desc")
 								.withType(GroupType.PROJECT)
 								.withAdministrator(new UserName("whoo"))
-								.build())
+								.build(), null)
 								.build())
 						));
 	}
