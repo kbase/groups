@@ -48,7 +48,6 @@ import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -56,19 +55,16 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.notifications.Notifications;
@@ -82,6 +78,7 @@ import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
@@ -102,11 +99,11 @@ public class GroupsTest {
 		}
 	}
 	
-	private static ResourceInformationSet wsis() {
-		return wsis(null);
+	private static ResourceInformationSet rsis() {
+		return rsis(null);
 	}
 
-	private static ResourceInformationSet wsis(final UserName user) {
+	private static ResourceInformationSet rsis(final UserName user) {
 		return ResourceInformationSet.getBuilder(user).build();
 	}
 
@@ -222,7 +219,9 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build(),
-				wsis(new UserName("foo")), MEMBER)));
+				rsis(new UserName("foo")),
+				rsis(new UserName("foo")),
+				MEMBER)));
 	}
 	
 	@Test
@@ -269,7 +268,9 @@ public class GroupsTest {
 				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build(),
-				wsis(new UserName("foo")), MEMBER)));
+				rsis(new UserName("foo")),
+				rsis(new UserName("foo")),
+				MEMBER)));
 	}
 	
 	@Test
@@ -511,8 +512,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getGroupNoToken() throws Exception {
-		// can get public ws
+	public void getGroupNoTokenNoResources() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -521,16 +521,63 @@ public class GroupsTest {
 				.withDescription("desc")
 				.withType(GroupType.TEAM)
 				.withMember(new UserName("baz"))
-				.withWorkspace(new WorkspaceID(92))
-				.withWorkspace(new WorkspaceID(86))
+				.build());
+
+		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("desc")
+				.withType(GroupType.TEAM)
+				.build(),
+				rsis(),
+				rsis(),
+				NON_MEMBER)));
+	}
+	
+	@Test
+	public void getGroupNoToken() throws Exception {
+		// can get public resources
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withDescription("desc")
+				.withType(GroupType.TEAM)
+				.withMember(new UserName("baz"))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod1"),
+								new ResourceID("mod1.meth1")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 				.build());
 
 		when(mocks.wsHandler.getResourceInformation(
 				null, set(new ResourceID("92"), new ResourceID("86")), true))
 				.thenReturn(ResourceInformationSet.getBuilder(null)
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(92), "public", true)
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"public", true)
 						.build());
+		
+		when(mocks.catHandler.getResourceInformation(
+				null, set(new ResourceID("mod1.meth1"), new ResourceID("mod2.meth2")), true))
+				.thenReturn(ResourceInformationSet.getBuilder(null)
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
+						.build());
+		
 		
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
@@ -541,15 +588,22 @@ public class GroupsTest {
 				.withType(GroupType.TEAM)
 				.build(),
 				ResourceInformationSet.getBuilder(null)
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(92), "public", true)
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"public", true)
+						.build(),
+				ResourceInformationSet.getBuilder(null)
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 						.build(),
 				NON_MEMBER)));
 	}
 	
 	@Test
 	public void getGroupNonMemberToken() throws Exception {
-		// can get public and admin'd ws
+		// can get public and admin'd resources
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -557,9 +611,20 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withMember(new UserName("baz"))
 				.withAdministrator(new UserName("whoo"))
-				.withWorkspace(new WorkspaceID(92))
-				.withWorkspace(new WorkspaceID(57))
-				.withWorkspace(new WorkspaceID(86))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod1"),
+								new ResourceID("mod1.meth1")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 
@@ -567,8 +632,18 @@ public class GroupsTest {
 				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
 						new ResourceID("86")), true))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(57), "name", "my ws2")
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
+								"name", "my ws2")
+						.build());
+		when(mocks.catHandler.getResourceInformation(
+				new UserName("whee"), set(new ResourceID("mod1.meth1"),
+						new ResourceID("mod2.meth2")), true))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
@@ -579,16 +654,23 @@ public class GroupsTest {
 				.withAdministrator(new UserName("whoo"))
 				.build(),
 				ResourceInformationSet.getBuilder(new UserName("whee"))
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(57), "name", "my ws2")
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
+								"name", "my ws2")
+						.build(),
+				ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 						.build(),
 				NON_MEMBER)));
 	}
 	
 	@Test
-	public void getGroupMemberTokenWithNonexistentWorkspaces() throws Exception {
-		// tests non existent workspace code
-		// can get all ws
+	public void getGroupMemberTokenWithNonexistentResources() throws Exception {
+		// tests non existent resource code
+		// can get all resources
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -597,29 +679,54 @@ public class GroupsTest {
 				.withDescription("other desc")
 				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
-				.withWorkspace(new WorkspaceID(92))
-				.withWorkspace(new WorkspaceID(6))
-				.withWorkspace(new WorkspaceID(57))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("6")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod1"),
+								new ResourceID("mod1.meth1")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
 						new ResourceID("57")), false))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(6), "name", "my other ws")
-						.withResourceField(getWSRD(57), "name", "my ws2")
-						.withNonexistentResource(getWSRD(34))
-						.withNonexistentResource(getWSRD(86)) // will throw error, should ignore
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("6")),
+								"name", "my other ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
+								"name", "my ws2")
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("34")))
+						// will throw error, should ignore
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("86")))
+						.build());
+		when(mocks.catHandler.getResourceInformation(
+				new UserName("baz"), set(new ResourceID("mod1.meth1"),
+						new ResourceID("mod2.meth2")), false))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 						.build());
 		when(mocks.clock.instant()).thenReturn(inst(5600));
-		doThrow(new NoSuchWorkspaceException("86")).when(mocks.storage)
-				.removeWorkspace(new GroupID("bar"), new WorkspaceID(86), inst(5600));
+		doThrow(new NoSuchResourceException("86")).when(mocks.storage)
+				.removeResource(new GroupID("bar"), new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")), inst(5600));
 		
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("bar"), new WorkspaceID(34), inst(5600));
+		verify(mocks.storage).removeResource(new GroupID("bar"), new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("34")), inst(5600));
 		
 		assertThat("incorrect group", g, is(new GroupView(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
@@ -629,12 +736,20 @@ public class GroupsTest {
 				.withMember(new UserName("baz"))
 				.build(),
 				ResourceInformationSet.getBuilder(new UserName("baz"))
-						.withResourceField(getWSRD(92), "name", "my ws")
-						.withResourceField(getWSRD(6), "name", "my other ws")
-						.withResourceField(getWSRD(57), "name", "my ws2")
+						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
+								"name", "my ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("6")),
+								"name", "my other ws")
+						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
+								"name", "my ws2")
 						//TODO NNOW remove nonexistant resources from view
-						.withNonexistentResource(getWSRD(34))
-						.withNonexistentResource(getWSRD(86))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("34")))
+						.withNonexistentResource(new ResourceDescriptor(new ResourceID("86")))
+						.build(),
+				ResourceInformationSet.getBuilder(new UserName("baz"))
+						.withResourceDescriptor(new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 						.build(),
 				MEMBER)));
 	}
@@ -673,11 +788,12 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("baz"))
-				.withWorkspace(new WorkspaceID(92)) // no way to realistically trigger this for now
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("not a ws id")))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
-				new UserName("baz"), set(new ResourceID("92")), false))
+				new UserName("baz"), set(new ResourceID("not a ws id")), false))
 				.thenThrow(new IllegalResourceIDException("oh heck"));
 		
 		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"), new RuntimeException(
@@ -769,7 +885,9 @@ public class GroupsTest {
 								new CreateAndModTimes(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 								.build(),
-								wsis(), MINIMAL),
+								rsis(),
+								rsis(),
+								MINIMAL),
 						new GroupView(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -777,7 +895,9 @@ public class GroupsTest {
 								.withType(GroupType.PROJECT)
 								.withAdministrator(new UserName("whoo"))
 								.build(),
-								wsis(), MINIMAL)
+								rsis(),
+								rsis(),
+								MINIMAL)
 						)));
 	}
 
@@ -2597,7 +2717,11 @@ public class GroupsTest {
 						new UserName("a3")),
 				b -> b.withRequestAddWorkspace(new WorkspaceID(56)));
 
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(12000));
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("56")),
+				inst(12000));
 	}
 	
 	@Test
@@ -2613,7 +2737,11 @@ public class GroupsTest {
 						new UserName("a3")),
 				b -> b.withInviteWorkspace(new WorkspaceID(44)));
 
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(44), inst(12000));
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("44")),
+				inst(12000));
 	}
 	
 	@Test
@@ -2627,12 +2755,16 @@ public class GroupsTest {
 						new UserName("a3")),
 				b -> b.withRequestAddCatalogMethod(new CatalogMethod("mod.n")));
 
-		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.n"),
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("catalogmethod"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("mod"), new ResourceID("mod.n")),
 				inst(12000));
 	}
 	
 	@Test
-	public void acceptRequestWSAdminForInviteMethod() throws Exception {
+	public void acceptRequestCatalogAdminForInviteMethod() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.catHandler.isAdministrator(new ResourceID("mod.n"), new UserName("catadmin")))
@@ -2644,7 +2776,11 @@ public class GroupsTest {
 						new UserName("a3")),
 				b -> b.withInviteCatalogMethod(new CatalogMethod("mod.n")));
 
-		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.n"),
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("catalogmethod"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("mod"), new ResourceID("mod.n")),
 				inst(12000));
 	}
 
@@ -2940,7 +3076,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void acceptRequestFailNoSuchGroupOnAddWorkspace() throws Exception {
+	public void acceptRequestFailNoSuchGroupOnAddResource() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -2964,7 +3100,11 @@ public class GroupsTest {
 				set(new UserName("u1"), new UserName("u2")));
 		when(mocks.clock.instant()).thenReturn(inst(4400));
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
-				.addWorkspace(new GroupID("gid"), new WorkspaceID(56), inst(4400));
+				.addResource(
+						new GroupID("gid"),
+						new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("56")),
+						inst(4400));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new RuntimeException(
@@ -3085,38 +3225,6 @@ public class GroupsTest {
 				new RuntimeException(String.format(
 						"Illegal value stored in request %s: 30030 Illegal resource ID: foo",
 						id.toString())));
-	}
-	
-	@Test
-	public void acceptRequestFailNoSuchGroupOnAddMethod() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withRequestAddCatalogMethod(new CatalogMethod("md.n"))
-						.build());
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
-				.build());
-		when(mocks.catHandler.getAdministrators(new ResourceID("md.n"))).thenReturn(
-				set(new UserName("u3"), new UserName("u4")));
-		when(mocks.clock.instant()).thenReturn(inst(4400));
-		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
-				.addCatalogMethod(new GroupID("gid"), new CatalogMethod("md.n"), inst(4400));
-		
-		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
-				new RuntimeException(
-						"Group gid unexpectedly doesn't exist: 50000 No such group: gid"));
 	}
 	
 	private void failAcceptRequest(
@@ -3439,7 +3547,11 @@ public class GroupsTest {
 		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
 				new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
-		verify(mocks.storage).addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(3400));
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("34")),
+				inst(3400));
 		
 		assertThat("incorrect request", ret, is(Optional.empty()));
 	}
@@ -3585,7 +3697,6 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withCatalogMethod(new CatalogMethod("m.n"))
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
@@ -3647,7 +3758,8 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withWorkspace(new WorkspaceID(34))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("34")))
 				.withAdministrator(new UserName("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
@@ -3673,8 +3785,12 @@ public class GroupsTest {
 				set(new UserName("admin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
-		doThrow(new WorkspaceExistsException("34")).when(mocks.storage)
-				.addWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
+		doThrow(new ResourceExistsException("34")).when(mocks.storage)
+				.addResource(
+						new GroupID("gid"),
+						new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("34")),
+						inst(7000));
 		
 		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
 				new ResourceExistsException("34"));
@@ -3713,7 +3829,11 @@ public class GroupsTest {
 		
 		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7100));
+		verify(mocks.storage).removeResource(
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("34")),
+				inst(7100));
 	}
 	
 	@Test
@@ -3735,7 +3855,11 @@ public class GroupsTest {
 		
 		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
 		
-		verify(mocks.storage).removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7500));
+		verify(mocks.storage).removeResource(
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("34")),
+				inst(7500));
 	}
 	
 	@Test
@@ -3827,8 +3951,12 @@ public class GroupsTest {
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
-		doThrow(new NoSuchWorkspaceException("34 not in group")).when(mocks.storage)
-				.removeWorkspace(new GroupID("gid"), new WorkspaceID(34), inst(7000));
+		doThrow(new NoSuchResourceException("34 not in group")).when(mocks.storage)
+				.removeResource(
+						new GroupID("gid"),
+						new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("34")),
+						inst(7000));
 		
 		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
 				new NoSuchResourceException("34 not in group"));
@@ -4043,7 +4171,11 @@ public class GroupsTest {
 		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
 				new Token("t"), new GroupID("gid"), new ResourceID("mod.meth"));
 		
-		verify(mocks.storage).addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.meth"),
+		verify(mocks.storage).addResource(
+				new GroupID("gid"),
+				new ResourceType("catalogmethod"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("mod"), new ResourceID("mod.meth")),
 				inst(3400));
 		
 		assertThat("incorrect request", ret, is(Optional.empty()));
@@ -4240,7 +4372,8 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withCatalogMethod(new CatalogMethod("m.n"))
+				.withResource(new ResourceType("catalogmethod"), new ResourceDescriptor(
+						new ResourceAdministrativeID("m"), new ResourceID("m.n")))
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
@@ -4261,7 +4394,8 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withCatalogMethod(new CatalogMethod("m.n"))
+				.withResource(new ResourceType("catalogmethod"), new ResourceDescriptor(
+						new ResourceAdministrativeID("m"), new ResourceID("m.n")))
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
@@ -4290,8 +4424,13 @@ public class GroupsTest {
 				set(new UserName("admin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 
-		doThrow(new CatalogMethodExistsException("mod.m")).when(mocks.storage)
-				.addCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.m"), inst(7000));
+		doThrow(new ResourceExistsException("mod.m")).when(mocks.storage)
+				.addResource(
+						new GroupID("gid"),
+						new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod"), new ResourceID("mod.m")),
+						inst(7000));
 		
 		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
 				new ResourceID("mod.m"), new ResourceExistsException("mod.m"));
@@ -4332,8 +4471,12 @@ public class GroupsTest {
 		mocks.groups.removeCatalogMethod(
 				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
-		verify(mocks.storage).removeCatalogMethod(
-				new GroupID("gid"), new CatalogMethod("m.n"), inst(7100));
+		verify(mocks.storage).removeResource(
+				new GroupID("gid"),
+				new ResourceType("catalogmethod"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("m"), new ResourceID("m.n")),
+				inst(7100));
 	}
 	
 	@Test
@@ -4357,8 +4500,12 @@ public class GroupsTest {
 		mocks.groups.removeCatalogMethod(
 				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
 		
-		verify(mocks.storage).removeCatalogMethod(
-				new GroupID("gid"), new CatalogMethod("m.n"), inst(7500));
+		verify(mocks.storage).removeResource(
+				new GroupID("gid"),
+				new ResourceType("catalogmethod"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("m"), new ResourceID("m.n")),
+				inst(7500));
 	}
 	
 	@Test
@@ -4454,8 +4601,12 @@ public class GroupsTest {
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7000));
 		
-		doThrow(new NoSuchCatalogEntryException("mod not in group")).when(mocks.storage)
-				.removeCatalogMethod(new GroupID("gid"), new CatalogMethod("mod.meth"),
+		doThrow(new NoSuchResourceException("mod not in group")).when(mocks.storage)
+				.removeResource(
+						new GroupID("gid"),
+						new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod"), new ResourceID("mod.meth")),
 						inst(7000));
 		
 		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),

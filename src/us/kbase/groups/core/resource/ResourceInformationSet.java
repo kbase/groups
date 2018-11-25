@@ -21,6 +21,7 @@ public class ResourceInformationSet {
 	
 	private final Optional<UserName> user;
 	// might need to think about sorting here. YAGNI for now.
+	//TODO NNOW consider just resourceID. Is RD necessary?
 	private final Map<ResourceDescriptor, Map<String, Object>> resources;
 	private final Set<ResourceDescriptor> nonexistent;
 	

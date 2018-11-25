@@ -96,8 +96,6 @@ public class GroupsAPITest {
 					.withMember(new UserName("bar"))
 					.withAdministrator(new UserName("whee"))
 					.withAdministrator(new UserName("whoo"))
-					.withCatalogMethod(new CatalogMethod("m.n"))
-					.withCatalogMethod(new CatalogMethod("x.y"))
 					.withType(GroupType.PROJECT)
 					.withCustomField(new NumberedCustomField("field-1"), "my val")
 					.withCustomField(new NumberedCustomField("otherfield"), "fieldval")
@@ -146,10 +144,7 @@ public class GroupsAPITest {
 			.with("admins", Arrays.asList("whee", "whoo"))
 			.with("resources", ImmutableMap.of(
 					"workspace", Collections.emptyList(),
-					"catalogmethod", Arrays.asList(
-							ImmutableMap.of("rid", "m.n"),
-							ImmutableMap.of("rid", "x.y"))))
-
+					"catalogmethod", Collections.emptyList()))
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -166,9 +161,7 @@ public class GroupsAPITest {
 			.with("admins", Arrays.asList("whee", "whoo"))
 			.with("resources", ImmutableMap.of(
 					"workspace", Collections.emptyList(),
-					"catalogmethod", Arrays.asList(
-							ImmutableMap.of("rid", "m.n"),
-							ImmutableMap.of("rid", "x.y"))))
+					"catalogmethod", Collections.emptyList()))
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -211,8 +204,8 @@ public class GroupsAPITest {
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		when(g.getGroups(expected)).thenReturn(Arrays.asList(
-				new GroupView(GROUP_MAX, rsis(), MINIMAL),
-				new GroupView(GROUP_MIN, rsis(), MINIMAL)));
+				new GroupView(GROUP_MAX, rsis(), rsis(), MINIMAL),
+				new GroupView(GROUP_MIN, rsis(), rsis(), MINIMAL)));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
 				.getGroups("unused for now", excludeUpTo, order);
 		
@@ -257,7 +250,7 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, noInput, custom));
@@ -280,7 +273,7 @@ public class GroupsAPITest {
 						.build())
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(new GroupView(GROUP_MIN, rsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MIN, rsis(), rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup("toke", "gid",
 				new CreateOrUpdateGroupJSON(op("name"), op("Team"), op("my desc"),
@@ -576,7 +569,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(expected, new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
@@ -588,7 +581,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), NON_MEMBER));
+				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), NON_MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
@@ -596,7 +589,7 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void getGroupWithWorkspaces() throws Exception {
+	public void getGroupWithResources() throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		final ResourceDescriptor d1 = new ResourceDescriptor(
@@ -604,9 +597,11 @@ public class GroupsAPITest {
 		final ResourceDescriptor d2 = new ResourceDescriptor(
 				new ResourceAdministrativeID("45"), new ResourceID("45"));
 		
+		final ResourceDescriptor c1 = new ResourceDescriptor(
+				new ResourceAdministrativeID("mod"), new ResourceID("mod.meth"));
+		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
 				.thenReturn(new GroupView(GROUP_MAX,
-						//TODO NNOW remove non-existant
 						ResourceInformationSet.getBuilder(new UserName("u"))
 								.withResourceField(d1, "name", "name82")
 								.withResourceField(d1, "public", true)
@@ -617,16 +612,16 @@ public class GroupsAPITest {
 								.withResourceField(d2, "narrname", null)
 								.withResourceField(d2, "perm", "None")
 								.build(),
-								MEMBER));
+						ResourceInformationSet.getBuilder(new UserName("u"))
+								.withResourceDescriptor(c1)
+								.build(),
+						MEMBER));
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		final Map<String, Object> expected = new HashMap<>();
 		expected.putAll(GROUP_MAX_JSON_STD);
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> resources =
-				(Map<String, Object>) GROUP_MAX_JSON_STD.get("resources");
 		expected.put("resources", ImmutableMap.of(
-				"catalogmethod", resources.get("catalogmethod"),
+				"catalogmethod", Arrays.asList(ImmutableMap.of("rid", "mod.meth")),
 				"workspace", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("rid", "45")

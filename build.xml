@@ -299,6 +299,7 @@
         <test name="us.kbase.test.groups.core.request.RequestTypeTest"/>
         <test name="us.kbase.test.groups.core.resource.ResourceIDTest"/>
         <test name="us.kbase.test.groups.core.resource.ResourceInformationSetTest"/>
+        <test name="us.kbase.test.groups.core.resource.ResourceTypeTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
         <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>

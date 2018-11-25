@@ -2,6 +2,9 @@ package us.kbase.groups.core.resource;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
+
 /** The resource ID and corresponding administrative ID for a resource.
  * @author gaprice@lbl.gov
  *
@@ -21,6 +24,20 @@ public class ResourceDescriptor {
 		checkNotNull(administrativeID, "administrativeID");
 		checkNotNull(resourceID, "resourceID");
 		this.administrativeID = administrativeID;
+		this.resourceID = resourceID;
+	}
+	
+	/** Create a descriptor with identical administrative and resource IDs.
+	 * @param resourceID the resource ID. The administrative ID for this resource is identical.
+	 */
+	public ResourceDescriptor(final ResourceID resourceID) {
+		checkNotNull(resourceID, "resourceID");
+		try {
+			this.administrativeID = new ResourceAdministrativeID(resourceID.getName());
+		} catch (MissingParameterException | IllegalParameterException e) {
+			// since resID and resadminID have the same requirements
+			throw new RuntimeException("This should be impossible", e);
+		}
 		this.resourceID = resourceID;
 	}
 

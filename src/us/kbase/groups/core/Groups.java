@@ -21,26 +21,22 @@ import us.kbase.groups.core.GroupView.ViewType;
 import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.AuthenticationException;
-import us.kbase.groups.core.exceptions.CatalogMethodExistsException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
-import us.kbase.groups.core.exceptions.NoSuchCatalogEntryException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
-import us.kbase.groups.core.exceptions.NoSuchWorkspaceException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
-import us.kbase.groups.core.exceptions.WorkspaceExistsException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -56,6 +52,7 @@ import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
@@ -179,6 +176,7 @@ public class Groups {
 			return new GroupView(
 					storage.getGroup(createParams.getGroupID()),
 					ResourceInformationSet.getBuilder(owner).build(),
+					ResourceInformationSet.getBuilder(owner).build(),
 					ViewType.MEMBER);
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
@@ -257,22 +255,42 @@ public class Groups {
 		} else {
 			user = null;
 		}
-		final ResourceInformationSet ris;
+		// TODO NNOW handle this generically
+		// TODO NNOW don't include resource descriptor in RIS. Look up from group if needed.
+		final ResourceInformationSet wis;
+		final ResourceInformationSet cis;
 		try {
-			ris = wsHandler.getResourceInformation(
-					user, toResIDs(g.getWorkspaceIDs()), !g.isMember(user));
+			if (g.getResourceTypes().contains(RTWS)) {
+				wis = wsHandler.getResourceInformation(
+						user,
+						g.getResources(RTWS).stream().map(r -> r.getResourceID())
+								.collect(Collectors.toSet()),
+						!g.isMember(user));
+			} else {
+				wis = ResourceInformationSet.getBuilder(user).build();
+			}
+			if (g.getResourceTypes().contains(RTCAT)) {
+				cis = catHandler.getResourceInformation(
+						user,
+						g.getResources(RTCAT).stream().map(r -> r.getResourceID())
+								.collect(Collectors.toSet()),
+						!g.isMember(user));
+			} else {
+				cis = ResourceInformationSet.getBuilder(user).build();
+			}
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal data associated with group %s: %s",
 					g.getGroupID().getName(), e.getMessage()), e);
 		}
-		for (final ResourceDescriptor wsid: ris.getNonexistentResources()) {
+		for (final ResourceDescriptor wsid: wis.getNonexistentResources()) {
 			try {
-				storage.removeWorkspace(g.getGroupID(), toWSID(wsid), clock.instant());
-			} catch (NoSuchWorkspaceException e) {
+				storage.removeResource(g.getGroupID(), RTWS, wsid, clock.instant());
+			} catch (NoSuchResourceException e) {
 				// do nothing, if the workspace isn't there fine.
 			}
 		}
-		return new GroupView(g, ris, g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
+		return new GroupView(g, wis, cis,
+				g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
 	// TODO NNOW remove
@@ -285,24 +303,21 @@ public class Groups {
 	}
 
 	//TODO NNOW remove
-	private Set<ResourceID> toResIDs(final WorkspaceIDSet workspaceIDs) {
-		return workspaceIDs.getIDs().stream().map(i -> toResID(i)).collect(Collectors.toSet());
-	}
-
-	//TODO NNOW remove
-	private ResourceID toResID(final WorkspaceID id) {
-		return toResID(id.getID());
-	}
-	
-	//TODO NNOW remove
-	private ResourceID toResID(final int id) {
-		final ResourceID r;
+	private ResourceID toResID(final CatalogMethod m) {
 		try {
-			r = new ResourceID(id + "");
+			return new ResourceID(m.getFullMethod());
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("Impossible", e);
 		}
-		return r;
+	}
+	
+	//TODO NNOW remove
+	private ResourceID toResID(final WorkspaceID id) {
+		try {
+			return new ResourceID(id.getID() + "");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("Impossible", e);
+		}
 	}
 
 	/** Check if a group exists based on the group ID.
@@ -327,7 +342,10 @@ public class Groups {
 		checkNotNull(params, "params");
 		return storage.getGroups(params).stream()
 				.map(g -> new GroupView(
-						g, ResourceInformationSet.getBuilder(null).build(), ViewType.MINIMAL))
+						g,
+						ResourceInformationSet.getBuilder(null).build(),
+						ResourceInformationSet.getBuilder(null).build(),
+						ViewType.MINIMAL))
 				.collect(Collectors.toList());
 	}
 	
@@ -573,30 +591,6 @@ public class Groups {
 		}
 	}
 	
-	private void addWorkspaceToKnownGoodGroup(final GroupID groupID, final WorkspaceID wsid)
-			throws GroupsStorageException, ResourceExistsException {
-		try {
-			storage.addWorkspace(groupID, wsid, clock.instant());
-		} catch (NoSuchGroupException e) {
-			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
-					groupID.getName(), e.getMessage()), e);
-		} catch (WorkspaceExistsException e) {
-			throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
-		}
-	}
-	
-	private void addMethodToKnownGoodGroup(final GroupID groupID, final CatalogMethod method)
-			throws GroupsStorageException, ResourceExistsException {
-		try {
-			storage.addCatalogMethod(groupID, method, clock.instant());
-		} catch (NoSuchGroupException e) {
-			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
-					groupID.getName(), e.getMessage()), e);
-		} catch (CatalogMethodExistsException e) {
-			throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
-		}
-	}
-	
 	/** Cancel a request.
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request to cancel.
@@ -718,14 +712,12 @@ public class Groups {
 				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
 			// do this first in case the ws has been deleted
-			toNotify = getAdmins(wsHandler, toResID(wsid), request);
-			addWorkspaceToKnownGoodGroup(groupID, wsid);
+			toNotify = addResourceAndGetAdmins(wsHandler, RTWS, groupID, request, toResDesc(wsid));
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD) ||
 				request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
 			final CatalogMethod m = request.getCatalogMethodTarget().get();
 			// do this first in case the catalog ever allows module deletion
-			toNotify = getAdmins(catHandler, toResourceID(m), request);
-			addMethodToKnownGoodGroup(groupID, m);
+			toNotify = addResourceAndGetAdmins(catHandler, RTCAT, groupID, request, toResDesc(m));
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
@@ -733,26 +725,48 @@ public class Groups {
 		return new HashSet<>(toNotify);
 	}
 
-	private Collection<UserName> getAdmins(
-			final ResourceHandler handler,
-			final ResourceID resource, //TODO NNOW get from request
-			final GroupRequest request)
-			throws NoSuchResourceException, ResourceHandlerException {
+	//TODO NNOW remove
+	private ResourceDescriptor toResDesc(final CatalogMethod m) {
 		try {
-			return handler.getAdministrators(resource);
-		} catch (IllegalResourceIDException e) {
-			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
-					request.getID().getID(), e.getMessage()), e);
+			return new ResourceDescriptor(new ResourceAdministrativeID(m.getModule().getName()),
+					new ResourceID(m.getFullMethod()));
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
 		}
 	}
 
 	//TODO NNOW remove
-	private ResourceID toResourceID(final CatalogMethod m) {
+	private ResourceDescriptor toResDesc(final WorkspaceID wsid) {
 		try {
-			return new ResourceID(m.getFullMethod());
+			return new ResourceDescriptor(new ResourceID(wsid.getID() + ""));
 		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new RuntimeException("Impossible", e);
+			throw new RuntimeException("This should be impossible", e);
 		}
+	}
+
+	private Collection<UserName> addResourceAndGetAdmins(
+			final ResourceHandler handler, //TODO NNOW get handler from type
+			final ResourceType type,
+			final GroupID groupID,
+			final GroupRequest request,
+			final ResourceDescriptor resID) //TODO NNOW get from request
+			throws ResourceHandlerException, NoSuchResourceException, GroupsStorageException,
+				ResourceExistsException {
+		final Collection<UserName> toNotify;
+		try {
+			// do this before adding to group in case the resource has been deleted
+			toNotify = handler.getAdministrators(resID.getResourceID());
+		} catch (IllegalResourceIDException e) {
+			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
+					request.getID().getID().toString(), e.getMessage()), e);
+		}
+		try {
+			storage.addResource(groupID, type, resID, clock.instant());
+		} catch (NoSuchGroupException e) {
+			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
+					groupID.getName(), e.getMessage()), e);
+		}
+		return toNotify;
 	}
 	
 	private void ensureIsOpen(final GroupRequest request) throws ClosedRequestException {
@@ -779,7 +793,7 @@ public class Groups {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD) &&
 				isAdministrator(catHandler, user, request,
-						toResourceID(request.getCatalogMethodTarget().get()))) {
+						toResID(request.getCatalogMethodTarget().get()))) {
 			return;
 		} else {
 			throw new UnauthorizedException(String.format("User %s may not %s request %s",
@@ -901,6 +915,18 @@ public class Groups {
 		// notify? I'm thinking not
 	}
 	
+	//TODO NNOW remove
+	private static final ResourceType RTWS;
+	private static final ResourceType RTCAT;
+	static {
+		try {
+			RTWS = new ResourceType("workspace");
+			RTCAT = new ResourceType("catalogmethod");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("impossible", e);
+		}
+	}
+	
 	/** Add a workspace to a group. The workspace is added immediately if the user is an
 	 * administrator of both the group and the workspace. Otherwise, a {@link GroupRequest} is
 	 * added to the system and returned.
@@ -929,6 +955,7 @@ public class Groups {
 				GroupsStorageException, UnauthorizedException, RequestExistsException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException,
 				ResourceExistsException {
+		//TODO NNOW make general
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		checkNotNull(resource, "resource");
@@ -936,16 +963,12 @@ public class Groups {
 		final Group g = storage.getGroup(groupID);
 		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
 		final WorkspaceID wsid = toWSID(d); // TODO NNOW remove
-		if (g.getWorkspaceIDs().contains(wsid)) {
+		if (g.containsResource(RTWS, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}
 		final Set<UserName> wsadmins = wsHandler.getAdministrators(resource);
 		if (g.isAdministrator(user) && wsadmins.contains(user)) {
-			try {
-				storage.addWorkspace(groupID, wsid, clock.instant());
-			} catch (WorkspaceExistsException e) { // TODO NNOW remove
-				throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
-			}
+			storage.addResource(groupID, RTWS, d, clock.instant());
 			//TODO NNOW notify
 			return Optional.empty();
 		}
@@ -983,6 +1006,7 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, NoSuchResourceException,
 				IllegalResourceIDException, ResourceHandlerException {
+		//TODO NNOW make general
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		checkNotNull(resource, "resource");
@@ -991,12 +1015,7 @@ public class Groups {
 		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
 		// should check if ws not in group & fail early?
 		if (group.isAdministrator(user) || wsHandler.isAdministrator(resource, user)) {
-			try {
-				final WorkspaceID wsid = toWSID(d); //TODO NNOW remove
-				storage.removeWorkspace(groupID, wsid, clock.instant());
-			} catch (NoSuchWorkspaceException e) { // TODO NNOW remove
-				throw new NoSuchResourceException(e.getMessage().split(":", 2)[1].trim(), e);
-			}
+			storage.removeResource(groupID, RTWS, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
 					"User %s is not an admin for group %s or resource %s",
@@ -1086,16 +1105,12 @@ public class Groups {
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("impossible", e);
 		}
-		if (g.getCatalogMethods().contains(m)) {
+		if (g.containsResource(RTCAT, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}
 		final Set<UserName> modowners = catHandler.getAdministrators(resource);
 		if (g.isAdministrator(user) && modowners.contains(user)) {
-			try {
-				storage.addCatalogMethod(groupID, m, clock.instant());
-			} catch (CatalogMethodExistsException e) { // TODO NNOW remove
-				throw new ResourceExistsException(e.getMessage().split(":", 2)[1].trim(), e);
-			}
+			storage.addResource(groupID, RTCAT, d, clock.instant());
 			//TODO NNOW notify
 			return Optional.empty();
 		}
@@ -1141,15 +1156,7 @@ public class Groups {
 		// should check if method not in group & fail early?
 		final ResourceDescriptor d = catHandler.getDescriptor(resource);
 		if (group.isAdministrator(user) || catHandler.isAdministrator(resource, user)) {
-			final CatalogMethod m; // TODO NNOW remove
-			try {
-				m = new CatalogMethod(d.getResourceID().getName());
-				storage.removeCatalogMethod(groupID, m, clock.instant());
-			} catch (MissingParameterException | IllegalParameterException e) {
-				throw new RuntimeException("impossible", e);
-			} catch (NoSuchCatalogEntryException e) { // TODO NNOW remove
-				throw new NoSuchResourceException(e.getMessage().split(":", 2)[1].trim(), e);
-			}
+			storage.removeResource(groupID, RTCAT, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
 					"User %s is not an admin for group %s or resource %s",
