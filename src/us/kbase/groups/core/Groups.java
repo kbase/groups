@@ -9,8 +9,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -31,6 +33,7 @@ import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.NoSuchResourceTypeException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
@@ -64,6 +67,8 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
+	// TODO NNOW enforce that a resource ID can only appear once in a group? Enforce @ DB level? (1:M mapping from resource admin ID to resource ID)
+	
 	//TODO NNOW limits on resource IDs (both)
 	
 	//TODO LOGGING for all actions
@@ -90,11 +95,18 @@ public class Groups {
 	
 	// TODO NNOW mimimize info sent to notifications. Don't send request ID on deny/accept/cancel
 	
+	private static final ResourceType USERTYPE;
+	static {
+		try {
+			USERTYPE = new ResourceType("user");
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
-	private final ResourceHandler wsHandler;
-	private final ResourceHandler catHandler;
+	private final Map<ResourceType, ResourceHandler> resourceHandlers;
 	private final FieldValidators validators;
 	private final Notifications notifications;
 	private final UUIDGenerator uuidGen;
@@ -103,10 +115,11 @@ public class Groups {
 	/** Create a new {@link Groups} class.
 	 * @param storage the storage system to be used by the class.
 	 * @param userHandler the user handler by which users shall be handled.
-	 * @param wsHandler the workspace handler by which information from the workspace service
-	 * will be retrieved.
-	 * @param catHandler the catalog handler by which information from the catalog service
-	 * will be retrieved.
+	 * @param resourceHandlers the resource handlers for providing information about resources.
+	 * Note that changing the set of configured handlers for a storage instance may cause errors
+	 * and unexpected behavior, as handlers may be missing for data in the storage system or
+	 * handlers may be swapped, leading to inaccurate information being returned for the
+	 * stored data.
 	 * @param validators the validators for group custom fields.
 	 * @param notifications where notification should be sent.
 	 */
@@ -114,11 +127,10 @@ public class Groups {
 			// getting to the point where a builder might be useful, but everything's required.
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final ResourceHandler wsHandler,
-			final ResourceHandler catHandler,
+			final Map<ResourceType, ResourceHandler> resourceHandlers,
 			final FieldValidators validators,
 			final Notifications notifications) {
-		this(storage, userHandler, wsHandler, catHandler, validators, notifications,
+		this(storage, userHandler, resourceHandlers, validators, notifications,
 				new UUIDGenerator(), Clock.systemDefaultZone());
 	}
 	
@@ -126,22 +138,23 @@ public class Groups {
 	private Groups(
 			final GroupsStorage storage,
 			final UserHandler userHandler,
-			final ResourceHandler wsHandler,
-			final ResourceHandler catHandler,
+			final Map<ResourceType, ResourceHandler> resourceHandlers,
 			final FieldValidators validators,
 			final Notifications notifications,
 			final UUIDGenerator uuidGen,
 			final Clock clock) {
 		checkNotNull(storage, "storage");
 		checkNotNull(userHandler, "userHandler");
-		checkNotNull(wsHandler, "wsHandler");
-		checkNotNull(catHandler, "catHandler");
+		checkNotNull(resourceHandlers, "resourceHandlers");
 		checkNotNull(validators, "validators");
 		checkNotNull(notifications, "notifications");
 		this.storage = storage;
 		this.userHandler = userHandler;
-		this.wsHandler = wsHandler;
-		this.catHandler = catHandler;
+		if (resourceHandlers.containsKey(USERTYPE)) {
+			throw new IllegalArgumentException("resourceHandlers cannot contain built in type " +
+					USERTYPE.getName());
+		}
+		this.resourceHandlers = new HashMap<>(resourceHandlers);
 		this.validators = validators;
 		this.notifications = notifications;
 		this.uuidGen = uuidGen;
@@ -173,11 +186,7 @@ public class Groups {
 		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(clock.instant())));
 		
 		try {
-			return new GroupView(
-					storage.getGroup(createParams.getGroupID()),
-					ResourceInformationSet.getBuilder(owner).build(),
-					ResourceInformationSet.getBuilder(owner).build(),
-					ViewType.MEMBER);
+			return startViewBuild(storage.getGroup(createParams.getGroupID()), owner).build();
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
 					"Just created a group and it's already gone. Something's really broken", e);
@@ -255,42 +264,57 @@ public class Groups {
 		} else {
 			user = null;
 		}
-		// TODO NNOW handle this generically
-		// TODO NNOW don't include resource descriptor in RIS. Look up from group if needed.
-		final ResourceInformationSet wis;
-		final ResourceInformationSet cis;
+		final GroupView.Builder b = startViewBuild(g, user);
+		for (final ResourceType type: g.getResourceTypes()) {
+			processGroupType(g, user, type, b);
+		}
+		return b.build();
+	}
+
+	private GroupView.Builder startViewBuild(final Group g, final UserName user) {
+		final GroupView.Builder b = GroupView.getBuilder(g).withViewType(
+				g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
+		for (final ResourceType type: resourceHandlers.keySet()) {
+			b.withResourceType(type, user);
+		}
+		return b;
+	}
+	
+	private void processGroupType(
+			final Group g,
+			final UserName user,
+			final ResourceType type,
+			final GroupView.Builder b)
+			throws ResourceHandlerException, NoSuchGroupException, GroupsStorageException {
+		final ResourceHandler h;
 		try {
-			if (g.getResourceTypes().contains(RTWS)) {
-				wis = wsHandler.getResourceInformation(
-						user,
-						g.getResources(RTWS).stream().map(r -> r.getResourceID())
-								.collect(Collectors.toSet()),
-						!g.isMember(user));
-			} else {
-				wis = ResourceInformationSet.getBuilder(user).build();
-			}
-			if (g.getResourceTypes().contains(RTCAT)) {
-				cis = catHandler.getResourceInformation(
-						user,
-						g.getResources(RTCAT).stream().map(r -> r.getResourceID())
-								.collect(Collectors.toSet()),
-						!g.isMember(user));
-			} else {
-				cis = ResourceInformationSet.getBuilder(user).build();
-			}
+			h = getHandler(type);
+		} catch (NoSuchResourceTypeException e) {
+			throw new RuntimeException(String.format(
+					"Group %s has %s data without a configured handler",
+					g.getGroupID().getName(), type.getName()), e);
+		}
+		final ResourceInformationSet info;
+		try {
+			// TODO NNOW don't include resource descriptor in RIS. Look up from group if needed.
+			info = h.getResourceInformation(
+					user,
+					g.getResources(type).stream().map(r -> r.getResourceID())
+							.collect(Collectors.toSet()),
+					!g.isMember(user));
 		} catch (IllegalResourceIDException e) {
-			throw new RuntimeException(String.format("Illegal data associated with group %s: %s",
+			throw new RuntimeException(String.format(
+					"Illegal data associated with group %s: %s",
 					g.getGroupID().getName(), e.getMessage()), e);
 		}
-		for (final ResourceDescriptor wsid: wis.getNonexistentResources()) {
+		b.withResource(type, info);
+		for (final ResourceDescriptor d: info.getNonexistentResources()) {
 			try {
-				storage.removeResource(g.getGroupID(), RTWS, wsid, clock.instant());
+				storage.removeResource(g.getGroupID(), type, d, clock.instant());
 			} catch (NoSuchResourceException e) {
-				// do nothing, if the workspace isn't there fine.
+				// do nothing, if the resource isn't there fine.
 			}
 		}
-		return new GroupView(g, wis, cis,
-				g.isMember(user) ? ViewType.MEMBER : ViewType.NON_MEMBER);
 	}
 	
 	// TODO NNOW remove
@@ -341,11 +365,7 @@ public class Groups {
 			throws GroupsStorageException {
 		checkNotNull(params, "params");
 		return storage.getGroups(params).stream()
-				.map(g -> new GroupView(
-						g,
-						ResourceInformationSet.getBuilder(null).build(),
-						ResourceInformationSet.getBuilder(null).build(),
-						ViewType.MINIMAL))
+				.map(g -> GroupView.getBuilder(g).build())
 				.collect(Collectors.toList());
 	}
 	
@@ -469,8 +489,8 @@ public class Groups {
 		} else {
 			/* For the invite types, this code means that admins can't see the request unless they
 			 * created it (same deal for the list fns). I think that's ok - the request is between
-			 * a particular admin and a user or workspace. The other admins will get a notification
-			 * if it's accepted and then can remove the user / ws.
+			 * a particular admin and a user or resource. The other admins will get a notification
+			 * if it's accepted and then can remove the user / resource.
 			 * Still though, maybe some admin endpoint or this one should just return any request.
 			 * Or maybe admins should be able to view and cancel each other's requests.
 			 */
@@ -517,8 +537,11 @@ public class Groups {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
-		final Set<ResourceAdministrativeID> ws = wsHandler.getAdministratedResources(user);
-		final Set<ResourceAdministrativeID> adIDs = catHandler.getAdministratedResources(user);
+		//TODO NNOW run through all resource types here
+		final Set<ResourceAdministrativeID> ws = resourceHandlers.get(RTWS)
+				.getAdministratedResources(user);
+		final Set<ResourceAdministrativeID> adIDs = resourceHandlers.get(RTCAT)
+				.getAdministratedResources(user);
 		final Set<Integer> wsids = new HashSet<>();
 		for (final ResourceAdministrativeID id: ws) {
 			try {
@@ -712,12 +735,12 @@ public class Groups {
 				request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
 			final WorkspaceID wsid = request.getWorkspaceTarget().get();
 			// do this first in case the ws has been deleted
-			toNotify = addResourceAndGetAdmins(wsHandler, RTWS, groupID, request, toResDesc(wsid));
+			toNotify = addResourceAndGetAdmins(RTWS, groupID, request, toResDesc(wsid));
 		} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD) ||
 				request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
 			final CatalogMethod m = request.getCatalogMethodTarget().get();
 			// do this first in case the catalog ever allows module deletion
-			toNotify = addResourceAndGetAdmins(catHandler, RTCAT, groupID, request, toResDesc(m));
+			toNotify = addResourceAndGetAdmins(RTCAT, groupID, request, toResDesc(m));
 		} else {
 			// untestable. Here to throw an error if a type is added and not accounted for
 			throw new UnimplementedException();
@@ -745,8 +768,7 @@ public class Groups {
 	}
 
 	private Collection<UserName> addResourceAndGetAdmins(
-			final ResourceHandler handler, //TODO NNOW get handler from type
-			final ResourceType type,
+			final ResourceType type, // TODO NNOW get from request
 			final GroupID groupID,
 			final GroupRequest request,
 			final ResourceDescriptor resID) //TODO NNOW get from request
@@ -755,10 +777,15 @@ public class Groups {
 		final Collection<UserName> toNotify;
 		try {
 			// do this before adding to group in case the resource has been deleted
-			toNotify = handler.getAdministrators(resID.getResourceID());
+			toNotify = getHandler(type).getAdministrators(resID.getResourceID());
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
 					request.getID().getID().toString(), e.getMessage()), e);
+		} catch (NoSuchResourceTypeException e) {
+			//TODO NNOW test when type in request. For now untestable.
+			throw new RuntimeException(String.format(
+					"No handler configured for resource type %s in request %s",
+					type.getName(), request.getID().getID().toString()), e);
 		}
 		try {
 			storage.addResource(groupID, type, resID, clock.instant());
@@ -767,6 +794,14 @@ public class Groups {
 					groupID.getName(), e.getMessage()), e);
 		}
 		return toNotify;
+	}
+
+	private ResourceHandler getHandler(final ResourceType type)
+			throws NoSuchResourceTypeException {
+		if (!resourceHandlers.containsKey(type)) {
+			throw new NoSuchResourceTypeException(type.getName());
+		}
+		return resourceHandlers.get(type);
 	}
 	
 	private void ensureIsOpen(final GroupRequest request) throws ClosedRequestException {
@@ -788,11 +823,11 @@ public class Groups {
 			return;
 		// TODO NNOW combine next 2
 		} else if (request.getType().equals(GroupRequestType.INVITE_WORKSPACE) &&
-				isAdministrator(wsHandler, user, request,
+				isAdministrator(RTWS, user, request,
 						toResID(request.getWorkspaceTarget().get()))) {
 			return;
 		} else if (request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD) &&
-				isAdministrator(catHandler, user, request,
+				isAdministrator(RTCAT, user, request,
 						toResID(request.getCatalogMethodTarget().get()))) {
 			return;
 		} else {
@@ -804,18 +839,23 @@ public class Groups {
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
 	// returns false if ws is missing / deleted
 	private boolean isAdministrator(
-			final ResourceHandler handler,
+			final ResourceType type, //TODO NNOW get from request
 			final UserName user,
 			final GroupRequest request,
 			final ResourceID resource) // TODO NNOW get from request
 			throws ResourceHandlerException {
 		try {
-			return handler.isAdministrator(resource, user);
+			return getHandler(type).isAdministrator(resource, user);
 		} catch (NoSuchResourceException e) {
 			return false;
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
 					request.getID().getID(), e.getMessage()), e);
+		} catch (NoSuchResourceTypeException e) {
+			//TODO NNOW test when type in request. For now untestable.
+			throw new RuntimeException(String.format(
+					"No handler configured for resource type %s in request %s",
+					type.getName(), request.getID().getID().toString()), e);
 		}
 	}
 
@@ -961,12 +1001,18 @@ public class Groups {
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
-		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
+		final ResourceHandler h;
+		try {
+			h = getHandler(RTWS);
+		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
+			throw new RuntimeException("impossible", e);
+		}
+		final ResourceDescriptor d = h.getDescriptor(resource);
 		final WorkspaceID wsid = toWSID(d); // TODO NNOW remove
 		if (g.containsResource(RTWS, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> wsadmins = wsHandler.getAdministrators(resource);
+		final Set<UserName> wsadmins = h.getAdministrators(resource);
 		if (g.isAdministrator(user) && wsadmins.contains(user)) {
 			storage.addResource(groupID, RTWS, d, clock.instant());
 			//TODO NNOW notify
@@ -1012,9 +1058,15 @@ public class Groups {
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
-		final ResourceDescriptor d = wsHandler.getDescriptor(resource);
+		final ResourceHandler h;
+		try {
+			h = getHandler(RTWS);
+		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
+			throw new RuntimeException("impossible", e);
+		}
+		final ResourceDescriptor d = h.getDescriptor(resource);
 		// should check if ws not in group & fail early?
-		if (group.isAdministrator(user) || wsHandler.isAdministrator(resource, user)) {
+		if (group.isAdministrator(user) || h.isAdministrator(resource, user)) {
 			storage.removeResource(groupID, RTWS, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
@@ -1062,7 +1114,13 @@ public class Groups {
 		}
 		ensureIsOpen(r);
 		final ResourceID rid = toResID(r.getWorkspaceTarget().get()); //TODO NNOW remove
-		wsHandler.setReadPermission(rid, user);
+		final ResourceHandler h;
+		try {
+			h = getHandler(RTWS);
+		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
+			throw new RuntimeException("impossible", e);
+		}
+		h.setReadPermission(rid, user);
 	}
 	
 	/** Add a catalog method to a group. The method is added immediately if the user is an
@@ -1098,7 +1156,13 @@ public class Groups {
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
-		final ResourceDescriptor d = catHandler.getDescriptor(resource);
+		final ResourceHandler h;
+		try {
+			h = getHandler(RTCAT);
+		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
+			throw new RuntimeException("impossible", e);
+		}
+		final ResourceDescriptor d = h.getDescriptor(resource);
 		final CatalogMethod m; // TODO NNOW remove
 		try {
 			m = new CatalogMethod(d.getResourceID().getName());
@@ -1108,7 +1172,7 @@ public class Groups {
 		if (g.containsResource(RTCAT, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> modowners = catHandler.getAdministrators(resource);
+		final Set<UserName> modowners = h.getAdministrators(resource);
 		if (g.isAdministrator(user) && modowners.contains(user)) {
 			storage.addResource(groupID, RTCAT, d, clock.instant());
 			//TODO NNOW notify
@@ -1153,9 +1217,15 @@ public class Groups {
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
+		final ResourceHandler h;
+		try {
+			h = getHandler(RTCAT);
+		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
+			throw new RuntimeException("impossible", e);
+		}
 		// should check if method not in group & fail early?
-		final ResourceDescriptor d = catHandler.getDescriptor(resource);
-		if (group.isAdministrator(user) || catHandler.isAdministrator(resource, user)) {
+		final ResourceDescriptor d = h.getDescriptor(resource);
+		if (group.isAdministrator(user) || h.isAdministrator(resource, user)) {
 			storage.removeResource(groupID, RTCAT, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(

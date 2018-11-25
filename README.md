@@ -154,6 +154,7 @@ Current error types are:
 50020	No such user
 50030	No such custom field
 50040	No such resource
+50050	No such resource type
 60000	Request closed
 70000	Unsupported operation
 ```

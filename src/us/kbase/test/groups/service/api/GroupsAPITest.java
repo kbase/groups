@@ -1,6 +1,5 @@
 package us.kbase.test.groups.service.api;
 
-import static us.kbase.groups.core.GroupView.ViewType.MINIMAL;
 import static us.kbase.groups.core.GroupView.ViewType.NON_MEMBER;
 import static us.kbase.groups.core.GroupView.ViewType.MEMBER;
 import static us.kbase.test.groups.TestCommon.inst;
@@ -63,6 +62,7 @@ import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
@@ -71,10 +71,6 @@ import us.kbase.test.groups.TestCommon;
 
 public class GroupsAPITest {
 
-	private static ResourceInformationSet rsis() {
-		return ResourceInformationSet.getBuilder(null).build();
-	}
-	
 	private static <T> Optional<T> op(T item) {
 		return Optional.ofNullable(item);
 	}
@@ -114,9 +110,7 @@ public class GroupsAPITest {
 			.with("moddate", 10000L)
 			.with("type", "Organization")
 			.with("description", null)
-			.with("resources", ImmutableMap.of(
-					"workspace", Collections.emptyList(),
-					"catalogmethod", Collections.emptyList()))
+			.with("resources", Collections.emptyMap())
 			.with("members", Collections.emptyList())
 			.with("admins", Collections.emptyList())
 			.with("custom", Collections.emptyMap())
@@ -142,9 +136,7 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Arrays.asList("bar", "foo"))
 			.with("admins", Arrays.asList("whee", "whoo"))
-			.with("resources", ImmutableMap.of(
-					"workspace", Collections.emptyList(),
-					"catalogmethod", Collections.emptyList()))
+			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -159,9 +151,7 @@ public class GroupsAPITest {
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
-			.with("resources", ImmutableMap.of(
-					"workspace", Collections.emptyList(),
-					"catalogmethod", Collections.emptyList()))
+			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 	
@@ -204,8 +194,8 @@ public class GroupsAPITest {
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		when(g.getGroups(expected)).thenReturn(Arrays.asList(
-				new GroupView(GROUP_MAX, rsis(), rsis(), MINIMAL),
-				new GroupView(GROUP_MIN, rsis(), rsis(), MINIMAL)));
+				GroupView.getBuilder(GROUP_MAX).build(),
+				GroupView.getBuilder(GROUP_MIN).build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
 				.getGroups("unused for now", excludeUpTo, order);
 		
@@ -250,7 +240,7 @@ public class GroupsAPITest {
 		
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name")).build()))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), MEMBER));
+				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(MEMBER).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
 				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, noInput, custom));
@@ -273,7 +263,7 @@ public class GroupsAPITest {
 						.build())
 				.withType(GroupType.TEAM)
 				.build()))
-				.thenReturn(new GroupView(GROUP_MIN, rsis(), rsis(), MEMBER));
+				.thenReturn(GroupView.getBuilder(GROUP_MIN).withViewType(MEMBER).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup("toke", "gid",
 				new CreateOrUpdateGroupJSON(op("name"), op("Team"), op("my desc"),
@@ -569,7 +559,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(expected, new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), MEMBER));
+				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(MEMBER).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		
@@ -581,7 +571,7 @@ public class GroupsAPITest {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX, rsis(), rsis(), NON_MEMBER));
+				.thenReturn(GroupView.getBuilder(GROUP_MAX).withViewType(NON_MEMBER).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
@@ -601,26 +591,31 @@ public class GroupsAPITest {
 				new ResourceAdministrativeID("mod"), new ResourceID("mod.meth"));
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(new GroupView(GROUP_MAX,
-						ResourceInformationSet.getBuilder(new UserName("u"))
-								.withResourceField(d1, "name", "name82")
-								.withResourceField(d1, "public", true)
-								.withResourceField(d1, "narrname", "narrname")
-								.withResourceField(d1, "perm", "Admin")
-								.withResourceField(d2, "name", "name45")
-								.withResourceField(d2, "public", false)
-								.withResourceField(d2, "narrname", null)
-								.withResourceField(d2, "perm", "None")
-								.build(),
-						ResourceInformationSet.getBuilder(new UserName("u"))
-								.withResourceDescriptor(c1)
-								.build(),
-						MEMBER));
+				.thenReturn(GroupView.getBuilder(GROUP_MAX)
+						.withViewType(MEMBER)
+						.withResourceType(new ResourceType("foo"), new UserName("bar"))
+						.withResource(new ResourceType("workspace"),
+								ResourceInformationSet.getBuilder(new UserName("u"))
+										.withResourceField(d1, "name", "name82")
+										.withResourceField(d1, "public", true)
+										.withResourceField(d1, "narrname", "narrname")
+										.withResourceField(d1, "perm", "Admin")
+										.withResourceField(d2, "name", "name45")
+										.withResourceField(d2, "public", false)
+										.withResourceField(d2, "narrname", null)
+										.withResourceField(d2, "perm", "None")
+										.build())
+						.withResource(new ResourceType("catalogmethod"),
+								ResourceInformationSet.getBuilder(new UserName("u"))
+										.withResourceDescriptor(c1)
+										.build())
+						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		final Map<String, Object> expected = new HashMap<>();
 		expected.putAll(GROUP_MAX_JSON_STD);
 		expected.put("resources", ImmutableMap.of(
+				"foo", Collections.emptyList(),
 				"catalogmethod", Arrays.asList(ImmutableMap.of("rid", "mod.meth")),
 				"workspace", Arrays.asList(
 						MapBuilder.newHashMap()

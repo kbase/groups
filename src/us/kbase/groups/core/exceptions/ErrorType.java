@@ -23,7 +23,7 @@ public enum ErrorType {
 	/** The provided group id was not legal. */
 	ILLEGAL_GROUP_ID		(30020, "Illegal group ID"),
 	/** The provided resource ID was not legal. */
-	ILLEGAL_RESOURCE_ID	(30030, "Illegal resource ID"),
+	ILLEGAL_RESOURCE_ID		(30030, "Illegal resource ID"),
 	/** The group could not be created because it already exists. */
 	GROUP_ALREADY_EXISTS	(40000, "Group already exists"),
 	/** The request could not be created because it already exists. */
@@ -42,6 +42,8 @@ public enum ErrorType {
 	NO_SUCH_CUSTOM_FIELD	(50030, "No such custom field"),
 	/** The resource does not exist. */
 	NO_SUCH_RESOURCE		(50040, "No such resource"),
+	/** The resource type does not exist. */
+	NO_SUCH_RESOURCE_TYPE	(50050, "No such resource type"),
 	/** The request is closed. */
 	REQUEST_CLOSED			(60000, "Request closed"),
 	/** The requested operation is not supported. */

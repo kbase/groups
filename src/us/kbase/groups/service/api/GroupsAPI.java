@@ -65,6 +65,7 @@ import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.GROUP)
@@ -338,10 +339,9 @@ public class GroupsAPI {
 					g.getAdministrators(), u -> u.getName()));
 			final Map<String, Object> resources = new HashMap<>();
 			ret.put(Fields.GROUP_RESOURCES, resources);
-			//TODO NNOW handle resources generically
-			//TODO NNOW replace with resource type
-			resources.put("catalogmethod", getResourceList(g.getCatalogInformation()));
-			resources.put("workspace", getResourceList(g.getWorkspaceInformation()));
+			for (final ResourceType t: g.getResourceTypes()) {
+				resources.put(t.getName(), getResourceList(g.getResourceInformation(t)));
+			}
 		}
 		return ret;
 	}
