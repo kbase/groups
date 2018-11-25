@@ -164,7 +164,7 @@ public class GroupView {
 	}
 	
 	/** Get the types of the resources included in this view.
-	 * @return
+	 * @return the resource types.
 	 */
 	public Set<ResourceType> getResourceTypes() {
 		return resourceInfo.keySet();
