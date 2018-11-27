@@ -51,6 +51,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.NoSuchResourceTypeException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
@@ -414,19 +415,22 @@ public class GroupsAPI {
 	}
 	
 	@DELETE
-	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Path(ServicePaths.GROUP_RESOURCE_ID)
 	@Produces(MediaType.APPLICATION_JSON)
-	public void removeWorkspace(
+	public void removeResource(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
+			@PathParam(Fields.GROUP_RESOURCE_TYPE) final String resourceType,
+			@PathParam(Fields.GROUP_RESOURCE_ID) final String resourceID)
 			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
 				AuthenticationException, UnauthorizedException, MissingParameterException,
 				IllegalParameterException, GroupsStorageException, NoSuchResourceException,
-				IllegalResourceIDException, ResourceHandlerException {
-		//TODO NNOW generalize this method
-		groups.removeWorkspace(
-				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID));
+				IllegalResourceIDException, ResourceHandlerException, NoSuchResourceTypeException {
+		groups.removeResource(
+				getToken(token, true),
+				new GroupID(groupID),
+				new ResourceType(resourceType),
+				new ResourceID(resourceID));
 	}
 	
 	@POST
@@ -443,22 +447,6 @@ public class GroupsAPI {
 				ResourceHandlerException {
 		return toGroupRequestJSON(groups.addCatalogMethod(
 				getToken(token, true), new GroupID(groupID), new ResourceID(method)));
-	}
-	
-	@DELETE
-	@Path(ServicePaths.GROUP_CATALOG_METHOD_NAME)
-	@Produces(MediaType.APPLICATION_JSON)
-	public void removeCatalogMethod(
-			@HeaderParam(HEADER_TOKEN) final String token,
-			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
-			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
-				AuthenticationException, UnauthorizedException, MissingParameterException,
-				IllegalParameterException, GroupsStorageException, NoSuchResourceException,
-				IllegalResourceIDException, ResourceHandlerException {
-		groups.removeCatalogMethod(
-				getToken(token, true), new GroupID(groupID), new ResourceID(method));
-		
 	}
 	
 	private Map<String, Object> toGroupRequestJSON(final Optional<GroupRequest> req) {

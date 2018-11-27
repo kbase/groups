@@ -756,7 +756,6 @@ public class Groups {
 	}
 	
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
-	// TODO NNOW combine with addResoucesAndGetAdmins above? Similar
 	// returns false if ws is missing / deleted
 	private boolean isAdministrator(
 			final UserName user,
@@ -944,43 +943,41 @@ public class Groups {
 				user.getName(), groupID.getName(), resource.getName()));
 	}
 	
-	/** Remove a workspace from a group.
+	/** Remove a resource from a group.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param resource the workspace ID.
+	 * @param type the type of the resource.
+	 * @param resource the resource ID.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no such group.
 	 * @throws UnauthorizedException if the user is not an administrator of the group or the
-	 * workspace.
+	 * resource.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 * @throws IllegalResourceIDException if the resource ID is illegal.
 	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
-	public void removeWorkspace(
+	public void removeResource(
 			final Token userToken,
 			final GroupID groupID,
+			final ResourceType type,
 			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, NoSuchResourceException,
-				IllegalResourceIDException, ResourceHandlerException {
-		//TODO NNOW make general
+				IllegalResourceIDException, ResourceHandlerException, NoSuchResourceTypeException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
+		checkNotNull(type, "type");
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
-		final ResourceHandler h;
-		try {
-			h = getHandler(RTWS);
-		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
-			throw new RuntimeException("impossible", e);
-		}
+		final ResourceHandler h = getHandler(type);
 		final ResourceDescriptor d = h.getDescriptor(resource);
 		// should check if ws not in group & fail early?
 		if (group.isAdministrator(user) || h.isAdministrator(resource, user)) {
-			storage.removeResource(groupID, RTWS, d, clock.instant());
+			storage.removeResource(groupID, type, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
 					"User %s is not an admin for group %s or resource %s",
@@ -1095,46 +1092,4 @@ public class Groups {
 				user.getName(), groupID.getName(), resource.getName()));
 	}
 	
-	/** Remove a catalog method from a group.
-	 * @param userToken the user's token.
-	 * @param groupID the ID of the group to be modified.
-	 * @param resource the method.
-	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws AuthenticationException if authentication fails.
-	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws NoSuchGroupException if there is no such group.
-	 * @throws UnauthorizedException if the user is not an administrator of the group or the
-	 * catalog module.
-	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
-	 * @throws IllegalResourceIDException if the resource ID is illegal.
-	 * @throws NoSuchResourceException if there is no such resource.
-	 */
-	public void removeCatalogMethod(
-			final Token userToken,
-			final GroupID groupID,
-			final ResourceID resource)
-			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, UnauthorizedException, NoSuchResourceException,
-				IllegalResourceIDException, ResourceHandlerException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(groupID, "groupID");
-		checkNotNull(resource, "resource");
-		final UserName user = userHandler.getUser(userToken);
-		final Group group = storage.getGroup(groupID);
-		final ResourceHandler h;
-		try {
-			h = getHandler(RTCAT);
-		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
-			throw new RuntimeException("impossible", e);
-		}
-		// should check if method not in group & fail early?
-		final ResourceDescriptor d = h.getDescriptor(resource);
-		if (group.isAdministrator(user) || h.isAdministrator(resource, user)) {
-			storage.removeResource(groupID, RTCAT, d, clock.instant());
-		} else {
-			throw new UnauthorizedException(String.format(
-					"User %s is not an admin for group %s or resource %s",
-					user.getName(), groupID.getName(), resource.getName()));
-		}
-	}
 }
