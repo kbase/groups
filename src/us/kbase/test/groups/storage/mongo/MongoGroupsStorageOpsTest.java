@@ -104,7 +104,7 @@ public class MongoGroupsStorageOpsTest {
 		logEvents.clear();
 	}
 	
-	public <T> List<T> list(@SuppressWarnings("unchecked") T... items) {
+	private <T> List<T> list(@SuppressWarnings("unchecked") T... items) {
 		return Arrays.asList(items);
 	}
 	
@@ -2554,13 +2554,13 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void failGetRequestsByGroup() throws Exception {
-		getRequestsByGroupFail(null, GetRequestsParams.getBuilder().build(),
+	public void getRequestsByGroupFail() throws Exception {
+		failGetRequestsByGroup(null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("groupID"));
-		getRequestsByGroupFail(new GroupID("id"), null, new NullPointerException("params"));
+		failGetRequestsByGroup(new GroupID("id"), null, new NullPointerException("params"));
 	}
 	
-	private void getRequestsByGroupFail(
+	private void failGetRequestsByGroup(
 			final GroupID id,
 			final GetRequestsParams p,
 			final Exception expected) {

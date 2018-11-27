@@ -394,15 +394,15 @@ to the user.
 
 Possible actions are `Cancel`, `Accept`, and `Deny`.
 
-### Get permission to read a workspace associated with a request
+### Get permission to read a resource associated with a request
 
 ```
 AUTHORIZATION REQUIRED
 POST /request/id/<request id>/getperm
 ```
 
-The request type must be `Request`, the resource type `workspace`, and the user must be a group
-administrator.
+The request type must be `Request`, the resource type cannot be `user`,
+and the user must be a group administrator.
 
 ### Listing requests
 
