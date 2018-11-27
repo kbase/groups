@@ -80,7 +80,7 @@ public class RequestAPI {
 				AuthenticationException, UnauthorizedException, IllegalParameterException,
 				MissingParameterException, GroupsStorageException, ClosedRequestException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
-		groups.setReadPermissionOnWorkspace(getToken(token, true), new RequestID(requestID));
+		groups.setReadPermission(getToken(token, true), new RequestID(requestID));
 	}
 	
 	@GET

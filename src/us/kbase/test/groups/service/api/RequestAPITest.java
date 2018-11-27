@@ -233,7 +233,7 @@ public class RequestAPITest {
 		
 		new RequestAPI(g).getPerms("t", id.toString());
 		
-		verify(g).setReadPermissionOnWorkspace(new Token("t"), new RequestID(id));
+		verify(g).setReadPermission(new Token("t"), new RequestID(id));
 	}
 	
 	@Test

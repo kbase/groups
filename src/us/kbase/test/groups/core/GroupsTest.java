@@ -2252,7 +2252,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void denyRequestAdminReasonInviteWS() throws Exception {
+	public void denyRequestAdminReasonInviteResource() throws Exception {
 		denyRequestAdmin(" reason  ", "wsadmin",
 				b -> b.withType(RequestType.INVITE)
 						.withResourceType(new ResourceType("workspace"))
@@ -3980,16 +3980,16 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceAdmin() throws Exception {
-		setReadPermissionOnWorkspace(new UserName("admin"));
+	public void setReadPermissionAdmin() throws Exception {
+		setReadPermission(new UserName("admin"));
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceOwner() throws Exception {
-		setReadPermissionOnWorkspace(new UserName("own"));
+	public void setReadPermissionOwner() throws Exception {
+		setReadPermission(new UserName("own"));
 	}
 
-	private void setReadPermissionOnWorkspace(final UserName user) throws Exception {
+	private void setReadPermission(final UserName user) throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -3999,8 +3999,9 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("43")))
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+								new ResourceID("m.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
@@ -4012,23 +4013,23 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		mocks.groups.setReadPermissionOnWorkspace(new Token("token"), new RequestID(id));
+		mocks.groups.setReadPermission(new Token("token"), new RequestID(id));
 		
-		verify(mocks.wsHandler).setReadPermission(new ResourceID("43"), user);
+		verify(mocks.catHandler).setReadPermission(new ResourceID("m.meth"), user);
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailNulls() throws Exception {
+	public void setReadPermissionFailNulls() throws Exception {
 		final Groups g = initTestMocks().groups;
 		
-		failSetReadPermissionsOnWorkspace(g, null, new RequestID(UUID.randomUUID()),
+		failSetReadPermissions(g, null, new RequestID(UUID.randomUUID()),
 				new NullPointerException("userToken"));
-		failSetReadPermissionsOnWorkspace(g, new Token("t"), null,
+		failSetReadPermissions(g, new Token("t"), null,
 				new NullPointerException("requestID"));
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailNoGroup() throws Exception {
+	public void setReadPermissionFailNoGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4044,14 +4045,14 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("gid")))
 		.thenThrow(new NoSuchGroupException("gid"));
 		
-		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
+		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
 				new RuntimeException(String.format(
 						"Request %s's group doesn't exist: 50000 No such group: gid",
 						id.toString())));
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailNotAdmin() throws Exception {
+	public void setReadPermissionFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4072,27 +4073,46 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
+		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
 				new UnauthorizedException("User u1 is not an admin for group gid"));
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailInvite() throws Exception {
-		setReadPermissionOnWorkspaceFailWrongType(b -> b.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace")));
+	public void setReadPermissionFailInvite() throws Exception {
+		setReadPermissionFail(
+				UUID.randomUUID(),
+				b -> b.withType(RequestType.INVITE)
+						.withResourceType(new ResourceType("workspace")),
+				new UnauthorizedException(
+						"Only Request type requests allow for resource permissions changes."));
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailResourcetype() throws Exception {
-		setReadPermissionOnWorkspaceFailWrongType(
-				b -> b.withResourceType(new ResourceType("catalogmethod")));
+	public void setReadPermissionFailResourceType() throws Exception {
+		setReadPermissionFail(
+				UUID.randomUUID(),
+				b -> b.withResourceType(new ResourceType("user")),
+				new UnauthorizedException("Requests with a user resource type do not allow " +
+						"for permissions changes."));
 	}
 	
-	private void setReadPermissionOnWorkspaceFailWrongType(
-			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn)
+	@Test
+	public void setReadPermissionFailNoResourceHandler() throws Exception {
+		final UUID id = UUID.randomUUID();
+		setReadPermissionFail(
+				id,
+				b -> b.withResourceType(new ResourceType("wrkspce")),
+				new RuntimeException(
+						"No handler configured for resource type wrkspce in request " +
+						id.toString()));
+	}
+	
+	private void setReadPermissionFail(
+			final UUID id,
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
+			final Exception expected)
 			throws Exception {
 		final TestMocks mocks = initTestMocks();
-		final UUID id = UUID.randomUUID();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
@@ -4109,13 +4129,11 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
-				new UnauthorizedException(
-						"Only workspace add requests allow for workspace permissions changes."));
+		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id), expected);
 	}
 	
 	@Test
-	public void setReadPermissionOnWorkspaceFailClosed() throws Exception {
+	public void setReadPermissionFailClosed() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4137,17 +4155,17 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissionsOnWorkspace(mocks.groups, new Token("t"), new RequestID(id),
+		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
 				new ClosedRequestException(id + ""));
 	}
 	
-	private void failSetReadPermissionsOnWorkspace(
+	private void failSetReadPermissions(
 			final Groups g,
 			final Token t,
 			final RequestID i,
 			final Exception expected) {
 		try {
-			g.setReadPermissionOnWorkspace(t, i);
+			g.setReadPermission(t, i);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

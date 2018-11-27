@@ -695,15 +695,11 @@ public class Groups {
 		final Set<UserName> toNotify;
 		try {
 			// do this before adding to group in case the resource has been deleted
-			toNotify = getHandler(request.getResourceType())
+			toNotify = getHandlerRuntimeException(request)
 					.getAdministrators(request.getResource().getResourceID());
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
 					request.getID().getID().toString(), e.getMessage()), e);
-		} catch (NoSuchResourceTypeException e) {
-			throw new RuntimeException(String.format(
-					"No handler configured for resource type %s in request %s",
-					request.getResourceType().getName(), request.getID().getID().toString()), e);
 		}
 		try {
 			storage.addResource(groupID, request.getResourceType(), request.getResource(),
@@ -721,6 +717,15 @@ public class Groups {
 			throw new NoSuchResourceTypeException(type.getName());
 		}
 		return resourceHandlers.get(type);
+	}
+	
+	private ResourceHandler getHandlerRuntimeException(final GroupRequest request) {
+		if (!resourceHandlers.containsKey(request.getResourceType())) {
+			throw new RuntimeException(String.format(
+					"No handler configured for resource type %s in request %s",
+					request.getResourceType().getName(), request.getID().getID().toString()));
+		}
+		return resourceHandlers.get(request.getResourceType());
 	}
 	
 	private void ensureIsOpen(final GroupRequest request) throws ClosedRequestException {
@@ -758,17 +763,13 @@ public class Groups {
 			final GroupRequest request)
 			throws ResourceHandlerException {
 		try {
-			return getHandler(request.getResourceType())
+			return getHandlerRuntimeException(request)
 					.isAdministrator(request.getResource().getResourceID(), user);
 		} catch (NoSuchResourceException e) {
 			return false;
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format("Illegal value stored in request %s: %s",
 					request.getID().getID(), e.getMessage()), e);
-		} catch (NoSuchResourceTypeException e) {
-			throw new RuntimeException(String.format(
-					"No handler configured for resource type %s in request %s",
-					request.getResourceType().getName(), request.getID().getID().toString()), e);
 		}
 	}
 
@@ -987,10 +988,10 @@ public class Groups {
 		}
 	}
 	
-	/** Set read permissions on a workspace that has been requested to be added to a group
-	 * for the user if the workspace is not already readable (including publicly so). The user
+	/** Set read permissions on a resource that has been requested to be added to a group
+	 * for the user if the resource is not already readable (including publicly so). The user
 	 * must be a group administrator for the request, the request type must be
-	 * {@link RequestType#INVITE}, and the resource type must be "workspace".
+	 * {@link RequestType#INVITE}, and the resource type may not be "user".
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request.
 	 * @throws NoSuchRequestException if no request with that ID exists.
@@ -1004,13 +1005,12 @@ public class Groups {
 	 * @throws IllegalResourceIDException if the resource ID is illegal.
 	 * @throws NoSuchResourceException if there is no such resource.
 	 */
-	public void setReadPermissionOnWorkspace(
+	public void setReadPermission(
 			final Token userToken,
 			final RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, ClosedRequestException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
-		//TODO NNOW generalize this method to all resources
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
@@ -1020,18 +1020,16 @@ public class Groups {
 			throw new UnauthorizedException(String.format("User %s is not an admin for group %s",
 					user.getName(), g.getGroupID().getName()));
 		}
-		// TODO NNOW remove resource type check. request type check stays. Must be request.
-		if (!RequestType.REQUEST.equals(r.getType()) || !r.getResourceType().equals(RTWS)) {
+		if (!RequestType.REQUEST.equals(r.getType())) {
 			throw new UnauthorizedException(
-					"Only workspace add requests allow for workspace permissions changes.");
+					"Only Request type requests allow for resource permissions changes.");
+		}
+		if (USER_TYPE.equals(r.getResourceType())) {
+			throw new UnauthorizedException(
+					"Requests with a user resource type do not allow for permissions changes.");
 		}
 		ensureIsOpen(r);
-		final ResourceHandler h;
-		try {
-			h = getHandler(RTWS);
-		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
-			throw new RuntimeException("impossible", e);
-		}
+		final ResourceHandler h = getHandlerRuntimeException(r);
 		h.setReadPermission(r.getResource().getResourceID(), user);
 	}
 	
