@@ -2,6 +2,7 @@ package us.kbase.groups.storage;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import us.kbase.groups.core.GetGroupsParams;
@@ -11,7 +12,6 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
@@ -23,11 +23,11 @@ import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
-import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceType;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 /** A storage interface for the {@link Groups} application.
@@ -189,28 +189,24 @@ public interface GroupsStorage {
 	List<GroupRequest> getRequestsByRequester(UserName requester, GetRequestsParams params)
 			throws GroupsStorageException;
 	
-	/** Get the open requests that target a user or the workspaces a user administrates,
+	/** Get the open requests that target a user or the resources a user administrates,
 	 * sorted by the modification time of the request.
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
-	 * @param wsids the targeted workspaces for that user.
-	 * @param modules the targeted catalog modules for that user.
+	 * @param resources the resources that user administrates.
 	 * @param params the parameters for getting the requests.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	List<GroupRequest> getRequestsByTarget(
 			UserName target,
-			WorkspaceIDSet wsids,
-			Set<CatalogModule> modules,
+			Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			GetRequestsParams params)
 			throws GroupsStorageException;
 
 	/** Get the open requests that target a group, sorted by the modification time of the request.
 	 * At most 100 requests are returned.
-	 * Requests that target a group are {@link GroupRequestType#REQUEST_ADD_WORKSPACE},
-	 * {@link GroupRequestType#REQUEST_ADD_CATALOG_METHOD} and
-	 * {@link GroupRequestType#REQUEST_GROUP_MEMBERSHIP}.
+	 * Requests that target a group are of type {@link RequestType#REQUEST}.
 	 * @param groupID the targeted group.
 	 * @param params the parameters for getting the requests.
 	 * @return the requests.
@@ -225,7 +221,7 @@ public interface GroupsStorage {
 	 * @param requestID the ID of the request to close.
 	 * @param status the status to apply to the request. Must not be
 	 * {@link GroupRequestStatus#open()}.
-	 * @param modificationTime the modfication time of the request.
+	 * @param modificationTime the modification time of the request.
 	 * @throws NoSuchRequestException if there is no open request with the given ID
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */

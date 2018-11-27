@@ -32,7 +32,6 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
 
 public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
@@ -137,26 +136,14 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			post.put("level", level);
 			//TODO NOW should accept/deny be anonymous?
 			post.put("actor", actor.getName());
-			if (request.getType().equals(GroupRequestType.REQUEST_GROUP_MEMBERSHIP)) {
-				post.put("object", request.getGroupID().getName());
-			} else if (request.getType().equals(GroupRequestType.INVITE_TO_GROUP)) {
-				post.put("object", request.getTarget().get().getName());
-			} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_WORKSPACE) ||
-					request.getType().equals(GroupRequestType.INVITE_WORKSPACE)) {
-				post.put("object", request.getWorkspaceTarget().get().getID());
-			} else if (request.getType().equals(GroupRequestType.REQUEST_ADD_CATALOG_METHOD) ||
-					request.getType().equals(GroupRequestType.INVITE_CATALOG_METHOD)) {
-				post.put("object", request.getCatalogMethodTarget().get().getFullMethod());
-			} else {
-				throw new IllegalStateException();
-			}
+			post.put("object", request.getResource().getResourceID().getName());
 			post.put("verb", verb);
 			post.put("external_key", request.getID().getID());
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
 			final Map<String, Object> context = new HashMap<>();
 			//TODO NOW include denyReason?
-			context.put("requesttype", request.getType().getRepresentation());
+			context.put("resourcetype", request.getResourceType().getName());
 			context.put("groupid", request.getGroupID().getName());
 			post.put("context", context);
 			

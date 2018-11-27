@@ -39,27 +39,18 @@ public class SLF4JNotifierFactory implements NotificationsFactory {
 				final Group group,
 				final GroupRequest request) {
 			LoggerFactory.getLogger(getClass()).info(String.format(
-					"Notifying %s of request %s %s for group %s (%s) with target %s " +
+					"Notifying %s of request %s %s for group %s (%s) adding %s %s " +
 					"requested by %s",
 					userNamesToStrings(targets),
 					request.getID().getID(),
 					request.getType().getRepresentation(),
 					request.getGroupID().getName(),
 					group.getGroupName().getName(),
-					getTarget(request),
+					request.getResourceType().getName(),
+					request.getResource().getResourceID().getName(),
 					request.getRequester().getName()));
 		}
 	
-		private String getTarget(final GroupRequest request) {
-			if (request.getTarget().isPresent()) {
-				return request.getTarget().get().getName();
-			}
-			if (request.getWorkspaceTarget().isPresent()) {
-				return request.getWorkspaceTarget().get().getID() + "";
-			}
-			return request.getCatalogMethodTarget().map(m -> m.getFullMethod()).orElse(null);
-		}
-
 		private List<String> userNamesToStrings(final Collection<UserName> targets) {
 			return targets.stream().map(t -> t.getName()).collect(Collectors.toList());
 		}

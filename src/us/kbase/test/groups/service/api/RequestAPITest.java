@@ -38,6 +38,9 @@ import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.RequestAPI;
 import us.kbase.groups.service.api.RequestAPI.DenyRequestJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -66,7 +69,9 @@ public class RequestAPITest {
 							Instant.ofEpochMilli(11000), Instant.ofEpochMilli(21000))
 							.withModificationTime(Instant.ofEpochMilli(26000))
 							.build())
-					.withInviteToGroup(new UserName("targ"))
+					.withType(RequestType.INVITE)
+					.withResourceType(new ResourceType("user"))
+					.withResource(ResourceDescriptor.from(new UserName("targ")))
 					//TODO TEST add tests if denied state is ever visible
 					.build();
 			REQ_DENIED = GroupRequest.getBuilder(
@@ -75,7 +80,9 @@ public class RequestAPITest {
 							Instant.ofEpochMilli(12000), Instant.ofEpochMilli(22000))
 							.withModificationTime(Instant.ofEpochMilli(27000))
 							.build())
-					.withInviteToGroup(new UserName("targ1"))
+					.withType(RequestType.INVITE)
+					.withResourceType(new ResourceType("user"))
+					.withResource(ResourceDescriptor.from(new UserName("targ1")))
 					//TODO TEST add tests if denied state is ever visible
 					.withStatus(GroupRequestStatus.denied(new UserName("d"), "reason"))
 					.build();
@@ -489,7 +496,9 @@ public class RequestAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(28000))
 								.build())
-						.withRequestGroupMembership()
+						.withType(RequestType.REQUEST)
+						.withResourceType(new ResourceType("user"))
+						.withResource(ResourceDescriptor.from(new UserName("u")))
 						.withStatus(GroupRequestStatus.canceled())
 						.build());
 		
@@ -564,7 +573,9 @@ public class RequestAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(28000))
 								.build())
-						.withInviteToGroup(new UserName("inv"))
+						.withType(RequestType.INVITE)
+						.withResourceType(new ResourceType("user"))
+						.withResource(ResourceDescriptor.from(new UserName("inv")))
 						// normally the acceptor would be the same as the invited user,
 						// but for testing purposes it's different.
 						.withStatus(GroupRequestStatus.accepted(new UserName("inv2")))
@@ -661,7 +672,9 @@ public class RequestAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.withModificationTime(Instant.ofEpochMilli(28000))
 								.build())
-						.withRequestGroupMembership()
+						.withType(RequestType.REQUEST)
+						.withResourceType(new ResourceType("user"))
+						.withResource(ResourceDescriptor.from(new UserName("u")))
 						// should not show up in output for now
 						.withStatus(GroupRequestStatus.denied(new UserName("d"), "testreason"))
 						.build());

@@ -39,7 +39,6 @@ import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -56,12 +55,12 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
-import us.kbase.groups.core.workspace.WorkspaceID;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -716,7 +715,9 @@ public class GroupsAPITest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
-						.withRequestGroupMembership()
+						.withType(RequestType.REQUEST)
+						.withResourceType(new ResourceType("user"))
+						.withResource(ResourceDescriptor.from(new UserName("foo")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).requestGroupMembership("t", "gid");
@@ -784,7 +785,9 @@ public class GroupsAPITest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
-						.withInviteToGroup(new UserName("bar"))
+						.withType(RequestType.INVITE)
+						.withResourceType(new ResourceType("user"))
+						.withResource(ResourceDescriptor.from(new UserName("bar")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).inviteMember("t", "gid", "bar");
@@ -919,7 +922,9 @@ public class GroupsAPITest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
-								.withInviteToGroup(new UserName("baz"))
+								.withType(RequestType.INVITE)
+								.withResourceType(new ResourceType("user"))
+								.withResource(ResourceDescriptor.from(new UserName("baz")))
 								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						));
@@ -1184,7 +1189,9 @@ public class GroupsAPITest {
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
-						.withRequestAddWorkspace(new WorkspaceID(42))
+						.withType(RequestType.REQUEST)
+						.withResourceType(new ResourceType("workspace"))
+						.withResource(new ResourceDescriptor(new ResourceID("42")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1217,7 +1224,9 @@ public class GroupsAPITest {
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
-						.withInviteWorkspace(new WorkspaceID(42))
+						.withType(RequestType.INVITE)
+						.withResourceType(new ResourceType("workspace"))
+						.withResource(new ResourceDescriptor(new ResourceID("42")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1348,7 +1357,9 @@ public class GroupsAPITest {
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
-						.withRequestAddCatalogMethod(new CatalogMethod("m.x"))
+						.withType(RequestType.REQUEST)
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceID("m.x")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1382,7 +1393,9 @@ public class GroupsAPITest {
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
-						.withInviteCatalogMethod(new CatalogMethod("m.y"))
+						.withType(RequestType.INVITE)
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceID("m.y")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)

@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
@@ -128,6 +129,24 @@ public class ResourceIDTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void descriptorFrom() throws Exception {
+		final ResourceDescriptor d = ResourceDescriptor.from(new UserName("foo"));
+		assertThat("incorrect aid", d.getAdministrativeID(),
+				is(new ResourceAdministrativeID("foo")));
+		assertThat("incorrect rid", d.getResourceID(), is(new ResourceID("foo")));
+	}
+	
+	@Test
+	public void descriptorFromFail() throws Exception {
+		try {
+			ResourceDescriptor.from(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("user"));
 		}
 	}
 

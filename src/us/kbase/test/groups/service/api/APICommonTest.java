@@ -19,13 +19,15 @@ import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
-import us.kbase.groups.core.workspace.WorkspaceID;
+import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.APICommon;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
@@ -40,7 +42,9 @@ public class APICommonTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
-				.withRequestGroupMembership()
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("n")))
 				.build();
 		
 		assertThat("incorrect request", APICommon.toGroupRequestJSON(r), is(MapBuilder.newHashMap()
@@ -66,7 +70,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
-				.withInviteToGroup(new UserName("inv"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -93,7 +99,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
-				.withInviteWorkspace(new WorkspaceID(42))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -120,7 +128,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
-				.withInviteCatalogMethod(new CatalogMethod("mod.meth"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -147,7 +157,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
-				.withRequestAddCatalogMethod(new CatalogMethod("mod.meth"))
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -183,7 +195,9 @@ public class APICommonTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
-				.withRequestGroupMembership()
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("n1")))
 				.build();
 		
 		final UUID id2 = UUID.randomUUID();
@@ -193,7 +207,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(11000), Instant.ofEpochMilli(21000))
 						.withModificationTime(Instant.ofEpochMilli(26000))
 						.build())
-				.withInviteToGroup(new UserName("inv"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -204,7 +220,9 @@ public class APICommonTest {
 						Instant.ofEpochMilli(12000), Instant.ofEpochMilli(22000))
 						.withModificationTime(Instant.ofEpochMilli(27000))
 						.build())
-				.withRequestAddWorkspace(new WorkspaceID(42))
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		

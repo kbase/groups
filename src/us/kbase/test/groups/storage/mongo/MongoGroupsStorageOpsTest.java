@@ -14,7 +14,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -25,6 +27,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -38,8 +42,6 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.FieldItem.StringField;
-import us.kbase.groups.core.catalog.CatalogMethod;
-import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -52,16 +54,15 @@ import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.request.GroupRequest.Builder;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
-import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceType;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -1418,112 +1419,7 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void storeAndGetRequestMinimalWithTarget() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-							.build())
-				.withInviteToGroup(new UserName("target"))
-				.build());
-		
-		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
-				is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.build())
-						.withInviteToGroup(new UserName("target"))
-						.build()));
-	}
-	
-	@Test
-	public void storeAndGetRequestMinimalWithRequestWS() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-							.build())
-				.withRequestAddWorkspace(new WorkspaceID(82))
-				.build());
-		
-		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
-				is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.build())
-						.withRequestAddWorkspace(new WorkspaceID(82))
-						.build()));
-	}
-	
-	@Test
-	public void storeAndGetRequestMinimalWithInviteWS() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-							.build())
-				.withInviteWorkspace(new WorkspaceID(82))
-				.build());
-		
-		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
-				is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.build())
-						.withInviteWorkspace(new WorkspaceID(82))
-						.build()));
-	}
-	
-	@Test
-	public void storeAndGetRequestMinimalWithRequestMethod() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-							.build())
-				.withRequestAddCatalogMethod(new CatalogMethod("m2.m3"))
-				.build());
-		
-		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
-				is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.build())
-						.withRequestAddCatalogMethod(new CatalogMethod("m2.m3"))
-						.build()));
-	}
-	
-	@Test
-	public void storeAndGetRequestMinimalWithInviteMethod() throws Exception {
-		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("foo"), new UserName("bar"),
-					CreateModAndExpireTimes.getBuilder(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-							.build())
-				.withInviteCatalogMethod(new CatalogMethod("m34.m42"))
-				.build());
-		
-		assertThat("incorrect request", manager.storage.getRequest(new RequestID(id)),
-				is(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("bar"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-								.build())
-						.withInviteCatalogMethod(new CatalogMethod("m34.m42"))
-						.build()));
-	}
-	
-	@Test
-	public void storeAndGetRequestMaximalWithTarget() throws Exception {
+	public void storeAndGetRequestMaximal() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("foobar"), new UserName("barfoo"),
@@ -1531,7 +1427,10 @@ public class MongoGroupsStorageOpsTest {
 							Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
 					.withModificationTime(Instant.ofEpochMilli(50000))
 					.build())
-				.withInviteToGroup(new UserName("target"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("githubrepo"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("kbase"),
+						new ResourceID("kbase/groups")))
 				.withStatus(GroupRequestStatus.from(
 						GroupRequestStatusType.DENIED, new UserName("whee"), "jerkface"))
 				.build());
@@ -1543,59 +1442,16 @@ public class MongoGroupsStorageOpsTest {
 								Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000))
 						.withModificationTime(Instant.ofEpochMilli(50000))
 						.build())
-					.withInviteToGroup(new UserName("target"))
+					.withType(RequestType.INVITE)
+					.withResourceType(new ResourceType("githubrepo"))
+					.withResource(new ResourceDescriptor(new ResourceAdministrativeID("kbase"),
+							new ResourceID("kbase/groups")))
 					.withStatus(GroupRequestStatus.denied(new UserName("whee"), "jerkface"))
 					.build()));
 	}
 	
-	private interface FuncExcept<T, R> {
-		
-		R apply(T t) throws Exception;
-	}
-	
 	@Test
 	public void storeRequestWithIdenticalCharacteristicString() throws Exception {
-		// default type, request user
-		storeRequestWithIdenticalCharacteristicString(b -> b);
-	}
-	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicStringWithTarget() throws Exception {
-		storeRequestWithIdenticalCharacteristicString(
-				b -> b.withInviteToGroup(new UserName("target")));
-	}
-	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicStringWithRequestWorkspace()
-			throws Exception {
-		storeRequestWithIdenticalCharacteristicString(
-				b -> b.withRequestAddWorkspace(new WorkspaceID(56)));
-	}
-	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicStringWithInviteWorkspace()
-			throws Exception {
-		storeRequestWithIdenticalCharacteristicString(
-				b -> b.withInviteWorkspace(new WorkspaceID(65)));
-	}
-	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicStringWithRequestMethod()
-			throws Exception {
-		storeRequestWithIdenticalCharacteristicString(
-				b -> b.withRequestAddCatalogMethod(new CatalogMethod("foo.bar")));
-	}
-	
-	@Test
-	public void storeRequestWithIdenticalCharacteristicStringWithInviteMethod()
-			throws Exception {
-		storeRequestWithIdenticalCharacteristicString(
-				b -> b.withInviteCatalogMethod(new CatalogMethod("bar.baz")));
-	}
-	
-	private void storeRequestWithIdenticalCharacteristicString(
-			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn)
-			throws Exception {
 		// tests that storage with identical characteristic strings works as long as
 		// there's only one open request
 		final UUID id1 = UUID.randomUUID();
@@ -1603,44 +1459,40 @@ public class MongoGroupsStorageOpsTest {
 		final UUID id3 = UUID.randomUUID();
 		final UUID id4 = UUID.randomUUID();
 		final UUID id5 = UUID.randomUUID();
-		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
-				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-				.build();
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
-				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)).build());
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
-				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.canceled()).build());
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
-				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.expired()).build());
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
-				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build());
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
-				new RequestID(id5), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build());
+		manager.storage.storeRequest(getBuilder(id1).build());
+		manager.storage.storeRequest(getBuilder(id2).withStatus(GroupRequestStatus.canceled())
+				.build());
+		manager.storage.storeRequest(getBuilder(id3).withStatus(GroupRequestStatus.expired())
+				.build());
+		manager.storage.storeRequest(getBuilder(id4).withStatus(
+				GroupRequestStatus.accepted(new UserName("u")))
+				.build());
+		manager.storage.storeRequest(getBuilder(id5).withStatus(
+				GroupRequestStatus.denied(new UserName("u"), "r")).build());
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times))
-				.build()));
+				getBuilder(id1).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.canceled()).build()));
+				getBuilder(id2).withStatus(GroupRequestStatus.canceled()).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.expired()).build()));
+				getBuilder(id3).withStatus(GroupRequestStatus.expired()).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
+				getBuilder(id4).withStatus(GroupRequestStatus.accepted(new UserName("u"))).build()));
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id5), new GroupID("foo"), new UserName("bar"), times))
-				.withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
+				getBuilder(id5).withStatus(GroupRequestStatus.denied(new UserName("u"), "r")).build()));
+	}
+
+	private Builder getBuilder(final UUID id)
+			throws Exception {
+		return GroupRequest.getBuilder(
+				new RequestID(id), new GroupID("foo"), new UserName("bar"),
+				CreateModAndExpireTimes.getBuilder(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+						.build())
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("yay"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("foo"),
+						new ResourceID("bar")));
 	}
 	
 	@Test
@@ -1653,168 +1505,78 @@ public class MongoGroupsStorageOpsTest {
 		final UUID id4 = UUID.randomUUID();
 		final UUID id5 = UUID.randomUUID();
 		final UUID id6 = UUID.randomUUID();
-		final UUID id7 = UUID.randomUUID();
-		final UUID id8 = UUID.randomUUID();
-		final UUID id9 = UUID.randomUUID();
-		final UUID id10 = UUID.randomUUID();
-		final UUID id11 = UUID.randomUUID();
-		final UUID id12 = UUID.randomUUID();
-		final UUID id14 = UUID.randomUUID(); // nope, no naughty numbers
 		final CreateModAndExpireTimes times = CreateModAndExpireTimes.getBuilder(
 				Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 				.build();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
 				.build());
 		
-		// with no target - implies different type
+		// with different request type
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+				.withType(RequestType.INVITE)
 				.build());
 		
-		// with different target
+		// with different resource type
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("tarjeh"))
+				.withResourceType(new ResourceType("foo"))
 				.build());
+		
+		// with different resource
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+				// res admin ID is not included in the char string since for a given resource ID,
+				// the admin ID is always the same
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("yay"),
+						new ResourceID("yo")))
+				.build());
+				
 		
 		// with different group
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id4), new GroupID("fooo"), new UserName("bar"), times)
-				.withInviteToGroup(new UserName("target"))
+				new RequestID(id5), new GroupID("fooo"), new UserName("bar"), times)
 				.build());
 		
 		// with different user
 		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id5), new GroupID("foo"), new UserName("barr"), times)
-				.withInviteToGroup(new UserName("target"))
-				.build());
-		
-		// with request workspace target - implies different type
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id6), new GroupID("foo"), new UserName("bar"), times)
-				.withRequestAddWorkspace(new WorkspaceID(42))
-				.build());
-
-		// with different request workspace target
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id7), new GroupID("foo"), new UserName("bar"), times)
-				.withRequestAddWorkspace(new WorkspaceID(43))
-				.build());
-		
-		// with invite workspace target - implies different type
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id8), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteWorkspace(new WorkspaceID(42))
-				.build());
-		
-		// with different invite workspace target
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id9), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteWorkspace(new WorkspaceID(43))
-				.build());
-		
-		// with request method target - implies different type
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id10), new GroupID("foo"), new UserName("bar"), times)
-				.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
-				.build());
-
-		// with different request method target
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id11), new GroupID("foo"), new UserName("bar"), times)
-				.withRequestAddCatalogMethod(new CatalogMethod("m.n2"))
-				.build());
-		
-		// with invite method target - implies different type
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id12), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteCatalogMethod(new CatalogMethod("m.n"))
-				.build());
-		
-		// with different invite method target
-		manager.storage.storeRequest(GroupRequest.getBuilder(
-				new RequestID(id14), new GroupID("foo"), new UserName("bar"), times)
-				.withInviteCatalogMethod(new CatalogMethod("m.n2"))
+				new RequestID(id6), new GroupID("foo"), new UserName("barr"), times)
 				.build());
 		
 		// check results
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id1)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id1), new GroupID("foo"), new UserName("bar"), times)
-						.withInviteToGroup(new UserName("target"))
 						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id2)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id2), new GroupID("foo"), new UserName("bar"), times)
+						.withType(RequestType.INVITE)
 						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id3)), is(
 				GroupRequest.getBuilder(
 						new RequestID(id3), new GroupID("foo"), new UserName("bar"), times)
-					.withInviteToGroup(new UserName("tarjeh"))
-					.build()));
+						.withResourceType(new ResourceType("foo"))
+						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id4)), is(
 				GroupRequest.getBuilder(
-						new RequestID(id4), new GroupID("fooo"), new UserName("bar"), times)
-						.withInviteToGroup(new UserName("target"))
+						new RequestID(id4), new GroupID("foo"), new UserName("bar"), times)
+						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("yay"),
+								new ResourceID("yo")))
 						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id5)), is(
 				GroupRequest.getBuilder(
-						new RequestID(id5), new GroupID("foo"), new UserName("barr"), times)
-						.withInviteToGroup(new UserName("target"))
+						new RequestID(id5), new GroupID("fooo"), new UserName("bar"), times)
 						.build()));
 		
 		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id6)), is(
 				GroupRequest.getBuilder(
-						new RequestID(id6), new GroupID("foo"), new UserName("bar"), times)
-						.withRequestAddWorkspace(new WorkspaceID(42))
-						.build()));
-		
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id7)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id7), new GroupID("foo"), new UserName("bar"), times)
-						.withRequestAddWorkspace(new WorkspaceID(43))
-						.build()));
-
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id8)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id8), new GroupID("foo"), new UserName("bar"), times)
-						.withInviteWorkspace(new WorkspaceID(42))
-						.build()));
-
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id9)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id9), new GroupID("foo"), new UserName("bar"), times)
-						.withInviteWorkspace(new WorkspaceID(43))
-						.build()));
-		
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id10)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id10), new GroupID("foo"), new UserName("bar"), times)
-						.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
-						.build()));
-		
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id11)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id11), new GroupID("foo"), new UserName("bar"), times)
-						.withRequestAddCatalogMethod(new CatalogMethod("m.n2"))
-						.build()));
-
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id12)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id12), new GroupID("foo"), new UserName("bar"), times)
-						.withInviteCatalogMethod(new CatalogMethod("m.n"))
-						.build()));
-
-		assertThat("incorrect group", manager.storage.getRequest(new RequestID(id14)), is(
-				GroupRequest.getBuilder(
-						new RequestID(id14), new GroupID("foo"), new UserName("bar"), times)
-						.withInviteCatalogMethod(new CatalogMethod("m.n2"))
+						new RequestID(id6), new GroupID("foo"), new UserName("barr"), times)
 						.build()));
 	}
 	
@@ -1847,54 +1609,31 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void storeRequestFailEquivalentRequestNoTarget() throws Exception {
-		storeRequestFailEquivalentRequest(b -> b);
-	}
-	
-	@Test
-	public void storeRequestFailEquivalentRequestWithTarget() throws Exception {
-		storeRequestFailEquivalentRequest(b -> b.withInviteToGroup(new UserName("baz1")));
-	}
-	
-	@Test
-	public void storeRequestFailEquivalentRequestWithRequestWorkspace() throws Exception {
-		storeRequestFailEquivalentRequest(b -> b.withRequestAddWorkspace(new WorkspaceID(34)));
-	}
-	
-	@Test
-	public void storeRequestFailEquivalentRequestWithInviteWorkspace() throws Exception {
-		storeRequestFailEquivalentRequest(b -> b.withInviteWorkspace(new WorkspaceID(43)));
-	}
-	
-	@Test
-	public void storeRequestFailEquivalentRequestWithRequestMethod() throws Exception {
-		storeRequestFailEquivalentRequest(
-				b -> b.withRequestAddCatalogMethod(new CatalogMethod("m.n")));
-	}
-	
-	@Test
-	public void storeRequestFailEquivalentRequestWithInviteMethod() throws Exception {
-		storeRequestFailEquivalentRequest(
-				b -> b.withRequestAddCatalogMethod(new CatalogMethod("m.n2")));
-	}
-	
-	private void storeRequestFailEquivalentRequest(
-			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn)
-			throws Exception {
+	public void storeRequestFailEquivalentRequest() throws Exception {
 		final UUID id = UUID.randomUUID();
-		manager.storage.storeRequest(builderFn.apply(GroupRequest.getBuilder(
+		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("foo1"), new UserName("bar1"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
-					.build()))
+					.build())
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("foo"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("aid"),
+						new ResourceID("rid")))
 				.build());
 		
-		final GroupRequest request = builderFn.apply(GroupRequest.getBuilder(
+		final GroupRequest request = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("bar1"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(30000), Instant.ofEpochMilli(40000))
-				.build()))
-			.build();
+						.build())
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("foo"))
+				// this should never actually happen. rid -> aid mapping should be immutable.
+				// however, we test here to ensure the RAID is not included in the char string.
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("aid2"),
+						new ResourceID("rid")))
+				.build();
 		
 		failStoreRequest(request, new RequestExistsException(String.format(
 				"Request exists with ID: %s", id.toString())));
@@ -1957,7 +1696,7 @@ public class MongoGroupsStorageOpsTest {
 	
 		failGetRequest(new RequestID(id), new GroupsStorageException(
 				"Unexpected value in database: No enum constant " +
-				"us.kbase.groups.core.request.GroupRequestType.KICK_FROM_GROUP"));
+				"us.kbase.groups.core.request.RequestType.KICK_FROM_GROUP"));
 	}
 	
 	
@@ -1985,28 +1724,37 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
 							.withModificationTime(Instant.ofEpochMilli(130000))
 							.build())
-				.withInviteToGroup(new UserName("whee"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("whee")))
 				.build();
 		final GroupRequest third = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
 							.withModificationTime(Instant.ofEpochMilli(140000))
 							.build())
-				.withInviteCatalogMethod(new CatalogMethod("m1.n"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m1"),
+						new ResourceID("m1.n")))
 				.build();
 		final GroupRequest fourth = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo4"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(150000))
 							.build())
-				.withInviteWorkspace(new WorkspaceID(2))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("2")))
 				.build();
 		final GroupRequest target = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("targ"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withInviteToGroup(new UserName("bar"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("user"))
+				.withResource(new ResourceDescriptor(new ResourceID("bar")))
 				.build();
 		final GroupRequest otheruser = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
@@ -2098,13 +1846,19 @@ public class MongoGroupsStorageOpsTest {
 	@Test
 	public void getRequestsByRequesterHitLimit() throws Exception {
 		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		final List<ResourceType> rtypes = Arrays.asList(new ResourceType("user"),
+				new ResourceType("workspace"), new ResourceType("catalogmethod"));
+		final List<ResourceDescriptor> resources = Arrays.asList(
+				ResourceDescriptor.from(new UserName("target")),
+				new ResourceDescriptor(new ResourceID("1")),
+				new ResourceDescriptor(new ResourceAdministrativeID("m"), new ResourceID("m.m")));
 		
 		for (int i = 1; i < 202; i++) {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("n" + i), new UserName("name"),
-					GroupRequestType.values()[i % GroupRequestType.values().length],
-					1,
-					"m.m");
+					RequestType.values()[i % RequestType.values().length],
+					rtypes.get(i % 3),
+					resources.get(i % 3));
 			manager.storage.storeRequest(req);
 		}
 		
@@ -2114,14 +1868,15 @@ public class MongoGroupsStorageOpsTest {
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1030000))
 						.build())
-				.withRequestGroupMembership()
 				.build());
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1130000))
 						.build())
-				.withRequestAddWorkspace(new WorkspaceID(2))
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("2")))
 				.build());
 		
 		assertRequestListCorrect(
@@ -2157,35 +1912,43 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(50000), forever)
 							.withModificationTime(Instant.ofEpochMilli(120000))
 							.build())
-				.withInviteToGroup(new UserName("bar"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("bar")))
 				.build();
 		final GroupRequest second = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo2"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
 							.withModificationTime(Instant.ofEpochMilli(130000))
 							.build())
-				.withInviteCatalogMethod(new CatalogMethod("m.n"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+						new ResourceID("m.n")))
 				.build();
 		final GroupRequest third = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
 							.withModificationTime(Instant.ofEpochMilli(140000))
 							.build())
-				.withInviteToGroup(new UserName("bar"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("bar")))
 				.build();
 		final GroupRequest fourth = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo4"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(150000))
 							.build())
-				.withInviteWorkspace(new WorkspaceID(1))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("1")))
 				.build();
 		final GroupRequest fifth = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo5"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(160000))
 							.build())
-				.withInviteToGroup(new UserName("bar"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("bar")))
 				.build();
 		final GroupRequest user = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("use"), new UserName("bar"),
@@ -2198,21 +1961,25 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withRequestAddWorkspace(new WorkspaceID(1))
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("1")))
 				.build();
 		final GroupRequest requestcat = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("reqcat"), new UserName("bar"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withRequestAddCatalogMethod(new CatalogMethod("m.n"))
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+						new ResourceID("m.n")))
 				.build();
 		final GroupRequest othertarget = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 							.build())
-				.withInviteToGroup(new UserName("bat"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("bat")))
 				.build();
 		final GroupRequest otherws = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("otherws"), new UserName("baz"),
@@ -2220,7 +1987,9 @@ public class MongoGroupsStorageOpsTest {
 							Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(125000))
 							.build())
-				.withInviteWorkspace(new WorkspaceID(2))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("2")))
 				.build();
 		final GroupRequest othercat = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("othercat"), new UserName("baz"),
@@ -2228,14 +1997,18 @@ public class MongoGroupsStorageOpsTest {
 							Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(135000))
 							.build())
-				.withInviteCatalogMethod(new CatalogMethod("m2.n"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m2"),
+						new ResourceID("m2.n")))
 				.build();
 		final GroupRequest closed = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(inst(170000))
 							.build())
-				.withInviteToGroup(new UserName("bar"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("bar")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		final GroupRequest closedws = GroupRequest.getBuilder(
@@ -2243,7 +2016,9 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(inst(110000))
 							.build())
-				.withInviteWorkspace(new WorkspaceID(1))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("1")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -2261,26 +2036,36 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.storeRequest(third);
 		manager.storage.storeRequest(second);
 
-		final WorkspaceIDSet mt = WorkspaceIDSet.fromIDs(set());
 		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
+		final Map<ResourceType, Set<ResourceAdministrativeID>> mt = Collections.emptyMap();
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bar"), mt, set(), p),
+				manager.storage.getRequestsByTarget(new UserName("bar"), mt, p),
 				is(Arrays.asList(first, third, fifth)));
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(), p),
+				manager.storage.getRequestsByTarget(
+						new UserName("bar"),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1"))),
+						p),
 				is(Arrays.asList(first, third, fourth, fifth)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")), p),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
+						p),
 				is(Arrays.asList(first, second, third, fourth, fifth)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(130000))
 								.build()),
@@ -2288,7 +2073,10 @@ public class MongoGroupsStorageOpsTest {
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(130000))
 								.withNullableIncludeClosed(true)
@@ -2297,7 +2085,10 @@ public class MongoGroupsStorageOpsTest {
 
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(120000))
 								.build()),
@@ -2305,7 +2096,10 @@ public class MongoGroupsStorageOpsTest {
 
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(129999))
 								.build()),
@@ -2313,7 +2107,10 @@ public class MongoGroupsStorageOpsTest {
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.build()),
@@ -2321,7 +2118,10 @@ public class MongoGroupsStorageOpsTest {
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.withNullableIncludeClosed(true)
@@ -2330,7 +2130,10 @@ public class MongoGroupsStorageOpsTest {
 
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1)), set(new CatalogModule("m")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"))),
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.withNullableExcludeUpTo(inst(140000))
@@ -2339,41 +2142,59 @@ public class MongoGroupsStorageOpsTest {
 
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bar"),
-						WorkspaceIDSet.fromInts(set(1, 2)),
-						set(new CatalogModule("m"), new CatalogModule("m2")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1"),
+										new ResourceAdministrativeID("2")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m"),
+										new ResourceAdministrativeID("m2"))),
 						p),
 				is(Arrays.asList(first, otherws, second, othercat, third, fourth, fifth)));
 		
 		assertThat("incorrect get by target",
-				manager.storage.getRequestsByTarget(new UserName("bat"), mt, set(), p),
+				manager.storage.getRequestsByTarget(new UserName("bat"), mt, p),
 				is(Arrays.asList(othertarget)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("bat"),
-						WorkspaceIDSet.fromInts(set(2)), set(new CatalogModule("m2")), p),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("2")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m2"))),
+						p),
 				is(Arrays.asList(othertarget, otherws, othercat)));
 		
 		assertThat("incorrect get by target",
 				manager.storage.getRequestsByTarget(new UserName("baz"),
-						WorkspaceIDSet.fromInts(set(3)), set(new CatalogModule("m3")),p),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("3")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m3"))),
+						p),
 				is(Collections.emptyList()));
+	}
+	
+	private interface FnExcept<T, R> {
+		R apply(T t) throws Exception;
 	}
 	
 	@Test
 	public void getRequestsByTargetHitLimit() throws Exception {
 		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
-		
-		final List<GroupRequestType> types = Arrays.asList(
-				GroupRequestType.INVITE_TO_GROUP,
-				GroupRequestType.INVITE_WORKSPACE,
-				GroupRequestType.INVITE_CATALOG_METHOD);
+		final List<ResourceType> rtypes = Arrays.asList(new ResourceType("user"),
+				new ResourceType("workspace"), new ResourceType("catalogmethod"));
+		final List<FnExcept<Integer, ResourceDescriptor>> intToResource = Arrays.asList(
+				i -> ResourceDescriptor.from(new UserName("target")),
+				i -> new ResourceDescriptor(new ResourceID(((i % 4) + 1) + "")),
+				i -> new ResourceDescriptor(new ResourceAdministrativeID("m" + ((i % 4) + 1)),
+						new ResourceID("m" + ((i % 4) + 1) + ".m")));
 		
 		for (int i = 1; i < 202; i++) {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("n" + i), new UserName("name"),
-					types.get(i % 3),
-					(i % 4) + 1,
-					"m" + ((i % 4) + 1) + ".m");
+					RequestType.INVITE,
+					rtypes.get(i % 3),
+					intToResource.get(i % 3).apply(i));
 			manager.storage.storeRequest(req);
 		}
 		
@@ -2383,57 +2204,85 @@ public class MongoGroupsStorageOpsTest {
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1030000))
 						.build())
-				.withInviteToGroup(new UserName("target1"))
+				.withType(RequestType.INVITE)
+				.withResource(ResourceDescriptor.from(new UserName("target1")))
 				.build());
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1130000))
 						.build())
-				.withInviteWorkspace(new WorkspaceID(5))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("5")))
 				.build());
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1130000))
 						.build())
-				.withInviteCatalogMethod(new CatalogMethod("m5.m"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m5"),
+						new ResourceID("m5.m")))
 				.build());
 		
 		assertRequestListCorrect(
 				r -> r.getGroupID().getName(),
 				(s, p) -> s.getRequestsByTarget(
 						new UserName("target"),
-						WorkspaceIDSet.fromInts(set(1, 2, 3, 4)),
-						set(new CatalogModule("m1"), new CatalogModule("m2"),
-								new CatalogModule("m3"), new CatalogModule("m4")),
+						ImmutableMap.of(new ResourceType("workspace"),
+								set(new ResourceAdministrativeID("1"),
+										new ResourceAdministrativeID("2"),
+										new ResourceAdministrativeID("3"),
+										new ResourceAdministrativeID("4")),
+								new ResourceType("catalogmethod"),
+								set(new ResourceAdministrativeID("m1"),
+										new ResourceAdministrativeID("m2"),
+										new ResourceAdministrativeID("m3"),
+										new ResourceAdministrativeID("m4"))),
 						p));
 	}
 	
 	@Test
-	public void getRequestsByTargetFailNulls() throws Exception {
+	public void getRequestsByTargetFailBadArgs() throws Exception {
 		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
-		failGetRequestsByTarget(null, WorkspaceIDSet.fromIDs(set()), set(), p,
+		failGetRequestsByTarget(null, Collections.emptyMap(), p,
 				new NullPointerException("target"));
-		failGetRequestsByTarget(new UserName("u"), null, set(), p,
-				new NullPointerException("wsids"));
-		failGetRequestsByTarget(new UserName("u"), WorkspaceIDSet.fromIDs(set()), null, p,
-				new NullPointerException("modules"));
-		failGetRequestsByTarget(new UserName("u"), WorkspaceIDSet.fromIDs(set()),
-				set(new CatalogModule("m"), null), p,
-				new NullPointerException("Null item in collection modules"));
-		failGetRequestsByTarget(new UserName("u"), WorkspaceIDSet.fromIDs(set()), set(), null,
+		failGetRequestsByTarget(new UserName("u"), null, p,
+				new NullPointerException("resources"));
+		
+		final ResourceAdministrativeID raid = new ResourceAdministrativeID("a");
+		final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
+		resources.put(new ResourceType("t"), set(raid));
+		resources.put(null, set(raid));
+		failGetRequestsByTarget(new UserName("u"), resources, p,
+				new NullPointerException("null key in resources"));
+		
+		resources.remove(null);
+		resources.put(new ResourceType("v"), null);
+		failGetRequestsByTarget(new UserName("u"), resources, p,
+				new NullPointerException("resources key v value"));
+		
+		resources.put(new ResourceType("v"), set());
+		failGetRequestsByTarget(new UserName("u"), resources, p,
+				new IllegalArgumentException("No resource IDs for key v"));
+		
+		resources.put(new ResourceType("v"), set(raid, null));
+		failGetRequestsByTarget(new UserName("u"), resources, p,
+				new NullPointerException("Null item in collection resources key v value"));
+		
+		failGetRequestsByTarget(new UserName("u"), Collections.emptyMap(), null,
 				new NullPointerException("params"));
 	}
 	
 	private void failGetRequestsByTarget(
 			final UserName target,
-			final WorkspaceIDSet wsids,
-			final Set<CatalogModule> modules,
+			final Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			final GetRequestsParams params,
 			final Exception expected) {
 		try {
-			manager.storage.getRequestsByTarget(target, wsids, modules, params);
+			manager.storage.getRequestsByTarget(target, resources, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -2457,21 +2306,25 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
 							.withModificationTime(Instant.ofEpochMilli(130000))
 							.build())
-				.withRequestAddWorkspace(new WorkspaceID(45))
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("45")))
 				.build();
 		final GroupRequest third = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar3"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
 							.withModificationTime(Instant.ofEpochMilli(140000))
 							.build())
-				.withRequestAddCatalogMethod(new CatalogMethod("m.m"))
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+						new ResourceID("m.m")))
 				.build();
 		final GroupRequest fourth = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar4"),
 					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
 							.withModificationTime(Instant.ofEpochMilli(150000))
 							.build())
-				.withRequestAddWorkspace(new WorkspaceID(42))
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("42")))
 				.build();
 		// any request with a target user is excluded
 		final GroupRequest target = GroupRequest.getBuilder(
@@ -2479,7 +2332,9 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withInviteToGroup(new UserName("foo"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("user"))
+				.withResource(ResourceDescriptor.from(new UserName("foo")))
 				.build();
 		// same for invite workspace requests
 		final GroupRequest targetws = GroupRequest.getBuilder(
@@ -2487,7 +2342,9 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withInviteWorkspace(new WorkspaceID(86))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("86")))
 				.build();
 		// and invite method requests
 		final GroupRequest targetcat = GroupRequest.getBuilder(
@@ -2495,7 +2352,10 @@ public class MongoGroupsStorageOpsTest {
 					CreateModAndExpireTimes.getBuilder(
 							Instant.ofEpochMilli(20000), forever)
 					.build())
-				.withInviteCatalogMethod(new CatalogMethod("m.m"))
+				.withType(RequestType.INVITE)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+						new ResourceID("m.m")))
 				.build();
 		final GroupRequest othergroup = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("other"),
@@ -2585,17 +2445,19 @@ public class MongoGroupsStorageOpsTest {
 	public void getRequestsByGroupHitLimit() throws Exception {
 		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
 		
-		final List<GroupRequestType> types = Arrays.asList(
-				GroupRequestType.REQUEST_GROUP_MEMBERSHIP,
-				GroupRequestType.REQUEST_ADD_WORKSPACE,
-				GroupRequestType.REQUEST_ADD_CATALOG_METHOD);
+		final List<ResourceType> rtypes = Arrays.asList(new ResourceType("user"),
+				new ResourceType("workspace"), new ResourceType("catalogmethod"));
+		final List<ResourceDescriptor> resources = Arrays.asList(
+				ResourceDescriptor.from(new UserName("target")),
+				new ResourceDescriptor(new ResourceID("1")),
+				new ResourceDescriptor(new ResourceAdministrativeID("m"), new ResourceID("m.m")));
 		
 		for (int i = 1; i < 202; i++) {
 			final GroupRequest req = makeRequestForLimitTests(
 					forever, i, new GroupID("gid"), new UserName("n" + i),
-					types.get(i % 3),
-					1,
-					"m.m");
+					RequestType.REQUEST,
+					rtypes.get(i % 3),
+					resources.get(i % 3));
 			manager.storage.storeRequest(req);
 		}
 		
@@ -2605,14 +2467,15 @@ public class MongoGroupsStorageOpsTest {
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1030000))
 						.build())
-				.withRequestGroupMembership()
 				.build());
 		manager.storage.storeRequest(GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("foo"),
 				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
 						.withModificationTime(inst(1130000))
 						.build())
-				.withRequestAddWorkspace(new WorkspaceID(2))
+				.withType(RequestType.REQUEST)
+				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceDescriptor(new ResourceID("2")))
 				.build());
 		
 		assertRequestListCorrect(
@@ -2671,9 +2534,9 @@ public class MongoGroupsStorageOpsTest {
 			final int i,
 			final GroupID gid,
 			final UserName requester,
-			final GroupRequestType type,
-			final int workspaceID,
-			final String catalogMethod)
+			final RequestType type,
+			final ResourceType restype,
+			final ResourceDescriptor resource)
 			throws Exception {
 		final GroupRequestStatusType st = GroupRequestStatusType.values()
 				[i % GroupRequestStatusType.values().length];
@@ -2683,8 +2546,9 @@ public class MongoGroupsStorageOpsTest {
 						.withModificationTime(inst(1000000 + (10000 * i)))
 						.build())
 				.withStatus(GroupRequestStatus.from(st, new UserName("c"), "r"))
-				.withType(type, new UserName("target"), new WorkspaceID(workspaceID),
-						new CatalogMethod(catalogMethod))
+				.withType(type)
+				.withResourceType(restype)
+				.withResource(resource)
 				.build();
 		return req;
 	}

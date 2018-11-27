@@ -4,7 +4,7 @@ import us.kbase.groups.core.Name;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
-/** The ID of a resource.
+/** An immutable ID of a resource.
  * @author gaprice@lbl.gov
  *
  */

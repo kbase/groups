@@ -49,8 +49,6 @@ import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.catalog.CatalogMethod;
-import us.kbase.groups.core.catalog.CatalogModule;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -65,14 +63,12 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
-import us.kbase.groups.core.request.GroupRequestType;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceType;
-import us.kbase.groups.core.workspace.WorkspaceID;
-import us.kbase.groups.core.workspace.WorkspaceIDSet;
 import us.kbase.groups.storage.GroupsStorage;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 import us.kbase.groups.storage.exceptions.StorageInitException;
@@ -139,25 +135,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// find by requester and state and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_STATUS,
 				Fields.REQUEST_MODIFICATION), null);
-		// find by target and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_MODIFICATION), null);
-		// find by target and state and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET, Fields.REQUEST_STATUS,
+		// find by resource and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION),
+				null);
+		// find by resource and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
 				Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards ws admins and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE,
-				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards ws admins with a particular state and
-		// sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET_WORKSPACE, Fields.REQUEST_STATUS,
-				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards module owners and sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET_CATALOG_MODULE,
-				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
-		// find requests targeted towards module owners with a particular state and
-		// sort/filter by modification time.
-		requests.put(Arrays.asList(Fields.REQUEST_TARGET_CATALOG_MODULE, Fields.REQUEST_STATUS,
-				Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION), null);
 		// find expired requests.
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
 		// ensure equivalent requests are rejected. See getCharacteristicString()
@@ -826,14 +811,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_REQUESTER, request.getRequester().getName())
 				.append(Fields.REQUEST_STATUS, request.getStatusType().name())
 				.append(Fields.REQUEST_TYPE, request.getType().name())
-				.append(Fields.REQUEST_TARGET, request.getTarget()
-						.map(t -> t.getName()).orElse(null))
-				.append(Fields.REQUEST_TARGET_WORKSPACE, request.getWorkspaceTarget()
-						.map(wt -> wt.getID()).orElse(null))
-				.append(Fields.REQUEST_TARGET_CATALOG_MODULE, request.getCatalogMethodTarget()
-						.map(m -> m.getModule().getName()).orElse(null))
-				.append(Fields.REQUEST_TARGET_CATALOG_METHOD, request.getCatalogMethodTarget()
-						.map(m -> m.getMethod()).orElse(null))
+				.append(Fields.REQUEST_RESOURCE_TYPE, request.getResourceType().getName())
+				.append(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID,
+						request.getResource().getAdministrativeID().getName())
+				.append(Fields.REQUEST_RESOURCE_ID,
+						request.getResource().getResourceID().getName())
 				.append(Fields.REQUEST_CLOSED_BY, request.getClosedBy()
 						.map(cb -> cb.getName()).orElse(null))
 				.append(Fields.REQUEST_REASON_CLOSED, request.getClosedReason().orElse(null))
@@ -903,9 +885,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 		builder.append(request.getGroupID().getName());
 		builder.append(request.getRequester().getName());
 		builder.append(request.getType().name());
-		builder.append(request.getTarget().map(t -> t.getName()).orElse(""));
-		builder.append(request.getWorkspaceTarget().map(m -> m.getID() + "").orElse(""));
-		builder.append(request.getCatalogMethodTarget().map(m -> m.getFullMethod()).orElse(""));
+		builder.append(request.getResourceType().getName());
+		// since knowing the resource ID means we know the admin ID, no need to include it
+		builder.append(request.getResource().getResourceID().getName());
 		final MessageDigest digester;
 		try {
 			digester = MessageDigest.getInstance("MD5");
@@ -945,25 +927,28 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public List<GroupRequest> getRequestsByTarget(
 			final UserName target,
-			final WorkspaceIDSet wsids,
-			final Set<CatalogModule> modules,
+			final Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			final GetRequestsParams params)
 			throws GroupsStorageException {
 		checkNotNull(target, "target");
-		checkNotNull(wsids, "wsids");
-		checkNoNullsInCollection(modules, "modules");
-		final List<Document> or = Arrays.asList(
-				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_TO_GROUP.name())
-						.append(Fields.REQUEST_TARGET, target.getName()),
-				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_WORKSPACE.name())
-						.append(Fields.REQUEST_TARGET_WORKSPACE, new Document(
-								"$in", wsids.getIDs())),
-				new Document(Fields.REQUEST_TYPE, GroupRequestType.INVITE_CATALOG_METHOD.name())
-						.append(Fields.REQUEST_TARGET_CATALOG_MODULE, new Document(
-								"$in", modules.stream().map(m -> m.getName())
-										.collect(Collectors.toList())))
-		);
-		return findRequests(new Document("$or", or), params);
+		checkNotNull(resources, "resources");
+		final List<Document> or = new LinkedList<>();
+		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name())
+				.append("$or", or);
+		or.add(new Document(Fields.REQUEST_RESOURCE_TYPE, GroupRequest.USER_TYPE.getName())
+				.append(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID, target.getName()));
+		for (final ResourceType t: resources.keySet()) {
+			checkNotNull(t, "null key in resources");
+			checkNoNullsInCollection(resources.get(t), "resources key " + t.getName() + " value");
+			if (resources.get(t).isEmpty()) {
+				throw new IllegalArgumentException("No resource IDs for key " + t.getName());
+			}
+			or.add(new Document(Fields.REQUEST_RESOURCE_TYPE, t.getName())
+					.append(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID, new Document(
+							"$in", resources.get(t).stream().map(r -> r.getName())
+									.collect(Collectors.toList()))));
+		}
+		return findRequests(query, params);
 	}
 
 	@Override
@@ -973,10 +958,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throws GroupsStorageException {
 		checkNotNull(groupID, "groupID");
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
-				.append(Fields.REQUEST_TYPE, new Document("$in", Arrays.asList(
-						GroupRequestType.REQUEST_GROUP_MEMBERSHIP.name(),
-						GroupRequestType.REQUEST_ADD_WORKSPACE.name(),
-						GroupRequestType.REQUEST_ADD_CATALOG_METHOD.name())));
+				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name());
 		return findRequests(query, params);
 	}
 
@@ -1009,10 +991,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {
 		try {
-			final String target = req.getString(Fields.REQUEST_TARGET);
-			final Integer wsTarget = req.getInteger(Fields.REQUEST_TARGET_WORKSPACE);
 			final String closedBy = req.getString(Fields.REQUEST_CLOSED_BY);
-			final String module = req.getString(Fields.REQUEST_TARGET_CATALOG_MODULE);
 			return GroupRequest.getBuilder(
 					new RequestID(req.getString(Fields.REQUEST_ID)),
 					new GroupID(req.getString(Fields.REQUEST_GROUP_ID)),
@@ -1023,12 +1002,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 							.withModificationTime(req.getDate(Fields.REQUEST_MODIFICATION)
 									.toInstant())
 							.build())
-					.withType(
-							GroupRequestType.valueOf(req.getString(Fields.REQUEST_TYPE)),
-							target == null ? null : new UserName(target),
-							wsTarget == null ? null : new WorkspaceID(wsTarget),
-							module == null ? null : new CatalogMethod(new CatalogModule(module),
-									req.getString(Fields.REQUEST_TARGET_CATALOG_METHOD)))
+					.withType(RequestType.valueOf(req.getString(Fields.REQUEST_TYPE)))
+					.withResourceType(new ResourceType(
+							req.getString(Fields.REQUEST_RESOURCE_TYPE)))
+					.withResource(new ResourceDescriptor(
+							new ResourceAdministrativeID(
+									req.getString(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID)),
+							new ResourceID(req.getString(Fields.REQUEST_RESOURCE_ID))))
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),
