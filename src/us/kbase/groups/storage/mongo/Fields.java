@@ -55,18 +55,16 @@ public class Fields {
 	public static final String REQUEST_ID = "id";
 	/** The group ID for the request */
 	public static final String REQUEST_GROUP_ID = "gid";
-	/** The user the request targets, if any. */
-	public static final String REQUEST_TARGET = "target";
-	/** The workspace the request targets, if any. */
-	public static final String REQUEST_TARGET_WORKSPACE = "wstarg";
-	/** The catalog module the request targets, if any. */
-	public static final String REQUEST_TARGET_CATALOG_MODULE = "modtarg";
-	/** The catalog method the request targets, if any. */
-	public static final String REQUEST_TARGET_CATALOG_METHOD = "methtarg";
-	/** The user that made the request. */
-	public static final String REQUEST_REQUESTER = "requester";
 	/** The type of the request. */
 	public static final String REQUEST_TYPE = "type";
+	/** The type of the resource that is the subject of the request.*/
+	public static final String REQUEST_RESOURCE_TYPE = "restype";
+	/** The administrative ID of the resource that is the subject of the request. */
+	public static final String REQUEST_RESOURCE_ADMINISTRATIVE_ID = "resaid";
+	/** The ID of the resource that is the subject of the request. */
+	public static final String REQUEST_RESOURCE_ID = "resrid";
+	/** The user that made the request. */
+	public static final String REQUEST_REQUESTER = "requester";
 	/** The the status of the request. */
 	public static final String REQUEST_STATUS = "status";
 	/** The user that closed the request. */

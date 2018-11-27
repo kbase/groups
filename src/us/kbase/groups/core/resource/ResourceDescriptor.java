@@ -2,10 +2,18 @@ package us.kbase.groups.core.resource;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 
-/** The resource ID and corresponding administrative ID for a resource.
+/** The resource ID and corresponding administrative ID for a resource. Both the resource and
+ * administrative IDs are expected to be immutable addresses to a resource and its administrative
+ * resource. Furthermore, the resource ID to administrative ID mapping must also be immutable.
+ * Each unique resource ID must have exactly one administrative ID (which may be identical to the
+ * resource ID).
+ * Many resource IDs may share one administrative ID.
+ * It is expected that each {@link ResourceHandler} for a resource service or collection
+ * enforce these properties.
  * @author gaprice@lbl.gov
  *
  */
@@ -39,6 +47,16 @@ public class ResourceDescriptor {
 			throw new RuntimeException("This should be impossible", e);
 		}
 		this.resourceID = resourceID;
+	}
+	
+	public static ResourceDescriptor from(final UserName user) {
+		checkNotNull(user, "user");
+		try {
+			return new ResourceDescriptor(new ResourceID(user.getName()));
+		} catch (MissingParameterException | IllegalParameterException e) {
+			// since user requirements are tighter than res id
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 
 	/** Get the administrative ID of the resource.

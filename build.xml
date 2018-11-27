@@ -283,8 +283,6 @@
         <test name="us.kbase.test.groups.core.OptionalGroupFieldsTest"/>
         <test name="us.kbase.test.groups.core.TokenTest"/>
         <test name="us.kbase.test.groups.core.UserNameTest"/>
-        <test name="us.kbase.test.groups.core.catalog.CatalogMethodTest"/>
-        <test name="us.kbase.test.groups.core.catalog.CatalogModuleTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.CustomFieldTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.FieldValidatorConfigurationTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.FieldValidatorsTest"/>
@@ -292,7 +290,6 @@
         <test name="us.kbase.test.groups.core.request.GroupRequestTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestStatusTypeTest"/>
-        <test name="us.kbase.test.groups.core.request.GroupRequestTypeTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestUserActionTest"/>
         <test name="us.kbase.test.groups.core.request.GroupRequestWithActionsTest"/>
         <test name="us.kbase.test.groups.core.request.RequestIDTest"/>
@@ -300,8 +297,6 @@
         <test name="us.kbase.test.groups.core.resource.ResourceIDTest"/>
         <test name="us.kbase.test.groups.core.resource.ResourceInformationSetTest"/>
         <test name="us.kbase.test.groups.core.resource.ResourceTypeTest"/>
-        <test name="us.kbase.test.groups.core.workspace.WorkspaceIDTest"/>
-        <test name="us.kbase.test.groups.core.workspace.WorkspaceIDSetTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.EnumFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.SimpleFieldValidatorFactoryTest"/>
