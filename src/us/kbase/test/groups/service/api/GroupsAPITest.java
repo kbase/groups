@@ -1285,45 +1285,51 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void removeWorkspace() throws Exception {
+	public void removeResource() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		new GroupsAPI(g).removeWorkspace("t", "gid", "99");
+		new GroupsAPI(g).removeResource("t", "gid", "rtype", "99");
 		
-		verify(g).removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("99"));
+		verify(g).removeResource(new Token("t"), new GroupID("gid"), new ResourceType("rtype"),
+				new ResourceID("99"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailBadArgs() throws Exception {
+	public void removeResourceFailBadArgs() throws Exception {
 		final Groups g = mock(Groups.class);
-		failRemoveWorkspace(g, null, "id", "45", new NoTokenProvidedException("No token provided"));
-		failRemoveWorkspace(g, "  \t  ", "id", "45",
+		failRemoveResource(g, null, "id", "t", "45", new NoTokenProvidedException("No token provided"));
+		failRemoveResource(g, "  \t  ", "id", "t", "45",
 				new NoTokenProvidedException("No token provided"));
-		failRemoveWorkspace(g, "t", "illegal*id", "45",
+		failRemoveResource(g, "t", "illegal*id", "t", "45",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failRemoveWorkspace(g, "t", "id", "   foo\nbar    ",
+		failRemoveResource(g, "t", "i", "illegal*type", "45",
+				new IllegalParameterException(
+						"Illegal character in resource type illegal*type: *"));
+		failRemoveResource(g, "t", "id", "t", "   foo\nbar    ",
 				new IllegalParameterException("resource ID contains control characters"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailNoSuchGroup() throws Exception {
+	public void removeResourceFailNoSuchGroup() throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		doThrow(new NoSuchGroupException("i")).when(g)
-				.removeWorkspace(new Token("t"), new GroupID("i"), new ResourceID("34"));
+				.removeResource(new Token("t"), new GroupID("i"), new ResourceType("type"),
+						new ResourceID("34"));
 		
-		failRemoveWorkspace(g, "t", "i", "34", new NoSuchGroupException("i"));
+		failRemoveResource(g, "t", "i", "type", "34", new NoSuchGroupException("i"));
 	}
 	
-	private void failRemoveWorkspace(
+	private void failRemoveResource(
 			final Groups g,
 			final String t,
 			final String i,
-			final String w,
+			final String type,
+			final String r,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).removeWorkspace(t, i, w);
+			new GroupsAPI(g).removeResource(t, i, type, r);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -1454,51 +1460,4 @@ public class GroupsAPITest {
 		}
 	}
 	
-	@Test
-	public void removeCatalogMethod() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		new GroupsAPI(g).removeCatalogMethod("t", "gid", "m.n");
-		
-		verify(g).removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailBadArgs() throws Exception {
-		final Groups g = mock(Groups.class);
-		failRemoveCatalogMethod(g, null, "id", "m.n",
-				new NoTokenProvidedException("No token provided"));
-		failRemoveCatalogMethod(g, "  \t  ", "id", "m.n",
-				new NoTokenProvidedException("No token provided"));
-		failRemoveCatalogMethod(g, "t", "illegal*id", "m.n",
-				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
-						"Illegal character in group id illegal*id: *"));
-		failRemoveCatalogMethod(g, "t", "id", "   \t   ",
-				new MissingParameterException("resource ID"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailNoSuchGroup() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		doThrow(new NoSuchGroupException("i")).when(g)
-				.removeCatalogMethod(new Token("t"), new GroupID("i"), new ResourceID("m.n"));
-		
-		failRemoveCatalogMethod(g, "t", "i", "m.n", new NoSuchGroupException("i"));
-	}
-	
-	private void failRemoveCatalogMethod(
-			final Groups g,
-			final String t,
-			final String i,
-			final String m,
-			final Exception expected) {
-		try {
-			new GroupsAPI(g).removeCatalogMethod(t, i, m);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
 }

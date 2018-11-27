@@ -350,14 +350,14 @@ The workspace is added immediately if the user is an administrator of both the g
 the workspace. A request object is returned if the user is an administrator of at least one; if
 not an error is returned.
 
-### Remove a workspace from a group
+### Remove a resource from a group
 
 ```
 AUTHORIZATION REQUIRED
-DELETE /group/<group id>/resource/workspace/<workspace id>
+DELETE /group/<group id>/resource/<resource type>/<resource id>
 ```
 
-The user must be an administrator of either the group or the workspace.
+The user must be an administrator of either the group or the resource.
 
 ### Add a catalog method to a group
 
@@ -372,15 +372,6 @@ with a value of false.
 The method is added immediately if the user is an administrator of both the group and owner
 of the module. A request object is returned if the user is an administrator/owner of at least one;
 if not an error is returned.
-
-### Remove a catalog method from a group
-
-```
-AUTHORIZATION REQUIRED
-DELETE /group/<group id>/resource/catalogmethod/<full method name, e.g. Module.method>
-```
-
-The user must be an administrator or owner of either the group or the catalog module.
 
 ### Get a request
 

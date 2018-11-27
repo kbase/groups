@@ -33,6 +33,8 @@ public class Fields {
 	public static final String GROUP_CUSTOM_FIELDS = "custom";
 	
 	// resource fields
+	/** The resource type. */
+	public static final String GROUP_RESOURCE_TYPE = "resourcetype";
 	/** The resource ID. */
 	public static final String GROUP_RESOURCE_ID = "rid";
 	

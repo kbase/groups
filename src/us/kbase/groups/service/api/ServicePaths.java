@@ -38,6 +38,11 @@ public class ServicePaths {
 	
 	// resources
 	private static final String GROUP_RESOURCE = SEP + "resource" + SEP ;
+	/** The location to add or remove a resource from a group. */
+	public static final String GROUP_RESOURCE_ID = GROUP_ID + GROUP_RESOURCE + "{" +
+			Fields.GROUP_RESOURCE_TYPE + "}" + SEP + "{" + Fields.GROUP_RESOURCE_ID + "}";
+	
+	//TODO NNOW remove
 	/** The location to add or remove a workspace from a group. */
 	public static final String GROUP_WORKSPACE_ID = GROUP_ID + GROUP_RESOURCE + 
 			"workspace" + SEP + "{" + Fields.GROUP_WS_ID + "}";

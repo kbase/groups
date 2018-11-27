@@ -56,6 +56,7 @@ import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.NoSuchResourceTypeException;
 import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
@@ -508,12 +509,7 @@ public class GroupsTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
-	
-	private ResourceDescriptor getWSRD(final int wsid) throws Exception {
-		return new ResourceDescriptor(ResourceAdministrativeID.from(wsid),
-				new ResourceID(wsid + ""));
-	}
-	
+
 	@Test
 	public void getGroupNoTokenNoResources() throws Exception {
 		final TestMocks mocks = initTestMocks();
@@ -3521,6 +3517,12 @@ public class GroupsTest {
 		}
 	}
 	
+	
+	private ResourceDescriptor getWSRD(final int wsid) throws Exception {
+		return new ResourceDescriptor(ResourceAdministrativeID.from(wsid),
+				new ResourceID(wsid + ""));
+	}
+	
 	@Test
 	public void addWorkspace() throws Exception {
 		final TestMocks mocks = initTestMocks();
@@ -3814,7 +3816,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void removeWorkspaceGroupAdmin() throws Exception {
+	public void removeResourceGroupAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3830,7 +3832,8 @@ public class GroupsTest {
 				.thenReturn(false);
 		when(mocks.clock.instant()).thenReturn(inst(7100));
 		
-		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
+		mocks.groups.removeResource(new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"));
 		
 		verify(mocks.storage).removeResource(
 				new GroupID("gid"),
@@ -3840,7 +3843,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void removeWorkspaceWSAdmin() throws Exception {
+	public void removeResourceResourceAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
@@ -3856,7 +3859,8 @@ public class GroupsTest {
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7500));
 		
-		mocks.groups.removeWorkspace(new Token("t"), new GroupID("gid"), new ResourceID("34"));
+		mocks.groups.removeResource(new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"));
 		
 		verify(mocks.storage).removeResource(
 				new GroupID("gid"),
@@ -3866,20 +3870,40 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void removeWorkspaceFailNulls() throws Exception {
+	public void removeResourceFailNulls() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
+		final ResourceType ty = new ResourceType("t");
 		final ResourceID w = new ResourceID("1");
 		
-		failRemoveWorkspace(g, null, i, w, new NullPointerException("userToken"));
-		failRemoveWorkspace(g, t, null, w, new NullPointerException("groupID"));
-		failRemoveWorkspace(g, t, i, null, new NullPointerException("resource"));
+		failRemoveResource(g, null, i, ty, w, new NullPointerException("userToken"));
+		failRemoveResource(g, t, null, ty, w, new NullPointerException("groupID"));
+		failRemoveResource(g, t, i, null, w, new NullPointerException("type"));
+		failRemoveResource(g, t, i, ty, null, new NullPointerException("resource"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailIllegalResourceValue() throws Exception {
+	public void removeResourceFailNoSuchResourceType() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("werkspace"), new ResourceID("34"),
+				new NoSuchResourceTypeException("werkspace"));
+	}
+	
+	@Test
+	public void removeResourceFailIllegalResourceValue() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
@@ -3893,12 +3917,13 @@ public class GroupsTest {
 		when(mocks.wsHandler.getDescriptor(new ResourceID("6")))
 				.thenThrow(new IllegalResourceIDException("bleah"));
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("6"), new IllegalResourceIDException("bleah"));
+		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("6"),
+				new IllegalResourceIDException("bleah"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailCommError() throws Exception {
+	public void removeResourceFailCommError() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
@@ -3912,13 +3937,13 @@ public class GroupsTest {
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
 				.thenThrow(new ResourceHandlerException("bork"));
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new ResourceHandlerException("bork"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailNotEitherAdmin() throws Exception {
-		// this will need changes once requests work
+	public void removeResourceFailNotEitherAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
@@ -3932,13 +3957,14 @@ public class GroupsTest {
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
 				.thenReturn(false);
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new UnauthorizedException(
 						"User notadmin is not an admin for group gid or resource 34"));
 	}
 	
 	@Test
-	public void removeWorkspaceFailWSNotInGroup() throws Exception {
+	public void removeResourceFailResourceNotInGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
@@ -3961,18 +3987,20 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("34")),
 						inst(7000));
 		
-		failRemoveWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new NoSuchResourceException("34 not in group"));
 	}
 	
-	private void failRemoveWorkspace(
+	private void failRemoveResource(
 			final Groups g,
 			final Token t,
 			final GroupID i,
+			final ResourceType type,
 			final ResourceID w,
 			final Exception expected) {
 		try {
-			g.removeWorkspace(t, i, w);
+			g.removeResource(t, i, type, w);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -4486,181 +4514,4 @@ public class GroupsTest {
 		}
 	}
 	
-	@Test
-	public void removeCatalogMethodGroupAdmin() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("admin")))
-				.thenReturn(false);
-		when(mocks.clock.instant()).thenReturn(inst(7100));
-
-		mocks.groups.removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
-		
-		verify(mocks.storage).removeResource(
-				new GroupID("gid"),
-				new ResourceType("catalogmethod"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("m"), new ResourceID("m.n")),
-				inst(7100));
-	}
-	
-	@Test
-	public void removeCatalogMethodModuleOwner() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("catadmin")))
-				.thenReturn(true);
-		when(mocks.clock.instant()).thenReturn(inst(7500));
-		
-		mocks.groups.removeCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
-		
-		verify(mocks.storage).removeResource(
-				new GroupID("gid"),
-				new ResourceType("catalogmethod"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("m"), new ResourceID("m.n")),
-				inst(7500));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailNulls() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		final Groups g = mocks.groups;
-		final Token t = new Token("t");
-		final GroupID i = new GroupID("i");
-		final ResourceID m = new ResourceID("m.n");
-		
-		failRemoveCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
-		failRemoveCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
-		failRemoveCatalogMethod(g, t, i, null, new NullPointerException("resource"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailIllegalResourceValue() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenThrow(new IllegalResourceIDException("bleah"));
-		
-		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new IllegalResourceIDException("bleah"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailCommError() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("notadmin")))
-			.thenThrow(new ResourceHandlerException("oops"));
-		
-		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new ResourceHandlerException("oops"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailNotEitherAdmin() throws Exception {
-		// this will need changes once requests work
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.isAdministrator(new ResourceID("m.n"), new UserName("notamdin")))
-				.thenReturn(false);
-		
-		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new UnauthorizedException(
-						"User notadmin is not an admin for group gid or resource m.n"));
-	}
-	
-	@Test
-	public void removeCatalogMethodFailMethodNotInGroup() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
-				.thenReturn(getResDesc("mod", "mod.meth"));
-		when(mocks.catHandler.isAdministrator(
-				new ResourceID("mod.meth"), new UserName("catadmin")))
-				.thenReturn(true);
-		when(mocks.clock.instant()).thenReturn(inst(7000));
-		
-		doThrow(new NoSuchResourceException("mod not in group")).when(mocks.storage)
-				.removeResource(
-						new GroupID("gid"),
-						new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod"), new ResourceID("mod.meth")),
-						inst(7000));
-		
-		failRemoveCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("mod.meth"),
-				new NoSuchResourceException("mod not in group"));
-	}
-	
-	private void failRemoveCatalogMethod(
-			final Groups g,
-			final Token t,
-			final GroupID i,
-			final ResourceID m,
-			final Exception expected) {
-		try {
-			g.removeCatalogMethod(t, i, m);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
 }
