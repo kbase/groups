@@ -777,15 +777,26 @@ public class MongoGroupsStorage implements GroupsStorage {
 		checkNotNull(type, "type");
 		checkNotNull(resource, "resource");
 		checkNotNull(modDate, "modDate");
-		final String field = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + type.getName();
-		final Document resdoc = new Document(
-				Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, resource.getAdministrativeID().getName())
-				.append(Fields.GROUP_RESOURCE_ID, resource.getResourceID().getName());
+		// resource IDs should always have the same admin ID, so we check for equality
+		// only on the resource ID and pull any resource with the resource ID, regardless of
+		// admin ID
+		final String resourceField = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + type.getName();
+		final String resourceID = resource.getResourceID().getName();
+		final String resourceIDField = resourceField + Fields.FIELD_SEP + Fields.GROUP_RESOURCE_ID;
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				.append(field, add ? new Document("$ne", resdoc) : resdoc);
-		final Document update = new Document(add ? "$addToSet" : "$pull",
-				new Document(field, resdoc))
-				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
+				.append(resourceIDField, add ? new Document("$ne", resourceID) : resourceID);
+		final Document update = new Document("$set",
+				new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
+		if (add) {
+			update.append("$addToSet", new Document(
+					resourceField, new Document(
+							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID,
+									resource.getAdministrativeID().getName())
+							.append(Fields.GROUP_RESOURCE_ID, resourceID)));
+		} else {
+			update.append("$pull", new Document(resourceField,
+					new Document(Fields.GROUP_RESOURCE_ID, resourceID)));
+		}
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
 			if (res.getMatchedCount() != 1) {

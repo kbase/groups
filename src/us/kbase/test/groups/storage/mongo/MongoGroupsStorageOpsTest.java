@@ -1218,7 +1218,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.addResource(
 				new GroupID("gid"),
 				new ResourceType("ws"),
-				new ResourceDescriptor(new ResourceAdministrativeID("b"), new ResourceID("b")),
+				new ResourceDescriptor(new ResourceAdministrativeID("b"), new ResourceID("d")),
 				inst(65000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
@@ -1230,10 +1230,8 @@ public class MongoGroupsStorageOpsTest {
 								new ResourceAdministrativeID("a"), new ResourceID("b")))
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
 								new ResourceAdministrativeID("a"), new ResourceID("c")))
-						// note this should never happen. There should be a 1:M mapping from
-						// RAI to RI
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
-								new ResourceAdministrativeID("b"), new ResourceID("b")))
+								new ResourceAdministrativeID("b"), new ResourceID("d")))
 						.build()));
 	}
 	
@@ -1283,6 +1281,14 @@ public class MongoGroupsStorageOpsTest {
 				inst(32),
 				new ResourceExistsException("ws b"));
 		
+		failAddResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("c"), new ResourceID("b")),
+				inst(32),
+				new ResourceExistsException("ws b"));
+		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
 	
@@ -1325,6 +1331,23 @@ public class MongoGroupsStorageOpsTest {
 								Instant.ofEpochMilli(109200)))
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
 								new ResourceAdministrativeID("a"), new ResourceID("b")))
+						.build()));
+		
+		// since each resource ID should always have the same admin ID, just remove the
+		// resource based on the resource ID. If the admin ID changes there's something very
+		// wrong, but not allowing a removal of the resource is a bad idea
+		manager.storage.removeResource(
+				new GroupID("gid"),
+				new ResourceType("ws"),
+				new ResourceDescriptor(
+						new ResourceAdministrativeID("b"), new ResourceID("b")),
+				inst(119200));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
+				Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"), new UserName("uname3"),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(119200)))
 						.build()));
 	}
 	
@@ -1373,14 +1396,6 @@ public class MongoGroupsStorageOpsTest {
 						new ResourceAdministrativeID("a"), new ResourceID("c")),
 				inst(1),
 				new NoSuchResourceException("Group gid does not include ws c"));
-		failRemoveResource(
-				new GroupID("gid"),
-				new ResourceType("ws"),
-				new ResourceDescriptor(
-						// b should really only have one RAI mapped to it
-						new ResourceAdministrativeID("z"), new ResourceID("b")),
-				inst(1),
-				new NoSuchResourceException("Group gid does not include ws b"));
 		
 		assertModificationTimeIs(new GroupID("gid"), inst(50000));
 	}
