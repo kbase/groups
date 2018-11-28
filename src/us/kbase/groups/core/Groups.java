@@ -67,8 +67,6 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
-	// TODO NNOW mimimize info sent to notifications. Don't send request ID on deny/accept/cancel
-	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
