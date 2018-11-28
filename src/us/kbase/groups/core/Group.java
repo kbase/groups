@@ -11,9 +11,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceType;
 
 /** Represents a group consisting primarily of a set of users and set of workspaces associated
@@ -32,7 +35,7 @@ public class Group {
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
 	private final GroupType type;
-	private final Map<ResourceType, Set<ResourceDescriptor>> resources;
+	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
 	private final Instant creationDate;
 	private final Instant modificationDate;
 	private final Optional<String> description;
@@ -45,7 +48,7 @@ public class Group {
 			final Set<UserName> members,
 			final Set<UserName> admins,
 			final GroupType type,
-			final Map<ResourceType, Set<ResourceDescriptor>> resources,
+			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
 			final CreateAndModTimes times,
 			final Optional<String> description,
 			final Map<NumberedCustomField, String> customFields) {
@@ -120,7 +123,9 @@ public class Group {
 		if (!resources.containsKey(type)) {
 			throw new IllegalArgumentException("Type not found in group: " + type.getName());
 		}
-		return Collections.unmodifiableSet(resources.get(type));
+		return Collections.unmodifiableSet(resources.get(type).entrySet().stream()
+				.map(e -> new ResourceDescriptor(e.getValue(), e.getKey()))
+				.collect(Collectors.toSet()));
 	}
 	
 	/** Determine whether this group contains a resource.
@@ -129,7 +134,36 @@ public class Group {
 	 * @return true if the group contains the resource, false otherwise.
 	 */
 	public boolean containsResource(final ResourceType type, final ResourceDescriptor descriptor) {
-		return resources.containsKey(type) && resources.get(type).contains(descriptor);
+		checkNotNull(type, "type");
+		checkNotNull(descriptor, "descriptor");
+		return resources.containsKey(type) && descriptor.getAdministrativeID()
+				.equals(resources.get(type).get(descriptor.getResourceID()));
+	}
+	
+	/** Determine whether this group contains a resource.
+	 * @param type the type of the resource.
+	 * @param resourceID the resource ID.
+	 * @return true if the group contains the resource, false otherwise.
+	 */
+	public boolean containsResource(final ResourceType type, final ResourceID resourceID) {
+		checkNotNull(type, "type");
+		checkNotNull(resourceID, "resourceID");
+		return resources.containsKey(type) && resources.get(type).containsKey(resourceID);
+	}
+	
+	/** Get a resource contained in the group.
+	 * @param type the type of the resource.
+	 * @param resourceID the resource ID.
+	 * @return the resource.
+	 */
+	public ResourceDescriptor getResource(final ResourceType type, final ResourceID resourceID) {
+		checkNotNull(type, "type");
+		checkNotNull(resourceID, "resourceID");
+		if (!resources.containsKey(type) || !resources.get(type).containsKey(resourceID)) {
+			throw new IllegalArgumentException(String.format("No such resource %s %s",
+					type.getName(), resourceID.getName()));
+		}
+		return new ResourceDescriptor(resources.get(type).get(resourceID), resourceID);
 	}
 
 	/** Get the date the group was created.
@@ -321,7 +355,8 @@ public class Group {
 		private final Set<UserName> members = new HashSet<>();
 		private final Set<UserName> admins = new HashSet<>();
 		private GroupType type = GroupType.ORGANIZATION;
-		private final Map<ResourceType, Set<ResourceDescriptor>> resources = new HashMap<>();
+		private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources =
+				new HashMap<>();
 		private Optional<String> description = Optional.empty();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
@@ -403,6 +438,8 @@ public class Group {
 		}
 		
 		/** Add a resource to the group.
+		 * Adding a duplicate resource ID with a different administrative ID will overwrite the
+		 * previous resource.
 		 * @param type the type of the resource.
 		 * @param descriptor the resource descriptor.
 		 * @return this builder.
@@ -411,9 +448,9 @@ public class Group {
 			checkNotNull(type, "type");
 			checkNotNull(descriptor, "descriptor");
 			if (!resources.containsKey(type)) {
-				resources.put(type, new HashSet<>());
+				resources.put(type, new HashMap<>());
 			}
-			resources.get(type).add(descriptor);
+			resources.get(type).put(descriptor.getResourceID(), descriptor.getAdministrativeID());
 			return this;
 		}
 		
