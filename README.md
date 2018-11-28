@@ -336,18 +336,18 @@ DELETE /group/<group id>/user/<user name>/admin
 
 The user must be the group owner.
 
-### Add a workspace to a group
+### Add a resource to a group
 
 ```
 AUTHORIZATION REQUIRED
-POST /group/<group id>/resource/workspace/<workspace id>
+POST /group/<group id>/resource/<resource type>/<resource id>
 
 RETURNS: Either {"complete": true} or a Request with the additional field "complete"
 with a value of false.
 ```
 
-The workspace is added immediately if the user is an administrator of both the group and
-the workspace. A request object is returned if the user is an administrator of at least one; if
+The resource is added immediately if the user is an administrator of both the group and
+the resource. A request object is returned if the user is an administrator of at least one; if
 not an error is returned.
 
 ### Remove a resource from a group

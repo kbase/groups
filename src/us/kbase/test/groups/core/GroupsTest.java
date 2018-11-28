@@ -3518,13 +3518,8 @@ public class GroupsTest {
 	}
 	
 	
-	private ResourceDescriptor getWSRD(final int wsid) throws Exception {
-		return new ResourceDescriptor(ResourceAdministrativeID.from(wsid),
-				new ResourceID(wsid + ""));
-	}
-	
 	@Test
-	public void addWorkspace() throws Exception {
+	public void addResource() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3535,13 +3530,15 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(inst(3400));
 		
-		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new ResourceID("34"));
+		final Optional<GroupRequest> ret = mocks.groups.addResource(
+				new Token("t"), new GroupID("gid"), new ResourceType("workspace"),
+				new ResourceID("34"));
 		
 		verify(mocks.storage).addResource(
 				new GroupID("gid"),
@@ -3553,12 +3550,12 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void addWorkspaceWSAdmin() throws Exception {
+	public void addResourceResourceAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		final UUID id = UUID.randomUUID();
 		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), new UserName("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -3566,22 +3563,26 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
-		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
-				set(new UserName("wsadmin"), new UserName("ws2")));
+		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
+				.thenReturn(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+						new ResourceID("mod.meth")));
+		when(mocks.catHandler.getAdministrators(new ResourceID("mod.meth"))).thenReturn(
+				set(new UserName("catadmin"), new UserName("cat2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
-		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new ResourceID("34"));
+		final Optional<GroupRequest> ret = mocks.groups.addResource(
+				new Token("t"), new GroupID("gid"), new ResourceType("catalogmethod"),
+				new ResourceID("mod.meth"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+				new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 						.build())
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("34")))
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+						new ResourceID("mod.meth")))
 				.build());
 		
 		verify(mocks.notifs).notify(
@@ -3594,28 +3595,30 @@ public class GroupsTest {
 						.withAdministrator(new UserName("admin"))
 						.build(),
 				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("34")))
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 						.build()
 				);
 		
 		assertThat("incorrect request", ret, is(Optional.of(
 				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("wsadmin"),
+						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("34")))
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 						.build())));
 	}
 	
 	@Test
-	public void addWorkspaceGroupAdmin() throws Exception {
+	public void addResourceGroupAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		final UUID id = UUID.randomUUID();
@@ -3628,14 +3631,16 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("ws1"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
 		
-		final Optional<GroupRequest> ret = mocks.groups.addWorkspace(
-				new Token("t"), new GroupID("gid"), new ResourceID("34"));
+		final Optional<GroupRequest> ret = mocks.groups.addResource(
+				new Token("t"), new GroupID("gid"), new ResourceType("workspace"),
+				new ResourceID("34"));
 		
 		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
 				new RequestID(id), new GroupID("gid"), new UserName("admin"),
@@ -3680,20 +3685,22 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void addWorkspaceFailNulls() throws Exception {
+	public void addResourceFailNulls() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final Groups g = mocks.groups;
 		final Token t = new Token("t");
 		final GroupID i = new GroupID("i");
+		final ResourceType ty = new ResourceType("t");
 		final ResourceID w = new ResourceID("1");
 		
-		failAddWorkspace(g, null, i, w, new NullPointerException("userToken"));
-		failAddWorkspace(g, t, null, w, new NullPointerException("groupID"));
-		failAddWorkspace(g, t, i, null, new NullPointerException("resource"));
+		failAddResource(g, null, i, ty, w, new NullPointerException("userToken"));
+		failAddResource(g, t, null, ty, w, new NullPointerException("groupID"));
+		failAddResource(g, t, i, null, w, new NullPointerException("type"));
+		failAddResource(g, t, i, ty, null, new NullPointerException("resource"));
 	}
 	
 	@Test
-	public void addWorkspaceFailIllegalValue() throws Exception {
+	public void addResourceFailNoResourceType() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3705,15 +3712,34 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		when(mocks.wsHandler.getDescriptor(new ResourceID("4")))
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("certerlogmethod"), new ResourceID("4"),
+				new NoSuchResourceTypeException("certerlogmethod"));
+	}
+	
+	@Test
+	public void addResourceFailIllegalValue() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("admin"))
+				.build());
+		
+		when(mocks.catHandler.getDescriptor(new ResourceID("4")))
 				.thenThrow(new IllegalResourceIDException("bar"));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("4"), new IllegalResourceIDException("bar"));
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("4"),
+				new IllegalResourceIDException("bar"));
 	}
 	
 	@Test
-	public void addWorkspaceFailNoSuchWorkspace() throws Exception {
+	public void addResourceFailNoSuchResource() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3724,16 +3750,18 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.getAdministrators(new ResourceID("34")))
 				.thenThrow(new NoSuchResourceException("34"));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new NoSuchResourceException("34"));
 	}
 	
 	@Test
-	public void addWorkspaceFailNotAdmin() throws Exception {
+	public void addResourceFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
@@ -3744,17 +3772,20 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
-		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
-				set(new UserName("ws1"), new UserName("ws2")));
+		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
+				.thenReturn(new ResourceDescriptor(new ResourceAdministrativeID("m"),
+						new ResourceID("m.n")));
+		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
+				set(new UserName("cat1"), new UserName("cat2")));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("m.n"),
 				new UnauthorizedException(
-						"User u1 is not an admin for group gid or resource 34"));
+						"User u1 is not an admin for group gid or catalogmethod m.n"));
 	}
 	
 	@Test
-	public void addWorkspaceFailWorkspaceInGroup() throws Exception {
+	public void addResourceFailResourceInGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3767,14 +3798,16 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("34")))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new ResourceExistsException("34"));
 	}
 	
 	@Test
-	public void addWorkspaceFailWorkspaceInGroupAtStorage() throws Exception {
+	public void addResourceFailResourceInGroupAtStorage() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
@@ -3785,7 +3818,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.getAdministrators(new ResourceID("34"))).thenReturn(
 				set(new UserName("admin"), new UserName("ws2")));
 		when(mocks.clock.instant()).thenReturn(inst(7000));
@@ -3797,18 +3831,20 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("34")),
 						inst(7000));
 		
-		failAddWorkspace(mocks.groups, new Token("t"), new GroupID("gid"), new ResourceID("34"),
+		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
+				new ResourceType("workspace"), new ResourceID("34"),
 				new ResourceExistsException("34"));
 	}
 	
-	private void failAddWorkspace(
+	private void failAddResource(
 			final Groups g,
 			final Token t,
 			final GroupID i,
+			final ResourceType type,
 			final ResourceID w,
 			final Exception expected) {
 		try {
-			g.addWorkspace(t, i, w);
+			g.addResource(t, i, type, w);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -3827,7 +3863,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("admin")))
 				.thenReturn(false);
 		when(mocks.clock.instant()).thenReturn(inst(7100));
@@ -3854,7 +3891,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7500));
@@ -3960,7 +3998,7 @@ public class GroupsTest {
 		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
 				new ResourceType("workspace"), new ResourceID("34"),
 				new UnauthorizedException(
-						"User notadmin is not an admin for group gid or resource 34"));
+						"User notadmin is not an admin for group gid or workspace 34"));
 	}
 	
 	@Test
@@ -3975,7 +4013,8 @@ public class GroupsTest {
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34"))).thenReturn(getWSRD(34));
+		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
+				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("wsadmin")))
 				.thenReturn(true);
 		when(mocks.clock.instant()).thenReturn(inst(7000));
@@ -4194,320 +4233,6 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.setReadPermission(t, i);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void addCatalogMethod() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
-				.thenReturn(getResDesc("mod", "mod.meth"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("mod.meth"))).thenReturn(
-				set(new UserName("admin"), new UserName("cat2")));
-		when(mocks.clock.instant()).thenReturn(inst(3400));
-		
-		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("mod.meth"));
-		
-		verify(mocks.storage).addResource(
-				new GroupID("gid"),
-				new ResourceType("catalogmethod"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("mod"), new ResourceID("mod.meth")),
-				inst(3400));
-		
-		assertThat("incorrect request", ret, is(Optional.empty()));
-	}
-	
-	
-	private ResourceDescriptor getResDesc(final String aid, final String rid) throws Exception {
-		return new ResourceDescriptor(new ResourceAdministrativeID(aid), new ResourceID(rid));
-	}
-
-	@Test
-	public void addCatalogMethodModuleOwner() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
-				set(new UserName("catadmin"), new UserName("cat2")));
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
-		when(mocks.uuidGen.randomUUID()).thenReturn(id);
-		
-		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
-		
-		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-						.build())
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-						new ResourceID("m.n")))
-				.build());
-		
-		verify(mocks.notifs).notify(
-				set(new UserName("own"), new UserName("admin")),
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
-						.withAdministrator(new UserName("admin"))
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-								.build())
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-								new ResourceID("m.n")))
-						.build()
-				);
-		
-		assertThat("incorrect request", ret, is(Optional.of(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-								.build())
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-								new ResourceID("m.n")))
-						.build())));
-	}
-	
-	@Test
-	public void addCatalogMethodGroupAdmin() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		final UUID id = UUID.randomUUID();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
-				set(new UserName("catadmin"), new UserName("cat2")));
-		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
-		when(mocks.uuidGen.randomUUID()).thenReturn(id);
-		
-		final Optional<GroupRequest> ret = mocks.groups.addCatalogMethod(
-				new Token("t"), new GroupID("gid"), new ResourceID("m.n"));
-		
-		verify(mocks.storage).storeRequest(GroupRequest.getBuilder(
-				new RequestID(id), new GroupID("gid"), new UserName("admin"),
-				CreateModAndExpireTimes.getBuilder(
-						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-						.build())
-				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-						new ResourceID("m.n")))
-				.build());
-		
-		verify(mocks.notifs).notify(
-				set(new UserName("catadmin"), new UserName("cat2")),
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
-						.withAdministrator(new UserName("admin"))
-						.build(),
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("admin"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-								.build()).withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-								new ResourceID("m.n")))
-						.build()
-				);
-		
-		assertThat("incorrect request", ret, is(Optional.of(
-				GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("admin"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
-								.build())
-						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-								new ResourceID("m.n")))
-						.build())));
-	}
-	
-	@Test
-	public void addCatalogMethodFailNulls() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		final Groups g = mocks.groups;
-		final Token t = new Token("t");
-		final GroupID i = new GroupID("i");
-		final ResourceID m = new ResourceID("m.n");
-		
-		failAddCatalogMethod(g, null, i, m, new NullPointerException("userToken"));
-		failAddCatalogMethod(g, t, null, m, new NullPointerException("groupID"));
-		failAddCatalogMethod(g, t, i, null, new NullPointerException("resource"));
-	}
-	
-	@Test
-	public void addCatalogEntryFailNoSuchMethod() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("m.n")))
-				.thenThrow(new NoSuchResourceException("m.n"));
-		
-		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new NoSuchResourceException("m.n"));
-	}
-	
-	@Test
-	public void addCatalogMethodFailNotAdmin() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("m.n"))).thenReturn(
-				set(new UserName("cat1"), new UserName("cat2")));
-		
-		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new UnauthorizedException(
-						"User u1 is not an admin for group gid or resource m.n"));
-	}
-	
-	@Test
-	public void addCatalogMethodFailMethodInGroup() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withResource(new ResourceType("catalogmethod"), new ResourceDescriptor(
-						new ResourceAdministrativeID("m"), new ResourceID("m.n")))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenReturn(getResDesc("m", "m.n"));
-		
-		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new ResourceExistsException("m.n"));
-	}
-	
-	@Test
-	public void addCatalogMethodFailIllegalValue() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withResource(new ResourceType("catalogmethod"), new ResourceDescriptor(
-						new ResourceAdministrativeID("m"), new ResourceID("m.n")))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		
-		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
-				.thenThrow(new IllegalResourceIDException("bar"));
-		
-		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("m.n"), new IllegalResourceIDException("bar"));
-	}
-	
-	@Test
-	public void addCatalogMethodFailMethodInGroupAtStorage() throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.build());
-		when(mocks.catHandler.getDescriptor(new ResourceID("mod.m")))
-				.thenReturn(getResDesc("mod", "mod.m"));
-		when(mocks.catHandler.getAdministrators(new ResourceID("mod.m"))).thenReturn(
-				set(new UserName("admin"), new UserName("cat2")));
-		when(mocks.clock.instant()).thenReturn(inst(7000));
-
-		doThrow(new ResourceExistsException("mod.m")).when(mocks.storage)
-				.addResource(
-						new GroupID("gid"),
-						new ResourceType("catalogmethod"),
-						new ResourceDescriptor(
-								new ResourceAdministrativeID("mod"), new ResourceID("mod.m")),
-						inst(7000));
-		
-		failAddCatalogMethod(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceID("mod.m"), new ResourceExistsException("mod.m"));
-	}
-	
-	private void failAddCatalogMethod(
-			final Groups g,
-			final Token t,
-			final GroupID i,
-			final ResourceID m,
-			final Exception expected) {
-		try {
-			g.addCatalogMethod(t, i, m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -71,7 +71,7 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
 @Path(ServicePaths.GROUP)
 public class GroupsAPI {
 
-	// TODO NOW reduce request list size
+	// TODO NOW reduce request list size by removing unused fields
 	// TODO JAVADOC / swagger
 	// TODO NOW add endpoint for getting group types
 	
@@ -398,20 +398,23 @@ public class GroupsAPI {
 	}
 	
 	@POST
-	@Path(ServicePaths.GROUP_WORKSPACE_ID)
+	@Path(ServicePaths.GROUP_RESOURCE_ID)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> addWorkspace(
+	public Map<String, Object> addResource(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_WS_ID) final String workspaceID)
+			@PathParam(Fields.GROUP_RESOURCE_TYPE) final String resourceType,
+			@PathParam(Fields.GROUP_RESOURCE_ID) final String resourceID)
 			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
 				AuthenticationException, UnauthorizedException, MissingParameterException,
 				IllegalParameterException, GroupsStorageException, RequestExistsException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceExistsException,
-				ResourceHandlerException {
-		//TODO NNOW generalize this method
-		return toGroupRequestJSON(groups.addWorkspace(
-				getToken(token, true), new GroupID(groupID), new ResourceID(workspaceID)));
+				ResourceHandlerException, NoSuchResourceTypeException {
+		return toGroupRequestJSON(groups.addResource(
+				getToken(token, true),
+				new GroupID(groupID),
+				new ResourceType(resourceType),
+				new ResourceID(resourceID)));
 	}
 	
 	@DELETE
@@ -431,22 +434,6 @@ public class GroupsAPI {
 				new GroupID(groupID),
 				new ResourceType(resourceType),
 				new ResourceID(resourceID));
-	}
-	
-	@POST
-	@Path(ServicePaths.GROUP_CATALOG_METHOD_NAME)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> addCatalogMethod(
-			@HeaderParam(HEADER_TOKEN) final String token,
-			@PathParam(Fields.GROUP_ID) final String groupID,
-			@PathParam(Fields.GROUP_CATALOG_METHOD_NAME) final String method)
-			throws InvalidTokenException, NoSuchGroupException, NoTokenProvidedException,
-				AuthenticationException, UnauthorizedException, RequestExistsException,
-				MissingParameterException, IllegalParameterException, GroupsStorageException,
-				NoSuchResourceException, IllegalResourceIDException, ResourceExistsException,
-				ResourceHandlerException {
-		return toGroupRequestJSON(groups.addCatalogMethod(
-				getToken(token, true), new GroupID(groupID), new ResourceID(method)));
 	}
 	
 	private Map<String, Object> toGroupRequestJSON(final Optional<GroupRequest> req) {
