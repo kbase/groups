@@ -119,8 +119,14 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				final Collection<UserName> targets,
 				final Group group,
 				final GroupRequest request) {
-			postNotification(targets, request.getRequester(), request, request.getExpirationDate(),
-					request.isInvite() ? "invite" : "request", "request");
+			postNotification(
+					targets,
+					request.getRequester(),
+					request,
+					request.getExpirationDate(),
+					request.isInvite() ? "invite" : "request",
+					"request",
+					true);
 		}
 
 		private void postNotification(
@@ -129,7 +135,8 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				final GroupRequest request,
 				final Instant expirationDate,
 				final String verb,
-				final String level) {
+				final String level,
+				boolean includeID) {
 			final Map<String, Object> post = new HashMap<>();
 			post.put("target", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
@@ -138,7 +145,9 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			post.put("actor", actor.getName());
 			post.put("object", request.getResource().getResourceID().getName());
 			post.put("verb", verb);
-			post.put("external_key", request.getID().getID());
+			if (includeID) {
+				post.put("external_key", request.getID().getID());
+			}
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
 			final Map<String, Object> context = new HashMap<>();
@@ -149,7 +158,9 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			
 			//TODO NOW remove later
 			post.put("source", "fake");
-			context.put("requestid", request.getID().getID());
+			if (includeID) {
+				context.put("requestid", request.getID().getID());
+			}
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
 			
@@ -167,7 +178,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		
 		@Override
 		public void cancel(final RequestID requestID) {
-			// TODO NOW Auto-generated method stub
+			// TODO NOW waiting on feeds cancel endpoint
 		
 		}
 		
@@ -178,14 +189,14 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				return;
 			}
 			postNotification(
-					targets, request.getClosedBy().get(), request, null, "reject", "alert");
+					targets, request.getClosedBy().get(), request, null, "reject", "alert", false);
 		
 		}
 		
 		@Override
 		public void accept(final Collection<UserName> targets, final GroupRequest request) {
 			postNotification(
-					targets, request.getClosedBy().get(), request, null, "accept", "alert");
+					targets, request.getClosedBy().get(), request, null, "accept", "alert", false);
 		
 		}
 	}
