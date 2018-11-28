@@ -159,7 +159,7 @@ public class Group {
 	public ResourceDescriptor getResource(final ResourceType type, final ResourceID resourceID) {
 		checkNotNull(type, "type");
 		checkNotNull(resourceID, "resourceID");
-		if (!resources.containsKey(type) || !resources.get(type).containsKey(resourceID)) {
+		if (!containsResource(type, resourceID)) {
 			throw new IllegalArgumentException(String.format("No such resource %s %s",
 					type.getName(), resourceID.getName()));
 		}

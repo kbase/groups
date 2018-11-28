@@ -685,13 +685,13 @@ public class GroupsTest {
 		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchResourceException("86")).when(mocks.storage)
 				.removeResource(new GroupID("bar"), new ResourceType("workspace"),
-						new ResourceDescriptor(new ResourceID("86")), inst(5600));
+						new ResourceID("86"), inst(5600));
 		
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
 		verify(mocks.storage).removeResource(new GroupID("bar"), new ResourceType("workspace"),
-				new ResourceDescriptor(new ResourceID("34")), inst(5600));
+				new ResourceID("34"), inst(5600));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
@@ -3875,7 +3875,7 @@ public class GroupsTest {
 		verify(mocks.storage).removeResource(
 				new GroupID("gid"),
 				new ResourceType("workspace"),
-				new ResourceDescriptor(new ResourceID("34")),
+				new ResourceID("34"),
 				inst(7100));
 	}
 	
@@ -3903,7 +3903,7 @@ public class GroupsTest {
 		verify(mocks.storage).removeResource(
 				new GroupID("gid"),
 				new ResourceType("workspace"),
-				new ResourceDescriptor(new ResourceID("34")),
+				new ResourceID("34"),
 				inst(7500));
 	}
 	
@@ -4023,7 +4023,7 @@ public class GroupsTest {
 				.removeResource(
 						new GroupID("gid"),
 						new ResourceType("workspace"),
-						new ResourceDescriptor(new ResourceID("34")),
+						new ResourceID("34"),
 						inst(7000));
 		
 		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),

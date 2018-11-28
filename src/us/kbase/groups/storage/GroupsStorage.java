@@ -27,6 +27,7 @@ import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -146,7 +147,7 @@ public interface GroupsStorage {
 	/** Remove a resource from a group.
 	 * @param groupID the group ID.
 	 * @param type the resource type.
-	 * @param resource the resource descriptor.
+	 * @param resource the resource ID.
 	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
@@ -155,7 +156,7 @@ public interface GroupsStorage {
 	void removeResource(
 			GroupID groupID,
 			ResourceType type,
-			ResourceDescriptor resource,
+			ResourceID resource,
 			Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchResourceException;
 	

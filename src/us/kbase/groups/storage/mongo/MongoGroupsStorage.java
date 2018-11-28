@@ -745,7 +745,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final ResourceDescriptor resource,
 			final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, ResourceExistsException {
-		if (!modifyResourceInGroup(groupID, type, resource, modDate, true)) {
+		checkNotNull(resource, "resource");
+		if (!modifyResourceInGroup(groupID, type, resource.getAdministrativeID(),
+				resource.getResourceID(), modDate)) {
 			throw new ResourceExistsException(String.format("%s %s",
 					type.getName(), resource.getResourceID().getName()));
 		}
@@ -755,47 +757,48 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public void removeResource(
 			final GroupID groupID,
 			final ResourceType type,
-			final ResourceDescriptor resource,
+			final ResourceID resource,
 			final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchResourceException {
-		if (!modifyResourceInGroup(groupID, type, resource, modDate, false)) {
+		checkNotNull(resource, "resource");
+		if (!modifyResourceInGroup(groupID, type, null, resource, modDate)) {
 			throw new NoSuchResourceException(String.format(
 					"Group %s does not include %s %s",
-					groupID.getName(), type.getName(), resource.getResourceID().getName()));
+					groupID.getName(), type.getName(), resource.getName()));
 		}
 	}
 	
 	// returns true if modified, false otherwise.
+	// pass an admin ID to add, null to remove.
 	private boolean modifyResourceInGroup(
 			final GroupID groupID,
 			final ResourceType type,
-			final ResourceDescriptor resource,
-			final Instant modDate,
-			final boolean add)
+			final ResourceAdministrativeID resourceAdminID,
+			final ResourceID resourceID,
+			final Instant modDate)
 			throws GroupsStorageException, NoSuchGroupException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(type, "type");
-		checkNotNull(resource, "resource");
 		checkNotNull(modDate, "modDate");
 		// resource IDs should always have the same admin ID, so we check for equality
 		// only on the resource ID and pull any resource with the resource ID, regardless of
 		// admin ID
 		final String resourceField = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + type.getName();
-		final String resourceID = resource.getResourceID().getName();
+		final String resIDStr = resourceID.getName();
 		final String resourceIDField = resourceField + Fields.FIELD_SEP + Fields.GROUP_RESOURCE_ID;
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
-				.append(resourceIDField, add ? new Document("$ne", resourceID) : resourceID);
+				.append(resourceIDField,
+						resourceAdminID == null ? resIDStr : new Document("$ne", resIDStr));
 		final Document update = new Document("$set",
 				new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
-		if (add) {
+		if (resourceAdminID != null) {
 			update.append("$addToSet", new Document(
 					resourceField, new Document(
-							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID,
-									resource.getAdministrativeID().getName())
-							.append(Fields.GROUP_RESOURCE_ID, resourceID)));
+							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, resourceAdminID.getName())
+							.append(Fields.GROUP_RESOURCE_ID, resIDStr)));
 		} else {
 			update.append("$pull", new Document(resourceField,
-					new Document(Fields.GROUP_RESOURCE_ID, resourceID)));
+					new Document(Fields.GROUP_RESOURCE_ID, resIDStr)));
 		}
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);

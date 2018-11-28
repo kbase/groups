@@ -272,7 +272,7 @@ public class Groups {
 		b.withResource(type, info);
 		for (final ResourceDescriptor d: info.getNonexistentResources()) {
 			try {
-				storage.removeResource(g.getGroupID(), type, d, clock.instant());
+				storage.removeResource(g.getGroupID(), type, d.getResourceID(), clock.instant());
 			} catch (NoSuchResourceException e) {
 				// do nothing, if the resource isn't there fine.
 			}
@@ -938,10 +938,10 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final Group group = storage.getGroup(groupID);
 		final ResourceHandler h = getHandler(type);
-		final ResourceDescriptor d = h.getDescriptor(resource);
+		h.getDescriptor(resource); // check that the id is valid
 		// should check if ws not in group & fail early?
 		if (group.isAdministrator(user) || h.isAdministrator(resource, user)) {
-			storage.removeResource(groupID, type, d, clock.instant());
+			storage.removeResource(groupID, type, resource, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
 					"User %s is not an admin for group %s or %s %s",
