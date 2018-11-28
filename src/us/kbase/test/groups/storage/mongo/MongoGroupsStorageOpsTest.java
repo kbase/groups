@@ -1320,8 +1320,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.removeResource(
 				new GroupID("gid"),
 				new ResourceType("ws"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("a"), new ResourceID("c")),
+				new ResourceID("c"),
 				inst(109200));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
@@ -1333,14 +1332,10 @@ public class MongoGroupsStorageOpsTest {
 								new ResourceAdministrativeID("a"), new ResourceID("b")))
 						.build()));
 		
-		// since each resource ID should always have the same admin ID, just remove the
-		// resource based on the resource ID. If the admin ID changes there's something very
-		// wrong, but not allowing a removal of the resource is a bad idea
 		manager.storage.removeResource(
 				new GroupID("gid"),
 				new ResourceType("ws"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("b"), new ResourceID("b")),
+				new ResourceID("b"),
 				inst(119200));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")), is(
@@ -1355,7 +1350,7 @@ public class MongoGroupsStorageOpsTest {
 	public void removeResourceFailNulls() throws Exception {
 		final GroupID g = new GroupID("g");
 		final ResourceType t = new ResourceType("t");
-		final ResourceDescriptor d = new ResourceDescriptor(new ResourceID("i"));
+		final ResourceID d = new ResourceID("i");
 		
 		failRemoveResource(null, t, d, inst(1), new NullPointerException("groupID"));
 		failRemoveResource(g, null, d, inst(1), new NullPointerException("type"));
@@ -1373,7 +1368,7 @@ public class MongoGroupsStorageOpsTest {
 		failRemoveResource(
 				new GroupID("gid1"),
 				new ResourceType("t"),
-				new ResourceDescriptor(new ResourceID("id")),
+				new ResourceID("id"),
 				inst(1),
 				new NoSuchGroupException("gid1"));
 		
@@ -1392,8 +1387,7 @@ public class MongoGroupsStorageOpsTest {
 		failRemoveResource(
 				new GroupID("gid"),
 				new ResourceType("ws"),
-				new ResourceDescriptor(
-						new ResourceAdministrativeID("a"), new ResourceID("c")),
+				new ResourceID("c"),
 				inst(1),
 				new NoSuchResourceException("Group gid does not include ws c"));
 		
@@ -1403,7 +1397,7 @@ public class MongoGroupsStorageOpsTest {
 	private void failRemoveResource(
 			final GroupID g,
 			final ResourceType t,
-			final ResourceDescriptor d,
+			final ResourceID d,
 			final Instant modDate,
 			final Exception expected) {
 		try {
