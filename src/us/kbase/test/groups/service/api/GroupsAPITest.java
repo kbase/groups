@@ -1165,25 +1165,27 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void addWorkspaceNoRequest() throws Exception {
+	public void addResourceNoRequest() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
+		when(g.addResource(new Token("my token"), new GroupID("foo"),
+				new ResourceType("workspace"), new ResourceID("34")))
 				.thenReturn(Optional.empty());
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
-				.addWorkspace("my token", "foo", "34");
+				.addResource("my token", "foo", "workspace", "34");
 		
 		assertThat("incorrect ret", ret, is(ImmutableMap.of("complete", true)));
 	}
 	
 	@Test
-	public void addWorkspaceWithRequest() throws Exception {
+	public void addResourceWithRequest() throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		final UUID id = UUID.randomUUID();
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
+		when(g.addResource(new Token("my token"), new GroupID("foo"),
+				new ResourceType("workspace"), new ResourceID("42")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
@@ -1195,7 +1197,7 @@ public class GroupsAPITest {
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
-				.addWorkspace("my token", "foo", "34");
+				.addResource("my token", "foo", "workspace", "42");
 		
 		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
 				.with("complete", false)
@@ -1213,24 +1215,26 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void addWorkspaceWithRequestInvite() throws Exception {
+	public void addResourceWithRequestInvite() throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		final UUID id = UUID.randomUUID();
 		
-		when(g.addWorkspace(new Token("my token"), new GroupID("foo"), new ResourceID("34")))
+		when(g.addResource(new Token("my token"), new GroupID("foo"),
+				new ResourceType("catalogmethod"), new ResourceID("mod.meth")))
 				.thenReturn(Optional.of(GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("foo"), new UserName("u"),
 							CreateModAndExpireTimes.getBuilder(
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("42")))
+						.withResourceType(new ResourceType("catalogmethod"))
+						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
-				.addWorkspace("my token", "foo", "34");
+				.addResource("my token", "foo", "catalogmethod", "mod.meth");
 		
 		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
 				.with("complete", false)
@@ -1238,8 +1242,8 @@ public class GroupsAPITest {
 				.with("groupid", "foo")
 				.with("requester", "u")
 				.with("type", "Invite")
-				.with("resourcetype", "workspace")
-				.with("resource", "42")
+				.with("resourcetype", "catalogmethod")
+				.with("resource", "mod.meth")
 				.with("status", "Open")
 				.with("createdate", 10000L)
 				.with("moddate", 10000L)
@@ -1248,36 +1252,40 @@ public class GroupsAPITest {
 	}
 	
 	@Test
-	public void addWorkspaceFailBadArgs() throws Exception {
+	public void addResourceFailBadArgs() throws Exception {
 		final Groups g = mock(Groups.class);
-		failAddWorkspace(g, null, "id", "45", new NoTokenProvidedException("No token provided"));
-		failAddWorkspace(g, "  \t  ", "id", "45",
+		failAddResource(g, null, "id", "t", "45", new NoTokenProvidedException("No token provided"));
+		failAddResource(g, "  \t  ", "id", "t", "45",
 				new NoTokenProvidedException("No token provided"));
-		failAddWorkspace(g, "t", "illegal*id", "45",
+		failAddResource(g, "t", "illegal*id", "t", "45",
 				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
 						"Illegal character in group id illegal*id: *"));
-		failAddWorkspace(g, "t", "id", "   \t   ",
+		failAddResource(g, "t", "id", null, "45",
+				new MissingParameterException("resource type"));
+		failAddResource(g, "t", "id", "t", "   \t   ",
 				new MissingParameterException("resource ID"));
 	}
 	
 	@Test
-	public void addWorkspaceFailNoSuchWorkspace() throws Exception {
+	public void addResourceFailNoSuchResource() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.addWorkspace(new Token("t"), new GroupID("i"), new ResourceID("34")))
+		when(g.addResource(new Token("t"), new GroupID("i"),
+				new ResourceType("ty"), new ResourceID("34")))
 				.thenThrow(new NoSuchResourceException("34"));
 		
-		failAddWorkspace(g, "t", "i", "34", new NoSuchResourceException("34"));
+		failAddResource(g, "t", "i", "ty", "34", new NoSuchResourceException("34"));
 	}
 	
-	private void failAddWorkspace(
+	private void failAddResource(
 			final Groups g,
 			final String t,
 			final String i,
+			final String type,
 			final String w,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).addWorkspace(t, i, w);
+			new GroupsAPI(g).addResource(t, i, type, w);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -1330,130 +1338,6 @@ public class GroupsAPITest {
 			final Exception expected) {
 		try {
 			new GroupsAPI(g).removeResource(t, i, type, r);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void addCatalogMethodNoRequest() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new ResourceID("m.n")))
-				.thenReturn(Optional.empty());
-		
-		final Map<String, Object> ret = new GroupsAPI(g).addCatalogMethod(
-				"my token", "foo", "m.n");
-		
-		assertThat("incorrect ret", ret, is(ImmutableMap.of("complete", true)));
-	}
-	
-	@Test
-	public void addCatalogMethodWithRequest() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		final UUID id = UUID.randomUUID();
-		
-		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new ResourceID("m.x")))
-				.thenReturn(Optional.of(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("u"),
-							CreateModAndExpireTimes.getBuilder(
-									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-									.build())
-						.withType(RequestType.REQUEST)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceID("m.x")))
-						.build()));
-		
-		final Map<String, Object> ret = new GroupsAPI(g)
-				.addCatalogMethod("my token", "foo", "m.x");
-		
-		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
-				.with("complete", false)
-				.with("id", id.toString())
-				.with("groupid", "foo")
-				.with("requester", "u")
-				.with("type", "Request")
-				.with("resourcetype", "catalogmethod")
-				.with("resource", "m.x")
-				.with("status", "Open")
-				.with("createdate", 10000L)
-				.with("moddate", 10000L)
-				.with("expiredate", 20000L)
-				.build()));
-	}
-	
-	@Test
-	public void addCatalogMethodWithRequestInvite() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		final UUID id = UUID.randomUUID();
-		
-		when(g.addCatalogMethod(
-				new Token("my token"), new GroupID("foo"), new ResourceID("m.y")))
-				.thenReturn(Optional.of(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("foo"), new UserName("u"),
-							CreateModAndExpireTimes.getBuilder(
-									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-									.build())
-						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceID("m.y")))
-						.build()));
-		
-		final Map<String, Object> ret = new GroupsAPI(g)
-				.addCatalogMethod("my token", "foo", "m.y");
-		
-		assertThat("incorrect ret", ret, is(MapBuilder.newHashMap()
-				.with("complete", false)
-				.with("id", id.toString())
-				.with("groupid", "foo")
-				.with("requester", "u")
-				.with("type", "Invite")
-				.with("resourcetype", "catalogmethod")
-				.with("resource", "m.y")
-				.with("status", "Open")
-				.with("createdate", 10000L)
-				.with("moddate", 10000L)
-				.with("expiredate", 20000L)
-				.build()));
-	}
-	
-	@Test
-	public void addCatalogMethodFailBadArgs() throws Exception {
-		final Groups g = mock(Groups.class);
-		failAddCatalogMethod(g, null, "id", "m.n",
-				new NoTokenProvidedException("No token provided"));
-		failAddCatalogMethod(g, "  \t  ", "id", "m.n",
-				new NoTokenProvidedException("No token provided"));
-		failAddCatalogMethod(g, "t", "illegal*id", "m.n",
-				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
-						"Illegal character in group id illegal*id: *"));
-		failAddCatalogMethod(g, "t", "id", "   \t    ",
-				new MissingParameterException("resource ID"));
-	}
-	
-	@Test
-	public void addCatalogMethodFailNoSuchMethod() throws Exception {
-		final Groups g = mock(Groups.class);
-		
-		when(g.addCatalogMethod(new Token("t"), new GroupID("i"), new ResourceID("m.n")))
-				.thenThrow(new NoSuchResourceException("m.n"));
-		
-		failAddCatalogMethod(g, "t", "i", "m.n", new NoSuchResourceException("m.n"));
-	}
-	
-	private void failAddCatalogMethod(
-			final Groups g,
-			final String t,
-			final String i,
-			final String m,
-			final Exception expected) {
-		try {
-			new GroupsAPI(g).addCatalogMethod(t, i, m);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

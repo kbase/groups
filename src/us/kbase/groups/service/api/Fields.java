@@ -38,17 +38,6 @@ public class Fields {
 	/** The resource ID. */
 	public static final String GROUP_RESOURCE_ID = "rid";
 	
-	
-	// TODO NNOW remove all resource specific fields
-	// workspace fields
-	/** The workspace ID. */
-	public static final String GROUP_WS_ID = "wid"; //TODO NNOW remove 
-	
-	// catalog fields
-	/** The catalog method name. */
-	public static final String GROUP_CATALOG_METHOD_NAME = "methodname"; //TODO NNOW remove
-	
-	
 	/** Whether an action is complete or not, and therefore whether a request object is
 	 * included in the response.
 	 */

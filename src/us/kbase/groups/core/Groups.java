@@ -67,26 +67,6 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
-	//TODO NNOW major refactor. See below.
-	/* A request is 3 things
-	 * invite to group vs. request addition to group (invite vs. request)
-	 * The type of resource (user, ws, catalog method)
-	 * The resource.
-	 * Right now there's a lot of redundant code between ws and method. Refactor into a general
-	 * typed resource system (including user where possible, but users are a little different).
-	 * 
-	 * Always include users as the target of requests though. Generalize the target.
-	 */
-	
-	/* could probably abstract the workspace & catalog handling in a
-	 * general resource handling system, where resources and handlers for those resources
-	 * could be specified in a configuration file or just hard coded.
-	 * Then you could add new resources w/o major code changes. Indexing might be tricky but
-	 * doable.
-	 * 
-	 * That being said, it's probably only ever going to be workspaces and apps so YAGNI.
-	 */
-	
 	// TODO NNOW mimimize info sent to notifications. Don't send request ID on deny/accept/cancel
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
@@ -868,24 +848,12 @@ public class Groups {
 		// notify? I'm thinking not
 	}
 	
-	//TODO NNOW remove
-	private static final ResourceType RTWS;
-	private static final ResourceType RTCAT;
-	static {
-		try {
-			RTWS = new ResourceType("workspace");
-			RTCAT = new ResourceType("catalogmethod");
-		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new RuntimeException("impossible", e);
-		}
-	}
-	
-	/** Add a workspace to a group. The workspace is added immediately if the user is an
-	 * administrator of both the group and the workspace. Otherwise, a {@link GroupRequest} is
+	/** Add a resource to a group. The resource is added immediately if the user is an
+	 * administrator of both the group and the resource. Otherwise, a {@link GroupRequest} is
 	 * added to the system and returned.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
-	 * @param resource the workspace ID.
+	 * @param resource the resource ID.
 	 * @return A request if required or {@link Optional#empty()} if the operation is already
 	 * complete.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -899,48 +867,45 @@ public class Groups {
 	 * @throws IllegalResourceIDException if the resource ID is illegal.
 	 * @throws NoSuchResourceException if there is no such resource.
 	 * @throws ResourceExistsException  if the resource is already associated with the group.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
-	public Optional<GroupRequest> addWorkspace(
+	public Optional<GroupRequest> addResource(
 			final Token userToken,
 			final GroupID groupID,
+			final ResourceType type,
 			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, RequestExistsException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException,
-				ResourceExistsException {
-		//TODO NNOW make general
+				ResourceExistsException, NoSuchResourceTypeException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
+		checkNotNull(type, "type");
 		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
-		final ResourceHandler h;
-		try {
-			h = getHandler(RTWS);
-		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
-			throw new RuntimeException("impossible", e);
-		}
+		final ResourceHandler h = getHandler(type);
 		final ResourceDescriptor d = h.getDescriptor(resource);
-		if (g.containsResource(RTWS, d)) {
+		if (g.containsResource(type, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}
-		final Set<UserName> wsadmins = h.getAdministrators(resource);
-		if (g.isAdministrator(user) && wsadmins.contains(user)) {
-			storage.addResource(groupID, RTWS, d, clock.instant());
+		final Set<UserName> admins = h.getAdministrators(resource);
+		if (g.isAdministrator(user) && admins.contains(user)) {
+			storage.addResource(groupID, type, d, clock.instant());
 			//TODO NNOW notify
 			return Optional.empty();
 		}
-		if (wsadmins.contains(user)) {
+		if (admins.contains(user)) {
 			return Optional.of(createRequestStoreAndNotify(
-					g, user, RequestType.REQUEST, RTWS, d, g.getAdministratorsAndOwner()));
+					g, user, RequestType.REQUEST, type, d, g.getAdministratorsAndOwner()));
 		}
 		if (g.isAdministrator(user)) {
 			return Optional.of(createRequestStoreAndNotify(
-					g, user, RequestType.INVITE, RTWS, d, wsadmins));
+					g, user, RequestType.INVITE, type, d, admins));
 		}
 		throw new UnauthorizedException(String.format(
-				"User %s is not an admin for group %s or resource %s",
-				user.getName(), groupID.getName(), resource.getName()));
+				"User %s is not an admin for group %s or %s %s",
+				user.getName(), groupID.getName(), type.getName(), resource.getName()));
 	}
 	
 	/** Remove a resource from a group.
@@ -980,8 +945,8 @@ public class Groups {
 			storage.removeResource(groupID, type, d, clock.instant());
 		} else {
 			throw new UnauthorizedException(String.format(
-					"User %s is not an admin for group %s or resource %s",
-					user.getName(), groupID.getName(), resource.getName()));
+					"User %s is not an admin for group %s or %s %s",
+					user.getName(), groupID.getName(), type.getName(), resource.getName()));
 		}
 	}
 	
@@ -1028,68 +993,6 @@ public class Groups {
 		ensureIsOpen(r);
 		final ResourceHandler h = getHandlerRuntimeException(r);
 		h.setReadPermission(r.getResource().getResourceID(), user);
-	}
-	
-	/** Add a catalog method to a group. The method is added immediately if the user is an
-	 * administrator of both the group and the catalog module. Otherwise, a {@link GroupRequest} is
-	 * added to the system and returned.
-	 * @param userToken the user's token.
-	 * @param groupID the ID of the group to be modified.
-	 * @param resource the method.
-	 * @return A request if required or {@link Optional#empty()} if the operation is already
-	 * complete.
-	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws AuthenticationException if authentication fails.
-	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws NoSuchGroupException if there is no such group.
-	 * @throws UnauthorizedException if the user is not an administrator of the group or an
-	 * owner of the module.
-	 * @throws RequestExistsException if there's already an equivalent request in the system.
-	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
-	 * @throws IllegalResourceIDException if the resource ID is illegal.
-	 * @throws NoSuchResourceException if there is no such resource.
-	 * @throws ResourceExistsException  if the resource is already associated with the group.
-	 */
-	public Optional<GroupRequest> addCatalogMethod(
-			final Token userToken,
-			final GroupID groupID,
-			final ResourceID resource)
-			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException, UnauthorizedException, RequestExistsException,
-				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException,
-				ResourceExistsException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(groupID, "groupID");
-		checkNotNull(resource, "resource");
-		final UserName user = userHandler.getUser(userToken);
-		final Group g = storage.getGroup(groupID);
-		final ResourceHandler h;
-		try {
-			h = getHandler(RTCAT);
-		} catch (NoSuchResourceTypeException e) { //TODO NNOW remove when make general
-			throw new RuntimeException("impossible", e);
-		}
-		final ResourceDescriptor d = h.getDescriptor(resource);
-		if (g.containsResource(RTCAT, d)) {
-			throw new ResourceExistsException(resource.getName());
-		}
-		final Set<UserName> modowners = h.getAdministrators(resource);
-		if (g.isAdministrator(user) && modowners.contains(user)) {
-			storage.addResource(groupID, RTCAT, d, clock.instant());
-			//TODO NNOW notify
-			return Optional.empty();
-		}
-		if (modowners.contains(user)) {
-			return Optional.of(createRequestStoreAndNotify(
-					g, user, RequestType.REQUEST, RTCAT, d, g.getAdministratorsAndOwner()));
-		}
-		if (g.isAdministrator(user)) {
-			return Optional.of(createRequestStoreAndNotify(
-					g, user, RequestType.INVITE, RTCAT, d, modowners));
-		}
-		throw new UnauthorizedException(String.format(
-				"User %s is not an admin for group %s or resource %s",
-				user.getName(), groupID.getName(), resource.getName()));
 	}
 	
 }
