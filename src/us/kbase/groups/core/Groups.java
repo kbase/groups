@@ -884,6 +884,7 @@ public class Groups {
 		final Group g = storage.getGroup(groupID);
 		final ResourceHandler h = getHandler(type);
 		final ResourceDescriptor d = h.getDescriptor(resource);
+		//TODO NNOW change to test on ID, not descriptor
 		if (g.containsResource(type, d)) {
 			throw new ResourceExistsException(resource.getName());
 		}

@@ -22,6 +22,7 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
+import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceType;
@@ -73,7 +74,12 @@ public class GroupTest {
 				.withResource(new ResourceType("catalogmethod"),
 						new ResourceDescriptor(new ResourceID("foo.bar")))
 				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(new ResourceID("baz.bat")))
+						new ResourceDescriptor(new ResourceAdministrativeID("bar"),
+								new ResourceID("baz.bat")))
+				// overwrite previous resource
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("baz"),
+								new ResourceID("baz.bat")))
 				.withType(GroupType.PROJECT)
 				.withCustomField(new NumberedCustomField("foo-1"), "bar")
 				.withCustomField(new NumberedCustomField("baz"), "bat")
@@ -96,7 +102,8 @@ public class GroupTest {
 						new ResourceDescriptor(new ResourceID("3")))));
 		assertThat("incorrect res", g.getResources(new ResourceType("catalogmethod")),
 				is(set(new ResourceDescriptor(new ResourceID("foo.bar")),
-						new ResourceDescriptor(new ResourceID("baz.bat")))));
+						new ResourceDescriptor(new ResourceAdministrativeID("baz"),
+								new ResourceID("baz.bat")))));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
@@ -382,12 +389,8 @@ public class GroupTest {
 	}
 	
 	@Test
-	public void getResourceFail() throws Exception {
-		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withResource(new ResourceType("foo"), new ResourceDescriptor(new ResourceID("b")))
-				.build();
+	public void getResourcesFail() throws Exception {
+		final Group g = getBuilderWithResource();
 		try {
 			g.getResources(new ResourceType("bar"));
 			fail("expected exception");
@@ -399,27 +402,125 @@ public class GroupTest {
 	
 	@Test
 	public void containsResource() throws Exception {
+		final Group g = getBuilderWithResource();
+		
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b"))),
+				is(true));
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foob"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b"))),
+				is(false));
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("b"),
+						new ResourceID("b"))),
+				is(false));
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("c"))),
+				is(false));
+		
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foo"), new ResourceID("b")),
+				is(true));
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foob"), new ResourceID("b")),
+				is(false));
+		assertThat("incorrect contains", g.containsResource(
+				new ResourceType("foo"), new ResourceID("c")),
+				is(false));
+		
+	}
+
+	private Group getBuilderWithResource() throws Exception {
 		final Group g = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withResource(new ResourceType("foo"), new ResourceDescriptor(new ResourceID("b")))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
 				.build();
+		return g;
+	}
+	
+	@Test
+	public void containsResourceFail() throws Exception {
+		final ResourceType t = new ResourceType("t");
 		
-		assertThat("incorrect contains", g.containsResource(
-				new ResourceType("foo"), new ResourceDescriptor(new ResourceID("b"))),
-				is(true));
-		assertThat("incorrect contains", g.containsResource(
-				new ResourceType("foo"), null),
-				is(false));
-		assertThat("incorrect contains", g.containsResource(
-				null, new ResourceDescriptor(new ResourceID("b"))),
-				is(false));
-		assertThat("incorrect contains", g.containsResource(
-				new ResourceType("foob"), new ResourceDescriptor(new ResourceID("b"))),
-				is(false));
-		assertThat("incorrect contains", g.containsResource(
-				new ResourceType("foo"), new ResourceDescriptor(new ResourceID("c"))),
-				is(false));
+		containsResourceFail(null, new ResourceDescriptor(new ResourceID("i")),
+				new NullPointerException("type"));
+		containsResourceFail(null, new ResourceID("i"), new NullPointerException("type"));
+		containsResourceFail(t, (ResourceDescriptor) null, new NullPointerException("descriptor"));
+		containsResourceFail(t, (ResourceID) null, new NullPointerException("resourceID"));
+	}
+	
+	private void containsResourceFail(
+			final ResourceType t,
+			final ResourceDescriptor d,
+			final Exception expected)
+			throws Exception {
+		final Group g = getBuilderWithResource();
+		try {
+			g.containsResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	private void containsResourceFail(
+			final ResourceType t,
+			final ResourceID d,
+			final Exception expected)
+			throws Exception {
+		final Group g = getBuilderWithResource();
+		try {
+			g.containsResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getResource() throws Exception {
+		final Group g = getBuilderWithResource();
 		
+		assertThat("incorrect get res",
+				g.getResource(new ResourceType("foo"), new ResourceID("b")),
+				is(new ResourceDescriptor(
+						new ResourceAdministrativeID("a"), new ResourceID("b"))));
+	}
+	
+	@Test
+	public void getResourceFail() throws Exception {
+		final ResourceType t = new ResourceType("t");
+		
+		getResourceFail(null, new ResourceID("i"), new NullPointerException("type"));
+		getResourceFail(t, (ResourceID) null, new NullPointerException("resourceID"));
+		
+		getResourceFail(new ResourceType("foo"), new ResourceID("a"),
+				new IllegalArgumentException("No such resource foo a"));
+		getResourceFail(new ResourceType("foob"), new ResourceID("b"),
+				new IllegalArgumentException("No such resource foob b"));
+	}
+	
+	private void getResourceFail(
+			final ResourceType t,
+			final ResourceID d,
+			final Exception expected)
+			throws Exception {
+		final Group g = getBuilderWithResource();
+		try {
+			g.getResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 }
