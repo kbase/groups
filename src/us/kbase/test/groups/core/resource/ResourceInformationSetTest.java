@@ -91,6 +91,27 @@ public class ResourceInformationSetTest {
 	}
 	
 	@Test
+	public void withoutNonexistentResources() throws Exception {
+		final ResourceInformationSet r = ResourceInformationSet.getBuilder(new UserName("u"))
+				.withNonexistentResource(new ResourceID("rid3"))
+				.withResourceField(new ResourceID("rid7"), "f2", "ya0")
+				.build();
+		
+		final ResourceInformationSet expected = ResourceInformationSet
+				.getBuilder(new UserName("u"))
+				.withResourceField(new ResourceID("rid7"), "f2", "ya0")
+				.build();
+		assertThat("incorrect ris", r.withoutNonexistentResources(), is(expected));
+		
+		try {
+			expected.getNonexistentResources().add(new ResourceID("i"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// pass
+		}
+	}
+	
+	@Test
 	public void getFieldsFail() throws Exception {
 		final ResourceInformationSet r = ResourceInformationSet.getBuilder(new UserName("u"))
 				.withResourceField(new ResourceID("rid7"), "f2", "ya0")

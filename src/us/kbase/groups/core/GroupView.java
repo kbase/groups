@@ -33,7 +33,6 @@ public class GroupView {
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
-	//TODO NNOW remove non-existant
 	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
 	
 	// not part of the view, just describes the view
@@ -336,6 +335,7 @@ public class GroupView {
 		
 		/** Add resource information to the view.
 		 * Calling this method will overwrite any previous information for the type.
+		 * Any nonexistent resources in the information set will be discarded.
 		 * @param type the type of the resource.
 		 * @param info the information for the resource.
 		 * @return this builder.
@@ -346,7 +346,7 @@ public class GroupView {
 			if (!info.getUser().equals(user)) {
 				throw new IllegalArgumentException("User in info does not match user in builder");
 			}
-			resourceInfo.put(type, info);
+			resourceInfo.put(type, info.withoutNonexistentResources());
 			return this;
 		}
 		
