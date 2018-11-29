@@ -546,6 +546,10 @@ field-myfield-param-<parameter name>=<parameter value>
 
 A mapping of all parameter names and values will be provided to the validator on creation.
 
+**WARNING**: If a field configuration is removed from the configuration file, *the field
+will still be visible for any groups where it has been set*. The field cannot be included with
+new groups or updated on or added to existing groups, but it can be removed.
+
 Currently available validators are:
 
 ### us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory

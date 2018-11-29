@@ -194,7 +194,6 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		final ResourceInformationSet.Builder b = ResourceInformationSet.getBuilder(user);
 		for (final ResourceID rid: resources) {
 			final long wsid = getWSID(rid);
-			final ResourceDescriptor desc = getDesc(rid);
 			final Perms perms;
 			try {
 				perms = getPermissions(Arrays.asList(wsid), false);
@@ -202,14 +201,14 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 				throw new RuntimeException("This should be impossible", e);
 			}
 			if (perms.perms == null) {
-				b.withNonexistentResource(desc);
+				b.withNonexistentResource(rid);
 			} else {
 				final Perm perm = new Perm(user, perms.perms.get(0));
 				if (!administratedResourcesOnly || perm.perm.isAdmin() || perm.isPublic) {
 					final WSInfoOwner wi = getWSInfo(wsid);
 					if (wi == null) {
 						// should almost never happen since we checked for inaccessible ws above
-						b.withNonexistentResource(desc);
+						b.withNonexistentResource(rid);
 					} else {
 						if (user != null && wi.owner.equals(user.getName())) {
 							wi.wi.put("perm", WorkspacePermission.OWN.getRepresentation());
@@ -217,21 +216,12 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 							wi.wi.put("perm", perm.perm.getRepresentation());
 						}
 						wi.wi.keySet().stream()
-								.forEach(s -> b.withResourceField(desc, s, wi.wi.get(s)));
+								.forEach(s -> b.withResourceField(rid, s, wi.wi.get(s)));
 					}
 				}
 			}
 		}
 		return b.build();
-	}
-
-	// assumes good RID
-	private ResourceDescriptor getDesc(final ResourceID rid) {
-		try {
-			return new ResourceDescriptor(new ResourceAdministrativeID(rid.getName()), rid);
-		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new RuntimeException("This is impossible", e);
-		}
 	}
 
 	private static final TypeReference<Tuple9<Long, String, String, String, Long, String,
@@ -355,6 +345,6 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			throws IllegalResourceIDException {
 		checkNotNull(resource, "resource");
 		getWSID(resource); // check for bad id
-		return getDesc(resource);
+		return new ResourceDescriptor(resource);
 	}
 }

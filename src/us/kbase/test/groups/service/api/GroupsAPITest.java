@@ -583,13 +583,10 @@ public class GroupsAPITest {
 	public void getGroupWithResources() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		final ResourceDescriptor d1 = new ResourceDescriptor(
-				new ResourceAdministrativeID("82"), new ResourceID("82"));
-		final ResourceDescriptor d2 = new ResourceDescriptor(
-				new ResourceAdministrativeID("45"), new ResourceID("45"));
+		final ResourceID d1 = new ResourceID("82");
+		final ResourceID d2 = new ResourceID("45");
 		
-		final ResourceDescriptor c1 = new ResourceDescriptor(
-				new ResourceAdministrativeID("mod"), new ResourceID("mod.meth"));
+		final ResourceID c1 = new ResourceID("mod.meth");
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
 				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("whee"))
@@ -608,7 +605,7 @@ public class GroupsAPITest {
 										.build())
 						.withResource(new ResourceType("catalogmethod"),
 								ResourceInformationSet.getBuilder(new UserName("whee"))
-										.withResourceDescriptor(c1)
+										.withResource(c1)
 										.build())
 						.build());
 		

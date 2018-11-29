@@ -557,10 +557,8 @@ public class GroupsTest {
 		when(mocks.wsHandler.getResourceInformation(
 				null, set(new ResourceID("92"), new ResourceID("86")), true))
 				.thenReturn(ResourceInformationSet.getBuilder(null)
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"public", true)
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("92"), "public", true)
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
@@ -575,10 +573,8 @@ public class GroupsTest {
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(null)
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"public", true)
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("92"), "public", true)
 						.build())
 				.build()));
 	}
@@ -607,10 +603,8 @@ public class GroupsTest {
 				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
 						new ResourceID("86")), true))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
-								"name", "my ws2")
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("57"), "name", "my ws2")
 						.build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
@@ -624,10 +618,8 @@ public class GroupsTest {
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("whee"))
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
-								"name", "my ws2")
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("57"), "name", "my ws2")
 						.build())
 				.build()));
 	}
@@ -664,23 +656,18 @@ public class GroupsTest {
 				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
 						new ResourceID("57")), false))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("6")),
-								"name", "my other ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
-								"name", "my ws2")
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("34")))
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("6"), "name", "my other ws")
+						.withResourceField(new ResourceID("57"), "name", "my ws2")
+						.withNonexistentResource(new ResourceID("34"))
 						// will throw error, should ignore
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("86")))
+						.withNonexistentResource(new ResourceID("86"))
 						.build());
 		when(mocks.catHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("mod1.meth1"),
 						new ResourceID("mod2.meth2")), false))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
+						.withResource(new ResourceID("mod2.meth2"))
 						.build());
 		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchResourceException("86")).when(mocks.storage)
@@ -703,21 +690,16 @@ public class GroupsTest {
 				.withStandardView(true)
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("baz"))
-						.withResourceField(new ResourceDescriptor(new ResourceID("92")),
-								"name", "my ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("6")),
-								"name", "my other ws")
-						.withResourceField(new ResourceDescriptor(new ResourceID("57")),
-								"name", "my ws2")
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.withResourceField(new ResourceID("6"), "name", "my other ws")
+						.withResourceField(new ResourceID("57"), "name", "my ws2")
 						//TODO NNOW remove nonexistant resources from view
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("34")))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("86")))
+						.withNonexistentResource(new ResourceID("34"))
+						.withNonexistentResource(new ResourceID("86"))
 						.build())
 				.withResource(new ResourceType("catalogmethod"), ResourceInformationSet
 						.getBuilder(new UserName("baz"))
-						.withResourceDescriptor(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth2")))
+						.withResource(new ResourceID("mod2.meth2"))
 						.build())
 				.build()));
 	}

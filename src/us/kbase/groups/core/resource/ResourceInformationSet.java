@@ -21,21 +21,20 @@ public class ResourceInformationSet {
 	
 	private final Optional<UserName> user;
 	// might need to think about sorting here. YAGNI for now.
-	//TODO NNOW consider just resourceID. Is RD necessary?
-	private final Map<ResourceDescriptor, Map<String, Object>> resources;
-	private final Set<ResourceDescriptor> nonexistent;
+	private final Map<ResourceID, Map<String, Object>> resources;
+	private final Set<ResourceID> nonexistent;
 	
 	private ResourceInformationSet(
 			final Optional<UserName> user,
-			final Map<ResourceDescriptor, Map<String, Object>> perms,
-			final Set<ResourceDescriptor> nonexistent) {
+			final Map<ResourceID, Map<String, Object>> perms,
+			final Set<ResourceID> nonexistent) {
 		this.user = user;
 		this.resources = Collections.unmodifiableMap(perms);
 		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
 	/** Get the user associated with the set. Any user-specific fields returned by
-	 * {@link #getFields(ResourceDescriptor)} refers to this user.
+	 * {@link #getFields(ResourceID)} refers to this user.
 	 * @return the user, or {@link Optional#empty()} if the user is anonymous.
 	 */
 	public Optional<UserName> getUser() {
@@ -45,7 +44,7 @@ public class ResourceInformationSet {
 	/** Get the resources in this set.
 	 * @return the workspace information.
 	 */
-	public Set<ResourceDescriptor> getResources() {
+	public Set<ResourceID> getResources() {
 		return resources.keySet();
 	}
 	
@@ -54,7 +53,7 @@ public class ResourceInformationSet {
 	 * @param resource the resource to query.
 	 * @return the fields.
 	 */
-	public Map<String, Object> getFields(final ResourceDescriptor resource) {
+	public Map<String, Object> getFields(final ResourceID resource) {
 		checkNotNull(resource, "resource");
 		if (!resources.containsKey(resource)) {
 			throw new IllegalArgumentException("Provided resource not included in set");
@@ -67,7 +66,7 @@ public class ResourceInformationSet {
 	 * this set.
 	 * @return the resources.
 	 */
-	public Set<ResourceDescriptor> getNonexistentResources() {
+	public Set<ResourceID> getNonexistentResources() {
 		return nonexistent;
 	}
 	
@@ -119,7 +118,7 @@ public class ResourceInformationSet {
 
 	/** Get a builder for a {@link ResourceInformationSet}.
 	 * @param user the user associated with this set. The field information
-	 * passed to {@link Builder#withResourceField(ResourceDescriptor, String, Object)} must
+	 * passed to {@link Builder#withResourceField(ResourceID, String, Object)} must
 	 * be based on this user. Pass null for an anonymous user.
 	 * @return a new builder.
 	 */
@@ -135,8 +134,8 @@ public class ResourceInformationSet {
 
 		private final Optional<UserName> user;
 		// might need to think about sorting here. YAGNI for now.
-		private final Map<ResourceDescriptor, Map<String, Object>> resources = new HashMap<>();
-		private final Set<ResourceDescriptor> nonexistent = new HashSet<>();
+		private final Map<ResourceID, Map<String, Object>> resources = new HashMap<>();
+		private final Set<ResourceID> nonexistent = new HashSet<>();
 		
 		private Builder(final UserName user) {
 			this.user = Optional.ofNullable(user);
@@ -146,7 +145,7 @@ public class ResourceInformationSet {
 		 * @param resource the resource.
 		 * @return this builder.
 		 */
-		public Builder withResourceDescriptor(final ResourceDescriptor resource) {
+		public Builder withResource(final ResourceID resource) {
 			checkNotNull(resource, "resource");
 			if (!resources.containsKey(resource)) {
 				resources.put(resource, new HashMap<>());
@@ -162,12 +161,12 @@ public class ResourceInformationSet {
 		 * @return this builder.
 		 */
 		public Builder withResourceField(
-				final ResourceDescriptor resource,
+				final ResourceID resource,
 				final String field,
 				final Object value) {
 			checkNotNull(resource, "resource");
 			exceptOnEmpty(field, "field");
-			withResourceDescriptor(resource);
+			withResource(resource);
 			resources.get(resource).put(field, value);
 			return this;
 		}
@@ -177,7 +176,7 @@ public class ResourceInformationSet {
 		 * @param resource the deleted or missing resource.
 		 * @return this builder.
 		 */
-		public Builder withNonexistentResource(final ResourceDescriptor resource) {
+		public Builder withNonexistentResource(final ResourceID resource) {
 			checkNotNull(resource, "resource");
 			nonexistent.add(resource);
 			return this;

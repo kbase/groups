@@ -566,10 +566,8 @@ public class SDKClientCatalogHandlerTest {
 		
 		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(
 				new UserName("foo"))
-				.withResourceDescriptor(new ResourceDescriptor(
-						new ResourceAdministrativeID("foo"), new ResourceID("foo.bar")))
-				.withResourceDescriptor(new ResourceDescriptor(
-						new ResourceAdministrativeID("x"), new ResourceID("x.y")))
+				.withResource(new ResourceID("foo.bar"))
+				.withResource(new ResourceID("x.y"))
 				.build()));
 	}
 	

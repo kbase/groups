@@ -44,35 +44,26 @@ public class SDKClientWorkspaceHandlerTest {
 	
 	private static boolean DEBUG = false;
 	
-	private static final ResourceDescriptor RD3;
-	private static final ResourceDescriptor RD5;
-	private static final ResourceDescriptor RD7;
-	private static final ResourceDescriptor RD8;
-	private static final ResourceDescriptor RD9;
-	private static final ResourceDescriptor RD10;
-	private static final ResourceDescriptor RD11;
-	private static final ResourceDescriptor RD20;
-	private static final ResourceDescriptor RD21;
+	private static final ResourceID RD3;
+	private static final ResourceID RD5;
+	private static final ResourceID RD7;
+	private static final ResourceID RD8;
+	private static final ResourceID RD9;
+	private static final ResourceID RD10;
+	private static final ResourceID RD11;
+	private static final ResourceID RD20;
+	private static final ResourceID RD21;
 	static {
 		try {
-			RD3 = new ResourceDescriptor(
-					new ResourceAdministrativeID("3"), new ResourceID("3"));
-			RD5 = new ResourceDescriptor(
-					new ResourceAdministrativeID("5"), new ResourceID("5"));
-			RD7 = new ResourceDescriptor(
-					new ResourceAdministrativeID("7"), new ResourceID("7"));
-			RD8 = new ResourceDescriptor(
-					new ResourceAdministrativeID("8"), new ResourceID("8"));
-			RD9 = new ResourceDescriptor(
-					new ResourceAdministrativeID("9"), new ResourceID("9"));
-			RD10 = new ResourceDescriptor(
-					new ResourceAdministrativeID("10"), new ResourceID("10"));
-			RD11 = new ResourceDescriptor(
-					new ResourceAdministrativeID("11"), new ResourceID("11"));
-			RD20 = new ResourceDescriptor(
-					new ResourceAdministrativeID("20"), new ResourceID("20"));
-			RD21 = new ResourceDescriptor(
-					new ResourceAdministrativeID("21"), new ResourceID("21"));
+			RD3 = new ResourceID("3");
+			RD5 = new ResourceID("5");
+			RD7 = new ResourceID("7");
+			RD8 = new ResourceID("8");
+			RD9 = new ResourceID("9");
+			RD10 = new ResourceID("10");
+			RD11 = new ResourceID("11");
+			RD20 = new ResourceID("20");
+			RD21 = new ResourceID("21");
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests", e);
 		}
