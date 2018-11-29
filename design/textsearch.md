@@ -1,4 +1,4 @@
-#Text Search
+# Text Search
 
 Since MongoDB only supports one text index per collection and does not return which fields
 were hit during the search, it seems like it's not an option given we wish to support private
@@ -10,7 +10,7 @@ fields, as the index will have to be rebuilt each time.
 
 Options:
 
-## Only support public fields
+## Only support public fields with MongoDB text index
 
 Pros:
 
@@ -25,15 +25,23 @@ Cons:
 
 ## Standard MongoDB indexing with simple tokenizing
 
+Add `private` and `public` fields to the MongoDB record that contain a merge of
+tokenized versions of the searchable fields.
+
 Pros:
 1. Can support separate indexes for private and public fields
 
 Cons:
 1. No stemming and stop words
 2. No ordering by relevance
-3. Likely thousands of index entries per group
+3. Likely thousands of index entries per group - slow create & update
+4. Makes group updates much more tricky (details not shown)
+5. Adding or removing a text search field may require reindexing all groups (see below)
 
 ## Standard MongoDB indexing with stemming and stop words
+
+Add `private` and `public` fields to the MongoDB record that contain a merge of
+tokenized versions, including stop words and stemming, of the searchable fields.
 
 In practice, this probably means making Lucene a dependency and using it for stemming & stop
 words.
@@ -45,7 +53,9 @@ Pros:
 Cons:
 1. No ordering by relevance
 2. More work than simple tokenizing
-3. Likely thousands of index entries per group
+3. Likely thousands of index entries per group - slow create & update
+4. Makes group updates much more tricky (details not shown)
+5. Adding or removing a text search field may require reindexing all groups (see below)
 
 ## Delegate to ElasticSearch for text search
 
@@ -58,13 +68,29 @@ Pros:
 3. Supports ordering by relevance
 
 Cons:
-1. No ordering by relevance
-2. More work than simple tokenizing (not clear whether this is more work than using Lucene
+1. More work than simple tokenizing (not clear whether this is more work than using Lucene
    directly. Probably is).
+2. Need an admin command to reindex a specific group in case the server goes down between
+   a MongoDB update and ES update
+3. Adding or removing a text search field may require reindexing all groups (see below)
+
+## ~~Submit groups to KBase Search service~~
 
 # General issues
 
-## Adding a new text searchable field in any scenario requires a reindex.
+## Adding or removing a text search field may require reindexing all groups
+
+Removing a text search field requires reindexing all groups in order to remove index entries
+for that field.
+
+Normally adding a new field would not require reindexing the groups data, but there's one
+case where it could be required - when a field is removed and then later readded as a text
+search field. This means there may be entries in the database for the field which need to be
+included in the index but are not.
+
+All the options below could be run in the background if immediate consistency is not a concern.
+Otherwise, the server(s) would need to be taken down, the field configuration and fields updated,
+and the server(s) restarted.
 
 Options:
 
