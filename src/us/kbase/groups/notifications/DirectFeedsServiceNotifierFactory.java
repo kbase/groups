@@ -146,11 +146,12 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				final String verb,
 				final String level) {
 			final Map<String, Object> post = new HashMap<>();
-			post.put("target", targets.stream().map(t -> t.getName())
+			post.put("users", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
+			post.put("target", resourceID.getName());
 			post.put("level", level);
 			post.put("actor", actor);
-			post.put("object", resourceID.getName());
+			post.put("object", groupID.getName());
 			post.put("verb", verb);
 			if (requestID != null) {
 				post.put("external_key", requestID.getID());
