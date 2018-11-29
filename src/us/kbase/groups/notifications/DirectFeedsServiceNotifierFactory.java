@@ -121,7 +121,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				final GroupRequest request) {
 			postNotification(
 					targets,
-					request.getRequester(),
+					request.getRequester().getName(),
 					request,
 					request.getExpirationDate(),
 					request.isInvite() ? "invite" : "request",
@@ -131,7 +131,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 
 		private void postNotification(
 				final Collection<UserName> targets,
-				final UserName actor,
+				final String actor,
 				final GroupRequest request,
 				final Instant expirationDate,
 				final String verb,
@@ -141,8 +141,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			post.put("target", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
 			post.put("level", level);
-			//TODO NOW should accept/deny be anonymous?
-			post.put("actor", actor.getName());
+			post.put("actor", actor);
 			post.put("object", request.getResource().getResourceID().getName());
 			post.put("verb", verb);
 			if (includeID) {
@@ -189,14 +188,14 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				return;
 			}
 			postNotification(
-					targets, request.getClosedBy().get(), request, null, "reject", "alert", false);
+					targets, "groupservice", request, null, "reject", "alert", false);
 		
 		}
 		
 		@Override
 		public void accept(final Collection<UserName> targets, final GroupRequest request) {
 			postNotification(
-					targets, request.getClosedBy().get(), request, null, "accept", "alert", false);
+					targets, "groupservice", request, null, "accept", "alert", false);
 		
 		}
 	}

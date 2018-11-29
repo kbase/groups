@@ -93,10 +93,10 @@ public class GroupViewTest {
 				.withStandardView(true)
 				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.withNonexistentResource(new ResourceID("5"))
 						.build())
 				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.withNonexistentResource(new ResourceID("a.b"))
 						.build())
 				.build();
 		
@@ -120,11 +120,11 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(null).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
 				is(ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.withNonexistentResource(new ResourceID("5"))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
 				is(ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.withNonexistentResource(new ResourceID("a.b"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
@@ -142,11 +142,11 @@ public class GroupViewTest {
 				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
 						new UserName("m1"))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.withNonexistentResource(new ResourceID("5"))
 						.build())
 				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(
 						new UserName("m1"))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.withNonexistentResource(new ResourceID("a.b"))
 						.build())
 				.build();
 		
@@ -169,11 +169,11 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(new UserName("m1")).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
 				is(ResourceInformationSet.getBuilder(new UserName("m1"))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.withNonexistentResource(new ResourceID("5"))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
 				is(ResourceInformationSet.getBuilder(new UserName("m1"))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("a.b")))
+						.withNonexistentResource(new ResourceID("a.b"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
@@ -257,7 +257,7 @@ public class GroupViewTest {
 		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("u"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
 						new UserName("u"))
-						.withNonexistentResource(new ResourceDescriptor(new ResourceID("5")))
+						.withNonexistentResource(new ResourceID("5"))
 						.build())
 				.build();
 		try {

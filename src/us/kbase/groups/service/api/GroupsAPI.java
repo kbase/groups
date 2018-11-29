@@ -62,7 +62,6 @@ import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
-import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
@@ -348,11 +347,11 @@ public class GroupsAPI {
 
 	private List<Map<String, Object>> getResourceList(final ResourceInformationSet resourceInfo) {
 		final List<Map<String, Object>> rlist = new LinkedList<>();
-		for (final ResourceDescriptor rd: sorted(resourceInfo)) {
+		for (final ResourceID rd: sorted(resourceInfo)) {
 			final Map<String, Object> resource = new HashMap<>();
 			rlist.add(resource);
 			resource.putAll(resourceInfo.getFields(rd));
-			resource.put(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName());
+			resource.put(Fields.GROUP_RESOURCE_ID, rd.getName());
 		}
 		return rlist;
 	}
@@ -364,11 +363,10 @@ public class GroupsAPI {
 
 	// may want to subclass the descriptors to allow for resource type specific sorts
 	// specifically for workspaces
-	// or associated a comparator with a resource type
-	private List<ResourceDescriptor> sorted(final ResourceInformationSet resources) {
-		final List<ResourceDescriptor> ret = new ArrayList<>(resources.getResources());
-		
-		Collections.sort(ret, (r1, r2) -> r1.getResourceID().compareTo(r2.getResourceID()));
+	// or associate a comparator with a resource type
+	private List<ResourceID> sorted(final ResourceInformationSet resources) {
+		final List<ResourceID> ret = new ArrayList<>(resources.getResources());
+		Collections.sort(ret);
 		return ret;
 	}
 

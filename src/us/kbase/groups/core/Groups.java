@@ -61,11 +61,11 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
-	// TODO NNOW enforce that a resource ID can only appear once in a group? Enforce @ DB level? (1:M mapping from resource admin ID to resource ID)
-	
 	//TODO NNOW limits on resource IDs (both)
 	
 	//TODO LOGGING for all actions
+	
+	//TODO NNOW figure out how to make numbered fields text searchable - search is a problem in general
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -258,7 +258,6 @@ public class Groups {
 		}
 		final ResourceInformationSet info;
 		try {
-			// TODO NNOW don't include resource descriptor in RIS. Look up from group if needed.
 			info = h.getResourceInformation(
 					user,
 					g.getResources(type).stream().map(r -> r.getResourceID())
@@ -270,9 +269,9 @@ public class Groups {
 					g.getGroupID().getName(), e.getMessage()), e);
 		}
 		b.withResource(type, info);
-		for (final ResourceDescriptor d: info.getNonexistentResources()) {
+		for (final ResourceID rid: info.getNonexistentResources()) {
 			try {
-				storage.removeResource(g.getGroupID(), type, d.getResourceID(), clock.instant());
+				storage.removeResource(g.getGroupID(), type, rid, clock.instant());
 			} catch (NoSuchResourceException e) {
 				// do nothing, if the resource isn't there fine.
 			}

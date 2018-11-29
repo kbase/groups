@@ -34,7 +34,7 @@ public class Group {
 	private final UserName owner;
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
-	private final GroupType type;
+	private final GroupType type; //TODO NNOW remove
 	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
 	private final Instant creationDate;
 	private final Instant modificationDate;

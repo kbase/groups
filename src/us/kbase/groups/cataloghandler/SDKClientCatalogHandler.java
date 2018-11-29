@@ -93,16 +93,6 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 		return new ModMeth(mod, meth);
 	}
 
-	private ResourceDescriptor getDescriptorInternal(final ResourceID resource)
-			throws IllegalResourceIDException {
-		final ModMeth m = getModMeth(resource);
-		try {
-			return new ResourceDescriptor(new ResourceAdministrativeID(m.mod), resource);
-		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
-	}
-	
 	@Override
 	public boolean isAdministrator(final ResourceID resource, final UserName user)
 			throws ResourceHandlerException, NoSuchResourceException, IllegalResourceIDException {
@@ -188,9 +178,14 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 
 	@Override
 	public ResourceDescriptor getDescriptor(final ResourceID resource)
-			throws IllegalResourceIDException, ResourceHandlerException {
+			throws IllegalResourceIDException {
 		checkNotNull(resource, "resource");
-		return getDescriptorInternal(resource);
+		final ModMeth m = getModMeth(resource);
+		try {
+			return new ResourceDescriptor(new ResourceAdministrativeID(m.mod), resource);
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 
 	@Override
@@ -198,12 +193,13 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 			final UserName user,
 			final Set<ResourceID> resources,
 			final boolean administratedResourcesOnly)
-			throws IllegalResourceIDException, ResourceHandlerException {
+			throws IllegalResourceIDException {
 		checkNoNullsInCollection(resources, "resources");
 		final Builder b = ResourceInformationSet.getBuilder(user);
 		
 		for (final ResourceID r: resources) {
-			b.withResourceDescriptor(getDescriptorInternal(r));
+			getModMeth(r); // check id is valid
+			b.withResource(r);
 		}
 		return b.build();
 	}
