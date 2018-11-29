@@ -3508,6 +3508,7 @@ public class GroupsTest {
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
 				.withAdministrator(new UserName("admin"))
+				.withAdministrator(new UserName("admin2"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3524,6 +3525,13 @@ public class GroupsTest {
 				new ResourceType("workspace"),
 				new ResourceDescriptor(new ResourceID("34")),
 				inst(3400));
+		
+		verify(mocks.notifs).addResource(
+				new UserName("admin"),
+				set(new UserName("own"), new UserName("admin2"), new UserName("ws2")),
+				new GroupID("gid"),
+				new ResourceType("workspace"),
+				new ResourceID("34"));
 		
 		assertThat("incorrect request", ret, is(Optional.empty()));
 	}

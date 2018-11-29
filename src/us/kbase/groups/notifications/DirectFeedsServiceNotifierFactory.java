@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.client.Client;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.groups.core.Group;
+import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -33,6 +35,8 @@ import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 
 public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 	
@@ -122,43 +126,47 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			postNotification(
 					targets,
 					request.getRequester().getName(),
-					request,
+					request.getID(),
+					request.getGroupID(),
+					request.getResourceType(),
+					request.getResource().getResourceID(),
 					request.getExpirationDate(),
 					request.isInvite() ? "invite" : "request",
-					"request",
-					true);
+					"request");
 		}
 
 		private void postNotification(
 				final Collection<UserName> targets,
 				final String actor,
-				final GroupRequest request,
+				final RequestID requestID,
+				final GroupID groupID,
+				final ResourceType resourceType,
+				final ResourceID resourceID, 
 				final Instant expirationDate,
 				final String verb,
-				final String level,
-				boolean includeID) {
+				final String level) {
 			final Map<String, Object> post = new HashMap<>();
 			post.put("target", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
 			post.put("level", level);
 			post.put("actor", actor);
-			post.put("object", request.getResource().getResourceID().getName());
+			post.put("object", resourceID.getName());
 			post.put("verb", verb);
-			if (includeID) {
-				post.put("external_key", request.getID().getID());
+			if (requestID != null) {
+				post.put("external_key", requestID.getID());
 			}
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
 			final Map<String, Object> context = new HashMap<>();
 			//TODO NOW include denyReason?
-			context.put("resourcetype", request.getResourceType().getName());
-			context.put("groupid", request.getGroupID().getName());
+			context.put("resourcetype", resourceType.getName());
+			context.put("groupid", groupID.getName());
 			post.put("context", context);
 			
 			//TODO NOW remove later
 			post.put("source", "fake");
-			if (includeID) {
-				context.put("requestid", request.getID().getID());
+			if (requestID != null) {
+				context.put("requestid", requestID.getID());
 			}
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
@@ -188,15 +196,49 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 				return;
 			}
 			postNotification(
-					targets, "groupservice", request, null, "reject", "alert", false);
-		
+					targets,
+					"groupservice",
+					null,
+					request.getGroupID(),
+					request.getResourceType(),
+					request.getResource().getResourceID(),
+					null,
+					"reject",
+					"alert");
 		}
 		
 		@Override
 		public void accept(final Collection<UserName> targets, final GroupRequest request) {
 			postNotification(
-					targets, "groupservice", request, null, "accept", "alert", false);
+					targets,
+					"groupservice",
+					null,
+					request.getGroupID(),
+					request.getResourceType(),
+					request.getResource().getResourceID(),
+					null,
+					"accept",
+					"alert");
 		
+		}
+
+		@Override
+		public void addResource(
+				final UserName user,
+				final Set<UserName> targets,
+				final GroupID groupID,
+				final ResourceType type,
+				final ResourceID resource) {
+			postNotification(
+					targets,
+					"groupservice",
+					null,
+					groupID,
+					type,
+					resource,
+					null,
+					"updated",
+					"alert");
 		}
 	}
 }
