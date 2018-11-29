@@ -65,7 +65,7 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
-	//TODO NNOW figure out how to make numbered fields text searchable - search is a problem in general
+	//TODO NOW figure out how to make numbered fields text searchable - search is a problem in general
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;

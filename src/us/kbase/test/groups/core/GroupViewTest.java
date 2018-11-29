@@ -94,6 +94,7 @@ public class GroupViewTest {
 				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(null)
 						.withNonexistentResource(new ResourceID("5"))
+						.withResource(new ResourceID("6"))
 						.build())
 				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(null)
 						.withNonexistentResource(new ResourceID("a.b"))
@@ -120,11 +121,10 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(null).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
 				is(ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceID("5"))
+						.withResource(new ResourceID("6"))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
 				is(ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(new ResourceID("a.b"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
@@ -142,6 +142,7 @@ public class GroupViewTest {
 				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet.getBuilder(
 						new UserName("m1"))
+						.withResource(new ResourceID("7"))
 						.withNonexistentResource(new ResourceID("5"))
 						.build())
 				.withResource(new ResourceType("cat"), ResourceInformationSet.getBuilder(
@@ -169,11 +170,10 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(new UserName("m1")).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("ws")),
 				is(ResourceInformationSet.getBuilder(new UserName("m1"))
-						.withNonexistentResource(new ResourceID("5"))
+						.withResource(new ResourceID("7"))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
 				is(ResourceInformationSet.getBuilder(new UserName("m1"))
-						.withNonexistentResource(new ResourceID("a.b"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));

@@ -693,9 +693,6 @@ public class GroupsTest {
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("6"), "name", "my other ws")
 						.withResourceField(new ResourceID("57"), "name", "my ws2")
-						//TODO NNOW remove nonexistant resources from view
-						.withNonexistentResource(new ResourceID("34"))
-						.withNonexistentResource(new ResourceID("86"))
 						.build())
 				.withResource(new ResourceType("catalogmethod"), ResourceInformationSet
 						.getBuilder(new UserName("baz"))

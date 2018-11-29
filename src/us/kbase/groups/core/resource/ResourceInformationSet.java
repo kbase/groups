@@ -26,10 +26,10 @@ public class ResourceInformationSet {
 	
 	private ResourceInformationSet(
 			final Optional<UserName> user,
-			final Map<ResourceID, Map<String, Object>> perms,
+			final Map<ResourceID, Map<String, Object>> resources,
 			final Set<ResourceID> nonexistent) {
 		this.user = user;
-		this.resources = Collections.unmodifiableMap(perms);
+		this.resources = Collections.unmodifiableMap(resources);
 		this.nonexistent = Collections.unmodifiableSet(nonexistent);
 	}
 	
@@ -68,6 +68,13 @@ public class ResourceInformationSet {
 	 */
 	public Set<ResourceID> getNonexistentResources() {
 		return nonexistent;
+	}
+	
+	/** Get a copy of this information set without any nonexistent resources.
+	 * @return the copy.
+	 */
+	public ResourceInformationSet withoutNonexistentResources() {
+		return new ResourceInformationSet(user, resources, Collections.emptySet());
 	}
 	
 	@Override
