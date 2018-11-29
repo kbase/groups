@@ -34,7 +34,6 @@ public class Group {
 	private final UserName owner;
 	private final Set<UserName> members;
 	private final Set<UserName> admins;
-	private final GroupType type; //TODO NNOW remove
 	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
 	private final Instant creationDate;
 	private final Instant modificationDate;
@@ -47,7 +46,6 @@ public class Group {
 			final UserName owner,
 			final Set<UserName> members,
 			final Set<UserName> admins,
-			final GroupType type,
 			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
 			final CreateAndModTimes times,
 			final Optional<String> description,
@@ -57,7 +55,6 @@ public class Group {
 		this.owner = owner;
 		this.members = Collections.unmodifiableSet(members);
 		this.admins = Collections.unmodifiableSet(admins);
-		this.type = type;
 		this.resources = Collections.unmodifiableMap(resources);
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
@@ -101,13 +98,6 @@ public class Group {
 		return admins;
 	}
 
-	/** Get the type of the group.
-	 * @return the group type.
-	 */
-	public GroupType getType() {
-		return type;
-	}
-	
 	/** Get the types of resources associated with this group.
 	 * @return the types.
 	 */
@@ -235,7 +225,6 @@ public class Group {
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resources == null) ? 0 : resources.hashCode());
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
 
@@ -321,9 +310,6 @@ public class Group {
 		} else if (!resources.equals(other.resources)) {
 			return false;
 		}
-		if (type != other.type) {
-			return false;
-		}
 		return true;
 	}
 
@@ -354,7 +340,6 @@ public class Group {
 		private final CreateAndModTimes times;
 		private final Set<UserName> members = new HashSet<>();
 		private final Set<UserName> admins = new HashSet<>();
-		private GroupType type = GroupType.ORGANIZATION;
 		private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources =
 				new HashMap<>();
 		private Optional<String> description = Optional.empty();
@@ -373,16 +358,6 @@ public class Group {
 			this.groupName = name;
 			this.owner = owner;
 			this.times = times;
-		}
-		
-		/** Change the type of the group. The default type is {@link GroupType#ORGANIZATION}.
-		 * @param type the new type.
-		 * @return this builder.
-		 */
-		public Builder withType(final GroupType type) {
-			checkNotNull(type, "type");
-			this.type = type;
-			return this;
 		}
 		
 		/** Add a group description. The maximum description size is
@@ -471,7 +446,7 @@ public class Group {
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, members, admins, type, resources,
+			return new Group(groupID, groupName, owner, members, admins, resources,
 					times, description, customFields);
 		}
 	}

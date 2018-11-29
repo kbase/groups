@@ -34,7 +34,6 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
@@ -237,7 +236,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
@@ -250,7 +248,6 @@ public class GroupsTest {
 						.withCustomField(new NumberedCustomField("a"), StringField.remove())
 						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
 						.build())
-				.withType(GroupType.TEAM)
 				.build());
 		
 		verify(mocks.validators).validate(new NumberedCustomField("foo-26"), "yay");
@@ -260,7 +257,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
@@ -268,7 +264,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build(), new UserName("foo"))
 				.withStandardView(true)
@@ -493,7 +488,9 @@ public class GroupsTest {
 				.build());
 		
 		failUpdateGroup(mocks.groups, new Token("toketoke"),
-				GroupUpdateParams.getBuilder(new GroupID("gid")).withType(GroupType.TEAM).build(),
+				GroupUpdateParams.getBuilder(new GroupID("gid"))
+				.withName(new GroupName("foo"))
+				.build(),
 				new UnauthorizedException("User mem may not administrate group gid"));
 	}
 	
@@ -518,7 +515,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.withMember(new UserName("baz"))
 				.build());
 
@@ -528,7 +524,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.build(), null)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("workspace"))
@@ -546,7 +541,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.withMember(new UserName("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
@@ -567,7 +561,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withType(GroupType.TEAM)
 				.build(), null)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("catalogmethod"))
@@ -634,7 +627,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
-				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
@@ -684,7 +676,6 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
-				.withType(GroupType.PROJECT)
 				.withMember(new UserName("baz"))
 				.build(), new UserName("baz"))
 				.withStandardView(true)
@@ -834,7 +825,6 @@ public class GroupsTest {
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 								.withDescription("desc")
-								.withType(GroupType.PROJECT)
 								.withMember(new UserName("whee"))
 								.withAdministrator(new UserName("whoo"))
 								.build()
@@ -854,7 +844,6 @@ public class GroupsTest {
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 								.withDescription("desc")
-								.withType(GroupType.PROJECT)
 								.withAdministrator(new UserName("whoo"))
 								.build(), null)
 								.build())

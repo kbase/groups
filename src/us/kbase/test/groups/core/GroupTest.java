@@ -19,7 +19,6 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
@@ -53,7 +52,6 @@ public class GroupTest {
 		assertThat("incorrect resources", g.getResourceTypes(), is(set()));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
-		assertThat("incorrect type", g.getType(), is(GroupType.ORGANIZATION));
 		assertThat("incorrect custom", g.getCustomFields(), is(Collections.emptyMap()));
 	}
 	
@@ -80,7 +78,6 @@ public class GroupTest {
 				.withResource(new ResourceType("catalogmethod"),
 						new ResourceDescriptor(new ResourceAdministrativeID("baz"),
 								new ResourceID("baz.bat")))
-				.withType(GroupType.PROJECT)
 				.withCustomField(new NumberedCustomField("foo-1"), "bar")
 				.withCustomField(new NumberedCustomField("baz"), "bat")
 				.build();
@@ -106,7 +103,6 @@ public class GroupTest {
 								new ResourceID("baz.bat")))));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
-		assertThat("incorrect type", g.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect custom", g.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("foo-1"), "bar", new NumberedCustomField("baz"), "bat")));
 	}
@@ -269,20 +265,6 @@ public class GroupTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void withTypeFail() throws Exception {
-		final Builder b = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
-		
-		try {
-			b.withType(null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("type"));
 		}
 	}
 	

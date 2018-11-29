@@ -19,7 +19,6 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -45,7 +44,6 @@ public class GroupViewTest {
 					.withMember(new UserName("m1"))
 					.withMember(new UserName("m2"))
 					.withDescription("desc")
-					.withType(GroupType.PROJECT)
 					.withResource(ws, new ResourceDescriptor(new ResourceID("45")))
 					.withResource(ws, new ResourceDescriptor(new ResourceID("2")))
 					.withResource(cat, new ResourceDescriptor(new ResourceID("m.n")))
@@ -74,7 +72,6 @@ public class GroupViewTest {
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect mod", gv.getModificationDate(), is(Optional.empty()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
-		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
@@ -112,7 +109,6 @@ public class GroupViewTest {
 		assertThat("incorrect mod", gv.getModificationDate(),
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
-		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
@@ -163,7 +159,6 @@ public class GroupViewTest {
 		assertThat("incorrect mod", gv.getModificationDate(),
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
-		assertThat("incorrect type", gv.getType(), is(GroupType.PROJECT));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect view type", gv.isMember(), is(true));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
