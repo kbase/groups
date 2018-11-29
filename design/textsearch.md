@@ -1,7 +1,7 @@
 # Text Search
 
 Since MongoDB only supports one text index per collection and does not return which fields
-were hit during the search, it seems like it's not an option given we wish to support private
+were hit during the search, it seems like it's not an option if we wish to support private
 fields. Private fields mean we need to exclude search hits where the user is not a member of
 the group in question and the search only hits private fields.
 
