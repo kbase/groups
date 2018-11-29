@@ -3773,16 +3773,16 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(new UserName("u1"))
 				.withMember(new UserName("u3"))
-				.withResource(new ResourceType("workspace"),
-						new ResourceDescriptor(new ResourceID("34")))
+				.withResource(new ResourceType("catalogmethod"),
+						// whoops this shouldn't happen, but somehow it did
+						new ResourceDescriptor(new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod.meth")))
 				.withAdministrator(new UserName("admin"))
 				.build());
-		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
-				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
 		
 		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
-				new ResourceType("workspace"), new ResourceID("34"),
-				new ResourceExistsException("34"));
+				new ResourceType("catalogmethod"), new ResourceID("mod.meth"),
+				new ResourceExistsException("mod.meth"));
 	}
 	
 	@Test

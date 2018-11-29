@@ -882,11 +882,10 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
 		final ResourceHandler h = getHandler(type);
-		final ResourceDescriptor d = h.getDescriptor(resource);
-		//TODO NNOW change to test on ID, not descriptor
-		if (g.containsResource(type, d)) {
+		if (g.containsResource(type, resource)) {
 			throw new ResourceExistsException(resource.getName());
 		}
+		final ResourceDescriptor d = h.getDescriptor(resource);
 		final Set<UserName> admins = h.getAdministrators(resource);
 		if (g.isAdministrator(user) && admins.contains(user)) {
 			storage.addResource(groupID, type, d, clock.instant());
