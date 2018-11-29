@@ -3,17 +3,21 @@ package us.kbase.groups.notifications;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
 import us.kbase.groups.core.Group;
+import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.notifications.NotificationsFactory;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 
 /** A notification implementation that sends a message to SLF4J but otherwise does nothing
  * useful. 
@@ -74,6 +78,19 @@ public class SLF4JNotifierFactory implements NotificationsFactory {
 			LoggerFactory.getLogger(getClass()).info(String.format(
 					"User %s accepted request %s, targets: %s",
 					request.getClosedBy().get().getName(), request.getID().getID(),
+					userNamesToStrings(targets)));
+		}
+
+		@Override
+		public void addResource(
+				final UserName user,
+				final Set<UserName> targets,
+				final GroupID groupID,
+				final ResourceType type,
+				final ResourceID resource) {
+			LoggerFactory.getLogger(getClass()).info(String.format(
+					"User %s added %s %s to group %s, targets: %s",
+					user.getName(), type.getName(), resource.getName(), groupID.getName(),
 					userNamesToStrings(targets)));
 		}
 	}

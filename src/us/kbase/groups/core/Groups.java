@@ -889,7 +889,10 @@ public class Groups {
 		final Set<UserName> admins = h.getAdministrators(resource);
 		if (g.isAdministrator(user) && admins.contains(user)) {
 			storage.addResource(groupID, type, d, clock.instant());
-			//TODO NNOW notify
+			final Set<UserName> targets = new HashSet<>(admins);
+			targets.addAll(g.getAdministratorsAndOwner());
+			targets.remove(user);
+			notifications.addResource(user, targets, groupID, type, resource);
 			return Optional.empty();
 		}
 		if (admins.contains(user)) {
