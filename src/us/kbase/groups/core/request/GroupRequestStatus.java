@@ -6,11 +6,13 @@ import static us.kbase.groups.core.request.GroupRequestStatusType.CANCELED;
 import static us.kbase.groups.core.request.GroupRequestStatusType.DENIED;
 import static us.kbase.groups.core.request.GroupRequestStatusType.EXPIRED;
 import static us.kbase.groups.core.request.GroupRequestStatusType.OPEN;
+import static us.kbase.groups.util.Util.codePoints;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.Optional;
 
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 
 /** The status of a {@link GroupRequest}. Includes a {@link GroupRequestStatusType},
  * the user that accepted or denied the request for those types, and an optional denial reason
@@ -19,6 +21,9 @@ import us.kbase.groups.core.UserName;
  *
  */
 public class GroupRequestStatus {
+	
+	/** The maximum size of the reason string for denied requests. */
+	public final static int MAX_REASON_SIZE = 500;
 	
 	private final GroupRequestStatusType statusType;
 	private final Optional<UserName> closedBy;
@@ -87,18 +92,23 @@ public class GroupRequestStatus {
 		return new GroupRequestStatus(ACCEPTED, Optional.of(acceptedBy), OPTREASON);
 	}
 	
-	//TODO NOW max reason size
 	/** Get a denied status. If the reason is null or whitespace only, it is ignored.
 	 * @param deniedBy the user that closed the request.
 	 * @param reason the reason the request was denied.
 	 * @return the new status.
+	 * @throws IllegalParameterException if the reason is too long.
 	 */
-	public static GroupRequestStatus denied(final UserName deniedBy, String reason) {
+	public static GroupRequestStatus denied(final UserName deniedBy, String reason)
+			throws IllegalParameterException {
 		checkNotNull(deniedBy, "deniedBy");
 		if (isNullOrEmpty(reason)) {
 			reason = null;
 		} else {
 			reason = reason.trim();
+			if (codePoints(reason) > MAX_REASON_SIZE) {
+				throw new IllegalParameterException(
+						"reason size greater than limit " + MAX_REASON_SIZE);
+			}
 		}
 		return new GroupRequestStatus(
 				DENIED, Optional.of(deniedBy), Optional.ofNullable(reason));
@@ -112,11 +122,13 @@ public class GroupRequestStatus {
 	 * @param reason the reason the request was closed. Ignored if null, whitespace only, or if
 	 * the status type is not {@link GroupRequestStatusType#DENIED}.
 	 * @return the new status.
+	 * @throws IllegalParameterException if the reason is too long.
 	 */
 	public static GroupRequestStatus from(
 			final GroupRequestStatusType statusType,
 			final UserName closedBy,
-			String reason) {
+			final String reason)
+			throws IllegalParameterException {
 		checkNotNull(statusType, "statusType");
 		if (OPEN.equals(statusType) || EXPIRED.equals(statusType) || CANCELED.equals(statusType)) {
 			return new GroupRequestStatus(statusType, OPTUSER, OPTREASON);

@@ -65,7 +65,7 @@ public class Groups {
 	
 	//TODO LOGGING for all actions
 	
-	//TODO NOW figure out how to make numbered fields text searchable - search is a problem in general
+	//TODO SEARCH figure out how to make numbered fields text searchable - search is a problem in general
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private final GroupsStorage storage;
@@ -576,6 +576,7 @@ public class Groups {
 	 * administrator of the group targeted in the request, if a group is targeted.
 	 * @throws ClosedRequestException if the request is closed.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalParameterException if the reason is too long.
 	 */
 	public GroupRequest denyRequest(
 			final Token userToken,
@@ -583,18 +584,20 @@ public class Groups {
 			final String reason)
 			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
 				GroupsStorageException, UnauthorizedException, ClosedRequestException,
-				ResourceHandlerException {
+				ResourceHandlerException, IllegalParameterException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(requestID, "requestID");
 		final UserName user = userHandler.getUser(userToken);
+		// fail early on long reason string
+		final GroupRequestStatus denied = GroupRequestStatus.denied(user, reason);
 		final GroupRequest request = storage.getRequest(requestID);
 		final Group group = getGroupFromKnownGoodRequest(request);
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "deny");
 		ensureIsOpen(request);
 		
-		storage.closeRequest(requestID, GroupRequestStatus.denied(user, reason), clock.instant());
+		storage.closeRequest(requestID, denied, clock.instant());
 		final GroupRequest r = storage.getRequest(requestID);
-		//TODO NOW who should get notified?
+		//TODO FEEDS who should get notified?
 		notifications.deny(new HashSet<>(), r);
 		return r;
 	}

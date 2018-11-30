@@ -2361,6 +2361,18 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void denyRequestFailLongReason() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("invite"));
+		
+		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
+				TestCommon.LONG1001.substring(0, 501), new IllegalParameterException(
+						"reason size greater than limit 500"));
+	}
+	
+	@Test
 	public void denyRequestFailNoGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
@@ -2606,8 +2618,17 @@ public class GroupsTest {
 			final Token t,
 			final RequestID i,
 			final Exception expected) {
+		failDenyRequest(g, t, i, null, expected);
+	}
+	
+	private void failDenyRequest(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final String reason,
+			final Exception expected) {
 		try {
-			g.denyRequest(t, i, null);
+			g.denyRequest(t, i, reason);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
