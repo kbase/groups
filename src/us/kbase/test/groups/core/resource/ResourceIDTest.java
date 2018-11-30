@@ -34,17 +34,23 @@ public class ResourceIDTest {
 	
 	@Test
 	public void constructor() throws Exception {
-		final ResourceID r = new ResourceID("    foooΔ   ");
-		assertThat("incorrect groupname", r.getName(), is("foooΔ"));
-		assertThat("incorrect toString", r.toString(), is("ResourceID [name=foooΔ]"));
+		final ResourceID r = new ResourceID("    " + TestCommon.LONG1001.substring(0, 251) +
+				"foooΔ   ");
+		assertThat("incorrect groupname", r.getName(), is(TestCommon.LONG1001.substring(0, 251) +
+				"foooΔ"));
+		assertThat("incorrect toString", r.toString(), is("ResourceID [name=" +
+				TestCommon.LONG1001.substring(0, 251) + "foooΔ]"));
 	}
 	
 	@Test
 	public void constructorAdmin() throws Exception {
-		final ResourceAdministrativeID r = new ResourceAdministrativeID("    foooΔ   ");
-		assertThat("incorrect groupname", r.getName(), is("foooΔ"));
+		final ResourceAdministrativeID r = new ResourceAdministrativeID(
+				"    " + TestCommon.LONG1001.substring(0, 251) + "foooΔ   ");
+		assertThat("incorrect groupname", r.getName(), is(TestCommon.LONG1001.substring(0, 251) +
+				"foooΔ"));
 		assertThat("incorrect toString", r.toString(),
-				is("ResourceAdministrativeID [name=foooΔ]"));
+				is("ResourceAdministrativeID [name=" + TestCommon.LONG1001.substring(0, 251) +
+						"foooΔ]"));
 	}
 	
 	@Test
@@ -66,6 +72,8 @@ public class ResourceIDTest {
 		failConstruct("   \n  ", new MissingParameterException("resource ID"));
 		failConstruct("    fo\no\boΔ\n", new IllegalParameterException(
 				"resource ID contains control characters"));
+		failConstruct(TestCommon.LONG1001.substring(0, 257), new IllegalParameterException(
+				"resource ID size greater than limit 256"));
 	}
 
 	private void failConstruct(final String r, final Exception exception) {
@@ -83,6 +91,8 @@ public class ResourceIDTest {
 		failConstructAdmin("   \n  ", new MissingParameterException("administrative resource ID"));
 		failConstructAdmin("    fo\no\boΔ\n", new IllegalParameterException(
 				"administrative resource ID contains control characters"));
+		failConstructAdmin(TestCommon.LONG1001.substring(0, 257), new IllegalParameterException(
+				"administrative resource ID size greater than limit 256"));
 	}
 
 	private void failConstructAdmin(final String r, final Exception exception) {

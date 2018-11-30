@@ -23,7 +23,7 @@ public class ResourceAdministrativeID extends Name {
 	 */
 	public ResourceAdministrativeID(final String rid)
 			throws MissingParameterException, IllegalParameterException {
-		super(rid, "administrative resource ID", -1);
+		super(rid, "administrative resource ID", 256);
 	}
 	
 	/** Create the administrative resource ID from a long.
@@ -33,6 +33,7 @@ public class ResourceAdministrativeID extends Name {
 		try {
 			return new ResourceAdministrativeID(rid + "");
 		} catch (MissingParameterException | IllegalParameterException e) {
+			// max long chars is 20, soooo...
 			throw new RuntimeException("This is impossible", e);
 		}
 	}
