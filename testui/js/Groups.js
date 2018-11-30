@@ -256,20 +256,24 @@ export default class {
                           <tr>
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
-                            <th scope="col">Type</th>
                             <th scope="col">Owner</th>
+                            <th scope="col">Created</th>
+                            <th scope="col">Modified</th>
                           </tr>
                         </thead>
                         <tbody>
                       `;
                   for (const g of json) {
+                      const c = new Date(g.createdate).toLocaleString();
+                      const m = new Date(g.moddate).toLocaleString();
                       gtable +=
                           `
                           <tr id="${s(g.id)}">
                             <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
-                            <td>${s(g.type)}</td>
                             <td>${s(g.owner)}</td>
+                            <td>${s(c)}</td>
+                            <td>${s(m)}</td>
                           </tr>
                           `
                   }
@@ -318,7 +322,6 @@ export default class {
                         <tbody>
                           <tr><th>ID</th><td>${this.getGravatar(json)}${s(json.id)}</td></tr>
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
-                          <tr><th>Type</th><td>${s(json.type)}</td></tr>
                           <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
@@ -943,14 +946,6 @@ export default class {
               </small>
             </div>
             <div class="form-group">
-              <label for="grouptype">Type</label>
-              <select class="form-control" id="grouptype">
-                  <option value="Organization">Organization</option>
-                  <option value="Project">Project</option>
-                  <option value="Team">Team</option>
-              </select>
-            </div>
-            <div class="form-group">
               <label for="groupdesc">Description</label>
               <input class="form-control" id="groupdesc" aria-describedby="deschelp"
                 placeholder="Enter group description (optional)"
@@ -976,14 +971,12 @@ export default class {
           //TODO Do validation
           let id = $('#groupid').val();
           let name = $('#groupname').val();
-          let type = $('#grouptype').val();
           let desc = $('#groupdesc').val();
           let grav = $('#groupgravatar').val();
           fetch(this.serviceUrl + "group/" + id + urlsuffix,
                 {"method": "PUT",
                  "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name,
-                                         "type": type,
                                          "description": desc,
                                          "custom": {"gravatarhash": grav}})
                  }).then( (response) => {

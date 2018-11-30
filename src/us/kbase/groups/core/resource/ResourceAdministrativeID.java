@@ -19,7 +19,8 @@ public class ResourceAdministrativeID extends Name {
 	/** Create the administrative resource ID.
 	 * @param rid the ID.
 	 * @throws MissingParameterException if the input is null or whitespace only.
-	 * @throws IllegalParameterException if the input contains control characters.
+	 * @throws IllegalParameterException if the input contains control characters or is more
+	 * than 256 characters.
 	 */
 	public ResourceAdministrativeID(final String rid)
 			throws MissingParameterException, IllegalParameterException {
