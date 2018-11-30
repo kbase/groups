@@ -17,7 +17,6 @@ Represents a group of users and associated data.
     "id": <the group ID>,
     "name": <the group name>,
     "owner": <the username of the group owner>,
-    "type": <the type of the group, e.g. Team, Project, etc.>,
     "admins": <an array of usernames of admins of the group>,
     "members": <an array of usernames of members of the group>,
     "description": <a description of the group>,
@@ -185,7 +184,8 @@ RETURNS:
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, custom, and type fields are included.
+A list of Groups. Only the id, name, owner, custom, createdate, and moddate fields
+are included.
 ```
 
 A maximum of 100 groups are returned.
@@ -205,7 +205,6 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>
 {
     "name": <an arbitrary group name>,
-    "type": <the type of the group, optional>,
     "description": <the description of the group, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
@@ -222,9 +221,6 @@ and hyphens, and be no longer than 100 characters.
 
 The group name must be no longer than 256 Unicode code points.
 
-The valid type values are one of `Organization`, `Project`, or `Team`. The default type
-is `Organization`.
-
 The group description must be no longer than 5000 Unicode code points.
 
 See `Custom fields` below for information on custom fields.
@@ -238,7 +234,6 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>/update
 {
     "name": <an arbitrary group name, optional>,
-    "type": <the type of the group, optional>,
     "description": <the description of the group, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
@@ -252,7 +247,7 @@ The user must be a group administrator.
 
 The constraints on the parameters are the same as for the creation parameters.
 
-If `name` or `type` are `null` or the field is missing altogether, they are not altered.
+If `name` is `null` or missing altogether, it are not altered.
 
 If the `description` field or custom fields are missing, they are not altered.
 If they are `null`, they are removed. Otherwise they are set to the new value.
@@ -498,6 +493,9 @@ RETURNS: A Request.
 
 The user must be the target of the request (including an administrator of the resource at
 which the request is targeted) or an administrator of the group at which the request is targeted.
+
+The `reason` can be no more than 500 Unicode code points.
+Currently, the reason is not exposed by the API, but that may change in the future.
 
 ## Custom fields
 

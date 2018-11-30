@@ -161,10 +161,10 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			}
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
-			//TODO NOW include denyReason?
+			//TODO FEEDS include denyReason?
 			post.put("context", ImmutableMap.of("resourcetype", resourceType.getName()));
 			
-			//TODO NOW remove later
+			//TODO FEEDS remove later
 			post.put("source", "fake");
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
@@ -176,9 +176,9 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			
 			System.out.println(res.readEntity(String.class));
 			
-			//TODO LOG log id (or just the entire package?)
+			//TODO FEEDS LOG log id (or just the entire package?)
 			
-			//TODO NOW retry on fail - circular queue? should probably submit these to a queue in the first place and return immediately. put in DB?
+			//TODO FEEDS retry on fail - circular queue? should probably submit these to a queue in the first place and return immediately. put in DB?
 		}
 		
 		@Override
@@ -192,10 +192,10 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			final Response res = req.post(Entity.json(ImmutableMap.of(
 					"external_keys", Arrays.asList(requestID.getID()))));
 			
-			// TODO NOW check for failure - see https://github.com/kbase/feeds#expire-a-notification-right-away
+			// TODO FEEDS check for failure - see https://github.com/kbase/feeds#expire-a-notification-right-away
 			System.out.println(res.readEntity(String.class));
 			
-			//TODO NOW retry on fail - circular queue? should probably submit these to a queue in the first place and return immediately. put in DB?
+			//TODO FEEDS retry on fail - circular queue? should probably submit these to a queue in the first place and return immediately. put in DB?
 		
 		}
 		

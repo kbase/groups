@@ -6,10 +6,12 @@ import static org.junit.Assert.fail;
 
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.test.groups.TestCommon;
@@ -126,27 +128,45 @@ public class GroupRequestStatusTest {
 	
 	@Test
 	public void deniedWithReason() throws Exception {
-		final GroupRequestStatus s = GroupRequestStatus.denied(new UserName("a"), "   reason  \t");
+		final String st = StringUtils.repeat("𐍆𐍆𐍆𐍆𐍆", 100);
+		assertThat("incorrect size", st.length(), is(1000));
+		assertThat("incorrect code points", st.codePointCount(0, st.length()), is(500));
+		
+		final GroupRequestStatus s = GroupRequestStatus.denied(
+				new UserName("a"), "    " + st + "   \t  ");
 		
 		assertThat("incorrect type", s.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s.getClosedBy(), is(Optional.of(new UserName("a"))));
-		assertThat("incorrect reason", s.getClosedReason(), is(Optional.of("reason")));
+		assertThat("incorrect reason", s.getClosedReason(), is(Optional.of(st)));
 		
 		final GroupRequestStatus s2 = GroupRequestStatus.from(
-				GroupRequestStatusType.DENIED, new UserName("n"), "whee");
+				GroupRequestStatusType.DENIED, new UserName("n"), st);
 		
 		assertThat("incorrect type", s2.getStatusType(), is(GroupRequestStatusType.DENIED));
 		assertThat("incorrect user", s2.getClosedBy(), is(Optional.of(new UserName("n"))));
-		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.of("whee")));
+		assertThat("incorrect reason", s2.getClosedReason(), is(Optional.of(st)));
 	}
 	
 	@Test
 	public void deniedFail() throws Exception {
+		final String st = StringUtils.repeat("𐍆𐍆𐍆𐍆𐍆", 100) + "a";
+		assertThat("incorrect size", st.length(), is(1001));
+		assertThat("incorrect code points", st.codePointCount(0, st.length()), is(501));
+
+		deniedFail(null, null, new NullPointerException("deniedBy"));
+		deniedFail(new UserName("f"), st, new IllegalParameterException(
+				"reason size greater than limit 500"));
+	}
+	
+	private void deniedFail(
+			final UserName user,
+			final String reason,
+			final Exception expected) {
 		try {
-			GroupRequestStatus.denied(null, null);
+			GroupRequestStatus.denied(user, reason);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("deniedBy"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -157,6 +177,12 @@ public class GroupRequestStatusTest {
 				new NullPointerException("closedBy"));
 		failFrom(GroupRequestStatusType.DENIED, null, null,
 				new NullPointerException("closedBy"));
+		
+		final String st = StringUtils.repeat("𐍆𐍆𐍆𐍆𐍆", 100) + "a";
+		assertThat("incorrect size", st.length(), is(1001));
+		assertThat("incorrect code points", st.codePointCount(0, st.length()), is(501));
+		failFrom(GroupRequestStatusType.DENIED, new UserName("f"), st,
+				new IllegalParameterException("reason size greater than limit 500"));
 	}
 	
 	private void failFrom(
