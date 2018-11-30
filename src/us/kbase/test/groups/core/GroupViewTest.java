@@ -3,6 +3,7 @@ package us.kbase.test.groups.core;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.groups.TestCommon.inst;
 import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
@@ -66,11 +67,11 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
-		assertThat("incorrect create", gv.getCreationDate(), is(Optional.empty()));
+		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
+		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
 		assertThat("incorrect desc", gv.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
-		assertThat("incorrect mod", gv.getModificationDate(), is(Optional.empty()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect view type", gv.isMember(), is(false));
@@ -101,13 +102,11 @@ public class GroupViewTest {
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
 				is(set(new UserName("a1"), new UserName("a2"))));
-		assertThat("incorrect create", gv.getCreationDate(),
-				is(Optional.of(Instant.ofEpochMilli(10000))));
+		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
+		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
 		assertThat("incorrect desc", gv.getDescription(), is(Optional.of("desc")));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
-		assertThat("incorrect mod", gv.getModificationDate(),
-				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect view type", gv.isMember(), is(false));
@@ -150,14 +149,12 @@ public class GroupViewTest {
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admins", gv.getAdministrators(),
 				is(set(new UserName("a1"), new UserName("a2"))));
-		assertThat("incorrect create", gv.getCreationDate(),
-				is(Optional.of(Instant.ofEpochMilli(10000))));
+		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
+		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
 		assertThat("incorrect desc", gv.getDescription(), is(Optional.of("desc")));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(),
 				is(set(new UserName("m1"), new UserName("m2"))));
-		assertThat("incorrect mod", gv.getModificationDate(),
-				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect view type", gv.isMember(), is(true));

@@ -69,7 +69,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
 @Path(ServicePaths.GROUP)
 public class GroupsAPI {
 
-	// TODO NOW reduce request list size by removing unused fields
 	// TODO JAVADOC / swagger
 	
 	private final Groups groups;
@@ -316,9 +315,9 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
 		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g));
+		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
+		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
 		if (g.isStandardView()) {
-			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
-			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));
 			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers(), u -> u.getName()));
 			ret.put(Fields.GROUP_ADMINS, toSortedStringList(
