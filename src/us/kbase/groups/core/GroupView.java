@@ -25,10 +25,10 @@ public class GroupView {
 	private final GroupName groupName; // all views
 	private final UserName owner; // all views
 	private final Map<NumberedCustomField, String> customFields; // all views
+	private final Instant creationDate; // all views
+	private final Instant modificationDate; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
-	private final Optional<Instant> creationDate; // standard
-	private final Optional<Instant> modificationDate; // standard
 	private final Optional<String> description; // standard
 
 	// additional fields. standard - contents should change based on user
@@ -52,16 +52,14 @@ public class GroupView {
 		this.groupName = group.getGroupName();
 		this.owner = group.getOwner();
 		this.customFields = group.getCustomFields();
+		this.creationDate = group.getCreationDate();
+		this.modificationDate = group.getModificationDate();
 		if (!standardView) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
-			creationDate = Optional.empty();
-			modificationDate = Optional.empty();
 			description = Optional.empty();
 		} else {
 			admins = group.getAdministrators();
-			creationDate = Optional.of(group.getCreationDate());
-			modificationDate = Optional.of(group.getModificationDate());
 			description = group.getDescription();
 			if (!isMember) {
 				members = getEmptyImmutableSet();
@@ -131,17 +129,17 @@ public class GroupView {
 		return admins;
 	}
 	
-	/** Get the creation date of the group. {@link Optional#empty()} for minimal views.
+	/** Get the creation date of the group.
 	 * @return the creation date.
 	 */
-	public Optional<Instant> getCreationDate() {
+	public Instant getCreationDate() {
 		return creationDate;
 	}
 
-	/** Get the modification date of the group. {@link Optional#empty()} for minimal views.
+	/** Get the modification date of the group.
 	 * @return the modification date.
 	 */
-	public Optional<Instant> getModificationDate() {
+	public Instant getModificationDate() {
 		return modificationDate;
 	}
 

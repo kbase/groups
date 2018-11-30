@@ -115,6 +115,8 @@ public class GroupsAPITest {
 			.with("id", "id")
 			.with("name", "name")
 			.with("owner", "u")
+			.with("createdate", 10000L)
+			.with("moddate", 10000L)
 			.with("custom", Collections.emptyMap())
 			.build();
 	
@@ -139,6 +141,8 @@ public class GroupsAPITest {
 			.with("owner", "u2")
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
+			.with("createdate", 20000L)
+			.with("moddate", 30000L)
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
@@ -151,6 +155,8 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("name", "name2")
 			.with("owner", "u2")
+			.with("createdate", 20000L)
+			.with("moddate", 30000L)
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
 
