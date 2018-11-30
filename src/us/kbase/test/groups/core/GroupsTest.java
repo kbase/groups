@@ -1784,12 +1784,10 @@ public class GroupsTest {
 		when(mocks.wsHandler.getAdministratedResources(new UserName("user")))
 				.thenReturn(set(ResourceAdministrativeID.from(96)));
 		when(mocks.catHandler.getAdministratedResources(new UserName("user")))
-				.thenReturn(set(new ResourceAdministrativeID("mod")));
+				.thenReturn(set());
 		when(mocks.storage.getRequestsByTarget(
 				new UserName("user"), ImmutableMap.of(
-						new ResourceType("workspace"), set(ResourceAdministrativeID.from(96)),
-						new ResourceType("catalogmethod"),
-								set(new ResourceAdministrativeID("mod"))),
+						new ResourceType("workspace"), set(ResourceAdministrativeID.from(96))),
 				GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
