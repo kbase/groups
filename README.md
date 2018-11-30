@@ -41,8 +41,8 @@ See `Resources` and `Custom fields` below.
 
 Resources are items external to the groups service that may be associated with groups. All
 resource entries have a `rid` field for the resource ID. The contents of this ID field depend
-on the resource, but are always a string. The other fields in the resource entry depend on the
-resource type.
+on the resource, but are always a string of at most 256 Unicode code points. The other fields in
+the resource entry depend on the resource type.
 
 The currently supported resource types are:
 

@@ -61,8 +61,6 @@ import us.kbase.groups.storage.exceptions.GroupsStorageException;
  */
 public class Groups {
 	
-	//TODO NNOW limits on resource IDs (both)
-	
 	//TODO LOGGING for all actions
 	
 	//TODO SEARCH figure out how to make numbered fields text searchable - search is a problem in general
