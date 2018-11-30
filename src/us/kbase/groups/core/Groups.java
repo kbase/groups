@@ -475,7 +475,11 @@ public class Groups {
 		final UserName user = userHandler.getUser(userToken);
 		final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
 		for (final ResourceType t: resourceHandlers.keySet()) {
-			resources.put(t, resourceHandlers.get(t).getAdministratedResources(user));
+			final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
+					.getAdministratedResources(user);
+			if (!reslist.isEmpty()) {
+				resources.put(t, reslist);
+			}
 		}
 		return storage.getRequestsByTarget(user, resources, params);
 	}
