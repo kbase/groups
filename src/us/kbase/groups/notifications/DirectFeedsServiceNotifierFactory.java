@@ -48,7 +48,6 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 
 	// TODO JAVADOC
 	// TODO TEST
-	
 
 	@Override
 	public Notifications getNotifier(final Map<String, String> configuration)
@@ -66,11 +65,12 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		private static final Client CLI = ClientBuilder.newClient();
 		private static final String PATH_CREATE = "api/V1/notification";
-		private static final String PATH_EXPIRE = PATH_CREATE + "/expire";
+		private static final String PATH_EXPIRE = "api/V1/notifications/expire";
 		private static final String PATH_PERMS = "permissions";
 		private static final String AUTH_HEADER = "Authorization";
 		private final String url;
 		private final Token token;
+		private final String source; //TODO FEEDS remove when no longer necessary
 		
 		public DirectFeedsServiceNotifier(final String url, final Token token)
 				throws IllegalParameterException {
@@ -109,6 +109,9 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 					// this error seems crummy. Probably want a better errors.
 					throw new IllegalParameterException(
 							"Feeds notifier token must be a service token");
+				} else {
+					//TODO FEEDS remove when fixed
+					source = tokenInfo.get("service");
 				}
 			}
 		}
@@ -151,7 +154,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			final Map<String, Object> post = new HashMap<>();
 			post.put("users", targets.stream().map(t -> t.getName())
 					.collect(Collectors.toList()));
-			post.put("target", resourceID.getName());
+			post.put("target", Arrays.asList(resourceID.getName()));
 			post.put("level", level);
 			post.put("actor", actor);
 			post.put("object", groupID.getName());
@@ -165,7 +168,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			post.put("context", ImmutableMap.of("resourcetype", resourceType.getName()));
 			
 			//TODO FEEDS remove later
-			post.put("source", "fake");
+			post.put("source", source);
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
 			
