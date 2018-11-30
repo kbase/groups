@@ -40,7 +40,6 @@ import com.mongodb.client.result.UpdateResult;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
@@ -378,7 +377,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
 				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
-				.append(Fields.GROUP_TYPE, group.getType().name())
 				.append(Fields.GROUP_RESOURCES, resources)
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
@@ -438,7 +436,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document unset = new Document();
 		
 		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
-		buildUpdate(or, set, update.getType(), Fields.GROUP_TYPE, n -> n.get().name());
 		final OptionalGroupFields opts = update.getOptionalFields();
 		buildUpdate(or, set, opts.getDescription(), Fields.GROUP_DESCRIPTION, n -> n.get());
 		for (final NumberedCustomField ncf: opts.getCustomFields()) {
@@ -552,7 +549,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
-					.withType(GroupType.valueOf(grp.getString(Fields.GROUP_TYPE)))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
 			addList(u -> b.withMember(new UserName(u)), grp, Fields.GROUP_MEMBERS, String.class);
 			addList(u -> b.withAdministrator(new UserName(u)), grp, Fields.GROUP_ADMINS,

@@ -13,17 +13,14 @@ public class GroupCreationParams {
 	
 	private final GroupID groupID;
 	private final GroupName groupName;
-	private final GroupType type;
 	private final OptionalGroupFields opfields;
 	
 	private GroupCreationParams(
 			final GroupID groupID,
 			final GroupName groupName,
-			final GroupType type,
 			final OptionalGroupFields opfields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
-		this.type = type;
 		this.opfields = opfields;
 	}
 
@@ -41,13 +38,6 @@ public class GroupCreationParams {
 		return groupName;
 	}
 
-	/** Get the type of the group.
-	 * @return the group type.
-	 */
-	public GroupType getType() {
-		return type;
-	}
-
 	/** Get any optional fields associated with the group.
 	 * @return the fields.
 	 */
@@ -63,7 +53,6 @@ public class GroupCreationParams {
 	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
 		final us.kbase.groups.core.Group.Builder b = Group.getBuilder(
 				groupID, groupName, owner, times)
-				.withType(type)
 				.withDescription(opfields.getDescription().orNull());
 		opfields.getCustomFields().stream().filter(f -> opfields.getCustomValue(f).hasItem())
 				.forEach(f -> b.withCustomField(f, opfields.getCustomValue(f).get()));
@@ -77,7 +66,6 @@ public class GroupCreationParams {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((opfields == null) ? 0 : opfields.hashCode());
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
 
@@ -114,9 +102,6 @@ public class GroupCreationParams {
 		} else if (!opfields.equals(other.opfields)) {
 			return false;
 		}
-		if (type != other.type) {
-			return false;
-		}
 		return true;
 	}
 
@@ -138,7 +123,6 @@ public class GroupCreationParams {
 		
 		private final GroupID groupID;
 		private final GroupName groupName;
-		private GroupType type = GroupType.ORGANIZATION;
 		private OptionalGroupFields opfields = OptionalGroupFields.getBuilder().build();
 		
 		private Builder(final GroupID id, final GroupName name) {
@@ -146,16 +130,6 @@ public class GroupCreationParams {
 			checkNotNull(name, "name");
 			this.groupID = id;
 			this.groupName = name;
-		}
-		
-		/** Change the type of the group. The default type is {@link GroupType#ORGANIZATION}.
-		 * @param type the new type.
-		 * @return this builder.
-		 */
-		public Builder withType(final GroupType type) {
-			checkNotNull(type, "type");
-			this.type = type;
-			return this;
 		}
 		
 		/** Add optional fields to the creation parameters. In the context of the creation
@@ -174,7 +148,7 @@ public class GroupCreationParams {
 		 * @return the parameters.
 		 */
 		public GroupCreationParams build() {
-			return new GroupCreationParams(groupID, groupName, type, opfields);
+			return new GroupCreationParams(groupID, groupName, opfields);
 		}
 	}
 	

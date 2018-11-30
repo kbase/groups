@@ -15,17 +15,14 @@ public class GroupUpdateParams {
 	
 	private final GroupID groupID;
 	private final Optional<GroupName> groupName;
-	private final Optional<GroupType> type;
 	private final OptionalGroupFields opfields;
 	
 	private GroupUpdateParams(
 			final GroupID groupID,
 			final Optional<GroupName> groupName,
-			final Optional<GroupType> type,
 			final OptionalGroupFields opfields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
-		this.type = type;
 		this.opfields = opfields;
 	}
 
@@ -43,14 +40,6 @@ public class GroupUpdateParams {
 		return groupName;
 	}
 
-	/** Get the new type of the group, or {@link Optional#empty()} if the type
-	 * should not be changed.
-	 * @return the group type.
-	 */
-	public Optional<GroupType> getType() {
-		return type;
-	}
-
 	/** Get any optional fields associated with the group.
 	 * @return the fields.
 	 */
@@ -62,7 +51,7 @@ public class GroupUpdateParams {
 	 * @return whether the update params contains update data.
 	 */
 	public boolean hasUpdate() {
-		return groupName.isPresent() || type.isPresent() || opfields.hasUpdate();
+		return groupName.isPresent() || opfields.hasUpdate();
 	}
 	
 	@Override
@@ -72,7 +61,6 @@ public class GroupUpdateParams {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + ((opfields == null) ? 0 : opfields.hashCode());
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
 
@@ -109,13 +97,6 @@ public class GroupUpdateParams {
 		} else if (!opfields.equals(other.opfields)) {
 			return false;
 		}
-		if (type == null) {
-			if (other.type != null) {
-				return false;
-			}
-		} else if (!type.equals(other.type)) {
-			return false;
-		}
 		return true;
 	}
 
@@ -135,7 +116,6 @@ public class GroupUpdateParams {
 		
 		private final GroupID groupID;
 		private Optional<GroupName> groupName = Optional.empty();
-		private Optional<GroupType> type = Optional.empty();
 		private OptionalGroupFields opfields = OptionalGroupFields.getBuilder().build();
 		
 		private Builder(final GroupID id) {
@@ -162,25 +142,6 @@ public class GroupUpdateParams {
 			return this;
 		}
 		
-		/** Change the type of the group.
-		 * @param type the new type.
-		 * @return this builder.
-		 */
-		public Builder withType(final GroupType type) {
-			checkNotNull(type, "type");
-			this.type = Optional.of(type);
-			return this;
-		}
-		
-		/** Change the type of the group.
-		 * @param type the new type, or null to not change the type.
-		 * @return this builder.
-		 */
-		public Builder withNullableType(final GroupType type) {
-			this.type = Optional.ofNullable(type);
-			return this;
-		}
-		
 		/** Add optional fields to the update parameters.
 		 * @param fields the optional fields.
 		 * @return this builder.
@@ -195,7 +156,7 @@ public class GroupUpdateParams {
 		 * @return the parameters.
 		 */
 		public GroupUpdateParams build() {
-			return new GroupUpdateParams(groupID, groupName, type, opfields);
+			return new GroupUpdateParams(groupID, groupName, opfields);
 		}
 	}
 	

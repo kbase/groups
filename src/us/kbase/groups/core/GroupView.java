@@ -27,7 +27,6 @@ public class GroupView {
 	private final Map<NumberedCustomField, String> customFields; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
-	private final GroupType type; // all views
 	private final Optional<Instant> creationDate; // standard
 	private final Optional<Instant> modificationDate; // standard
 	private final Optional<String> description; // standard
@@ -52,7 +51,6 @@ public class GroupView {
 		this.groupID = group.getGroupID();
 		this.groupName = group.getGroupName();
 		this.owner = group.getOwner();
-		this.type = group.getType();
 		this.customFields = group.getCustomFields();
 		if (!standardView) {
 			members = getEmptyImmutableSet();
@@ -133,13 +131,6 @@ public class GroupView {
 		return admins;
 	}
 	
-	/** Get the type of the group.
-	 * @return the group type.
-	 */
-	public GroupType getType() {
-		return type;
-	}
-
 	/** Get the creation date of the group. {@link Optional#empty()} for minimal views.
 	 * @return the creation date.
 	 */
@@ -196,7 +187,6 @@ public class GroupView {
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
 		result = prime * result + (standardView ? 1231 : 1237);
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
 
@@ -286,9 +276,6 @@ public class GroupView {
 			return false;
 		}
 		if (standardView != other.standardView) {
-			return false;
-		}
-		if (type != other.type) {
 			return false;
 		}
 		return true;

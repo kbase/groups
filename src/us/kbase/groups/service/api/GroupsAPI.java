@@ -35,7 +35,6 @@ import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
@@ -97,8 +96,6 @@ public class GroupsAPI {
 		
 		@JsonProperty(Fields.GROUP_NAME)
 		private Optional<String> groupName;
-		@JsonProperty(Fields.GROUP_TYPE)
-		private Optional<String> type;
 		@JsonProperty(Fields.GROUP_DESCRIPTION)
 		private Optional<String> description;
 		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
@@ -112,27 +109,20 @@ public class GroupsAPI {
 		// value.
 		public CreateOrUpdateGroupJSON(
 				final Optional<String> groupName,
-				final Optional<String> type,
 				final Optional<String> description,
 				final Object customFields) {
 			this.groupName = groupName;
-			this.type = type;
 			this.description = description;
 			this.customFields = customFields;
 		}
 
 		private GroupCreationParams toCreateParams(final GroupID groupID)
 				throws MissingParameterException, IllegalParameterException {
-			final GroupCreationParams.Builder gbuilder = GroupCreationParams.getBuilder(
-					groupID, new GroupName(fromNullable(groupName)))
+			return GroupCreationParams.getBuilder(groupID, new GroupName(fromNullable(groupName)))
 					.withOptionalFields(getOptionalFieldsBuilder(true)
 							.withDescription(StringField.fromNullable(fromNullable(description)))
-							.build());
-			final String gtype = fromNullable(type);
-			if (!isNullOrEmpty(gtype)) {
-				gbuilder.withType(GroupType.fromRepresentation(gtype));
-			}
-			return gbuilder.build();
+							.build())
+					.build();
 		}
 
 		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
@@ -185,7 +175,6 @@ public class GroupsAPI {
 				throws IllegalParameterException, MissingParameterException {
 			return GroupUpdateParams.getBuilder(groupID)
 					.withNullableName(fromNullable(groupName, s -> new GroupName(s)))
-					.withNullableType(fromNullable(type, t -> GroupType.fromRepresentation(t)))
 					.withOptionalFields(getOptionalFieldsBuilder(false)
 							.withDescription(getStringField(description))
 							.build())
@@ -327,7 +316,6 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
 		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
-		ret.put(Fields.GROUP_TYPE, g.getType().getRepresentation());
 		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g));
 		if (g.isStandardView()) {
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());

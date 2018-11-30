@@ -12,7 +12,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
-import us.kbase.groups.core.GroupType;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.test.groups.TestCommon;
@@ -32,7 +31,6 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect name", p.getGroupName(), is(Optional.empty()));
 		assertThat("incorrect fields", p.getOptionalFields(),
 				is(OptionalGroupFields.getBuilder().build()));
-		assertThat("incorrect type", p.getType(), is(Optional.empty()));
 		assertThat("incorrect update", p.hasUpdate(), is(false));
 	}
 	
@@ -40,7 +38,6 @@ public class GroupUpdateParamsTest {
 	public void buildMaximal() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withName(new GroupName("n"))
-				.withType(GroupType.TEAM)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build())
 				.build();
@@ -49,7 +46,6 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect name", p.getGroupName(), is(Optional.of(new GroupName("n"))));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build()));
-		assertThat("incorrect type", p.getType(), is(Optional.of(GroupType.TEAM)));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 	
@@ -57,7 +53,6 @@ public class GroupUpdateParamsTest {
 	public void buildMaximalFromNullable() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withNullableName(new GroupName("n"))
-				.withNullableType(GroupType.TEAM)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build())
 				.build();
@@ -66,7 +61,6 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect name", p.getGroupName(), is(Optional.of(new GroupName("n"))));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build()));
-		assertThat("incorrect type", p.getType(), is(Optional.of(GroupType.TEAM)));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 	
@@ -74,9 +68,7 @@ public class GroupUpdateParamsTest {
 	public void buildMaximalAndRevertNullables() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withName(new GroupName("n"))
-				.withType(GroupType.TEAM)
 				.withNullableName(null)
-				.withNullableType(null)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build())
 				.build();
@@ -85,7 +77,6 @@ public class GroupUpdateParamsTest {
 		assertThat("incorrect name", p.getGroupName(), is(Optional.empty()));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove()).build()));
-		assertThat("incorrect type", p.getType(), is(Optional.empty()));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 
@@ -93,15 +84,6 @@ public class GroupUpdateParamsTest {
 	public void hasUpdateWithName() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withName(new GroupName("n"))
-				.build();
-		
-		assertThat("incorrect update", p.hasUpdate(), is(true));
-	}
-	
-	@Test
-	public void hasUpdateWithType() throws Exception {
-		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
-				.withType(GroupType.TEAM)
 				.build();
 		
 		assertThat("incorrect update", p.hasUpdate(), is(true));
@@ -134,16 +116,6 @@ public class GroupUpdateParamsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("name"));
-		}
-	}
-	
-	@Test
-	public void withTypeFail() throws Exception {
-		try {
-			GroupUpdateParams.getBuilder(new GroupID("i")).withType(null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("type"));
 		}
 	}
 	
