@@ -546,9 +546,13 @@ field-myfield-param-<parameter name>=<parameter value>
 
 A mapping of all parameter names and values will be provided to the validator on creation.
 
-**WARNING**: If a field configuration is removed from the configuration file, *the field
-will still be visible for any groups where it has been set*. The field cannot be included with
-new groups or updated on or added to existing groups, but it can be removed.
+**WARNING**: Field validation only occurs when creating or updating a group - fields are not
+validated or checked against the field configuration when retrieving groups.
+If a field configuration is altered or removed from the configuration file, *the field
+will still be visible and unchanged for any groups where it has been set*.
+The field must meet the requirements of the new configuration (or cannot be created / updated
+at all if the configuration is removed) on group creation or update, but the field can
+always be removed.
 
 Currently available validators are:
 

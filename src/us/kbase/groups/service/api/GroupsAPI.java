@@ -71,7 +71,6 @@ public class GroupsAPI {
 
 	// TODO NOW reduce request list size by removing unused fields
 	// TODO JAVADOC / swagger
-	// TODO NOW add endpoint for getting group types
 	
 	private final Groups groups;
 	

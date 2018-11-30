@@ -5,6 +5,7 @@ import static us.kbase.groups.util.Util.checkString;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
@@ -64,6 +66,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		private static final Client CLI = ClientBuilder.newClient();
 		private static final String PATH_CREATE = "api/V1/notification";
+		private static final String PATH_EXPIRE = PATH_CREATE + "/expire";
 		private static final String PATH_PERMS = "permissions";
 		private static final String AUTH_HEADER = "Authorization";
 		private final String url;
@@ -158,17 +161,11 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			}
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
-			final Map<String, Object> context = new HashMap<>();
 			//TODO NOW include denyReason?
-			context.put("resourcetype", resourceType.getName());
-			context.put("groupid", groupID.getName());
-			post.put("context", context);
+			post.put("context", ImmutableMap.of("resourcetype", resourceType.getName()));
 			
 			//TODO NOW remove later
 			post.put("source", "fake");
-			if (requestID != null) {
-				context.put("requestid", requestID.getID());
-			}
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
 			
@@ -186,7 +183,19 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		
 		@Override
 		public void cancel(final RequestID requestID) {
-			// TODO NOW waiting on feeds cancel endpoint
+			
+			final URI target = UriBuilder.fromUri(url).path(PATH_EXPIRE).build();
+			
+			final WebTarget wt = CLI.target(target);
+			final Builder req = wt.request().header(AUTH_HEADER, token.getToken());
+
+			final Response res = req.post(Entity.json(ImmutableMap.of(
+					"external_keys", Arrays.asList(requestID.getID()))));
+			
+			// TODO NOW check for failure - see https://github.com/kbase/feeds#expire-a-notification-right-away
+			System.out.println(res.readEntity(String.class));
+			
+			//TODO NOW retry on fail - circular queue? should probably submit these to a queue in the first place and return immediately. put in DB?
 		
 		}
 		
