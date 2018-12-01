@@ -10,6 +10,9 @@ export default class {
     this.token = null;
     this.user = null;
     this.cookieName = 'kbase_session';
+    this.type2url = {'user': '/#people/',
+                     'workspace': '/#tbdwhatgoesherews/',
+                     'catalogmethod': '/#tbdwhatgoesherecat/'}
   }
   
   render() {
@@ -32,7 +35,7 @@ export default class {
           <button id="loadtoken" class="btn btn-primary">Reload from cookie</button>
           <span id="useridentity"></span>
         </div>
-        <div class="row"><span>Set linkout to workspace view prefix</space>
+        <div class="row"><span>Set KBase environment url</space>
           <input id="linkout" />
         </div>
         <div class="row">
@@ -58,7 +61,7 @@ export default class {
     rootElement.innerHTML = html;
     $('#url').val(this.serviceUrl);
     $('#authurl').val(this.authUrl);
-    $('#linkout').val('https://ci.kbase.us/#tbdwhatgoeshere');
+    $('#linkout').val('https://ci.kbase.us/');
     
     // attach event listeners
     $('#settoken').on('click', () => {
@@ -732,12 +735,10 @@ export default class {
                           $(`#${s(r.id)}`).on('click', () => {
                               this.renderRequest(r.id);
                           });
-                          if (r.resourcetype === "workspace") {
-                              $(`#view_${s(r.resource)}`).on('click', (e) => {
-                                  e.stopPropagation();
-                                  this.view(r.id, r.resource); 
-                              });
-                          }
+                          $(`#view_${s(r.resource.replace('.', '_'))}`).on('click', (e) => {
+                              e.stopPropagation();
+                              this.view(r.id, r.resourcetype, r.resource);
+                          });
                       }
                   }).catch( (err) => {
                       this.handleError(err);
@@ -752,31 +753,35 @@ export default class {
       });
   }
   
-  //TODO Need to namespace resource by resource type & map resource type to linkout url
+  //TODO Need to namespace resource by resource type
   renderViewButton(resourcetype, resource) {
-      if (resourcetype !== "workspace") {
-          return `<button class="btn btn-primary">No worky</button>`;
-      }
       const s = this.sanitize;
-      return `<button id="view_${s(resource)}" class="btn btn-primary">View Resource</button>`
+      return `<button id="view_${s(resource.replace('.', '_'))}" class="btn btn-primary">
+                  View Resource</button>`
   }
   
-  view(requestid, resource) {
+  view(requestid, resourcetype, resource) {
       $('#error').text("");
-      fetch(this.serviceUrl + "request/id/" + requestid + "/getperm",
-       {"method": "POST",
-        "headers": this.getHeaders()
-        }).then( (response) => {
-          if (response.ok) {
-              window.open($("#linkout").val() + '/' + resource, '_blank');
-          } else {
-              response.text().then( (err) => {
-                  this.handleError(err);
-              });
-          }
-      }).catch( (err) => {
-          this.handleError(err);
-      });
+      if (resourcetype === 'user') {
+          window.open($("#linkout").val() + this.type2url[resourcetype] + resource,
+              '_blank');
+      } else {
+          fetch(this.serviceUrl + "request/id/" + requestid + "/getperm",
+           {"method": "POST",
+            "headers": this.getHeaders()
+            }).then( (response) => {
+              if (response.ok) {
+                  window.open($("#linkout").val() + this.type2url[resourcetype] + resource,
+                      '_blank');
+              } else {
+                  response.text().then( (err) => {
+                      this.handleError(err);
+                  });
+              }
+          }).catch( (err) => {
+              this.handleError(err);
+          });
+      }
   }
   
   renderRequest(requestid) {
@@ -854,11 +859,9 @@ export default class {
                           this.denyRequest(requestid, denyReason);
                       });
                   }
-                  if (json.resourcetype === "workspace") {
-                      $(`#view_${s(json.resource)}`).on('click', () => {
-                          this.view(json.id, json.resource); 
-                      });
-                  }
+                  $(`#view_${s(json.resource.replace('.', '_'))}`).on('click', () => {
+                      this.view(json.id, json.resourcetype, json.resource);
+                  });
               }).catch( (err) => {
                   this.handleError(err);
               });
