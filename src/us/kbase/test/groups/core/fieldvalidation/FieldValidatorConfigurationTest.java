@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.test.groups.TestCommon;
 
@@ -30,60 +31,18 @@ public class FieldValidatorConfigurationTest {
 		
 		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
 		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
-		assertThat("incorrect num", c.isNumberedField(), is(false));
-		assertThat("incorrect priv", c.isPublicField(), is(false));
-		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect num", c.getFieldConfiguration(),
+				is(FieldConfiguration.getBuilder().build()));
 		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
 	}
-	
-	@Test
-	public void buildWithNulls() throws Exception {
-		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
-				new CustomField("f"), "my class")
-				.withNullableIsMinimalViewField(true)
-				.withNullableIsNumberedField(true)
-				.withNullableIsPublicField(true)
-				.withNullableIsMinimalViewField(null)
-				.withNullableIsNumberedField(null)
-				.withNullableIsPublicField(null)
-				.build();
-		
-		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
-		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
-		assertThat("incorrect num", c.isNumberedField(), is(false));
-		assertThat("incorrect priv", c.isPublicField(), is(false));
-		assertThat("incorrect list", c.isMinimalViewField(), is(false));
-		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
-	}
-	
-	@Test
-	public void buildWithFalse() throws Exception {
-		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
-				new CustomField("f"), "my class")
-				.withNullableIsMinimalViewField(true)
-				.withNullableIsNumberedField(true)
-				.withNullableIsPublicField(true)
-				.withNullableIsMinimalViewField(false)
-				.withNullableIsNumberedField(false)
-				.withNullableIsPublicField(false)
-				.build();
-		
-		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
-		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
-		assertThat("incorrect num", c.isNumberedField(), is(false));
-		assertThat("incorrect priv", c.isPublicField(), is(false));
-		assertThat("incorrect list", c.isMinimalViewField(), is(false));
-		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
-	}
-	
 	
 	@Test
 	public void buildMaximal() throws Exception {
 		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
 				new CustomField("f"), "my class")
-				.withNullableIsMinimalViewField(true)
-				.withNullableIsNumberedField(true)
-				.withNullableIsPublicField(true)
+				.withFieldConfiguration(FieldConfiguration.getBuilder()
+						.withNullableIsMinimalViewField(true)
+						.build())
 				.withConfigurationEntry("foo", "bar")
 				.withConfigurationEntry("baz", "bat")
 				.build();
@@ -91,9 +50,10 @@ public class FieldValidatorConfigurationTest {
 				
 		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
 		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
-		assertThat("incorrect num", c.isNumberedField(), is(true));
-		assertThat("incorrect priv", c.isPublicField(), is(true));
-		assertThat("incorrect list", c.isMinimalViewField(), is(true));
+		assertThat("incorrect num", c.getFieldConfiguration(),
+				is(FieldConfiguration.getBuilder()
+						.withNullableIsMinimalViewField(true)
+						.build()));
 		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(ImmutableMap.of(
 				"foo", "bar", "baz", "bat")));
 	}
@@ -114,6 +74,17 @@ public class FieldValidatorConfigurationTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void withFieldConfigurationFail() throws Exception {
+		try {
+			FieldValidatorConfiguration.getBuilder(new CustomField("f"), "s")
+					.withFieldConfiguration(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("config"));
 		}
 	}
 	

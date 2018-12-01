@@ -24,6 +24,7 @@ import us.kbase.groups.core.Token;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
@@ -195,9 +196,11 @@ public class GroupsConfig {
 			final Map<String, String> params = getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg);
 			final FieldValidatorConfiguration.Builder b = FieldValidatorConfiguration
 					.getBuilder(field, valclass)
-					.withNullableIsNumberedField(isNumbered)
-					.withNullableIsPublicField(isPublic)
-					.withNullableIsMinimalViewField(isShowInList);
+					.withFieldConfiguration(FieldConfiguration.getBuilder()
+						.withNullableIsNumberedField(isNumbered)
+						.withNullableIsPublicField(isPublic)
+						.withNullableIsMinimalViewField(isShowInList)
+						.build());
 			for (final Entry<String, String> e: params.entrySet()) {
 				b.withConfigurationEntry(e.getKey(), e.getValue());
 			}

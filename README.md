@@ -743,7 +743,6 @@ see /design/*.md
     * Cache results
   * Cache results of catalog service queries
 * Usability
-  * Canceling a request should cancel the notification (needs feeds endpoint)
   * Endpoint for getting all requests targeted at groups I administrate
     * Currently I have to go group by group
   * Text search - need product team feedback
