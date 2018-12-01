@@ -79,6 +79,8 @@ public class GroupsConfig {
 	private static final String KEY_PREFIX_FIELD = "field-";
 	private static final String KEY_SUFFIX_FIELD_VALIDATOR = "-validator";
 	private static final String KEY_SUFFIX_FIELD_IS_NUMBERED = "-is-numbered";
+	private static final String KEY_SUFFIX_FIELD_IS_PUBLIC = "-is-public";
+	private static final String KEY_SUFFIX_FIELD_SHOW_IN_LIST = "-show-in-list";
 	private static final String KEY_SUFFIX_FIELD_PARAM = "-param-";
 	
 	public static final String TRUE = "true";
@@ -186,10 +188,16 @@ public class GroupsConfig {
 			final String valclass = getString(pre + KEY_SUFFIX_FIELD_VALIDATOR, cfg, true);
 			final boolean isNumbered = TRUE.equals(
 					getString(pre + KEY_SUFFIX_FIELD_IS_NUMBERED, cfg));
+			final boolean isPublic = TRUE.equals(
+					getString(pre + KEY_SUFFIX_FIELD_IS_PUBLIC, cfg));
+			final boolean isShowInList = TRUE.equals(
+					getString(pre + KEY_SUFFIX_FIELD_SHOW_IN_LIST, cfg));
 			final Map<String, String> params = getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg);
 			final FieldValidatorConfiguration.Builder b = FieldValidatorConfiguration
 					.getBuilder(field, valclass)
-					.withNullableIsNumberedField(isNumbered);
+					.withNullableIsNumberedField(isNumbered)
+					.withNullableIsPublicField(isPublic)
+					.withNullableIsMinimalViewField(isShowInList);
 			for (final Entry<String, String> e: params.entrySet()) {
 				b.withConfigurationEntry(e.getKey(), e.getValue());
 			}

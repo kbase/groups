@@ -522,6 +522,8 @@ A validator factory must implement
 
 Regardless of the validator, no field value may be longer than 5000 Unicode code points.
 
+### Numbered fields
+
 Optionally, a field may be specified as numbered, in which case any field with the pattern
 `<field name>-<integer>` is allowed. For example:
 ```
@@ -535,6 +537,41 @@ validator. This is useful for data where there may be a list of values for the f
 
 Any value other than `true` for `field-<field name>-is-numbered` is treated as false.
 
+### Public fields
+
+By default, custom fields are only visible to members of the group. Fields can be made public
+like so:
+
+```
+field-myfield-is-public=true
+```
+
+In this case, all users will be able to see the field. Any value other than `true` for
+`field-<field name>-is-public` is treated as false.
+
+Removing this setting will result in the field being set private for all extant and future fields.
+
+### Group list fields
+
+In order to reduce transport costs, by default, custom fields are only visible when a
+full group is accessed, not when multiple groups are listed.
+Fields can be set to be included in the list of groups like so:
+
+```
+field-myfield-show-in-list=true
+```
+
+In this case, the field will be shown in the group list, subject to privacy constraints.
+Any value other than `true` for `field-<field name>-show-in-list` is treated as false.
+
+Potentially large fields should not be included in the group list, and it is advisable to
+keep the number of fields in the group list small.
+
+Removing this setting will result in the field no longer being visible in groups lists
+for all extant and future fields.
+
+### Validator parameters
+
 Some validators have optional or required parameters. Validator parameters can be specified
 like so:
 ```
@@ -544,6 +581,8 @@ field-myfield-param-<parameter name>=<parameter value>
 
 A mapping of all parameter names and values will be provided to the validator on creation.
 
+### Altering field configurations
+
 **WARNING**: Field validation only occurs when creating or updating a group - fields are not
 validated or checked against the field configuration when retrieving groups.
 If a field configuration is altered or removed from the configuration file, *the field
@@ -552,9 +591,9 @@ The field must meet the requirements of the new configuration (or cannot be crea
 at all if the configuration is removed) on group creation or update, but the field can
 always be removed.
 
-Currently available validators are:
+### Available validators
 
-### us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+#### us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
 
 Checks that the value contains no control characters, and, optionally, is below a maximum length.
 
@@ -569,7 +608,7 @@ All parameters are optional.
 `allow-line-feeds-and-tabs` specifies that the `\n`, `\r`, and `\t` characters are allowed
 in the value.
 
-### us.kbase.groups.fieldvalidators.EnumFieldValidatorFactory
+#### us.kbase.groups.fieldvalidators.EnumFieldValidatorFactory
 
 Checks that the value is one of a set of specified values. This can be used for boolean values
 (`true`, `false`), controlled vocabularies, etc. The values may not be longer than 50 Unicode
@@ -586,7 +625,7 @@ field-boolean-param-allowed-values=true, false
 field-feast-param-allowed-values=lambs, sloths, carp, orangutans, breakfast cereals, fruit bats
 ```
 
-### us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
+#### us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
 
 Checks that the value is a valid [Gravatar hash](https://en.gravatar.com/site/implement/hash/).
 Has no parameters.
