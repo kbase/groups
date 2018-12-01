@@ -124,10 +124,14 @@ public class GroupsConfigTest {
 					 "field-foo-validator    =    foovalclass  \n" +
 					 "field-bar-validator    =    barvalclass   \n" +
 					 "field-bar-is-numbered  =   nope  \n" +
+					 "field-bar-is-public  =   nope  \n" +
+					 "field-bar-show-in-list  =   true  \n" +
 					 "field-bar-param-p1   =    p1val  \n" +
 					 "field-bar-param-p2   =    p2val  \n" +
 					 "field-baz-validator  =   bazvalclass  \n" +
 					 "field-baz-is-numbered  =   true  \n" +
+					 "field-baz-is-public  =   true  \n" +
+					 "field-baz-show-in-list  =   nope  \n" +
 					 "allow-insecure-urls=true1\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
@@ -156,9 +160,11 @@ public class GroupsConfigTest {
 				FieldValidatorConfiguration.getBuilder(new CustomField("bar"), "barvalclass")
 						.withConfigurationEntry("p1", "p1val")
 						.withConfigurationEntry("p2", "p2val")
+						.withNullableIsMinimalViewField(true)
 						.build(),
 				FieldValidatorConfiguration.getBuilder(new CustomField("baz"), "bazvalclass")
 						.withNullableIsNumberedField(true)
+						.withNullableIsPublicField(true)
 						.build())));
 		testLogger(cfg.getLogger(), false);
 		
