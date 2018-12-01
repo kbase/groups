@@ -151,17 +151,20 @@ public class GroupsConfigTest {
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set(
-				new FieldValidatorConfiguration(new CustomField("foo"), "foovalclass", false,
-						Collections.emptyMap()),
-				new FieldValidatorConfiguration(new CustomField("bar"), "barvalclass", false,
-						ImmutableMap.of("p1", "p1val", "p2", "p2val")),
-				new FieldValidatorConfiguration(new CustomField("baz"), "bazvalclass", true,
-						Collections.emptyMap()))));
+				FieldValidatorConfiguration.getBuilder(new CustomField("foo"), "foovalclass")
+						.build(),
+				FieldValidatorConfiguration.getBuilder(new CustomField("bar"), "barvalclass")
+						.withConfigurationEntry("p1", "p1val")
+						.withConfigurationEntry("p2", "p2val")
+						.build(),
+				FieldValidatorConfiguration.getBuilder(new CustomField("baz"), "bazvalclass")
+						.withNullableIsNumberedField(true)
+						.build())));
 		testLogger(cfg.getLogger(), false);
 		
 		try {
-			cfg.getFieldConfigurations().add(new FieldValidatorConfiguration(
-					new CustomField("f"), "c", false, Collections.emptyMap()));
+			cfg.getFieldConfigurations().add(FieldValidatorConfiguration.getBuilder(
+					new CustomField("f"), "c").build());
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// is immutable, test passes

@@ -5,8 +5,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.junit.Test;
 
@@ -25,66 +23,119 @@ public class FieldValidatorConfigurationTest {
 	}
 	
 	@Test
-	public void constructMinimal() throws Exception {
-		final FieldValidatorConfiguration c = new FieldValidatorConfiguration(
-				new CustomField("f"), "my class", false, Collections.emptyMap());
+	public void buildMinimal() throws Exception {
+		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
+				new CustomField("f"), "my class")
+				.build();
 		
 		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
 		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
 		assertThat("incorrect num", c.isNumberedField(), is(false));
+		assertThat("incorrect priv", c.isPublicField(), is(false));
+		assertThat("incorrect list", c.isMinimalViewField(), is(false));
 		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
 	}
 	
 	@Test
-	public void constructMaximal() throws Exception {
-		final FieldValidatorConfiguration c = new FieldValidatorConfiguration(
-				new CustomField("f"), "my class", true, ImmutableMap.of(
-						"foo", "bar", "baz", "bat"));
+	public void buildWithNulls() throws Exception {
+		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
+				new CustomField("f"), "my class")
+				.withNullableIsMinimalViewField(true)
+				.withNullableIsNumberedField(true)
+				.withNullableIsPublicField(true)
+				.withNullableIsMinimalViewField(null)
+				.withNullableIsNumberedField(null)
+				.withNullableIsPublicField(null)
+				.build();
 		
 		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
 		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
+		assertThat("incorrect num", c.isNumberedField(), is(false));
+		assertThat("incorrect priv", c.isPublicField(), is(false));
+		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void buildWithFalse() throws Exception {
+		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
+				new CustomField("f"), "my class")
+				.withNullableIsMinimalViewField(true)
+				.withNullableIsNumberedField(true)
+				.withNullableIsPublicField(true)
+				.withNullableIsMinimalViewField(false)
+				.withNullableIsNumberedField(false)
+				.withNullableIsPublicField(false)
+				.build();
+		
+		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
+		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
+		assertThat("incorrect num", c.isNumberedField(), is(false));
+		assertThat("incorrect priv", c.isPublicField(), is(false));
+		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(Collections.emptyMap()));
+	}
+	
+	
+	@Test
+	public void buildMaximal() throws Exception {
+		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
+				new CustomField("f"), "my class")
+				.withNullableIsMinimalViewField(true)
+				.withNullableIsNumberedField(true)
+				.withNullableIsPublicField(true)
+				.withConfigurationEntry("foo", "bar")
+				.withConfigurationEntry("baz", "bat")
+				.build();
+				
+				
+		assertThat("incorrect field", c.getField(), is(new CustomField("f")));
+		assertThat("incorrect class", c.getValidatorClass(), is("my class"));
 		assertThat("incorrect num", c.isNumberedField(), is(true));
+		assertThat("incorrect priv", c.isPublicField(), is(true));
+		assertThat("incorrect list", c.isMinimalViewField(), is(true));
 		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(ImmutableMap.of(
 				"foo", "bar", "baz", "bat")));
 	}
 	
 	@Test
-	public void constructFail() throws Exception {
+	public void getBuilderFail() throws Exception {
 		final CustomField f = new CustomField("f");
-		final String vc = "vc";
-		final Map<String, String> c = Collections.emptyMap();
-		
-		failConstruct(null, vc, c, new NullPointerException("field"));
-		failConstruct(f, null, c, new IllegalArgumentException(
+		getBuilderFail(null, "c", new NullPointerException("field"));
+		getBuilderFail(f, null, new IllegalArgumentException(
 				"validatorClass cannot be null or whitespace only"));
-		failConstruct(f, "   \t   ", c, new IllegalArgumentException(
+		getBuilderFail(f, "   \t   ", new IllegalArgumentException(
 				"validatorClass cannot be null or whitespace only"));
-		failConstruct(f, vc, null, new NullPointerException("validatorConfiguration"));
-		final Map<String, String> m = new HashMap<>();
-		m.put(null, "s");
-		failConstruct(f, vc, m, new IllegalArgumentException(
-				"Validator configuration key cannot be null or whitespace only"));
-		m.clear();
-		m.put("    \t   ", "s");
-		failConstruct(f, vc, m, new IllegalArgumentException(
-				"Validator configuration key cannot be null or whitespace only"));
-		m.clear();
-		m.put("s", null);
-		failConstruct(f, vc, m, new IllegalArgumentException(
-				"Validator configuration value for key s cannot be null or whitespace only"));
-		m.clear();
-		m.put("s", "   \t   ");
-		failConstruct(f, vc, m, new IllegalArgumentException(
-				"Validator configuration value for key s cannot be null or whitespace only"));
 	}
 	
-	private void failConstruct(
-			final CustomField f,
-			final String valclass,
-			final Map<String, String> config,
+	private void getBuilderFail(final CustomField f, final String c, final Exception expected) {
+		try {
+			FieldValidatorConfiguration.getBuilder(f, c);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void withConfigurationEntryFail() throws Exception {
+		withConfigurationEntryFail(null, "v", new IllegalArgumentException(
+				"key cannot be null or whitespace only"));
+		withConfigurationEntryFail("    \t    ", "v", new IllegalArgumentException(
+				"key cannot be null or whitespace only"));
+		withConfigurationEntryFail("k", null, new IllegalArgumentException(
+				"value cannot be null or whitespace only"));
+		withConfigurationEntryFail("k", "    \t    ", new IllegalArgumentException(
+				"value cannot be null or whitespace only"));
+	}
+	
+	private void withConfigurationEntryFail(
+			final String k,
+			final String v,
 			final Exception expected) {
 		try {
-			new FieldValidatorConfiguration(f, valclass, false, config);
+			FieldValidatorConfiguration.getBuilder(new CustomField("f"), "s")
+					.withConfigurationEntry(k, v);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -93,14 +144,10 @@ public class FieldValidatorConfigurationTest {
 
 	@Test
 	public void immutable() throws Exception {
-		final Map<String, String> m = new HashMap<>();
-		m.put("foo", "bar");
-		final FieldValidatorConfiguration c = new FieldValidatorConfiguration(
-				new CustomField("f"), "my class", true, m);
-		
-		m.put("baz", "bat");
-		assertThat("incorrect cfg", c.getValidatorConfiguration(), is(ImmutableMap.of(
-				"foo", "bar")));
+		final FieldValidatorConfiguration c = FieldValidatorConfiguration.getBuilder(
+				new CustomField("f"), "my class")
+				.withConfigurationEntry("foo", "bar")
+				.build();
 		
 		try {
 			c.getValidatorConfiguration().put("baz", "bat");
