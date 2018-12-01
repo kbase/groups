@@ -283,7 +283,7 @@
         <test name="us.kbase.test.groups.core.TokenTest"/>
         <test name="us.kbase.test.groups.core.UserNameTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.CustomFieldTest"/>
-      	<test name="us.kbase.test.groups.core.fieldvalidation.FieldConfigurationTest"/>
+        <test name="us.kbase.test.groups.core.fieldvalidation.FieldConfigurationTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.FieldValidatorConfigurationTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.FieldValidatorsTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.NumberedCustomFieldTest"/>
