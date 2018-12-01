@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.ini4j.Ini;
@@ -185,8 +186,14 @@ public class GroupsConfig {
 			final String valclass = getString(pre + KEY_SUFFIX_FIELD_VALIDATOR, cfg, true);
 			final boolean isNumbered = TRUE.equals(
 					getString(pre + KEY_SUFFIX_FIELD_IS_NUMBERED, cfg));
-			configs.add(new FieldValidatorConfiguration(
-					field, valclass, isNumbered, getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg)));
+			final Map<String, String> params = getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg);
+			final FieldValidatorConfiguration.Builder b = FieldValidatorConfiguration
+					.getBuilder(field, valclass)
+					.withNullableIsNumberedField(isNumbered);
+			for (final Entry<String, String> e: params.entrySet()) {
+				b.withConfigurationEntry(e.getKey(), e.getValue());
+			}
+			configs.add(b.build());
 		}
 		return Collections.unmodifiableSet(configs);
 	}
