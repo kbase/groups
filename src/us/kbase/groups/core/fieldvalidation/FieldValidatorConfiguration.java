@@ -15,23 +15,17 @@ public class FieldValidatorConfiguration {
 	
 	private final CustomField field;
 	private final String validatorClass;
-	private final boolean isNumberedField;
-	private final boolean isPublicField;
-	private final boolean isMinimalViewField;
+	private final FieldConfiguration fieldConfiguration;
 	private final Map<String, String> validatorConfiguration;
 	
 	private FieldValidatorConfiguration(
 			final CustomField field,
 			final String validatorClass,
-			final boolean isNumberedField,
-			final boolean isPublicField,
-			final boolean isMinimalViewField,
+			final FieldConfiguration fieldConfiguration,
 			final Map<String, String> validatorConfiguration) {
 		this.field = field;
 		this.validatorClass = validatorClass;
-		this.isNumberedField = isNumberedField;
-		this.isPublicField = isPublicField;
-		this.isMinimalViewField = isMinimalViewField;
+		this.fieldConfiguration = fieldConfiguration;
 		this.validatorConfiguration = Collections.unmodifiableMap(validatorConfiguration);
 	}
 
@@ -49,29 +43,13 @@ public class FieldValidatorConfiguration {
 		return validatorClass;
 	}
 
-	/** Get whether the field may be a numbered field, as specified by
-	 * {@link NumberedCustomField#isNumberedField()}.
-	 * @return true if the field is a numbered field.
+	/** Get the configuration for the field.
+	 * @return the field configuration.
 	 */
-	public boolean isNumberedField() {
-		return isNumberedField;
+	public FieldConfiguration getFieldConfiguration() {
+		return fieldConfiguration;
 	}
 	
-	/** Get whether the field is a public field and should be available to all users regardless
-	 * of appropriate authorization.
-	 * @return whether the field is public.
-	 */
-	public boolean isPublicField() {
-		return isPublicField;
-	}
-	
-	/** Get whether the field should be shown in minimal views of the containing object.
-	 * @return whether the field show be shown in minimal views.
-	 */
-	public boolean isMinimalViewField() {
-		return isMinimalViewField;
-	}
-
 	/** Get the configuration for the validator, as provided to
 	 * {@link FieldValidatorFactory#getValidator(Map)}.
 	 * @return the validator configuration.
@@ -85,9 +63,7 @@ public class FieldValidatorConfiguration {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((field == null) ? 0 : field.hashCode());
-		result = prime * result + (isMinimalViewField ? 1231 : 1237);
-		result = prime * result + (isNumberedField ? 1231 : 1237);
-		result = prime * result + (isPublicField ? 1231 : 1237);
+		result = prime * result + ((fieldConfiguration == null) ? 0 : fieldConfiguration.hashCode());
 		result = prime * result + ((validatorClass == null) ? 0 : validatorClass.hashCode());
 		result = prime * result + ((validatorConfiguration == null) ? 0 : validatorConfiguration.hashCode());
 		return result;
@@ -112,13 +88,11 @@ public class FieldValidatorConfiguration {
 		} else if (!field.equals(other.field)) {
 			return false;
 		}
-		if (isMinimalViewField != other.isMinimalViewField) {
-			return false;
-		}
-		if (isNumberedField != other.isNumberedField) {
-			return false;
-		}
-		if (isPublicField != other.isPublicField) {
+		if (fieldConfiguration == null) {
+			if (other.fieldConfiguration != null) {
+				return false;
+			}
+		} else if (!fieldConfiguration.equals(other.fieldConfiguration)) {
 			return false;
 		}
 		if (validatorClass == null) {
@@ -155,9 +129,7 @@ public class FieldValidatorConfiguration {
 		
 		private final CustomField field;
 		private final String validatorClass;
-		private boolean isNumberedField = false;
-		private boolean isPublicField = false;
-		private boolean isMinimalViewField = false;
+		private FieldConfiguration fieldConfiguration = FieldConfiguration.getBuilder().build();
 		private final Map<String, String> validatorConfiguration = new HashMap<>();
 		
 		private Builder(final CustomField field, final String validatorClass) {
@@ -167,41 +139,14 @@ public class FieldValidatorConfiguration {
 			this.validatorClass = validatorClass;
 		}
 		
-		/** Set whether this field is a numbered field.
-		 * @param isNumberedField whether the field may be a numbered field, as specified by
-		 * {@link NumberedCustomField#isNumberedField()}. Null results in a false (the default)
-		 * value.
+		/** Set the configuration for the field.
+		 * @param config
 		 * @return this builder.
 		 */
-		public Builder withNullableIsNumberedField(final Boolean isNumberedField) {
-			this.isNumberedField = bool(isNumberedField);
+		public Builder withFieldConfiguration(final FieldConfiguration config) {
+			checkNotNull(config, "config");
+			this.fieldConfiguration = config;
 			return this;
-		}
-		
-		/** Set whether the field is a public field and should be available to all users without
-		 * regard for appropriate authorization.
-		 * @param isPublicField whether the field is public. Null results in a false
-		 * (the default) value.
-		 * @return this builder.
-		 */
-		public Builder withNullableIsPublicField(final Boolean isPublicField) {
-			this.isPublicField = bool(isPublicField);
-			return this;
-		}
-		
-		/** Set whether the field should be shown in minimal views of the containing object.
-		 * @param isMinimalViewField whether the field show be shown in minimal views. Null
-		 * results in a false (the default) value.
-		 * @return this builder.
-		 */
-		public Builder withNullableIsMinimalViewField(final Boolean isMinimalViewField) {
-			this.isMinimalViewField = bool(isMinimalViewField);
-			return this;
-		}
-		
-		// null == false
-		private boolean bool(final Boolean b) {
-			return b != null && b;
 		}
 		
 		/** Add a configuration item for the validator, as provided to
@@ -221,8 +166,8 @@ public class FieldValidatorConfiguration {
 		 * @return a new configuration.
 		 */
 		public FieldValidatorConfiguration build() {
-			return new FieldValidatorConfiguration(field, validatorClass, isNumberedField,
-					isPublicField, isMinimalViewField, validatorConfiguration);
+			return new FieldValidatorConfiguration(field, validatorClass, fieldConfiguration,
+					validatorConfiguration);
 		}
 	}
 }

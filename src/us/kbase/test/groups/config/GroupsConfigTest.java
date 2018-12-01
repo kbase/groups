@@ -27,6 +27,7 @@ import us.kbase.groups.config.GroupsConfig;
 import us.kbase.groups.config.GroupsConfigurationException;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.service.SLF4JAutoLogger;
 import us.kbase.groups.util.FileOpener;
@@ -160,11 +161,15 @@ public class GroupsConfigTest {
 				FieldValidatorConfiguration.getBuilder(new CustomField("bar"), "barvalclass")
 						.withConfigurationEntry("p1", "p1val")
 						.withConfigurationEntry("p2", "p2val")
-						.withNullableIsMinimalViewField(true)
+						.withFieldConfiguration(FieldConfiguration.getBuilder()
+								.withNullableIsMinimalViewField(true)
+								.build())
 						.build(),
 				FieldValidatorConfiguration.getBuilder(new CustomField("baz"), "bazvalclass")
-						.withNullableIsNumberedField(true)
-						.withNullableIsPublicField(true)
+						.withFieldConfiguration(FieldConfiguration.getBuilder()
+								.withNullableIsNumberedField(true)
+								.withNullableIsPublicField(true)
+								.build())
 						.build())));
 		testLogger(cfg.getLogger(), false);
 		
