@@ -20,15 +20,15 @@ public class FieldValidators {
 	
 	private final int maximumValueSize;
 	private final Map<CustomField, FieldValidator> validators;
-	private final Map<CustomField, Boolean> isNumbered;
+	private final Map<CustomField, FieldConfiguration> fieldConfig;
 	
 	private FieldValidators(
 			final int maximumValueSize,
 			final Map<CustomField, FieldValidator> validators,
-			final Map<CustomField, Boolean> isNumbered) {
+			final Map<CustomField, FieldConfiguration> fieldConfig) {
 		this.maximumValueSize = maximumValueSize;
 		this.validators = Collections.unmodifiableMap(validators);
-		this.isNumbered = isNumbered;
+		this.fieldConfig = fieldConfig;
 	}
 
 	/** Validate a field. Runs the appropriate {@link FieldValidator#validate(String)} for the
@@ -52,7 +52,7 @@ public class FieldValidators {
 		}
 		
 		// allow numbered fields without a number
-		if (!isNumbered.get(field.getFieldRoot()) && field.isNumberedField()) {
+		if (!fieldConfig.get(field.getFieldRoot()).isNumberedField() && field.isNumberedField()) {
 			throw new IllegalParameterException(String.format(
 					"Field %s may not be a numbered field", field.getField()));
 		}
@@ -79,17 +79,16 @@ public class FieldValidators {
 		return validators.keySet();
 	}
 	
-	/** Check whether a field allows numbered fields.
+	/** Get the configuration for a field.
 	 * @param field the field to check.
-	 * @return true if numbered fields are allowed for the field.
-	 * @throws NoSuchCustomFieldException if there is no such field.
+	 * @return the configuration.
 	 */
-	public boolean isNumberedField(final CustomField field) throws NoSuchCustomFieldException {
+	public FieldConfiguration getConfiguration(final CustomField field) {
 		checkNotNull(field, "field");
 		if (!validators.containsKey(field)) {
-			throw new NoSuchCustomFieldException(field.getName());
+			throw new IllegalArgumentException("No such custom field: " + field.getName());
 		}
-		return isNumbered.get(field);
+		return fieldConfig.get(field);
 	}
 	
 	/** Get a builder for a {@link FieldValidators}.
@@ -108,7 +107,7 @@ public class FieldValidators {
 
 		private final int maximumValueSize;
 		private final Map<CustomField, FieldValidator> validators = new HashMap<>();
-		private final Map<CustomField, Boolean> isNumbered = new HashMap<>();
+		private final Map<CustomField, FieldConfiguration> fieldConfig = new HashMap<>();
 
 		private Builder(final int maximumFieldValueSize) {
 			if (maximumFieldValueSize < 1) {
@@ -119,19 +118,19 @@ public class FieldValidators {
 		
 		/** Add a validator.
 		 * @param field the field the validator will validate.
-		 * @param numberedField whether the field may be a numbered field, as designated by
-		 * {@link NumberedCustomField#isNumberedField()}.
+		 * @param config the field configuration.
 		 * @param validator the validator.
 		 * @return this builder.
 		 */
 		public Builder withValidator(
 				final CustomField field,
-				final boolean numberedField,
+				final FieldConfiguration config,
 				final FieldValidator validator) {
 			checkNotNull(field, "field");
+			checkNotNull(config, "config");
 			checkNotNull(validator, "validator");
 			validators.put(field, validator);
-			isNumbered.put(field, numberedField);
+			fieldConfig.put(field, config);
 			return this;
 		}
 		
@@ -139,7 +138,7 @@ public class FieldValidators {
 		 * @return the validators.
 		 */
 		public FieldValidators build() {
-			return new FieldValidators(maximumValueSize, validators, isNumbered);
+			return new FieldValidators(maximumValueSize, validators, fieldConfig);
 		}
 	}
 }

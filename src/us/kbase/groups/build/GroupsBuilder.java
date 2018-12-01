@@ -185,7 +185,7 @@ public class GroupsBuilder {
 			final FieldValidatorFactory fac = Util.loadClassWithInterface(
 					cfg.getValidatorClass(), FieldValidatorFactory.class);
 			try {
-				b.withValidator(cfg.getField(), cfg.getFieldConfiguration().isNumberedField(),
+				b.withValidator(cfg.getField(), cfg.getFieldConfiguration(),
 						fac.getValidator(cfg.getValidatorConfiguration()));
 			} catch (IllegalParameterException e) {
 				throw new GroupsConfigurationException(String.format(
