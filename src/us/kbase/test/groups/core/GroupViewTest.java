@@ -8,6 +8,7 @@ import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,6 +51,7 @@ public class GroupViewTest {
 					.withResource(cat, new ResourceDescriptor(new ResourceID("m.n")))
 					.withResource(cat, new ResourceDescriptor(new ResourceID("x.y")))
 					.withCustomField(new NumberedCustomField("field"), "val")
+					.withCustomField(new NumberedCustomField("field2"), "val2")
 					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -76,8 +78,7 @@ public class GroupViewTest {
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
-		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
-				new NumberedCustomField("field"), "val")));
+		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -121,8 +122,7 @@ public class GroupViewTest {
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("cat")),
 				is(ResourceInformationSet.getBuilder(null)
 						.build()));
-		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
-				new NumberedCustomField("field"), "val")));
+		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -168,7 +168,8 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(new UserName("m1"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
-				new NumberedCustomField("field"), "val")));
+				new NumberedCustomField("field"), "val",
+				new NumberedCustomField("field2"), "val2")));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -192,6 +193,54 @@ public class GroupViewTest {
 		} catch (UnsupportedOperationException e) {
 			// immutable 
 		}
+	}
+	
+	@Test
+	public void customFieldVisibility() throws Exception {
+		GroupView gv = GroupView.getBuilder(GROUP, null).build();
+		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
+		
+		gv = GroupView.getBuilder(GROUP, null)
+				.withMinimalViewFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
+		
+		gv = GroupView.getBuilder(GROUP, null)
+				.withMinimalViewFieldDeterminer(f -> f.getField().equals("field"))
+				.withPublicFieldDeterminer(f -> f.getField().equals("field2"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
+		
+		gv = GroupView.getBuilder(GROUP, null)
+				.withMinimalViewFieldDeterminer(f -> f.getField().equals("field"))
+				.withPublicFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val")));
+		
+		gv = GroupView.getBuilder(GROUP, null)
+				.withStandardView(true)
+				.withPublicFieldDeterminer(f -> f.getField().equals("field2"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field2"), "val2")));
+		
+		gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
+		
+		gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.withMinimalViewFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val")));
+		
+		gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.withStandardView(true)
+				.build();
+		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
+				new NumberedCustomField("field"), "val",
+				new NumberedCustomField("field2"), "val2")));
 	}
 
 	@Test
@@ -241,6 +290,26 @@ public class GroupViewTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("type"));
+		}
+	}
+	
+	@Test
+	public void withPublicFieldDeterminerFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP, null).withPublicFieldDeterminer(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("isPublic"));
+		}
+	}
+	
+	@Test
+	public void withMinimalViewFieldDeterminerFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP, null).withMinimalViewFieldDeterminer(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("isMinimalView"));
 		}
 	}
 	
