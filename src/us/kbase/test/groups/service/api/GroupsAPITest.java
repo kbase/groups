@@ -147,7 +147,7 @@ public class GroupsAPITest {
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList("whee", "whoo"))
 			.with("resources", Collections.emptyMap())
-			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+			.with("custom", ImmutableMap.of("otherfield", "fieldval"))
 			.build();
 	
 	private static final Map<String, Object> GROUP_MAX_JSON_MIN = MapBuilder
@@ -157,43 +157,48 @@ public class GroupsAPITest {
 			.with("owner", "u2")
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
-			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+			.with("custom", ImmutableMap.of("field-1", "my val"))
 			.build();
 
 	@Test
 	public void getGroupsNulls() throws Exception {
-		getGroups(null, null, GetGroupsParams.getBuilder().build());
+		getGroups(null, null, null, null, GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespace() throws Exception {
-		getGroups("   \t   ", "   \t   ", GetGroupsParams.getBuilder().build());
+		getGroups("   \t   ", "   \t   ", "   \t   ", null, GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesAsc() throws Exception {
-		getGroups("   foo  \t  ", "  asc  \t ", GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("foo").build());
+		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", new Token("    tok \t   "),
+				GetGroupsParams.getBuilder()
+						.withNullableExcludeUpTo("foo").build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesDesc() throws Exception {
-		getGroups("   foo  \t  ", "  desc  \t ", GetGroupsParams.getBuilder()
+		getGroups("t", "   foo  \t  ", "  desc  \t ", new Token("t"), GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("foo")
 				.withNullableSortAscending(false).build());
 	}
 
 	private void getGroups(
+			final String token,
 			final String excludeUpTo,
 			final String order,
+			final Token expectedToken,
 			final GetGroupsParams expected)
 			throws Exception {
 		final Groups g = mock(Groups.class);
-		when(g.getGroups(expected)).thenReturn(Arrays.asList(
-				GroupView.getBuilder(GROUP_MAX, null).build(),
-				GroupView.getBuilder(GROUP_MIN, null).build()));
+		when(g.getGroups(expectedToken, expected)).thenReturn(Arrays.asList(
+				GroupView.getBuilder(GROUP_MAX, new UserName("u2"))
+						.withMinimalViewFieldDeterminer(f -> f.getField().equals("field-1"))
+						.build(),
+				GroupView.getBuilder(GROUP_MIN, new UserName("u2")).build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
-				.getGroups("unused for now", excludeUpTo, order);
+				.getGroups(token, excludeUpTo, order);
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
@@ -547,7 +552,9 @@ public class GroupsAPITest {
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
 				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("nonmember"))
-						.withStandardView(true).build());
+						.withStandardView(true)
+						.withPublicFieldDeterminer(f -> f.getField().equals("otherfield"))
+						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		

@@ -181,6 +181,7 @@ RETURNS:
 ### List groups
 
 ```
+AUTHORIZATION OPTIONAL
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
@@ -197,6 +198,10 @@ The query parameters are all optional:
   depending on the sort order. `asc` and `desc` sorts will include groups with
   group IDs, respectively, after and before the `excludeupto` string, non-inclusive.
   This can be used to page through the groups if needed.
+
+If the user is anonymous or not a member of the group, only custom fields that are both public and
+group listable (see custom fields below) are included. If the user is a member of the group,
+all group listable fields are included.
 
 ### Create a group
 
@@ -265,15 +270,15 @@ GET /group/<group id>
 RETURNS: A Group.
 ```
 
-If no authorization is provided, the members list is empty and only public resources associated
-with the group are returned.
+If no authorization is provided, the members list is empty, only public custom fields are included,
+and only public resources associated with the group are returned.
 
 If authorization is provided and the user is not a member of the group, the members list is
-empty and only group-associated public resources and resources the user administrates are
-returned.
+empty, only public custom fields are included, and only group-associated public resources and
+resources the user administrates are returned.
 
-If authorization is provided and the user is a member of the group, the members list is populated
-and all group-associated resources are returned.
+If authorization is provided and the user is a member of the group, the members list is populated,
+all custom fields are included, and all group-associated resources are returned.
 
 ### Check if a group ID exists
 

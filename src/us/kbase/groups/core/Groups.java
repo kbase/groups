@@ -219,17 +219,20 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, ResourceHandlerException {
 		final Group g = storage.getGroup(groupID);
-		final UserName user;
-		if (userToken != null) {
-			user = userHandler.getUser(userToken);
-		} else {
-			user = null;
-		}
-		final GroupView.Builder b = startViewBuild(g, user);
+		final UserName user = getOptionalUser(userToken);
+		final GroupView.Builder b = startViewBuild(g, user)
+				.withPublicFieldDeterminer(
+						f -> validators.getConfiguration(f.getFieldRoot()).isPublicField());
 		for (final ResourceType type: g.getResourceTypes()) {
 			processGroupType(g, user, type, b);
 		}
 		return b.build();
+	}
+
+	// returns null if token is null
+	private UserName getOptionalUser(final Token userToken)
+			throws InvalidTokenException, AuthenticationException {
+		return userToken == null ? null : userHandler.getUser(userToken);
 	}
 
 	private GroupView.Builder startViewBuild(final Group g, final UserName user) {
@@ -288,15 +291,26 @@ public class Groups {
 	
 	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
+	 * @param userToken the user's token.
 	 * @param params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
 	 */
-	public List<GroupView> getGroups(final GetGroupsParams params)
-			throws GroupsStorageException {
+	public List<GroupView> getGroups(final Token userToken, final GetGroupsParams params)
+			throws GroupsStorageException, InvalidTokenException, AuthenticationException {
 		checkNotNull(params, "params");
+		final UserName user = getOptionalUser(userToken);
 		return storage.getGroups(params).stream()
-				.map(g -> GroupView.getBuilder(g, null).build())
+				.map(g -> GroupView.getBuilder(g, user)
+						.withMinimalViewFieldDeterminer(
+								f -> validators.getConfiguration(f.getFieldRoot())
+										.isMinimalViewField())
+						.withPublicFieldDeterminer(
+								f -> validators.getConfiguration(f.getFieldRoot())
+										.isPublicField())
+						.build())
 				.collect(Collectors.toList());
 	}
 	

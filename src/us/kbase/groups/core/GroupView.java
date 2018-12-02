@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceInformationSet;
@@ -35,15 +36,17 @@ public class GroupView {
 	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
 	
 	// not part of the view, just describes the view
-	private final boolean standardView;
+	private final boolean isStandardView;
 	private final boolean isMember;
 	
 	private GroupView(
 			final Group group,
 			final boolean standardView,
 			final boolean isMember,
-			final Map<ResourceType, ResourceInformationSet> resourceInfo) {
-		this.standardView = standardView;
+			final Map<ResourceType, ResourceInformationSet> resourceInfo,
+			final Function<NumberedCustomField, Boolean> isPublicField,
+			final Function<NumberedCustomField, Boolean> isMinimalViewField) {
+		this.isStandardView = standardView;
 		this.isMember = isMember;
 		this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 		
@@ -51,7 +54,8 @@ public class GroupView {
 		this.groupID = group.getGroupID();
 		this.groupName = group.getGroupName();
 		this.owner = group.getOwner();
-		this.customFields = group.getCustomFields();
+		this.customFields = getCustomFields(
+				group.getCustomFields(), isPublicField, isMinimalViewField);
 		this.creationDate = group.getCreationDate();
 		this.modificationDate = group.getModificationDate();
 		if (!standardView) {
@@ -69,6 +73,21 @@ public class GroupView {
 		}
 	}
 	
+	private Map<NumberedCustomField, String> getCustomFields(
+			final Map<NumberedCustomField, String> customFields,
+			final Function<NumberedCustomField, Boolean> isPublicField,
+			final Function<NumberedCustomField, Boolean> isMinimalViewField) {
+		final Map<NumberedCustomField, String> ret = new HashMap<>();
+		for (final NumberedCustomField f: customFields.keySet()) {
+			final boolean isPublic = isPublicField.apply(f);
+			final boolean isMinimal = isMinimalViewField.apply(f);
+			if ((isPublic || isMember) && (isMinimal || isStandardView)) {
+				ret.put(f, customFields.get(f));
+			}
+		}
+		return Collections.unmodifiableMap(ret);
+	}
+
 	private <T> Set<T> getEmptyImmutableSet() {
 		return Collections.unmodifiableSet(Collections.emptySet());
 	}
@@ -77,7 +96,7 @@ public class GroupView {
 	 * @return true if the view is a standard view, false if the view is minimal.
 	 */
 	public boolean isStandardView() {
-		return standardView;
+		return isStandardView;
 	}
 	
 	/** Get whether the user is a member of the group.
@@ -184,7 +203,7 @@ public class GroupView {
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
-		result = prime * result + (standardView ? 1231 : 1237);
+		result = prime * result + (isStandardView ? 1231 : 1237);
 		return result;
 	}
 
@@ -273,7 +292,7 @@ public class GroupView {
 		} else if (!resourceInfo.equals(other.resourceInfo)) {
 			return false;
 		}
-		if (standardView != other.standardView) {
+		if (isStandardView != other.isStandardView) {
 			return false;
 		}
 		return true;
@@ -299,8 +318,10 @@ public class GroupView {
 		
 		private final Group group;
 		private final Optional<UserName> user;
-		private boolean standardView = false;
+		private boolean isStandardView = false;
 		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
+		private Function<NumberedCustomField, Boolean> isPublicField = f -> false;
+		private Function<NumberedCustomField, Boolean> isMinimalViewField = f -> false;
 		
 		private Builder(final Group group, final UserName user) {
 			checkNotNull(group, "group");
@@ -310,11 +331,11 @@ public class GroupView {
 		
 		/** Set the type of the view - false for a minimal view (the default), true for a
 		 * standard view.
-		 * @param standardView the view type.
+		 * @param isStandardView the view type.
 		 * @return this builder.
 		 */
-		public Builder withStandardView(final boolean standardView) {
-			this.standardView = standardView;
+		public Builder withStandardView(final boolean isStandardView) {
+			this.isStandardView = isStandardView;
 			return this;
 		}
 		
@@ -348,12 +369,42 @@ public class GroupView {
 			return this;
 		}
 		
+		/** Add a function that will be used to determine which fields are public fields and
+		 * therefore viewable by all users, not just group members.
+		 * By default, no fields are considered to be public fields.
+		 * The function must not return null.
+		 * @param isPublic a function that determines whether a custom field is public (true)
+		 * or not (false).
+		 * @return this builder.
+		 */
+		public Builder withPublicFieldDeterminer(
+				final Function<NumberedCustomField, Boolean> isPublic) {
+			checkNotNull(isPublic, "isPublic");
+			this.isPublicField = isPublic;
+			return this;
+		}
+		
+		/** Add a function that will be used to determine which fields are viewable in a
+		 * non-standard (e.g. minimal) view.
+		 * By default, no fields are viewable in a minimal view.
+		 * The function must not return null.
+		 * @param isMinimalView a function that determines whether a custom field is viewable
+		 * in a minimal view (true) or not (false).
+		 * @return this builder.
+		 */
+		public Builder withMinimalViewFieldDeterminer(
+				final Function<NumberedCustomField, Boolean> isMinimalView) {
+			checkNotNull(isMinimalView, "isMinimalView");
+			this.isMinimalViewField = isMinimalView;
+			return this;
+		}
+		
 		/** Build a new {@link GroupView}.
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, standardView, group.isMember(user.orElse(null)),
-					resourceInfo);
+			return new GroupView(group, isStandardView, group.isMember(user.orElse(null)),
+					resourceInfo, isPublicField, isMinimalViewField);
 		}
 		
 	}

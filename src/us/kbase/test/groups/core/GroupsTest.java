@@ -62,6 +62,8 @@ import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.notifications.Notifications;
@@ -546,8 +548,15 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("86")))
+				.withCustomField(new NumberedCustomField("private-42"), "priv")
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build());
 
+		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
+		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		
 		when(mocks.wsHandler.getResourceInformation(
 				null, set(new ResourceID("92"), new ResourceID("86")), true))
 				.thenReturn(ResourceInformationSet.getBuilder(null)
@@ -561,8 +570,10 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), null)
 				.withStandardView(true)
+				.withPublicFieldDeterminer(f -> true)
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(null)
@@ -589,6 +600,8 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("57")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("86")))
+				.withCustomField(new NumberedCustomField("private-42"), "priv")
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 
@@ -600,14 +613,21 @@ public class GroupsTest {
 						.withResourceField(new ResourceID("57"), "name", "my ws2")
 						.build());
 		
+		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
+		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withAdministrator(new UserName("whoo"))
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), new UserName("whee"))
 				.withStandardView(true)
+				.withPublicFieldDeterminer(f -> true)
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("whee"))
@@ -642,6 +662,8 @@ public class GroupsTest {
 						new ResourceDescriptor(
 								new ResourceAdministrativeID("mod2"),
 								new ResourceID("mod2.meth2")))
+				.withCustomField(new NumberedCustomField("private-42"), "priv")
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
@@ -665,7 +687,10 @@ public class GroupsTest {
 		doThrow(new NoSuchResourceException("86")).when(mocks.storage)
 				.removeResource(new GroupID("bar"), new ResourceType("workspace"),
 						new ResourceID("86"), inst(5600));
-		
+		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
+		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
@@ -676,6 +701,8 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
+				.withCustomField(new NumberedCustomField("private-42"), "priv")
+				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.withMember(new UserName("baz"))
 				.build(), new UserName("baz"))
 				.withStandardView(true)
@@ -801,7 +828,7 @@ public class GroupsTest {
 				.build()))
 				.thenReturn(Collections.emptyList());
 		
-		assertThat("incorrect groups", mocks.groups.getGroups(GetGroupsParams.getBuilder()
+		assertThat("incorrect groups", mocks.groups.getGroups(null, GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("ex")
 				.withNullableSortAscending(false)
 				.build()),
@@ -816,10 +843,7 @@ public class GroupsTest {
 				.withNullableExcludeUpTo("someex")
 				.build()))
 				.thenReturn(Arrays.asList(
-						Group.getBuilder(
-								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
-								new CreateAndModTimes(
-										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						getGroupsBuilder()
 								.build(),
 						Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
@@ -830,14 +854,11 @@ public class GroupsTest {
 								.build()
 						));
 		
-		assertThat("incorrect groups", mocks.groups.getGroups(GetGroupsParams.getBuilder()
+		assertThat("incorrect groups", mocks.groups.getGroups(null, GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("someex")
 				.build()),
 				is(Arrays.asList(
-						GroupView.getBuilder(Group.getBuilder(
-								new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
-								new CreateAndModTimes(
-										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						GroupView.getBuilder(getGroupsBuilder()
 								.build(), null)
 								.build(),
 						GroupView.getBuilder(Group.getBuilder(
@@ -849,11 +870,81 @@ public class GroupsTest {
 								.build())
 						));
 	}
+	
+	@Test
+	public void getGroupsWithCustomFields() throws Exception {
+		// tests that the custom fields are displayed correctly
+		final TestMocks mocks = initTestMocks();
+		
+		final GetGroupsParams mtparams = GetGroupsParams.getBuilder().build();
+		
+		when(mocks.userHandler.getUser(new Token("m1"))).thenReturn(new UserName("m1"));
+		when(mocks.userHandler.getUser(new Token("m2"))).thenReturn(new UserName("m2"));
+		when(mocks.storage.getGroups(mtparams))
+				.thenReturn(Arrays.asList(getGroupsBuilder()
+						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+						.withCustomField(new NumberedCustomField("pub-8"), "pub")
+						.withCustomField(new NumberedCustomField("priv-9"), "priv")
+						.build()));
+		
+		when(mocks.validators.getConfiguration(new CustomField("minpub"))).thenReturn(
+				FieldConfiguration.getBuilder()
+						.withNullableIsPublicField(true)
+						.withNullableIsMinimalViewField(true)
+						.build());
+		when(mocks.validators.getConfiguration(new CustomField("minpriv"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true).build());
+		when(mocks.validators.getConfiguration(new CustomField("pub"))).thenReturn(
+				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		when(mocks.validators.getConfiguration(new CustomField("priv"))).thenReturn(
+				FieldConfiguration.getBuilder().build());
+		
+		// null user
+		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
+				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						.build(),
+						null)
+						.withMinimalViewFieldDeterminer(f -> true)
+						.withPublicFieldDeterminer(f -> true)
+						.build())));
+		
+		// non member
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
+				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						.build(),
+						new UserName("m2"))
+						.withMinimalViewFieldDeterminer(f -> true)
+						.withPublicFieldDeterminer(f -> true)
+						.build())));
+		
+		//member
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
+				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+						.build(),
+						new UserName("m1"))
+						.withMinimalViewFieldDeterminer(f -> true)
+						.withPublicFieldDeterminer(f -> true)
+						.build())));
+	}
+
+	private Group.Builder getGroupsBuilder() throws Exception {
+		return Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withMember(new UserName("m1"))
+				.withAdministrator(new UserName("a1"));
+	}
 
 	@Test
 	public void getGroupsFail() throws Exception {
 		try {
-			initTestMocks().groups.getGroups(null);
+			initTestMocks().groups.getGroups(null, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));

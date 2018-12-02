@@ -85,9 +85,12 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order)
-			throws GroupsStorageException, IllegalParameterException {
-		return groups.getGroups(APICommon.getGroupsParams(excludeUpTo, order, true)).stream()
-				.map(g -> toGroupJSON(g)).collect(Collectors.toList());
+			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
+				InvalidTokenException, AuthenticationException {
+		return groups.getGroups(
+				getToken(token, false),
+				APICommon.getGroupsParams(excludeUpTo, order, true))
+				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
 	public static class CreateOrUpdateGroupJSON extends IncomingJSON {
