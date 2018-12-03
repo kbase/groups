@@ -367,8 +367,9 @@ export default class {
                           <tr>
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
-                            <th scope="col">Mod date</th>
                             <th scope="col">Narrative Name</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Mod date</th>
                             <th scope="col">Public</th>
                             <th scope="col">Permission</th>
                             <th scope="col">Action</th>
@@ -381,8 +382,9 @@ export default class {
                       g += `<tr>
                               <th>${s(ws.rid)}</th>
                               <td>${s(ws.name)}</td>
-                              <td>${s(wsm)}</td>
                               <td>${s(ws.narrname)}</td>
+                              <td>${s(ws.description)}</td>
+                              <td>${s(wsm)}</td>
                               <td>${s(ws.public)}</td>
                               <td>${s(ws.perm)}</td>
                               <td>
