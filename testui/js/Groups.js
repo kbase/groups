@@ -367,6 +367,7 @@ export default class {
                           <tr>
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
+                            <th scope="col">Mod date</th>
                             <th scope="col">Narrative Name</th>
                             <th scope="col">Public</th>
                             <th scope="col">Permission</th>
@@ -376,9 +377,11 @@ export default class {
                         <tbody>
                        `;
                   for (const ws of json.resources.workspace) {
+                      const wsm = new Date(ws.moddate).toLocaleString();
                       g += `<tr>
                               <th>${s(ws.rid)}</th>
                               <td>${s(ws.name)}</td>
+                              <td>${s(wsm)}</td>
                               <td>${s(ws.narrname)}</td>
                               <td>${s(ws.public)}</td>
                               <td>${s(ws.perm)}</td>

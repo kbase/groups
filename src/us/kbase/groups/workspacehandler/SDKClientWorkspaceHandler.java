@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,6 +55,9 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	private static final String PERM_WRITE = "w";
 	private static final String PERM_READ = "r";
 	private static final String GLOBAL_READ_USER = "*";
+	
+	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern(
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ssX");
 	
 	private final WorkspaceClient client;
 	
@@ -248,6 +253,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 					"command", "getWorkspaceInfo",
 					"params", new WorkspaceIdentity().withId((long) wsid))))
 					.asClassInstance(WS_INFO_TYPEREF);
+			// TODO NNOW WS get description - needs get desc admin method
 		} catch (ServerException e) {
 			if (getWorkspaceID(e) != null) { // deleted or missing
 				return null;
@@ -261,6 +267,8 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		ret.put("name", wsinfo.getE2());
 		ret.put("narrname", getNarrativeName(wsinfo.getE9()));
 		ret.put("public", PERM_READ.equals(wsinfo.getE7()));
+		ret.put("moddate", OffsetDateTime.parse(wsinfo.getE4(), FMT).toInstant()
+				.toEpochMilli());
 		return new WSInfoOwner(ret, wsinfo.getE3());
 	}
 

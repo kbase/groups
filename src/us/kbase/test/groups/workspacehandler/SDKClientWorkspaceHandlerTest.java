@@ -293,22 +293,27 @@ public class SDKClientWorkspaceHandlerTest {
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
 						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
 						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD7, "name", "name7")
 						.withResourceField(RD7, "public", false)
 						.withResourceField(RD7, "narrname", null)
 						.withResourceField(RD7, "perm", "Write")
+						.withResourceField(RD7, "moddate", 31535999000L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
 	
@@ -325,18 +330,22 @@ public class SDKClientWorkspaceHandlerTest {
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
 						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
 						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
 	
@@ -363,10 +372,12 @@ public class SDKClientWorkspaceHandlerTest {
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "None")
+						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
 
@@ -414,17 +425,20 @@ public class SDKClientWorkspaceHandlerTest {
 		doThrow(new ServerException("No workspace with id 21 exists", -1, "n"))
 				.when(c).administer(argThat(getPermissionsCommandMatcher(21)));
 
-		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", false, Collections.emptyMap()))
+		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", "2018-10-27T02:16:53+0000", false,
+				Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(3)));
 		
-		doReturn(getWorkspaceInfoResponse(5, "name5", "user3", false, ImmutableMap.of(
-				"is_temporary", "false",
-				"narrative_nice_name", "narr_name")))
+		doReturn(getWorkspaceInfoResponse(5, "name5", "user3", "1970-01-01T00:00:00+0000", false,
+				ImmutableMap.of(
+						"is_temporary", "false",
+						"narrative_nice_name", "narr_name")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(5)));
 
-		doReturn(getWorkspaceInfoResponse(7, "name7", "user3", false, ImmutableMap.of(
-				"is_temporary", "true",
-				"narrative_nice_name", "narr_name2")))
+		doReturn(getWorkspaceInfoResponse(7, "name7", "user3", "1970-12-31T23:59:59+0000", false,
+				ImmutableMap.of(
+						"is_temporary", "true",
+						"narrative_nice_name", "narr_name2")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(7)));
 		
 		doThrow(new ServerException("Workspace 8 is deleted", -1, "n"))
@@ -432,11 +446,12 @@ public class SDKClientWorkspaceHandlerTest {
 		doThrow(new ServerException("No workspace with id 9 exists", -1, "n"))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(9)));
 		
-		doReturn(getWorkspaceInfoResponse(10, "name10", "user3", true, ImmutableMap.of(
-				"is_temporary", "false")))
+		doReturn(getWorkspaceInfoResponse(10, "name10", "user3", "2017-07-14T02:40:00+0000", true,
+				ImmutableMap.of("is_temporary", "false")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(10)));
 
-		doReturn(getWorkspaceInfoResponse(11, "name11", "user3", true, Collections.emptyMap()))
+		doReturn(getWorkspaceInfoResponse(11, "name11", "user3", "1987-06-05T04:03:02+0000", true,
+				Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(11)));
 		
 		final ResourceInformationSet ri = h.getResourceInformation(
@@ -459,12 +474,14 @@ public class SDKClientWorkspaceHandlerTest {
 			final int id,
 			final String name,
 			final String userName,
+			final String timestamp,
 			final boolean isPublic,
 			final Map<String, String> meta) {
 		return new UObject(new Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>>()
 				.withE1((long) id)
 				.withE2(name)
+				.withE4(timestamp)
 				.withE3(userName)
 				.withE7(isPublic ? "r" : "n")
 				.withE9(meta));
