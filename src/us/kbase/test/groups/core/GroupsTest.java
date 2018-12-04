@@ -4133,16 +4133,16 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void setReadPermissionAdmin() throws Exception {
-		setReadPermission(new UserName("admin"));
+	public void setReadPermissionResourceAdmin() throws Exception {
+		setReadPermissionResource(new UserName("admin"));
 	}
 	
 	@Test
-	public void setReadPermissionOwner() throws Exception {
-		setReadPermission(new UserName("own"));
+	public void setReadPermissionResourceOwner() throws Exception {
+		setReadPermissionResource(new UserName("own"));
 	}
 
-	private void setReadPermission(final UserName user) throws Exception {
+	private void setReadPermissionResource(final UserName user) throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4172,17 +4172,17 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void setReadPermissionFailNulls() throws Exception {
+	public void setReadPermissionResourceFailNulls() throws Exception {
 		final Groups g = initTestMocks().groups;
 		
-		failSetReadPermissions(g, null, new RequestID(UUID.randomUUID()),
+		setReadPermissionResourceFail(g, null, new RequestID(UUID.randomUUID()),
 				new NullPointerException("userToken"));
-		failSetReadPermissions(g, new Token("t"), null,
+		setReadPermissionResourceFail(g, new Token("t"), null,
 				new NullPointerException("requestID"));
 	}
 	
 	@Test
-	public void setReadPermissionFailNoGroup() throws Exception {
+	public void setReadPermissionResourceFailNoGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4196,16 +4196,16 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("43")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid")))
-		.thenThrow(new NoSuchGroupException("gid"));
+				.thenThrow(new NoSuchGroupException("gid"));
 		
-		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
 				new RuntimeException(String.format(
 						"Request %s's group doesn't exist: 50000 No such group: gid",
 						id.toString())));
 	}
 	
 	@Test
-	public void setReadPermissionFailNotAdmin() throws Exception {
+	public void setReadPermissionResourceFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4226,13 +4226,13 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
 				new UnauthorizedException("User u1 is not an admin for group gid"));
 	}
 	
 	@Test
-	public void setReadPermissionFailInvite() throws Exception {
-		setReadPermissionFail(
+	public void setReadPermissionResourceFailInvite() throws Exception {
+		setReadPermissionResourceFail(
 				UUID.randomUUID(),
 				b -> b.withType(RequestType.INVITE)
 						.withResourceType(new ResourceType("workspace")),
@@ -4241,8 +4241,8 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void setReadPermissionFailResourceType() throws Exception {
-		setReadPermissionFail(
+	public void setReadPermissionResourceFailResourceType() throws Exception {
+		setReadPermissionResourceFail(
 				UUID.randomUUID(),
 				b -> b.withResourceType(new ResourceType("user")),
 				new UnauthorizedException("Requests with a user resource type do not allow " +
@@ -4250,9 +4250,9 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void setReadPermissionFailNoResourceHandler() throws Exception {
+	public void setReadPermissionResourceFailNoResourceHandler() throws Exception {
 		final UUID id = UUID.randomUUID();
-		setReadPermissionFail(
+		setReadPermissionResourceFail(
 				id,
 				b -> b.withResourceType(new ResourceType("wrkspce")),
 				new RuntimeException(
@@ -4260,7 +4260,7 @@ public class GroupsTest {
 						id.toString()));
 	}
 	
-	private void setReadPermissionFail(
+	private void setReadPermissionResourceFail(
 			final UUID id,
 			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
 			final Exception expected)
@@ -4282,11 +4282,11 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id), expected);
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id), expected);
 	}
 	
 	@Test
-	public void setReadPermissionFailClosed() throws Exception {
+	public void setReadPermissionResourceFailClosed() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -4308,17 +4308,142 @@ public class GroupsTest {
 				.withAdministrator(new UserName("admin"))
 				.build());
 		
-		failSetReadPermissions(mocks.groups, new Token("t"), new RequestID(id),
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
 				new ClosedRequestException(id + ""));
 	}
 	
-	private void failSetReadPermissions(
+	private void setReadPermissionResourceFail(
 			final Groups g,
 			final Token t,
 			final RequestID i,
 			final Exception expected) {
 		try {
 			g.setReadPermission(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void setReadPermissionGroupAdmin() throws Exception {
+		setReadPermissionGroup(new UserName("admin"));
+	}
+	
+	@Test
+	public void setReadPermissionGroupOwner() throws Exception {
+		setReadPermissionGroup(new UserName("own"));
+	}
+	
+	@Test
+	public void setReadPermissionGroupMember() throws Exception {
+		setReadPermissionGroup(new UserName("u1"));
+	}
+
+	private void setReadPermissionGroup(final UserName user) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(user);
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(setRPGgetTestGroup());
+		
+		mocks.groups.setReadPermission(new Token("token"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("moddymod.methymeth"));
+		
+		verify(mocks.catHandler).setReadPermission(new ResourceID("moddymod.methymeth"), user);
+	}
+
+	private Group setRPGgetTestGroup() throws Exception {
+		return Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(new UserName("u1"))
+				.withMember(new UserName("u3"))
+				.withAdministrator(new UserName("a1"))
+				.withAdministrator(new UserName("a3"))
+				.withAdministrator(new UserName("admin"))
+				.withResource(new ResourceType("catalogmethod"), 
+						new ResourceDescriptor(new ResourceAdministrativeID("moddymod"),
+								new ResourceID("moddymod.methymeth")))
+				.build();
+	}
+	
+	@Test
+	public void setReadPermissionGroupFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final Token t = new Token("t");
+		final GroupID i = new GroupID("i");
+		final ResourceType ty = new ResourceType("t");
+		final ResourceID w = new ResourceID("1");
+		
+		setReadPermissionGroupFail(g, null, i, ty, w, new NullPointerException("userToken"));
+		setReadPermissionGroupFail(g, t, null, ty, w, new NullPointerException("groupID"));
+		setReadPermissionGroupFail(g, t, i, null, w, new NullPointerException("type"));
+		setReadPermissionGroupFail(g, t, i, ty, null, new NullPointerException("resource"));
+	}
+	
+	@Test
+	public void setReadPermissionFailNotMember() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u2"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(setRPGgetTestGroup());
+		
+		setReadPermissionGroupFail(mocks.groups, new Token("tok"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("moddymod.methymeth"),
+				new UnauthorizedException("User u2 is not a member of group gid"));
+	}
+	
+	@Test
+	public void setReadPermissionFailNoSuchResourceType() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(setRPGgetTestGroup());
+		
+		setReadPermissionGroupFail(mocks.groups, new Token("tok"), new GroupID("gid"),
+				new ResourceType("redditjollyrancher"),
+				new ResourceID("moddymod.methymeth"),
+				new NoSuchResourceTypeException("redditjollyrancher"));
+	}
+	
+	@Test
+	public void setReadPermissionFailNoSuchResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(setRPGgetTestGroup());
+		
+		setReadPermissionGroupFail(mocks.groups, new Token("tok"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("mod.meth"),
+				new NoSuchResourceException("Group gid does not contain catalogmethod mod.meth"));
+	}
+	
+	@Test
+	public void setReadPermissionFailIllegalResourceID() throws Exception {
+		// really can't happen, but *shrug*
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(setRPGgetTestGroup());
+		doThrow(new IllegalResourceIDException("foo")).when(mocks.catHandler)
+				.setReadPermission(new ResourceID("moddymod.methymeth"), new UserName("u1"));
+		
+		setReadPermissionGroupFail(mocks.groups, new Token("tok"), new GroupID("gid"),
+				new ResourceType("catalogmethod"), new ResourceID("moddymod.methymeth"),
+				new RuntimeException("This should be impossible"));
+	}
+	
+	
+	private void setReadPermissionGroupFail(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final ResourceType type,
+			final ResourceID r,
+			final Exception expected) {
+		try {
+			g.setReadPermission(t, i, type, r);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

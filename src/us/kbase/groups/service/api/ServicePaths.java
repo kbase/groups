@@ -41,6 +41,9 @@ public class ServicePaths {
 	/** The location to add or remove a resource from a group. */
 	public static final String GROUP_RESOURCE_ID = GROUP_ID + GROUP_RESOURCE + "{" +
 			Fields.GROUP_RESOURCE_TYPE + "}" + SEP + "{" + Fields.GROUP_RESOURCE_ID + "}";
+	/** The location to get read permission for a group resource. */
+	public static final String GROUP_RESOURCE_ID_PERMS = GROUP_RESOURCE_ID + SEP + "getperm";
+
 	
 	/* Request endpoints */
 	
