@@ -372,7 +372,7 @@ export default class {
                             <th scope="col">Mod date</th>
                             <th scope="col">Public</th>
                             <th scope="col">Permission</th>
-                            <th scope="col">Action</th>
+                            <th scope="col">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -388,6 +388,8 @@ export default class {
                               <td>${s(ws.public)}</td>
                               <td>${s(ws.perm)}</td>
                               <td>
+                                <button id="readws_${s(ws.rid)}" class="btn btn-primary">Read
+                                      </button>
                                 <button id="removews_${s(ws.rid)}" class="btn btn-primary">Remove
                                       </button>
                               </td>
@@ -478,6 +480,9 @@ export default class {
                       });
                   }
                   for (const ws of json.resources.workspace) {
+                      $(`#readws_${s(ws.rid)}`).on('click', () => {
+                          this.getPerm(groupid, "workspace", ws.rid);
+                      });
                       $(`#removews_${s(ws.rid)}`).on('click', () => {
                           // TODO only activate button if ws admin or group admin
                           this.removeResource(groupid, "workspace", ws.rid);
@@ -620,9 +625,18 @@ export default class {
   }
   
   removeResource(groupid, resourcetype, resource) {
+      this.alterResource(groupid, resourcetype, resource, 'DELETE', '');
+  }
+  
+  getPerm(groupid, resourcetype, resource) {
+      this.alterResource(groupid, resourcetype, resource, 'POST', '/getperm');
+  }
+  
+  alterResource(groupid, resourcetype, resource, method, urlsuffix) {
       $('#error').text("");
-      fetch(this.serviceUrl + "group/" + groupid + '/resource/' + resourcetype + '/' + resource,
-              {"method": "DELETE",
+      fetch(this.serviceUrl + "group/" + groupid + '/resource/' + resourcetype + '/' + resource +
+          urlsuffix,
+              {"method": method,
                "headers": this.getHeaders()})
         .then( (response) => {
           if (response.ok) {

@@ -255,9 +255,9 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 					"command", "getWorkspaceInfo", "params", wsi)))
 					.asClassInstance(WS_INFO_TYPEREF);
 			//TODO NNOW include description in wsinfo
-			desc = client.administer(new UObject(ImmutableMap.of(
-					"command", "getWorkspaceDescription", "params", wsi)))
-					.asScalar();
+			final UObject d = client.administer(new UObject(ImmutableMap.of(
+					"command", "getWorkspaceDescription", "params", wsi)));
+			desc = d == null ? null : d.asScalar();
 			//TODO NNOW get narrative creation date from narr ob v1, if no obj just add error message
 		} catch (ServerException e) {
 			if (getWorkspaceID(e) != null) { // deleted or missing
