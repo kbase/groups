@@ -44,6 +44,8 @@ public class SDKClientWorkspaceHandlerTest {
 	
 	private static boolean DEBUG = false;
 	
+	private static String MIN_WS_VER = "0.8.2";
+	
 	private static final ResourceID RD3;
 	private static final ResourceID RD5;
 	private static final ResourceID RD7;
@@ -53,6 +55,8 @@ public class SDKClientWorkspaceHandlerTest {
 	private static final ResourceID RD11;
 	private static final ResourceID RD20;
 	private static final ResourceID RD21;
+	private static final ResourceID RD30;
+	private static final ResourceID RD31;
 	static {
 		try {
 			RD3 = new ResourceID("3");
@@ -64,6 +68,8 @@ public class SDKClientWorkspaceHandlerTest {
 			RD11 = new ResourceID("11");
 			RD20 = new ResourceID("20");
 			RD21 = new ResourceID("21");
+			RD30 = new ResourceID("30");
+			RD31 = new ResourceID("31");
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests", e);
 		}
@@ -98,10 +104,10 @@ public class SDKClientWorkspaceHandlerTest {
 	public void constructFailVersion() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.7.999999");
+		when(c.ver()).thenReturn("0.8.1");
 		
 		failConstruct(c, new ResourceHandlerException(
-				"Workspace version 0.8.0 or greater is required"));
+				"Workspace version 0.8.2 or greater is required"));
 	}
 	
 	@Test
@@ -118,7 +124,7 @@ public class SDKClientWorkspaceHandlerTest {
 	private void constructFail(final Exception exception) throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://bar.com"));
 		
 		when(c.administer(argThat(new UObjectArgumentMatcher(
@@ -156,7 +162,7 @@ public class SDKClientWorkspaceHandlerTest {
 	private void isAdmin(final String user, final boolean expected) throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -191,7 +197,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void isAdminFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -241,7 +247,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://foo.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -268,7 +274,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getResourceInformationNoWS() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -289,30 +295,37 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD9)
 						.withNonexistentResource(RD20)
 						.withNonexistentResource(RD21)
+						.withNonexistentResource(RD30)
+						.withNonexistentResource(RD31)
 						.withResourceField(RD3, "name", "name3")
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
 						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD3, "description", "my desc")
 						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
 						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD5, "description", null)
 						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD7, "name", "name7")
 						.withResourceField(RD7, "public", false)
 						.withResourceField(RD7, "narrname", null)
 						.withResourceField(RD7, "perm", "Write")
+						.withResourceField(RD7, "description", "my desc7")
 						.withResourceField(RD7, "moddate", 31535999000L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
@@ -326,25 +339,31 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD9)
 						.withNonexistentResource(RD20)
 						.withNonexistentResource(RD21)
+						.withNonexistentResource(RD30)
+						.withNonexistentResource(RD31)
 						.withResourceField(RD3, "name", "name3")
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
 						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD3, "description", "my desc")
 						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
 						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD5, "description", null)
 						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "Read")
+						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
@@ -368,15 +387,19 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD9)
 						.withNonexistentResource(RD20)
 						.withNonexistentResource(RD21)
+						.withNonexistentResource(RD30)
+						.withNonexistentResource(RD31)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
 						.withResourceField(RD10, "perm", "None")
+						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
 						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
@@ -388,7 +411,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -424,6 +447,14 @@ public class SDKClientWorkspaceHandlerTest {
 				.when(c).administer(argThat(getPermissionsCommandMatcher(20)));
 		doThrow(new ServerException("No workspace with id 21 exists", -1, "n"))
 				.when(c).administer(argThat(getPermissionsCommandMatcher(21)));
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user1", "r", "user2", "w", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(30)));
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user2", "w", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(31)));
 
 		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", "2018-10-27T02:16:53+0000", false,
 				Collections.emptyMap()))
@@ -454,11 +485,32 @@ public class SDKClientWorkspaceHandlerTest {
 				Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(11)));
 		
+		doReturn(getWorkspaceInfoResponse(30, "name30", "user3", "dontprocess", true,
+				Collections.emptyMap()))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(30)));
+
+		doReturn(getWorkspaceInfoResponse(31, "name31", "user3", "dontprocess", true,
+				Collections.emptyMap()))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(31)));
+		
+		doReturn(new UObject("my desc")).when(c).administer(argThat(getWSDescCommandMatcher(3)));
+		doReturn(new UObject(null)).when(c).administer(argThat(getWSDescCommandMatcher(5)));
+		doReturn(new UObject("my desc7")).when(c).administer(argThat(getWSDescCommandMatcher(7)));
+		doReturn(new UObject("my desc10")).when(c)
+				.administer(argThat(getWSDescCommandMatcher(10)));
+		doReturn(new UObject("my desc11")).when(c)
+				.administer(argThat(getWSDescCommandMatcher(11)));
+		doThrow(new ServerException("Workspace 30 is deleted", -1, "n")).when(c)
+				.administer(argThat(getWSDescCommandMatcher(30)));
+		doThrow(new ServerException("No workspace with id 31 exists", -1, "n")).when(c)
+				.administer(argThat(getWSDescCommandMatcher(31)));
+		
 		final ResourceInformationSet ri = h.getResourceInformation(
 				user,
 				set(new ResourceID("3"), new ResourceID("5"), new ResourceID("7"),
 						new ResourceID("8"), new ResourceID("9"), new ResourceID("10"),
-						new ResourceID("11"), new ResourceID("20"), new ResourceID("21")),
+						new ResourceID("11"), new ResourceID("20"), new ResourceID("21"),
+						new ResourceID("30"), new ResourceID("31")),
 				administratedResourcesOnly);
 		
 		assertThat("incorrect resources", ri, is(expected));
@@ -467,6 +519,12 @@ public class SDKClientWorkspaceHandlerTest {
 	private UObjectArgumentMatcher getWSInfoCommandMatcher(final int wsid) {
 		return new UObjectArgumentMatcher(ImmutableMap.of(
 				"command", "getWorkspaceInfo",
+				"params", ImmutableMap.of("id", wsid)));
+	}
+	
+	private UObjectArgumentMatcher getWSDescCommandMatcher(final int wsid) {
+		return new UObjectArgumentMatcher(ImmutableMap.of(
+				"command", "getWorkspaceDescription",
 				"params", ImmutableMap.of("id", wsid)));
 	}
 	
@@ -492,7 +550,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getResourceInformationFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -537,7 +595,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://baz.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -581,7 +639,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://bat.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -612,7 +670,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getAdministratedResources() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -629,7 +687,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getAdministratedResourcesFailNull() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -654,7 +712,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://nudewombats.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -688,7 +746,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getAdministrators() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -704,7 +762,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getAdministratorsFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -767,7 +825,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -782,7 +840,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://foo.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -808,7 +866,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void setReadPermission() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
 				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(ImmutableMap.of(
@@ -844,7 +902,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
 				.thenReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(returnedPerms))));
@@ -859,7 +917,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void setReadPermissionFailBadArgs() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
@@ -891,7 +949,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://foo.com"));
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
@@ -918,7 +976,7 @@ public class SDKClientWorkspaceHandlerTest {
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
 		
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		when(c.getURL()).thenReturn(new URL("http://hotchacha.com"));
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(56))))
@@ -948,7 +1006,7 @@ public class SDKClientWorkspaceHandlerTest {
 	@Test
 	public void getDescriptor() throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final ResourceDescriptor d = new SDKClientWorkspaceHandler(c)
 				.getDescriptor(new ResourceID("82"));
@@ -967,7 +1025,7 @@ public class SDKClientWorkspaceHandlerTest {
 	private void failGetDescriptor(final ResourceID rid, final Exception expected)
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
-		when(c.ver()).thenReturn("0.8.0");
+		when(c.ver()).thenReturn(MIN_WS_VER);
 		try {
 			new SDKClientWorkspaceHandler(c).getDescriptor(rid);
 			fail("expected exception");

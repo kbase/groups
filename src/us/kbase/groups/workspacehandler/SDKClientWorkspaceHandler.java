@@ -81,8 +81,8 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			throw getGeneralWSException(e);
 		}
 		
-		if (Version.valueOf(ver).lessThan(Version.forIntegers(0, 8))) {
-			throw new ResourceHandlerException("Workspace version 0.8.0 or greater is required");
+		if (Version.valueOf(ver).lessThan(Version.forIntegers(0, 8, 2))) {
+			throw new ResourceHandlerException("Workspace version 0.8.2 or greater is required");
 		}
 	}
 
@@ -248,12 +248,17 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	private WSInfoOwner getWSInfo(final long wsid) throws ResourceHandlerException {
 		final Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>> wsinfo;
+		final String desc;
 		try {
+			final WorkspaceIdentity wsi = new WorkspaceIdentity().withId((long) wsid);
 			wsinfo = client.administer(new UObject(ImmutableMap.of(
-					"command", "getWorkspaceInfo",
-					"params", new WorkspaceIdentity().withId((long) wsid))))
+					"command", "getWorkspaceInfo", "params", wsi)))
 					.asClassInstance(WS_INFO_TYPEREF);
-			// TODO NNOW WS get description - needs get desc admin method
+			//TODO NNOW include description in wsinfo
+			desc = client.administer(new UObject(ImmutableMap.of(
+					"command", "getWorkspaceDescription", "params", wsi)))
+					.asScalar();
+			//TODO NNOW get narrative creation date from narr ob v1, if no obj just add error message
 		} catch (ServerException e) {
 			if (getWorkspaceID(e) != null) { // deleted or missing
 				return null;
@@ -269,6 +274,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		ret.put("public", PERM_READ.equals(wsinfo.getE7()));
 		ret.put("moddate", OffsetDateTime.parse(wsinfo.getE4(), FMT).toInstant()
 				.toEpochMilli());
+		ret.put("description", desc);
 		return new WSInfoOwner(ret, wsinfo.getE3());
 	}
 

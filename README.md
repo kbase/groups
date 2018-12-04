@@ -65,6 +65,7 @@ Represents information about a workspace.
     "narrname": <the name of the narrative contained in the workspace or null>
     "public": <true if the workspace is public, false otherwise>
     "perm": <the user's permission for the workspace>,
+    "description": <the workspace description or null>
     "moddate": <the modification date of the workspace in epoch ms>
 }
 ```
