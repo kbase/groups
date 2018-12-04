@@ -368,7 +368,8 @@ AUTHORIZATION REQUIRED
 POST /group/<group id>/resource/<resource type>/<resource id>/getperm
 ```
 
-The user must be a member of the group.
+The user must be a member of the group. Read permissions are only granted if the user
+has no explicit permission to the resource and the resource is not publicly readable.
 
 ### Get a request
 
@@ -390,7 +391,8 @@ POST /request/id/<request id>/getperm
 ```
 
 The request type must be `Request`, the resource type cannot be `user`,
-and the user must be a group administrator.
+and the user must be a group administrator. Read permissions are only granted if the user
+has no explicit permission to the resource and the resource is not publicly readable
 
 ### Listing requests
 
