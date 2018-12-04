@@ -423,6 +423,25 @@ public class GroupsAPI {
 				new ResourceID(resourceID));
 	}
 	
+	@POST
+	@Path(ServicePaths.GROUP_RESOURCE_ID_PERMS)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void getPerms(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_RESOURCE_TYPE) final String resourceType,
+			@PathParam(Fields.GROUP_RESOURCE_ID) final String resourceID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchResourceException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				NoSuchResourceTypeException, MissingParameterException, IllegalParameterException,
+				GroupsStorageException, ResourceHandlerException {
+		groups.setReadPermission(
+				getToken(token, true),
+				new GroupID(groupID),
+				new ResourceType(resourceType),
+				new ResourceID(resourceID));
+	}
+	
 	private Map<String, Object> toGroupRequestJSON(final Optional<GroupRequest> req) {
 		final Map<String, Object> ret;
 		if (req.isPresent()) {

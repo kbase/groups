@@ -986,9 +986,7 @@ public class Groups {
 	 * @throws IllegalResourceIDException if the resource ID is illegal.
 	 * @throws NoSuchResourceException if there is no such resource.
 	 */
-	public void setReadPermission(
-			final Token userToken,
-			final RequestID requestID)
+	public void setReadPermission(final Token userToken, final RequestID requestID)
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, ClosedRequestException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
@@ -1014,4 +1012,49 @@ public class Groups {
 		h.setReadPermission(r.getResource().getResourceID(), user);
 	}
 	
+	/** Set read permission on a resource for the user.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to be modified.
+	 * @param type the type of the resource.
+	 * @param resource the resource ID.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws UnauthorizedException if the user is not a member of the group.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
+	 * 
+	 */
+	public void setReadPermission(
+			final Token userToken,
+			final GroupID groupID,
+			final ResourceType type,
+			final ResourceID resourceID)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException, NoSuchResourceTypeException,
+				NoSuchResourceException, ResourceHandlerException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(groupID, "groupID");
+		checkNotNull(type, "type");
+		checkNotNull(resourceID, "resource");
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(groupID);
+		if (!g.isMember(user)) {
+			throw new UnauthorizedException(String.format("User %s is not a member of group %s",
+					user.getName(), g.getGroupID().getName()));
+		}
+		final ResourceHandler h = getHandler(type);
+		if (!g.containsResource(type, resourceID)) {
+			throw new NoSuchResourceException(String.format("Group %s does not contain %s %s",
+					groupID.getName(), type.getName(), resourceID.getName()));
+		}
+		try {
+			h.setReadPermission(resourceID, user);
+		} catch (IllegalResourceIDException e) {
+			// since the resourceID is in the group
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
 }

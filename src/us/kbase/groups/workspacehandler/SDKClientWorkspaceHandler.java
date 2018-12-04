@@ -340,7 +340,8 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		if (!READ_PERMS.contains(perms.get(user.getName())) &&
 				!PERM_READ.equals(perms.get(GLOBAL_READ_USER))) {
 			// tiny chance for a race condition here
-			// TODO WS add temporary perms to workspace service so these granted perms can expire rather than forcing the user to remove them if s/he doesn't want them
+			// TODO WS add temporary perms to workspace service so these granted perms can expire rather than forcing the user to remove them if s/he doesn't want them. Optional - some perms should be permanent
+			// TODO WS flag to grant greater of requested & current perm (see $max)
 			try {
 				client.administer(new UObject(ImmutableMap.of(
 						"command", "setPermissions",

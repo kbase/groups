@@ -1284,7 +1284,8 @@ public class GroupsAPITest {
 	@Test
 	public void removeResourceFailBadArgs() throws Exception {
 		final Groups g = mock(Groups.class);
-		failRemoveResource(g, null, "id", "t", "45", new NoTokenProvidedException("No token provided"));
+		failRemoveResource(g, null, "id", "t", "45",
+				new NoTokenProvidedException("No token provided"));
 		failRemoveResource(g, "  \t  ", "id", "t", "45",
 				new NoTokenProvidedException("No token provided"));
 		failRemoveResource(g, "t", "illegal*id", "t", "45",
@@ -1323,4 +1324,56 @@ public class GroupsAPITest {
 		}
 	}
 	
+	@Test
+	public void getPerms() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).getPerms("t", "gid", "rtype", "99");
+		
+		verify(g).setReadPermission(new Token("t"), new GroupID("gid"), new ResourceType("rtype"),
+				new ResourceID("99"));
+	}
+	
+	@Test
+	public void getPermsFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		getPermsFail(g, null, "id", "t", "45",
+				new NoTokenProvidedException("No token provided"));
+		getPermsFail(g, "  \t  ", "id", "t", "45",
+				new NoTokenProvidedException("No token provided"));
+		getPermsFail(g, "t", "illegal*id", "t", "45",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id illegal*id: *"));
+		getPermsFail(g, "t", "i", "illegal*type", "45",
+				new IllegalParameterException(
+						"Illegal character in resource type illegal*type: *"));
+		getPermsFail(g, "t", "id", "t", "   foo\nbar    ",
+				new IllegalParameterException("resource ID contains control characters"));
+	}
+	
+	@Test
+	public void getPermsFailNoSuchResource() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchResourceException("type")).when(g)
+				.setReadPermission(new Token("t"), new GroupID("i"), new ResourceType("type"),
+						new ResourceID("34"));
+		
+		getPermsFail(g, "t", "i", "type", "34", new NoSuchResourceException("type"));
+	}
+	
+	private void getPermsFail(
+			final Groups g,
+			final String t,
+			final String i,
+			final String type,
+			final String r,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).getPerms(t, i, type, r);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }

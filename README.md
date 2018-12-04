@@ -361,6 +361,15 @@ DELETE /group/<group id>/resource/<resource type>/<resource id>
 
 The user must be an administrator of either the group or the resource.
 
+### Get read permission for a resource
+
+```
+AUTHORIZATION REQUIRED
+POST /group/<group id>/resource/<resource type>/<resource id>/getperm
+```
+
+The user must be a member of the group.
+
 ### Add a catalog method to a group
 
 ```
