@@ -494,7 +494,7 @@ public class SDKClientWorkspaceHandlerTest {
 				.when(c).administer(argThat(getWSInfoCommandMatcher(31)));
 		
 		doReturn(new UObject("my desc")).when(c).administer(argThat(getWSDescCommandMatcher(3)));
-		doReturn(new UObject(null)).when(c).administer(argThat(getWSDescCommandMatcher(5)));
+		doReturn(null).when(c).administer(argThat(getWSDescCommandMatcher(5)));
 		doReturn(new UObject("my desc7")).when(c).administer(argThat(getWSDescCommandMatcher(7)));
 		doReturn(new UObject("my desc10")).when(c)
 				.administer(argThat(getWSDescCommandMatcher(10)));

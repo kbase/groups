@@ -370,20 +370,6 @@ POST /group/<group id>/resource/<resource type>/<resource id>/getperm
 
 The user must be a member of the group.
 
-### Add a catalog method to a group
-
-```
-AUTHORIZATION REQUIRED
-POST /group/<group id>/resource/catalogmethod/<full method name, e.g. Module.method>
-
-RETURNS: Either {"complete": true} or a Request with the additional field "complete"
-with a value of false.
-```
-
-The method is added immediately if the user is an administrator of both the group and owner
-of the module. A request object is returned if the user is an administrator/owner of at least one;
-if not an error is returned.
-
 ### Get a request
 
 ```
