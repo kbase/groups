@@ -1,7 +1,7 @@
 # Text Search
 
 Since MongoDB only supports one text index per collection and does not return which fields
-were hit during the search, it seems like it's not an option if we wish to support private
+were hit during the search, it makes things more difficult if we wish to support private
 fields. Private fields mean we need to exclude search hits where the user is not a member of
 the group in question and the search only hits private fields.
 
@@ -57,6 +57,29 @@ Cons:
 4. Makes group updates much more tricky (details not shown)
 5. Adding or removing a text search field may require reindexing all groups (see below)
 
+## Separate public and private collections for MongoDB text search
+
+Add private and public **collections** in Mongo DB which use wildcard text indexes and thus
+index all `string` fields. On group creation / update, `upsert` the group into both
+collections, where all searchable fields plus a members list go in the private collection and
+only searchable public fields go in the public collection.
+
+On search, search in both collections, checking the user's name against the member list in the
+private collection, and merge the results in order of the relevance score.
+
+Pros:
+1. Can support separate indexes for private and public fields
+2. Supports stemming and stop words
+3. Supports ordering by relevance
+
+Cons:
+1. Need an admin command to reindex a specific group in case the server goes down between
+   a record update and index update
+2. Adding or removing a text search field may require reindexing all groups (see below)
+3. There's a small chance for race conditions getting the index out of sync with the MongoDB
+   record, since updating the record & index is not atomic.
+4. Quite a bit of data duplication between the group record and 2 collections and their indexes.
+
 ## Delegate to ElasticSearch for text search
 
 The Groups service would have its own ES namespace and completely wrap ES - searches would
@@ -73,6 +96,8 @@ Cons:
 2. Need an admin command to reindex a specific group in case the server goes down between
    a MongoDB update and ES update
 3. Adding or removing a text search field may require reindexing all groups (see below)
+4. There's a small chance for race conditions getting the index out of sync with the MongoDB
+   record, since updating the record & index is not atomic.
 
 ## ~~Submit groups to KBase Search service~~
 
