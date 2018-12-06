@@ -30,13 +30,16 @@ public class FieldValidatorsTest {
 		final FieldValidators v = FieldValidators.getBuilder(7000).build();
 		
 		assertThat("incorrect size", v.getMaximumFieldValueSize(), is(7000));
-		assertThat("incorrect size", v.getValidationTargetFields(), is(set()));
+		assertThat("incorrect fields", v.getValidationTargetFields(), is(set()));
+		assertThat("incorrect user fields", v.getValidationTargetUserFields(), is(set()));
 	}
 	
 	@Test
 	public void buildMaximal() throws Exception {
 		final FieldValidator v1 = mock(FieldValidator.class);
 		final FieldValidator v2 = mock(FieldValidator.class);
+		final FieldValidator v3 = mock(FieldValidator.class);
+		final FieldValidator v4 = mock(FieldValidator.class);
 		final FieldValidators vs = FieldValidators.getBuilder(7000)
 				.withValidator(
 						new CustomField("foo"),
@@ -48,15 +51,29 @@ public class FieldValidatorsTest {
 								.withNullableIsMinimalViewField(true)
 								.build(),
 						v2)
+				.withUserFieldValidator(new CustomField("foo"),
+						FieldConfiguration.getBuilder()
+								.withNullableIsUserSettable(true)
+								.build(),
+						v3)
+				.withUserFieldValidator(new CustomField("baz"),
+						FieldConfiguration.getBuilder().build(),
+						v4)
 				.build();
 		
 		assertThat("incorrect size", vs.getMaximumFieldValueSize(), is(7000));
-		assertThat("incorrect size", vs.getValidationTargetFields(), is(set(
+		assertThat("incorrect fields", vs.getValidationTargetFields(), is(set(
 				new CustomField("foo"), new CustomField("bar"))));
-		assertThat("incorrect num", vs.getConfiguration(new CustomField("foo")),
+		assertThat("incorrect user fields", vs.getValidationTargetUserFields(), is(set(
+				new CustomField("foo"), new CustomField("baz"))));
+		assertThat("incorrect config", vs.getConfiguration(new CustomField("foo")),
 				is(FieldConfiguration.getBuilder().build()));
-		assertThat("incorrect num", vs.getConfiguration(new CustomField("bar")),
+		assertThat("incorrect config", vs.getConfiguration(new CustomField("bar")),
 				is(FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true).build()));
+		assertThat("incorrect user config", vs.getUserFieldConfiguration(new CustomField("foo")),
+				is(FieldConfiguration.getBuilder().withNullableIsUserSettable(true).build()));
+		assertThat("incorrect user config", vs.getUserFieldConfiguration(new CustomField("baz")),
+				is(FieldConfiguration.getBuilder().build()));
 	}
 	
 	@Test
@@ -64,10 +81,18 @@ public class FieldValidatorsTest {
 		final FieldValidator v1 = mock(FieldValidator.class);
 		final FieldValidators vs = FieldValidators.getBuilder(7000)
 				.withValidator(new CustomField("foo"), MTCFG, v1)
+				.withUserFieldValidator(new CustomField("bar"), MTCFG, v1)
 				.build();
 		
 		try {
 			vs.getValidationTargetFields().add(new CustomField("baz"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passes
+		}
+		
+		try {
+			vs.getValidationTargetUserFields().add(new CustomField("baz"));
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passes
@@ -78,19 +103,30 @@ public class FieldValidatorsTest {
 	public void validate() throws Exception {
 		final FieldValidator v1 = mock(FieldValidator.class);
 		final FieldValidator v2 = mock(FieldValidator.class);
+		final FieldValidator v3 = mock(FieldValidator.class);
+		final FieldValidator v4 = mock(FieldValidator.class);
 		final FieldValidators vs = FieldValidators.getBuilder(12)
 				.withValidator(new CustomField("foo"), MTCFG, v1)
 				.withValidator(
 						new CustomField("bar"),
 						FieldConfiguration.getBuilder().withNullableIsNumberedField(true).build(),
 						v2)
+				.withUserFieldValidator(new CustomField("baz"), MTCFG, v3)
+				.withUserFieldValidator(
+						new CustomField("bat"),
+						FieldConfiguration.getBuilder().withNullableIsNumberedField(true).build(),
+						v4)
 				.build();
 		
 		vs.validate(new NumberedCustomField("foo"), "my val");
 		vs.validate(new NumberedCustomField("bar-23"), "my other 𐍆al");
+		vs.validateUserField(new NumberedCustomField("baz"), "my val2");
+		vs.validateUserField(new NumberedCustomField("bat-23"), "my 2ther 𐍆al");
 		
 		verify(v1).validate("my val");
 		verify(v2).validate("my other 𐍆al");
+		verify(v3).validate("my val2");
+		verify(v4).validate("my 2ther 𐍆al");
 	}
 	
 	@Test
@@ -124,12 +160,19 @@ public class FieldValidatorsTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+		try {
+			FieldValidators.getBuilder(1).withUserFieldValidator(f, cfg, v);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 	@Test
 	public void getConfigurationFail() throws Exception {
 		final FieldValidators vs = FieldValidators.getBuilder(1)
 				.withValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
+				.withUserFieldValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
 				.build();
 		
 		getConfigurationFail(vs, null, new NullPointerException("field"));
@@ -147,10 +190,16 @@ public class FieldValidatorsTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+		try {
+			v.getConfiguration(f);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 	@Test
-	public void validationFail() throws Exception {
+	public void validateFail() throws Exception {
 		final FieldValidator v1 = mock(FieldValidator.class);
 		final FieldValidator v2 = mock(FieldValidator.class);
 		final FieldValidators vs = FieldValidators.getBuilder(4)
@@ -161,34 +210,79 @@ public class FieldValidatorsTest {
 				.withValidator(new CustomField("bar"), MTCFG, v2)
 				.build();
 		
-		failValidation(vs, null, "v", new NullPointerException("field"));
-		failValidation(vs, new NumberedCustomField("bar-2"), "v", new IllegalParameterException(
+		validateFail(vs, null, "v", new NullPointerException("field"));
+		validateFail(vs, new NumberedCustomField("bar-2"), "v", new IllegalParameterException(
 				"Field bar-2 may not be a numbered field"));
-		failValidation(vs, new NumberedCustomField("bat-2"), "v", new NoSuchCustomFieldException(
+		validateFail(vs, new NumberedCustomField("bat-2"), "v", new NoSuchCustomFieldException(
 				"Field bat-2 is not a configured field"));
-		failValidation(vs, new NumberedCustomField("bar"), null, new MissingParameterException(
+		validateFail(vs, new NumberedCustomField("bar"), null, new MissingParameterException(
 				"Value for field bar"));
-		failValidation(vs, new NumberedCustomField("bar"), "  \t  ", new MissingParameterException(
+		validateFail(vs, new NumberedCustomField("bar"), "  \t  ", new MissingParameterException(
 				"Value for field bar"));
 		final String s = "𐍆234𐍆";
 		assertThat("incorrect length", s.length(), is(7));
 		assertThat("incorrect points", s.codePointCount(0, s.length()), is(5));
-		failValidation(vs, new NumberedCustomField("bar"), s, new IllegalParameterException(
+		validateFail(vs, new NumberedCustomField("bar"), s, new IllegalParameterException(
 				"Value for field bar size greater than limit 4"));
 		
 		doThrow(new IllegalFieldValueException("oh poop")).when(v1).validate("arg");
-		failValidation(vs, new NumberedCustomField("foo-45"), "arg", new IllegalParameterException(
+		validateFail(vs, new NumberedCustomField("foo-45"), "arg", new IllegalParameterException(
 				"Field foo-45 has an illegal value: oh poop"));
-		
 	}
 	
-	private void failValidation(
+	private void validateFail(
 			final FieldValidators v,
 			final NumberedCustomField f,
 			final String val,
 			final Exception expected) {
 		try {
 			v.validate(f, val);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	// very similar to above. DRY later, maybe
+	@Test
+	public void validateUserFieldFail() throws Exception {
+		final FieldValidator v1 = mock(FieldValidator.class);
+		final FieldValidator v2 = mock(FieldValidator.class);
+		final FieldValidators vs = FieldValidators.getBuilder(4)
+				.withUserFieldValidator(
+						new CustomField("foo"),
+						FieldConfiguration.getBuilder().withNullableIsNumberedField(true).build(),
+						v1)
+				.withUserFieldValidator(new CustomField("bar"), MTCFG, v2)
+				.build();
+		
+		validateUserFieldFail(vs, null, "v", new NullPointerException("field"));
+		validateUserFieldFail(vs, new NumberedCustomField("bar-2"), "v",
+				new IllegalParameterException("User field bar-2 may not be a numbered field"));
+		validateUserFieldFail(vs, new NumberedCustomField("bat-2"), "v",
+				new NoSuchCustomFieldException("User field bat-2 is not a configured field"));
+		validateUserFieldFail(vs, new NumberedCustomField("bar"), null,
+				new MissingParameterException("Value for user field bar"));
+		validateUserFieldFail(vs, new NumberedCustomField("bar"), "  \t  ",
+				new MissingParameterException("Value for user field bar"));
+		final String s = "𐍆234𐍆";
+		assertThat("incorrect length", s.length(), is(7));
+		assertThat("incorrect points", s.codePointCount(0, s.length()), is(5));
+		validateUserFieldFail(vs, new NumberedCustomField("bar"), s, new IllegalParameterException(
+				"Value for user field bar size greater than limit 4"));
+		
+		doThrow(new IllegalFieldValueException("oh poop")).when(v1).validate("arg");
+		validateUserFieldFail(vs, new NumberedCustomField("foo-45"), "arg",
+				new IllegalParameterException("User field foo-45 has an illegal value: oh poop"));
+	}
+	
+	private void validateUserFieldFail(
+			final FieldValidators v,
+			final NumberedCustomField f,
+			final String val,
+			final Exception expected) {
+		try {
+			v.validateUserField(f, val);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

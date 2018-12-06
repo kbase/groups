@@ -27,6 +27,9 @@ import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.fieldvalidation.CustomField;
+import us.kbase.groups.core.fieldvalidation.FieldConfiguration;
+import us.kbase.groups.core.fieldvalidation.FieldValidator;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorConfiguration;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.FieldValidators;
@@ -178,22 +181,37 @@ public class GroupsBuilder {
 		}
 	}
 
-	private FieldValidators getValidators(final GroupsConfig c)
+	private FieldValidators getValidators(final GroupsConfig groupscfg)
 			throws GroupsConfigurationException {
 		final FieldValidators.Builder b = FieldValidators.getBuilder(MAX_FIELD_SIZE);
-		for (final FieldValidatorConfiguration cfg: c.getFieldConfigurations()) {
-			final FieldValidatorFactory fac = Util.loadClassWithInterface(
-					cfg.getValidatorClass(), FieldValidatorFactory.class);
-			try {
-				b.withValidator(cfg.getField(), cfg.getFieldConfiguration(),
-						fac.getValidator(cfg.getValidatorConfiguration()));
-			} catch (IllegalParameterException e) {
-				throw new GroupsConfigurationException(String.format(
-						"Error building validator for field %s: %s",
-						cfg.getField().getName(), e.getMessage()), e);
-			}
+		for (final FieldValidatorConfiguration cfg: groupscfg.getFieldConfigurations()) {
+			withValidator(b, cfg, (f, c, v) -> b.withValidator(f, c, v));
+		}
+		for (final FieldValidatorConfiguration cfg: groupscfg.getUserFieldConfigurations()) {
+			withValidator(b, cfg, (f, c, v) -> b.withUserFieldValidator(f, c, v));
 		}
 		return b.build();
+	}
+	
+	private static interface TriConsumer<T, U, V> {
+		void accept(T t, U u, V v);
+	}
+
+	private void withValidator(
+			final FieldValidators.Builder b,
+			final FieldValidatorConfiguration cfg,
+			final TriConsumer<CustomField, FieldConfiguration, FieldValidator> consumer)
+			throws GroupsConfigurationException {
+		final FieldValidatorFactory fac = Util.loadClassWithInterface(
+				cfg.getValidatorClass(), FieldValidatorFactory.class);
+		try {
+			consumer.accept(cfg.getField(), cfg.getFieldConfiguration(),
+					fac.getValidator(cfg.getValidatorConfiguration()));
+		} catch (IllegalParameterException e) {
+			throw new GroupsConfigurationException(String.format(
+					"Error building validator for field %s: %s",
+					cfg.getField().getName(), e.getMessage()), e);
+		}
 	}
 
 	private GroupsStorage buildStorage(

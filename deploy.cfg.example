@@ -41,4 +41,10 @@ dont-trust-x-ip-headers=false
 #
 # field-somefield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
 # field-somefield-param-max-length=20
+#
+# User fields can also be configured:
+# field-user-title-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+# field-user-title-param-max-length=50
+# field-user-title-is-user-settable=true
+#
 # See the custom fields documentation in README.md for more information.

@@ -207,6 +207,11 @@ public class ServiceIntegrationTest {
 		sec.add("field-f1-is-numbered", "true");
 		sec.add("field-f1-param-max-length", "4");
 		sec.add("field-f2-validator", SimpleFieldValidatorFactory.class.getName());
+		//TODO MEMBERFIELDS test
+		sec.add("field-user-f1-validator", SimpleFieldValidatorFactory.class.getName());
+		sec.add("field-user-f1-is-numbered", "true");
+		sec.add("field-user-f1-param-max-length", "4");
+		sec.add("field-user-f2-validator", SimpleFieldValidatorFactory.class.getName());
 		
 		final Path deploy = Files.createTempFile(TEMP_DIR, "cli_test_deploy", ".cfg");
 		ini.store(deploy.toFile());
