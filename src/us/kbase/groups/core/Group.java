@@ -1,6 +1,5 @@
 package us.kbase.groups.core;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.exceptOnEmpty;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
@@ -128,8 +127,8 @@ public class Group {
 	 * @return true if the group contains the resource, false otherwise.
 	 */
 	public boolean containsResource(final ResourceType type, final ResourceDescriptor descriptor) {
-		checkNotNull(type, "type");
-		checkNotNull(descriptor, "descriptor");
+		requireNonNull(type, "type");
+		requireNonNull(descriptor, "descriptor");
 		return resources.containsKey(type) && descriptor.getAdministrativeID()
 				.equals(resources.get(type).get(descriptor.getResourceID()));
 	}
@@ -140,8 +139,8 @@ public class Group {
 	 * @return true if the group contains the resource, false otherwise.
 	 */
 	public boolean containsResource(final ResourceType type, final ResourceID resourceID) {
-		checkNotNull(type, "type");
-		checkNotNull(resourceID, "resourceID");
+		requireNonNull(type, "type");
+		requireNonNull(resourceID, "resourceID");
 		return resources.containsKey(type) && resources.get(type).containsKey(resourceID);
 	}
 	
@@ -151,8 +150,8 @@ public class Group {
 	 * @return the resource.
 	 */
 	public ResourceDescriptor getResource(final ResourceType type, final ResourceID resourceID) {
-		checkNotNull(type, "type");
-		checkNotNull(resourceID, "resourceID");
+		requireNonNull(type, "type");
+		requireNonNull(resourceID, "resourceID");
 		if (!containsResource(type, resourceID)) {
 			throw new IllegalArgumentException(String.format("No such resource %s %s",
 					type.getName(), resourceID.getName()));
@@ -193,7 +192,7 @@ public class Group {
 	 * @return true if the user is a group administrator, false otherwise.
 	 */
 	public boolean isAdministrator(final UserName user) {
-		checkNotNull(user, "user");
+		requireNonNull(user, "user");
 		return owner.equals(user) || admins.contains(user);
 	}
 	
@@ -372,15 +371,12 @@ public class Group {
 				final GroupName name,
 				final GroupUser owner,
 				final CreateAndModTimes times) {
-			checkNotNull(id, "id");
-			checkNotNull(name, "name");
-			checkNotNull(owner, "owner");
-			checkNotNull(times, "times");
-			this.groupID = id;
-			this.groupName = name;
+			requireNonNull(owner, "owner");
+			this.groupID = requireNonNull(id, "id");
+			this.groupName = requireNonNull(name, "name");
 			this.owner = owner.getName();
 			this.allMembers.put(owner.getName(), owner);
-			this.times = times;
+			this.times = requireNonNull(times, "times");
 		}
 		
 		/** Add a group description. The maximum description size is
@@ -430,7 +426,7 @@ public class Group {
 		 * or an member.
 		 */
 		public Builder withAdministrator(final GroupUser admin) {
-			checkNotNull(admin, "admin");
+			requireNonNull(admin, "admin");
 			addMember(admin);
 			this.admins.add(admin.getName());
 			return this;
@@ -444,8 +440,8 @@ public class Group {
 		 * @return this builder.
 		 */
 		public Builder withResource(final ResourceType type, final ResourceDescriptor descriptor) {
-			checkNotNull(type, "type");
-			checkNotNull(descriptor, "descriptor");
+			requireNonNull(type, "type");
+			requireNonNull(descriptor, "descriptor");
 			if (!resources.containsKey(type)) {
 				resources.put(type, new HashMap<>());
 			}
@@ -459,7 +455,7 @@ public class Group {
 		 * @return this builder.
 		 */
 		public Builder withCustomField(final NumberedCustomField field, final String value) {
-			checkNotNull(field, "field");
+			requireNonNull(field, "field");
 			exceptOnEmpty(value, "value");
 			// TODO CODE limit on value size?
 			customFields.put(field, value);

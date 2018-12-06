@@ -12,8 +12,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeSet;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -36,6 +34,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
@@ -312,19 +311,19 @@ public class GroupsAPI {
 		groups.removeMember(getToken(token, true), new GroupID(groupID), new UserName(member));
 	}
 
+	//TODO MEMBERFIELDS update docs for new structure
 	private Map<String, Object> toGroupJSON(final GroupView g) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
 		ret.put(Fields.GROUP_NAME, g.getGroupName().getName());
-		ret.put(Fields.GROUP_OWNER, g.getOwner().getName());
-		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g));
+		ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner())));
+		ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g.getCustomFields()));
 		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
 		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
 		if (g.isStandardView()) {
 			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));
-			ret.put(Fields.GROUP_MEMBERS, toSortedStringList(g.getMembers(), u -> u.getName()));
-			ret.put(Fields.GROUP_ADMINS, toSortedStringList(
-					g.getAdministrators(), u -> u.getName()));
+			ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));
+			ret.put(Fields.GROUP_ADMINS, toMemberList(g.getAdministrators(), g));
 			final Map<String, Object> resources = new HashMap<>();
 			ret.put(Fields.GROUP_RESOURCES, resources);
 			for (final ResourceType t: g.getResourceTypes()) {
@@ -332,6 +331,22 @@ public class GroupsAPI {
 			}
 		}
 		return ret;
+	}
+	
+	
+	private Map<String, Object> toUserJson(final GroupUser user) {
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
+		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, user.getJoinDate().toEpochMilli());
+		ret.put(Fields.GROUP_MEMBER_CUSTOM_FIELDS, getCustomFields(user.getCustomFields()));
+		return ret;
+	}
+	
+	private List<Map<String, Object>> toMemberList(
+			final Collection<UserName> members,
+			final GroupView group) {
+		return members.stream().sorted().map(m -> toUserJson(group.getMember(m)))
+				.collect(Collectors.toList());
 	}
 
 	private List<Map<String, Object>> getResourceList(final ResourceInformationSet resourceInfo) {
@@ -345,9 +360,9 @@ public class GroupsAPI {
 		return rlist;
 	}
 	
-	private Map<String, String> getCustomFields(final GroupView g) {
-		return g.getCustomFields().keySet().stream().collect(Collectors.toMap(
-				k -> k.getField(), k -> g.getCustomFields().get(k)));
+	private Map<String, String> getCustomFields(final Map<NumberedCustomField, String> fields) {
+		return fields.keySet().stream().collect(Collectors.toMap(
+				k -> k.getField(), k -> fields.get(k)));
 	}
 
 	// may want to subclass the descriptors to allow for resource type specific sorts
@@ -453,13 +468,6 @@ public class GroupsAPI {
 		return ret;
 	}
 
-	private <T> List<String> toSortedStringList(
-			final Collection<T> items,
-			final Function<T, String> convert) {
-		return new TreeSet<>(items).stream().map(n -> convert.apply(n))
-				.collect(Collectors.toList());
-	}
-	
 	private void checkIncomingJson(final IncomingJSON json)
 			throws IllegalParameterException, MissingParameterException {
 		if (json == null) {
