@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static us.kbase.test.groups.TestCommon.set;
 
 import org.junit.Test;
@@ -105,12 +106,16 @@ public class FieldValidatorsTest {
 		final FieldValidator v2 = mock(FieldValidator.class);
 		final FieldValidator v3 = mock(FieldValidator.class);
 		final FieldValidator v4 = mock(FieldValidator.class);
+		final FieldValidator v5 = mock(FieldValidator.class);
+		final FieldValidator v6 = mock(FieldValidator.class);
 		final FieldValidators vs = FieldValidators.getBuilder(12)
 				.withValidator(new CustomField("foo"), MTCFG, v1)
 				.withValidator(
 						new CustomField("bar"),
 						FieldConfiguration.getBuilder().withNullableIsNumberedField(true).build(),
 						v2)
+				.withValidator(new CustomField("baz"), MTCFG, v5)
+				.withUserFieldValidator(new CustomField("foo"), MTCFG, v6)
 				.withUserFieldValidator(new CustomField("baz"), MTCFG, v3)
 				.withUserFieldValidator(
 						new CustomField("bat"),
@@ -127,6 +132,8 @@ public class FieldValidatorsTest {
 		verify(v2).validate("my other 𐍆al");
 		verify(v3).validate("my val2");
 		verify(v4).validate("my 2ther 𐍆al");
+		verifyZeroInteractions(v5);
+		verifyZeroInteractions(v6);
 	}
 	
 	@Test
@@ -191,7 +198,7 @@ public class FieldValidatorsTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 		try {
-			v.getConfiguration(f);
+			v.getUserFieldConfiguration(f);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
