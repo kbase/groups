@@ -63,7 +63,6 @@ public class FieldConfigurationTest {
 		assertThat("incorrect user set", c.isUserSettable(), is(false));
 	}
 	
-	
 	@Test
 	public void buildMaximal() throws Exception {
 		final FieldConfiguration c = FieldConfiguration.getBuilder()

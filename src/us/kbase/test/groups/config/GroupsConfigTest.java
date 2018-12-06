@@ -99,6 +99,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
+		assertThat("incorrect user fields", cfg.getUserFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -127,12 +128,30 @@ public class GroupsConfigTest {
 					 "field-bar-is-numbered  =   nope  \n" +
 					 "field-bar-is-public  =   nope  \n" +
 					 "field-bar-show-in-list  =   true  \n" +
+					 // this shows up in the config, but not worth the effort to fix for now
+					 "field-bar-is-user-settable  =   true  \n" +
 					 "field-bar-param-p1   =    p1val  \n" +
 					 "field-bar-param-p2   =    p2val  \n" +
 					 "field-baz-validator  =   bazvalclass  \n" +
 					 "field-baz-is-numbered  =   true  \n" +
 					 "field-baz-is-public  =   true  \n" +
 					 "field-baz-show-in-list  =   nope  \n" +
+					 "field-baz-is-user-settable  =   nope  \n" +
+					 "field-user-validator  =   uservalclass  \n" +
+					 "field-user-param-p1  =   up1val  \n" +
+					 "field-user-foo-validator    =    userfoovalclass  \n" +
+					 "field-user-bar-validator    =    userbarvalclass   \n" +
+					 "field-user-bar-is-numbered  =   true  \n" +
+					 "field-user-bar-is-public  =   true  \n" +
+					 "field-user-bar-show-in-list  =   nope  \n" +
+					 "field-user-bar-is-user-settable  =   nope  \n" +
+					 "field-user-bar-param-p1   =    userp1val  \n" +
+					 "field-user-bar-param-p2   =    userp2val  \n" +
+					 "field-user-baz-validator  =   userbazvalclass  \n" +
+					 "field-user-baz-is-numbered  =   nope  \n" +
+					 "field-user-baz-is-public  =   nope  \n" +
+					 "field-user-baz-show-in-list  =   true  \n" +
+					 "field-user-baz-is-user-settable  =   true  \n" +
 					 "allow-insecure-urls=true1\n" +
 					 "dont-trust-x-ip-headers=true1\n")
 					.getBytes()));
@@ -163,12 +182,33 @@ public class GroupsConfigTest {
 						.withConfigurationEntry("p2", "p2val")
 						.withFieldConfiguration(FieldConfiguration.getBuilder()
 								.withNullableIsMinimalViewField(true)
+								.withNullableIsUserSettable(true)
 								.build())
 						.build(),
 				FieldValidatorConfiguration.getBuilder(new CustomField("baz"), "bazvalclass")
 						.withFieldConfiguration(FieldConfiguration.getBuilder()
 								.withNullableIsNumberedField(true)
 								.withNullableIsPublicField(true)
+								.build())
+						.build(),
+				FieldValidatorConfiguration.getBuilder(new CustomField("user"), "uservalclass")
+						.withConfigurationEntry("p1", "up1val")
+						.build())));
+		assertThat("incorrect fields", cfg.getUserFieldConfigurations(), is(set(
+				FieldValidatorConfiguration.getBuilder(new CustomField("foo"), "userfoovalclass")
+						.build(),
+				FieldValidatorConfiguration.getBuilder(new CustomField("bar"), "userbarvalclass")
+						.withConfigurationEntry("p1", "userp1val")
+						.withConfigurationEntry("p2", "userp2val")
+						.withFieldConfiguration(FieldConfiguration.getBuilder()
+								.withNullableIsNumberedField(true)
+								.withNullableIsPublicField(true)
+								.build())
+						.build(),
+				FieldValidatorConfiguration.getBuilder(new CustomField("baz"), "userbazvalclass")
+						.withFieldConfiguration(FieldConfiguration.getBuilder()
+								.withNullableIsMinimalViewField(true)
+								.withNullableIsUserSettable(true)
 								.build())
 						.build())));
 		testLogger(cfg.getLogger(), false);
@@ -229,6 +269,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
+		assertThat("incorrect user fields", cfg.getUserFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -261,6 +302,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(false));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(false));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
+		assertThat("incorrect user fields", cfg.getUserFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -298,6 +340,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect allow insecure", cfg.isAllowInsecureURLs(), is(true));
 		assertThat("incorrect ignore ip headers", cfg.isIgnoreIPHeaders(), is(true));
 		assertThat("incorrect fields", cfg.getFieldConfigurations(), is(set()));
+		assertThat("incorrect user fields", cfg.getUserFieldConfigurations(), is(set()));
 		testLogger(cfg.getLogger(), true);
 	}
 	
@@ -698,20 +741,20 @@ public class GroupsConfigTest {
 	}
 	
 	@Test
-	public void configFailBadFieldKey() throws Throwable {
+	public void configFailNoFieldNameForValidator() throws Throwable {
 		failConfigBoth(
 				"[groups]\n" +
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"notifier-factory=     factoryclass   \n" + 
-				"field-foo=bleah\n" + 
+				"field-validator=bleah\n" + 
 				"auth-url=https://auth.com\n" +
 				"catalog-url=     http://cat.com       \n" +
 				"workspace-admin-token=token\n" +
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
 						"Error building configuration for field in section groups of config " +
-						"file some file: Unknown field parameter field-foo"));
+						"file some file: Illegal validator key field-validator"));
 	}
 	
 	@Test
@@ -721,14 +764,64 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"notifier-factory=     factoryclass   \n" + 
-				"field-    \t   -foo=bleah\n" + 
+				"field-    \t   -validator=bleah\n" + 
 				"auth-url=https://auth.com\n" +
 				"catalog-url=     http://cat.com       \n" +
 				"workspace-admin-token=token\n" +
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
 						"Error building configuration for field in section groups of config " +
-						"file some file: Missing field name from parameter field-    \t   -foo"));
+						"file some file: Missing field name from parameter " +
+						"field-    \t   -validator"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-user-    \t   -validator=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: Missing field name from parameter " +
+						"field-user-    \t   -validator"));
+	}
+	
+	@Test
+	public void configFailBadFieldKeyTooManyInSplit() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-user-my-field-validator=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: Illegal validator key field-user-my-field-validator"));
+	}
+	
+	@Test
+	public void configFailBadUserFieldKeyNoUser() throws Throwable {
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-youser-myfield-validator=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: Illegal validator key field-youser-myfield-validator"));
 	}
 	
 	@Test
@@ -747,6 +840,21 @@ public class GroupsConfigTest {
 						"Error building configuration for field in section groups of config " +
 						"file some file: 30001 Illegal input parameter: " +
 						"Illegal character in custom field foo_1: _"));
+		
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-user-foo_1-validator=bleah\n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration for field in section groups of config " +
+						"file some file: 30001 Illegal input parameter: " +
+						"Illegal character in custom field foo_1: _"));
 	}
 	
 	@Test
@@ -756,6 +864,7 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"notifier-factory=     factoryclass   \n" + 
+				"field-foo-validator=       \t    \n" +
 				"field-foo-param-p1=   p2    \n" + 
 				"auth-url=https://auth.com\n" +
 				"catalog-url=     http://cat.com       \n" +
@@ -770,14 +879,14 @@ public class GroupsConfigTest {
 				"mongo-host=foo\n" +
 				"mongo-db=bar\n" +
 				"notifier-factory=     factoryclass   \n" + 
-				"field-foo-validator=       \t    \n" +
+				"field-user-foo-validator=       \t    \n" +
 				"field-foo-param-p1=   p2    \n" + 
 				"auth-url=https://auth.com\n" +
 				"catalog-url=     http://cat.com       \n" +
 				"workspace-admin-token=token\n" +
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
-						"Required parameter field-foo-validator not provided in " +
+						"Required parameter field-user-foo-validator not provided in " +
 						"configuration file some file, section groups"));
 	}
 	
@@ -797,6 +906,20 @@ public class GroupsConfigTest {
 				new GroupsConfigurationException(
 						"Error building configuration in section groups of " +
 						"config file some file: Illegal parameter field-foo-param-"));
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-user-foo-validator=    val    \n" +
+				"field-user-foo-param-=   p2    \n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Error building configuration in section groups of " +
+						"config file some file: Illegal parameter field-user-foo-param-"));
 	}
 	
 	@Test
@@ -814,6 +937,20 @@ public class GroupsConfigTest {
 				"workspace-url=http://foo.com\n",
 				new GroupsConfigurationException(
 						"Parameter field-foo-param-p1 in section groups of configfile some " +
+						"file has no value"));
+		failConfigBoth(
+				"[groups]\n" +
+				"mongo-host=foo\n" +
+				"mongo-db=bar\n" +
+				"notifier-factory=     factoryclass   \n" + 
+				"field-user-foo-validator=    val    \n" +
+				"field-user-foo-param-p1=   \t    \n" + 
+				"auth-url=https://auth.com\n" +
+				"catalog-url=     http://cat.com       \n" +
+				"workspace-admin-token=token\n" +
+				"workspace-url=http://foo.com\n",
+				new GroupsConfigurationException(
+						"Parameter field-user-foo-param-p1 in section groups of configfile some " +
 						"file has no value"));
 	}
 	
