@@ -72,15 +72,16 @@ public class GroupsAPITest {
 		return Optional.ofNullable(item);
 	}
 
-	//TODO MEMBERFIELDS expose in full group view
-	
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
 	static {
 		try {
 			GROUP_MIN = Group.getBuilder(
 					new GroupID("id"), new GroupName("name"),
-					GroupUser.getBuilder(new UserName("u"), inst(10000)).build(),
+					GroupUser.getBuilder(new UserName("u"), inst(10000))
+							.withCustomField(new NumberedCustomField("f-1"), "val")
+							.withCustomField(new NumberedCustomField("something"), "nothing")
+							.build(),
 					new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 					.build();
 			GROUP_MAX = Group.getBuilder(
@@ -89,11 +90,15 @@ public class GroupsAPITest {
 					new CreateAndModTimes(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 					.withDescription("desc")
-					.withMember(GroupUser.getBuilder(new UserName("foo"), inst(20000)).build())
-					.withMember(GroupUser.getBuilder(new UserName("bar"), inst(20000)).build())
-					.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(20000))
+					.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
+							.withCustomField(new NumberedCustomField("whee"), "whoo")
 							.build())
-					.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(20000))
+					.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
+					.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
+							.build())
+					.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
+							.withCustomField(new NumberedCustomField("yay-6"), "boo")
+							.withCustomField(new NumberedCustomField("bar"), "baz")
 							.build())
 					.withCustomField(new NumberedCustomField("field-1"), "my val")
 					.withCustomField(new NumberedCustomField("otherfield"), "fieldval")
@@ -107,7 +112,10 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("name", "name")
-			.with("owner", "u")
+			.with("owner", ImmutableMap.of(
+					"name", "u",
+					"joined", 10000L,
+					"custom", ImmutableMap.of("f-1", "val", "something", "nothing")))
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
 			.with("description", null)
@@ -121,7 +129,10 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("name", "name")
-			.with("owner", "u")
+			.with("owner", ImmutableMap.of(
+					"name", "u",
+					"joined", 10000L,
+					"custom", ImmutableMap.of("f-1", "val", "something", "nothing")))
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
 			.with("custom", Collections.emptyMap())
@@ -131,12 +142,33 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
-			.with("owner", "u2")
+			.with("owner", ImmutableMap.of(
+					"name", "u2",
+					"joined", 20000L,
+					"custom", Collections.emptyMap()))
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("description", "desc")
-			.with("members", Arrays.asList("bar", "foo"))
-			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("members", Arrays.asList(
+					ImmutableMap.of(
+							"name", "bar",
+							"joined", 40000L,
+							"custom", Collections.emptyMap()),
+					ImmutableMap.of(
+							"name", "foo",
+							"joined", 650000L,
+							"custom", ImmutableMap.of("whee", "whoo"))
+					))
+			.with("admins", Arrays.asList(
+					ImmutableMap.of(
+							"name", "whee",
+							"joined", 220000L,
+							"custom", Collections.emptyMap()),
+					ImmutableMap.of(
+							"name", "whoo",
+							"joined", 760000L,
+							"custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+					))
 			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 			.build();
@@ -145,14 +177,26 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
-			.with("owner", "u2")
+			.with("owner", ImmutableMap.of(
+					"name", "u2",
+					"joined", 20000L,
+					"custom", Collections.emptyMap()))
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("description", "desc")
 			.with("members", Collections.emptyList())
-			.with("admins", Arrays.asList("whee", "whoo"))
+			.with("admins", Arrays.asList(
+					ImmutableMap.of(
+							"name", "whee",
+							"joined", 220000L,
+							"custom", Collections.emptyMap()),
+					ImmutableMap.of(
+							"name", "whoo",
+							"joined", 760000L,
+							"custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+					))
 			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("otherfield", "fieldval"))
 			.build();
@@ -161,7 +205,10 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("name", "name2")
-			.with("owner", "u2")
+			.with("owner", ImmutableMap.of(
+					"name", "u2",
+					"joined", 20000L,
+					"custom", Collections.emptyMap()))
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("custom", ImmutableMap.of("field-1", "my val"))

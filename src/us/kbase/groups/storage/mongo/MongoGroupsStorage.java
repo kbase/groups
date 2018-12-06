@@ -563,15 +563,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final Group.Builder b = Group.getBuilder(
 					new GroupID(grp.getString(Fields.GROUP_ID)),
 					new GroupName(grp.getString(Fields.GROUP_NAME)),
-					members.get(owner),
+					members.remove(owner),
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
-			members.remove(owner);
 			getUserSet(grp, Fields.GROUP_ADMINS).stream().forEach(a ->
-					{b.withAdministrator(members.get(a));
-					 members.remove(a);});
+					b.withAdministrator(members.remove(a)));
 			members.values().stream().forEach(m -> b.withMember(m));
 			@SuppressWarnings("unchecked")
 			final Map<String, List<Document>> resources =

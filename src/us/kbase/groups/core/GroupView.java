@@ -20,6 +20,8 @@ import us.kbase.groups.core.resource.ResourceType;
  *
  */
 public class GroupView {
+	
+	// TODO MEMBERFIELDS remove non public / minimal fields
 
 	// group fields
 	private final GroupID groupID; // all views
@@ -31,6 +33,12 @@ public class GroupView {
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
 	private final Optional<String> description; // standard
+	
+	// standard, but contents depend on view. 
+	// minimal - owner only
+	// not member - owner & admins
+	// standard - all
+	private final Map<UserName, GroupUser> userInfo = new HashMap<>();
 
 	// additional fields. standard - contents should change based on user
 	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
@@ -62,13 +70,18 @@ public class GroupView {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
 			description = Optional.empty();
+			userInfo.put(owner, group.getMember(owner));
 		} else {
 			admins = group.getAdministrators();
 			description = group.getDescription();
 			if (!isMember) {
+				group.getAdministratorsAndOwner().stream()
+						.forEach(u -> userInfo.put(u, group.getMember(u)));
 				members = getEmptyImmutableSet();
 			} else {
 				members = group.getMembers();
+				group.getAllMembers().stream()
+						.forEach(u -> userInfo.put(u, group.getMember(u)));
 			}
 		}
 	}
@@ -187,6 +200,17 @@ public class GroupView {
 		}
 		return resourceInfo.get(type);
 	}
+	
+	/** Get a member's detailed information.
+	 * @param user the member.
+	 * @return the member's info.
+	 */
+	public GroupUser getMember(final UserName user) {
+		if (!userInfo.containsKey(user)) {
+			throw new IllegalArgumentException("No such member");
+		}
+		return userInfo.get(user);
+	}
 
 	@Override
 	public int hashCode() {
@@ -199,11 +223,12 @@ public class GroupView {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + (isMember ? 1231 : 1237);
+		result = prime * result + (isStandardView ? 1231 : 1237);
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
-		result = prime * result + (isStandardView ? 1231 : 1237);
+		result = prime * result + ((userInfo == null) ? 0 : userInfo.hashCode());
 		return result;
 	}
 
@@ -264,6 +289,9 @@ public class GroupView {
 		if (isMember != other.isMember) {
 			return false;
 		}
+		if (isStandardView != other.isStandardView) {
+			return false;
+		}
 		if (members == null) {
 			if (other.members != null) {
 				return false;
@@ -292,7 +320,11 @@ public class GroupView {
 		} else if (!resourceInfo.equals(other.resourceInfo)) {
 			return false;
 		}
-		if (isStandardView != other.isStandardView) {
+		if (userInfo == null) {
+			if (other.userInfo != null) {
+				return false;
+			}
+		} else if (!userInfo.equals(other.userInfo)) {
 			return false;
 		}
 		return true;

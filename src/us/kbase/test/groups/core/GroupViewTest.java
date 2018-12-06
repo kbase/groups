@@ -40,16 +40,20 @@ public class GroupViewTest {
 			final ResourceType cat = new ResourceType("catalogmethod");
 			GROUP = Group.getBuilder(
 					new GroupID("id"), new GroupName("name"),
-					GroupUser.getBuilder(new UserName("user"), inst(10000)).build(),
+					GroupUser.getBuilder(new UserName("user"), inst(10000))
+							.withCustomField(new NumberedCustomField("f-1"), "val")
+							.build(),
 					new CreateAndModTimes(
 							Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-					.withAdministrator(GroupUser.getBuilder(new UserName("a1"), inst(20000))
+					.withAdministrator(GroupUser.getBuilder(new UserName("a1"), inst(60000))
+							.withCustomField(new NumberedCustomField("admin"), "yar")
 							.build())
-					.withAdministrator(GroupUser.getBuilder(new UserName("a2"), inst(20000))
+					.withAdministrator(GroupUser.getBuilder(new UserName("a2"), inst(30000))
 							.build())
-					.withMember(GroupUser.getBuilder(new UserName("m1"), inst(20000))
+					.withMember(GroupUser.getBuilder(new UserName("m1"), inst(75000))
 							.build())
-					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(20000))
+					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(84000))
+							.withCustomField(new NumberedCustomField("user-6"), "yay")
 							.build())
 					.withDescription("desc")
 					.withResource(ws, new ResourceDescriptor(new ResourceID("45")))
@@ -85,6 +89,15 @@ public class GroupViewTest {
 		assertThat("incorrect view type", gv.isMember(), is(false));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
+		assertThat("incorrect user", gv.getMember(new UserName("user")),
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
+							.withCustomField(new NumberedCustomField("f-1"), "val")
+							.build()));
+		
+		getMemberFail(gv, new UserName("a1"));
+		getMemberFail(gv, new UserName("a2"));
+		getMemberFail(gv, new UserName("m1"));
+		getMemberFail(gv, new UserName("m2"));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -129,6 +142,20 @@ public class GroupViewTest {
 				is(ResourceInformationSet.getBuilder(null)
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
+		assertThat("incorrect user", gv.getMember(new UserName("user")),
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
+							.withCustomField(new NumberedCustomField("f-1"), "val")
+							.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a1")),
+				is(GroupUser.getBuilder(new UserName("a1"), inst(60000))
+						.withCustomField(new NumberedCustomField("admin"), "yar")
+						.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a2")),
+				is(GroupUser.getBuilder(new UserName("a2"), inst(30000))
+						.build()));
+		
+		getMemberFail(gv, new UserName("m1"));
+		getMemberFail(gv, new UserName("m2"));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -176,6 +203,24 @@ public class GroupViewTest {
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val",
 				new NumberedCustomField("field2"), "val2")));
+		assertThat("incorrect user", gv.getMember(new UserName("user")),
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
+							.withCustomField(new NumberedCustomField("f-1"), "val")
+							.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a1")),
+				is(GroupUser.getBuilder(new UserName("a1"), inst(60000))
+						.withCustomField(new NumberedCustomField("admin"), "yar")
+						.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a2")),
+				is(GroupUser.getBuilder(new UserName("a2"), inst(30000))
+						.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("m1")),
+				is(GroupUser.getBuilder(new UserName("m1"), inst(75000))
+						.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("m2")),
+				is(GroupUser.getBuilder(new UserName("m2"), inst(84000))
+						.withCustomField(new NumberedCustomField("user-6"), "yay")
+						.build()));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -334,6 +379,39 @@ public class GroupViewTest {
 			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
 					"No such resource type cat"));
 		}
+	}
+	
+	@Test
+	public void getMemberFail() throws Exception {
+		final GroupView.Builder b = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("i"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("n"), inst(1)).build(),
+				new CreateAndModTimes(inst(1)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("a"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("m"), inst(1)).build())
+				.build(),
+				new UserName("a"));
 		
+		getMemberFail(b.build(), null, new IllegalArgumentException("No such member"));
+		getMemberFail(b.build(), new UserName("m"),
+				new IllegalArgumentException("No such member"));
+		getMemberFail(b.withStandardView(true).build(), new UserName("o"),
+				new IllegalArgumentException("No such member"));
+	}
+	
+	private void getMemberFail(final GroupView view, final UserName member) {
+		getMemberFail(view, member, new IllegalArgumentException("No such member"));
+	}
+	
+	private void getMemberFail(
+			final GroupView g,
+			final UserName member,
+			final Exception expected) {
+		try {
+			g.getMember(member);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 }

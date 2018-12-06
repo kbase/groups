@@ -544,8 +544,14 @@ public class ServiceIntegrationTest {
 		TestCommon.assertCloseToNow(create);
 		TestCommon.assertCloseToNow(mod);
 		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> owner = (Map<String, Object>) g.get("owner");
+		final long join = (long) owner.get("joined");
+		owner.remove("joined");
+		TestCommon.assertCloseToNow(join);
+		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
-				.with("owner", "user1")
+				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
 				.with("members", Collections.emptyList())
 				.with("name", name)
 				.with("description", desc)
