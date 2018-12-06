@@ -35,6 +35,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
@@ -95,6 +96,10 @@ public class GroupsTest {
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
+	}
+	
+	private GroupUser toGUser(String username) throws Exception {
+		return GroupUser.getBuilder(new UserName(username), inst(10000)).build();
 	}
 	
 	private static TestMocks initTestMocks() throws Exception {
@@ -204,7 +209,7 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("foo"));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
@@ -214,12 +219,12 @@ public class GroupsTest {
 		verifyZeroInteractions(mocks.validators);
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
 		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build(), new UserName("foo"))
 				.withStandardView(true)
@@ -235,7 +240,7 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("foo"));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
@@ -256,14 +261,14 @@ public class GroupsTest {
 		verifyNoMoreInteractions(mocks.validators);
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
@@ -334,7 +339,7 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("foo"));
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		doThrow(new GroupExistsException("bar")).when(mocks.storage).createGroup(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
@@ -358,7 +363,7 @@ public class GroupsTest {
 						"Just created a group and it's already gone. Something's really broken"));
 		
 		verify(mocks.storage).createGroup(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 	}
@@ -403,9 +408,9 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("toketoke"))).thenReturn(user);
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withAdministrator(new UserName("admin"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(30000));
 		
@@ -483,10 +488,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("toketoke"))).thenReturn(new UserName("mem"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withAdministrator(new UserName("admin"))
-				.withMember(new UserName("mem"))
+				.withAdministrator(toGUser("admin"))
+				.withMember(toGUser("mem"))
 				.build());
 		
 		failUpdateGroup(mocks.groups, new Token("toketoke"),
@@ -514,16 +519,16 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.build());
 
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.build(), null)
@@ -540,10 +545,10 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -567,7 +572,7 @@ public class GroupsTest {
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
@@ -590,10 +595,10 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withMember(new UserName("baz"))
-				.withAdministrator(new UserName("whoo"))
+				.withMember(toGUser("baz"))
+				.withAdministrator(toGUser("whoo"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -621,9 +626,9 @@ public class GroupsTest {
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withAdministrator(new UserName("whoo"))
+				.withAdministrator(toGUser("whoo"))
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), new UserName("whee"))
 				.withStandardView(true)
@@ -644,10 +649,10 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -698,12 +703,12 @@ public class GroupsTest {
 				new ResourceID("34"), inst(5600));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withDescription("other desc")
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.build(), new UserName("baz"))
 				.withStandardView(true)
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
@@ -734,7 +739,7 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		when(mocks.userHandler.getUser(new Token("token")))
@@ -750,9 +755,9 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspyce"),
 						new ResourceDescriptor(new ResourceID("not a ws id")))
 				.build());
@@ -767,9 +772,9 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("foo"),
+				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("baz"))
+				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("not a ws id")))
 				.build());
@@ -846,11 +851,11 @@ public class GroupsTest {
 						getGroupsBuilder()
 								.build(),
 						Group.getBuilder(
-								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 								.withDescription("desc")
-								.withMember(new UserName("whee"))
-								.withAdministrator(new UserName("whoo"))
+								.withMember(toGUser("whee"))
+								.withAdministrator(toGUser("whoo"))
 								.build()
 						));
 		
@@ -862,10 +867,10 @@ public class GroupsTest {
 								.build(), null)
 								.build(),
 						GroupView.getBuilder(Group.getBuilder(
-								new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 								.withDescription("desc")
-								.withAdministrator(new UserName("whoo"))
+								.withAdministrator(toGUser("whoo"))
 								.build(), null)
 								.build())
 						));
@@ -934,11 +939,11 @@ public class GroupsTest {
 
 	private Group.Builder getGroupsBuilder() throws Exception {
 		return Group.getBuilder(
-				new GroupID("id1"), new GroupName("name1"), new UserName("u1"),
+				new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
 				new CreateAndModTimes(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withMember(new UserName("m1"))
-				.withAdministrator(new UserName("a1"));
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"));
 	}
 
 	@Test
@@ -958,10 +963,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("foo"));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -979,10 +984,10 @@ public class GroupsTest {
 		verify(mocks.notifs).notify(
 				set(new UserName("own")),
 				Group.getBuilder(
-						new GroupID("bar"), new GroupName("name"), new UserName("own"),
+						new GroupID("bar"), new GroupName("name"), toGUser("own"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
+						.withMember(toGUser("u1"))
+						.withMember(toGUser("u3"))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("bar"), new UserName("foo"),
@@ -1040,10 +1045,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failRequestGroupMembership(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1056,11 +1061,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failRequestGroupMembership(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1073,10 +1078,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("u3"));
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failRequestGroupMembership(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1104,11 +1109,11 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
 		when(mocks.userHandler.isValidUser(new UserName("foo"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -1128,11 +1133,11 @@ public class GroupsTest {
 		verify(mocks.notifs).notify(
 				Arrays.asList(new UserName("foo")),
 				Group.getBuilder(
-						new GroupID("bar"), new GroupName("name"), new UserName("own"),
+						new GroupID("bar"), new GroupName("name"), toGUser("own"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
-						.withAdministrator(new UserName("admin"))
+						.withMember(toGUser("u1"))
+						.withMember(toGUser("u3"))
+						.withAdministrator(toGUser("admin"))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("bar"), new UserName("admin"),
@@ -1209,11 +1214,11 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("notown"));
 		when(mocks.userHandler.isValidUser(new UserName("foo"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failInviteUserToGroup(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1228,10 +1233,10 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
 		when(mocks.userHandler.isValidUser(new UserName("u1"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failInviteUserToGroup(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1246,11 +1251,11 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("admin"));
 		when(mocks.userHandler.isValidUser(new UserName("admin"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failInviteUserToGroup(mocks.groups, new Token("token"), new GroupID("bar"),
@@ -1266,10 +1271,10 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
 		when(mocks.userHandler.isValidUser(new UserName("foo"))).thenReturn(true);
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), new UserName("own"),
+				new GroupID("bar"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(mocks.uuidGen.randomUUID()).thenReturn(id);
@@ -1469,11 +1474,11 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("87"), new UserName("wsadmin")))
 				.thenReturn(true);
@@ -1557,10 +1562,10 @@ public class GroupsTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1582,10 +1587,10 @@ public class GroupsTest {
 				.withResource(ResourceDescriptor.from(new UserName("invite")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1606,10 +1611,10 @@ public class GroupsTest {
 				.withResource(new ResourceDescriptor(new ResourceID("67")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -1631,11 +1636,11 @@ public class GroupsTest {
 				.withResource(new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("96"), new UserName("someuser")))
 				.thenReturn(false);
@@ -1659,11 +1664,11 @@ public class GroupsTest {
 				.withResource(new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("96"), new UserName("someuser")))
 				.thenThrow(new NoSuchResourceException("foo"));
@@ -1688,11 +1693,11 @@ public class GroupsTest {
 						new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.catHandler.isAdministrator(
 				new ResourceID("mod.meth"), new UserName("someuser")))
@@ -1718,11 +1723,11 @@ public class GroupsTest {
 				.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id), new RuntimeException(
@@ -1747,11 +1752,11 @@ public class GroupsTest {
 						new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failGetRequest(mocks.groups, new Token("token"), new RequestID(id), new RuntimeException(
@@ -2021,10 +2026,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.storage.getRequestsByGroup(
 				new GroupID("gid"), GetRequestsParams.getBuilder()
@@ -2049,10 +2054,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.storage.getRequestsByGroup(
 				new GroupID("gid"), GetRequestsParams.getBuilder()
@@ -2142,11 +2147,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("u1"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("u2"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("u2"))
 				.build());
 		
 		failGetRequestsForGroup(mocks.groups, new Token("token"), new GroupID("gid"),
@@ -2337,11 +2342,11 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.denied(new UserName(admin), reason))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("86"), new UserName("wsadmin")))
 				.thenReturn(true);
@@ -2400,10 +2405,10 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
 		
@@ -2498,10 +2503,10 @@ public class GroupsTest {
 						.withResource(ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2542,11 +2547,11 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.catHandler.isAdministrator(new ResourceID("foo.bar"), new UserName("notadmin")))
 				.thenReturn(false);
@@ -2573,10 +2578,10 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.canceled())
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2599,11 +2604,11 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("notadmin")))
 				.thenThrow(new NoSuchResourceException("foo"));
@@ -2629,11 +2634,11 @@ public class GroupsTest {
 								new ResourceID("mod.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.catHandler.isAdministrator(
 				new ResourceID("mod.meth"), new UserName("notadmin")))
@@ -2660,11 +2665,11 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id), new RuntimeException(
@@ -2690,11 +2695,11 @@ public class GroupsTest {
 								new ResourceID("mod.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failDenyRequest(mocks.groups, new Token("token"), new RequestID(id), new RuntimeException(
@@ -2729,8 +2734,9 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		acceptRequest(mocks, new UserName("own"),
 				set(new UserName("user"), new UserName("admin"), new UserName("a3")), b -> b);
-
-		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("user"), inst(12000));
+		
+		final GroupUser u = GroupUser.getBuilder(new UserName("user"), inst(12000)).build();
+		verify(mocks.storage).addMember(new GroupID("gid"), u, inst(12000));
 	}
 	
 	@Test
@@ -2741,7 +2747,8 @@ public class GroupsTest {
 				b -> b.withType(RequestType.INVITE)
 						.withResource(ResourceDescriptor.from(new UserName("target"))));
 
-		verify(mocks.storage).addMember(new GroupID("gid"), new UserName("target"), inst(12000));
+		final GroupUser u = GroupUser.getBuilder(new UserName("target"), inst(12000)).build();
+		verify(mocks.storage).addMember(new GroupID("gid"), u, inst(12000));
 	}
 	
 	@Test
@@ -2813,12 +2820,12 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.accepted(tokenUser))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(12000), inst(15000));
 		
@@ -2874,10 +2881,10 @@ public class GroupsTest {
 						.withResource(ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2917,10 +2924,10 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("55"), new UserName("notadmin")))
 				.thenReturn(false);
@@ -2945,10 +2952,10 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.expired())
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -2971,15 +2978,16 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
+		final GroupUser u = GroupUser.getBuilder(new UserName("user"), inst(14000)).build();
 		doThrow(new UserIsMemberException("you silly")).when(mocks.storage)
-				.addMember(new GroupID("gid"), new UserName("user"), inst(14000));
+				.addMember(new GroupID("gid"), u, inst(14000));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new UserIsMemberException("you silly"));
@@ -3000,15 +3008,16 @@ public class GroupsTest {
 						.withResource(ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
+		final GroupUser u = GroupUser.getBuilder(new UserName("target"), inst(14000)).build();
 		doThrow(new NoSuchGroupException("gid")).when(mocks.storage)
-				.addMember(new GroupID("gid"), new UserName("target"), inst(14000));
+				.addMember(new GroupID("gid"), u, inst(14000));
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
 				new RuntimeException(
@@ -3030,12 +3039,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.wsHandler.getAdministrators(new ResourceID("56"))).thenThrow(
 				new NoSuchResourceException("56"));
@@ -3061,12 +3070,12 @@ public class GroupsTest {
 								new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.catHandler.isAdministrator(new ResourceID("md.meth"), new UserName("catadmin")))
 				.thenThrow(new NoSuchResourceException("md.meth"));
@@ -3090,12 +3099,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.wsHandler.getAdministrators(new ResourceID("56"))).thenReturn(
 				set(new UserName("u1"), new UserName("u2")));
@@ -3127,12 +3136,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("4")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.wsHandler.getAdministrators(new ResourceID("4"))).thenThrow(
 				new IllegalResourceIDException("foo"));
@@ -3160,12 +3169,12 @@ public class GroupsTest {
 								new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		when(mocks.catHandler.isAdministrator(new ResourceID("md.meth"), new UserName("catadmin")))
 				.thenThrow(new IllegalResourceIDException("foo"));
@@ -3190,12 +3199,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3220,12 +3229,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("4")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3249,12 +3258,12 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3281,12 +3290,12 @@ public class GroupsTest {
 								new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("a3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("a3"))
 				.build());
 		
 		failAcceptRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3328,11 +3337,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(user);
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("user"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("user"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(12000));
 		
@@ -3360,10 +3369,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("someuser"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("user"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("user"))
+				.withMember(toGUser("u3"))
 				.build());
 		
 		failRemoveMember(mocks.groups, new Token("token"), new GroupID("gid"), new UserName("own"),
@@ -3376,10 +3385,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("user"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("user"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(5600));
 		doThrow(new NoSuchUserException("Nope.")).when(mocks.storage)
@@ -3409,10 +3418,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
@@ -3440,11 +3449,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
@@ -3457,11 +3466,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u2"),
@@ -3474,11 +3483,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(14000));
 		
@@ -3518,10 +3527,10 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName(user));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withAdministrator(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withAdministrator(toGUser("u3"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(45000));
 		
@@ -3549,11 +3558,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withAdministrator(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withAdministrator(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failDemoteAdmin(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
@@ -3566,11 +3575,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(3));
 		
@@ -3602,12 +3611,12 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
-				.withAdministrator(new UserName("admin2"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.withAdministrator(toGUser("admin2"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3643,11 +3652,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("catadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("mod.meth")))
 				.thenReturn(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
@@ -3674,11 +3683,11 @@ public class GroupsTest {
 		verify(mocks.notifs).notify(
 				set(new UserName("own"), new UserName("admin")),
 				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("own"),
+						new GroupID("gid"), new GroupName("name"), toGUser("own"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
-						.withAdministrator(new UserName("admin"))
+						.withMember(toGUser("u1"))
+						.withMember(toGUser("u3"))
+						.withAdministrator(toGUser("admin"))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
@@ -3711,11 +3720,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3741,11 +3750,11 @@ public class GroupsTest {
 		verify(mocks.notifs).notify(
 				set(new UserName("ws1"), new UserName("ws2")),
 				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), new UserName("own"),
+						new GroupID("gid"), new GroupName("name"), toGUser("own"),
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(new UserName("u1"))
-						.withMember(new UserName("u3"))
-						.withAdministrator(new UserName("admin"))
+						.withMember(toGUser("u1"))
+						.withMember(toGUser("u3"))
+						.withAdministrator(toGUser("admin"))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("admin"),
@@ -3791,11 +3800,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
@@ -3809,11 +3818,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		when(mocks.catHandler.getDescriptor(new ResourceID("4")))
@@ -3830,11 +3839,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3852,11 +3861,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.catHandler.getDescriptor(new ResourceID("m.n")))
 				.thenReturn(new ResourceDescriptor(new ResourceAdministrativeID("m"),
@@ -3876,15 +3885,15 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
 				.withResource(new ResourceType("catalogmethod"),
 						// whoops this shouldn't happen, but somehow it did
 						new ResourceDescriptor(new ResourceAdministrativeID("mod2"),
 								new ResourceID("mod.meth")))
-				.withAdministrator(new UserName("admin"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failAddResource(mocks.groups, new Token("t"), new GroupID("gid"),
@@ -3898,11 +3907,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3943,11 +3952,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -3971,11 +3980,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -4014,11 +4023,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		failRemoveResource(mocks.groups, new Token("t"), new GroupID("gid"),
@@ -4032,11 +4041,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("6")))
 				.thenThrow(new IllegalResourceIDException("bleah"));
@@ -4052,11 +4061,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
 				.thenThrow(new ResourceHandlerException("bork"));
@@ -4072,11 +4081,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("notadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.isAdministrator(new ResourceID("34"), new UserName("notadmin")))
 				.thenReturn(false);
@@ -4093,11 +4102,11 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("wsadmin"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		when(mocks.wsHandler.getDescriptor(new ResourceID("34")))
 				.thenReturn(new ResourceDescriptor(new ResourceID("34")));
@@ -4157,13 +4166,13 @@ public class GroupsTest {
 								new ResourceID("m.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("a1"))
-				.withAdministrator(new UserName("a3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		mocks.groups.setReadPermission(new Token("token"), new RequestID(id));
@@ -4219,11 +4228,11 @@ public class GroupsTest {
 						.withResource(new ResourceDescriptor(new ResourceID("43")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
@@ -4275,11 +4284,11 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id), expected);
@@ -4301,11 +4310,11 @@ public class GroupsTest {
 						.withStatus(GroupRequestStatus.denied(new UserName("d"), null))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
 				.build());
 		
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
@@ -4354,13 +4363,13 @@ public class GroupsTest {
 
 	private Group setRPGgetTestGroup() throws Exception {
 		return Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), new UserName("own"),
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("u1"))
-				.withMember(new UserName("u3"))
-				.withAdministrator(new UserName("a1"))
-				.withAdministrator(new UserName("a3"))
-				.withAdministrator(new UserName("admin"))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
 				.withResource(new ResourceType("catalogmethod"), 
 						new ResourceDescriptor(new ResourceAdministrativeID("moddymod"),
 								new ResourceID("moddymod.methymeth")))

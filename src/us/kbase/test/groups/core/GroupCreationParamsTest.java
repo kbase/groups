@@ -3,6 +3,7 @@ package us.kbase.test.groups.core;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 
@@ -15,6 +16,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupCreationParams.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -109,7 +111,8 @@ public class GroupCreationParamsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)));
 		
 		final Group expected = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.build();
 		
@@ -132,7 +135,8 @@ public class GroupCreationParamsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)));
 		
 		final Group expected = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.withDescription("yay")

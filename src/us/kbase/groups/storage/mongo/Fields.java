@@ -36,6 +36,14 @@ public class Fields {
 	/** The group custom fields. */
 	public static final String GROUP_CUSTOM_FIELDS = "custom";
 	
+	// members fields
+	/** A group member name. */
+	public static final String GROUP_MEMBER_NAME = "user";
+	/** Custom fields for a group member. */
+	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "custom";
+	/** A member's join date. */
+	public static final String GROUP_MEMBER_JOIN_DATE = "join";
+	
 	// resources fields
 	/** Resources associated with the group. */
 	public static final String GROUP_RESOURCES = "resources";

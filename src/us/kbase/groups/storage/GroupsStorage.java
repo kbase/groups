@@ -10,6 +10,7 @@ import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -90,7 +91,7 @@ public interface GroupsStorage {
 	 * the owner and administrators.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	void addMember(GroupID groupID, UserName member, Instant modDate)
+	void addMember(GroupID groupID, GroupUser member, Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException;
 	
 	/** Remove a member from a group.
@@ -113,9 +114,11 @@ public interface GroupsStorage {
 	 * @throws UserIsMemberException if the user is the owner or already an administrator
 	 * of the group.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchUserException if the user is not already a group member.
 	 */
 	void addAdmin(GroupID groupID, UserName admin, Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException;
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException,
+				NoSuchUserException;
 	
 	/** Demote an admin to a member of a group.
 	 * @param groupID the ID of the group.

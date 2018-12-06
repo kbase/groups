@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
+import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -19,6 +20,7 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
@@ -37,7 +39,8 @@ public class GroupTest {
 	@Test
 	public void buildMinimal() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build();
 		
@@ -47,24 +50,36 @@ public class GroupTest {
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
-		assertThat("incorrect member", g.getMembers(), is(set()));
+		assertThat("incorrect members", g.getMembers(), is(set()));
 		assertThat("incorrect admins", g.getAdministrators(), is(set()));
 		assertThat("incorrect resources", g.getResourceTypes(), is(set()));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect custom", g.getCustomFields(), is(Collections.emptyMap()));
+		assertThat("incorrect all members", g.getAllMembers(), is(set(new UserName("foo"))));
+		assertThat("incorrect get member", g.getMember(new UserName("foo")),
+				is(GroupUser.getBuilder(new UserName("foo"), inst(20000)).build()));
 	}
 	
 	@Test
 	public void buildMaximal() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000))
+						.withCustomField(new NumberedCustomField("own"), "yep")
+						.withCustomField(new NumberedCustomField("yay"), "boo")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withDescription("    \tmy desc     ")
-				.withMember(new UserName("bar"))
-				.withMember(new UserName("baz"))
-				.withAdministrator(new UserName("whee"))
-				.withAdministrator(new UserName("whoo"))
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(35000)).build())
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(6000))
+						.withCustomField(new NumberedCustomField("f"), "v")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(70000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(65000))
+						.withCustomField(new NumberedCustomField("f-66"), "66")
+						.withCustomField(new NumberedCustomField("f22-35"), "-42")
+						.build())
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("1")))
 				.withResource(new ResourceType("workspace"),
@@ -105,6 +120,27 @@ public class GroupTest {
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect custom", g.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("foo-1"), "bar", new NumberedCustomField("baz"), "bat")));
+		assertThat("incorrect all members", g.getAllMembers(), is(set(
+				new UserName("foo"), new UserName("bar"), new UserName("baz"),
+				new UserName("whee"), new UserName("whoo"))));
+		assertThat("incorrect get member", g.getMember(new UserName("foo")),
+				is(GroupUser.getBuilder(new UserName("foo"), inst(20000))
+						.withCustomField(new NumberedCustomField("own"), "yep")
+						.withCustomField(new NumberedCustomField("yay"), "boo")
+						.build()));
+		assertThat("incorrect get member", g.getMember(new UserName("bar")),
+				is(GroupUser.getBuilder(new UserName("bar"), inst(35000)).build()));
+		assertThat("incorrect get member", g.getMember(new UserName("baz")),
+				is(GroupUser.getBuilder(new UserName("baz"), inst(6000))
+						.withCustomField(new NumberedCustomField("f"), "v")
+						.build()));
+		assertThat("incorrect get member", g.getMember(new UserName("whee")),
+				is(GroupUser.getBuilder(new UserName("whee"), inst(70000)).build()));
+		assertThat("incorrect get member", g.getMember(new UserName("whoo")),
+				is(GroupUser.getBuilder(new UserName("whoo"), inst(65000))
+						.withCustomField(new NumberedCustomField("f-66"), "66")
+						.withCustomField(new NumberedCustomField("f22-35"), "-42")
+						.build()));
 	}
 	
 	@Test
@@ -115,7 +151,8 @@ public class GroupTest {
 	
 	private void buildWithEmptyDescription(final String description) throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withDescription(description)
 				.build();
@@ -126,13 +163,21 @@ public class GroupTest {
 	@Test
 	public void immutable() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("bar"))
-				.withAdministrator(new UserName("bat"))
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(20000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("bat"), inst(20000)).build())
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(new ResourceID("b")))
 				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.build();
+		
+		try {
+			g.getAllMembers().add(new UserName("baz"));
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
 		
 		try {
 			g.getMembers().add(new UserName("baz"));
@@ -175,19 +220,19 @@ public class GroupTest {
 	public void getBuilderFail() throws Exception {
 		final GroupID i = new GroupID("i");
 		final GroupName n = new GroupName("n");
-		final UserName o = new UserName("o");
+		final GroupUser u = GroupUser.getBuilder(new UserName("foo"), inst(20000)).build();
 		final CreateAndModTimes t = new CreateAndModTimes(Instant.ofEpochMilli(10000));
 		
-		failGetBuilder(null, n, o, t, new NullPointerException("id"));
-		failGetBuilder(i, null, o, t, new NullPointerException("name"));
+		failGetBuilder(null, n, u, t, new NullPointerException("id"));
+		failGetBuilder(i, null, u, t, new NullPointerException("name"));
 		failGetBuilder(i, n, null, t, new NullPointerException("owner"));
-		failGetBuilder(i, n, o, null, new NullPointerException("times"));
+		failGetBuilder(i, n, u, null, new NullPointerException("times"));
 	}
 	
 	private void failGetBuilder(
 			final GroupID id,
 			final GroupName name,
-			final UserName owner,
+			final GroupUser owner,
 			final CreateAndModTimes times,
 			final Exception expected) {
 		try {
@@ -201,18 +246,23 @@ public class GroupTest {
 	@Test
 	public void withMemberFail() throws Exception {
 		final Builder b = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withAdministrator(new UserName("admin"));
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+						.build());
 		
 		failWithMember(b, null, new NullPointerException("member"));
-		failWithMember(b, new UserName("foo"), new IllegalArgumentException(
-				"Group already contains member as owner or admin"));
-		failWithMember(b, new UserName("admin"), new IllegalArgumentException(
-				"Group already contains member as owner or admin"));
+		failWithMember(b, GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new IllegalArgumentException("Group already contains member foo"));
+		failWithMember(b, GroupUser.getBuilder(new UserName("admin"), inst(20000)).build(),
+				new IllegalArgumentException("Group already contains member admin"));
 	}
 	
-	private void failWithMember(final Builder b, final UserName member, final Exception expected) {
+	private void failWithMember(
+			final Builder b,
+			final GroupUser member,
+			final Exception expected) {
 		try {
 			b.withMember(member);
 			fail("expected exception");
@@ -224,18 +274,19 @@ public class GroupTest {
 	@Test
 	public void withAdminFail() throws Exception {
 		final Builder b = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("member"));
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000)).build());
 		
 		failWithAdmin(b, null, new NullPointerException("admin"));
-		failWithAdmin(b, new UserName("foo"), new IllegalArgumentException(
-				"Group already contains member as owner or member"));
-		failWithAdmin(b, new UserName("member"), new IllegalArgumentException(
-				"Group already contains member as owner or member"));
+		failWithAdmin(b, GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new IllegalArgumentException("Group already contains member foo"));
+		failWithAdmin(b, GroupUser.getBuilder(new UserName("member"), inst(20000)).build(),
+				new IllegalArgumentException("Group already contains member member"));
 	}
 	
-	private void failWithAdmin(final Builder b, final UserName admin, final Exception expected) {
+	private void failWithAdmin(final Builder b, final GroupUser admin, final Exception expected) {
 		try {
 			b.withAdministrator(admin);
 			fail("expected exception");
@@ -258,7 +309,8 @@ public class GroupTest {
 			final Exception expected)
 			throws Exception {
 		final Builder b = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
 		try {
 			b.withResource(type, desc);
@@ -277,7 +329,8 @@ public class GroupTest {
 		}
 		
 		final Builder build = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
 		
 		build.withDescription(b.toString()); // should pass
@@ -306,7 +359,8 @@ public class GroupTest {
 			final Exception expected)
 			throws Exception {
 		final Builder build = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
 		try {
 			build.withCustomField(field, value);
@@ -320,11 +374,14 @@ public class GroupTest {
 	@Test
 	public void isAdministator() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("member"))
-				.withAdministrator(new UserName("admin1"))
-				.withAdministrator(new UserName("admin3"))
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin1"), inst(20000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin3"), inst(20000))
+						.build())
 				.build();
 		
 		assertThat("incorrect isAdmin", g.isAdministrator(new UserName("bar")), is(false));
@@ -338,7 +395,8 @@ public class GroupTest {
 	@Test
 	public void failIsAdministrator() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build();
 		try {
@@ -352,12 +410,15 @@ public class GroupTest {
 	@Test
 	public void isMember() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(new UserName("bar"))
-				.withMember(new UserName("baz"))
-				.withAdministrator(new UserName("admin1"))
-				.withAdministrator(new UserName("admin3"))
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(20000)).build())
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin1"), inst(20000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin3"), inst(20000))
+						.build())
 				.build();
 		
 		assertThat("incorrect isMember", g.isMember(null), is(false));
@@ -421,7 +482,8 @@ public class GroupTest {
 
 	private Group getBuilderWithResource() throws Exception {
 		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("foo"),
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
@@ -500,6 +562,28 @@ public class GroupTest {
 		final Group g = getBuilderWithResource();
 		try {
 			g.getResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getMemberFail() throws Exception {
+		final Group g = Group.getBuilder(new GroupID("i"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("n"), inst(1)).build(),
+				new CreateAndModTimes(inst(1)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("a"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("m"), inst(1)).build())
+				.build();
+		
+		getMemberFail(g, null, new IllegalArgumentException("No such member"));
+		getMemberFail(g, new UserName("o"), new IllegalArgumentException("No such member"));
+	}
+	
+	private void getMemberFail(final Group g, final UserName member, final Exception expected) {
+		try {
+			g.getMember(member);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

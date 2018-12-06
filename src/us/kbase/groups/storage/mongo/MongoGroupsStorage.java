@@ -1,6 +1,7 @@
 package us.kbase.groups.storage.mongo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.nio.charset.StandardCharsets;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,6 +44,7 @@ import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
@@ -375,7 +379,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				Fields.GROUP_ID, group.getGroupID().getName())
 				.append(Fields.GROUP_NAME, group.getGroupName().getName())
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
-				.append(Fields.GROUP_MEMBERS, toStringList(group.getMembers()))
+				.append(Fields.GROUP_MEMBERS, toMembersDocList(group))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
 				.append(Fields.GROUP_RESOURCES, resources)
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
@@ -403,6 +407,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
+	}
+
+	private List<Document> toMembersDocList(final Group group) {
+		return group.getAllMembers().stream().map(u -> toDoc(group.getMember(u)))
+				.collect(Collectors.toList());
+	}
+
+	private Document toDoc(final GroupUser gu) {
+		return new Document(Fields.GROUP_MEMBER_NAME, gu.getName().getName())
+				.append(Fields.GROUP_MEMBER_JOIN_DATE, Date.from(gu.getJoinDate()))
+				.append(Fields.GROUP_MEMBER_CUSTOM_FIELDS,
+						getCustomFields(gu.getCustomFields()));
 	}
 
 	private GroupsStorageException wrapMongoException(MongoException e) {
@@ -542,17 +558,21 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	private Group toGroup(final Document grp) throws GroupsStorageException {
 		try {
+			final Map<UserName, GroupUser> members = getMembers(grp);
+			final UserName owner = new UserName(grp.getString(Fields.GROUP_OWNER));
 			final Group.Builder b = Group.getBuilder(
 					new GroupID(grp.getString(Fields.GROUP_ID)),
 					new GroupName(grp.getString(Fields.GROUP_NAME)),
-					new UserName(grp.getString(Fields.GROUP_OWNER)),
+					members.get(owner),
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
 							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
 					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
-			addList(u -> b.withMember(new UserName(u)), grp, Fields.GROUP_MEMBERS, String.class);
-			addList(u -> b.withAdministrator(new UserName(u)), grp, Fields.GROUP_ADMINS,
-					String.class);
+			members.remove(owner);
+			getUserSet(grp, Fields.GROUP_ADMINS).stream().forEach(a ->
+					{b.withAdministrator(members.get(a));
+					 members.remove(a);});
+			members.values().stream().forEach(m -> b.withMember(m));
 			@SuppressWarnings("unchecked")
 			final Map<String, List<Document>> resources =
 					(Map<String, List<Document>>) grp.get(Fields.GROUP_RESOURCES);
@@ -565,7 +585,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 							new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))));
 				}
 			}
-			addCustomFields(b, grp);
+			addCustomFields((f, v) -> b.withCustomField(f, v), Fields.GROUP_CUSTOM_FIELDS, grp);
 			return b.build();
 		} catch (MissingParameterException | IllegalParameterException |
 				IllegalArgumentException e) {
@@ -574,74 +594,86 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
-	private void addCustomFields(final Group.Builder b, final Document groupDoc)
+	private void addCustomFields(
+			final BiConsumer<NumberedCustomField, String> fieldConsumer,
+			final String customFieldField,
+			final Document groupDoc)
 			throws IllegalParameterException, MissingParameterException {
 		@SuppressWarnings("unchecked")
-		final Map<String, String> custom = (Map<String, String>) groupDoc.get(
-				Fields.GROUP_CUSTOM_FIELDS);
+		final Map<String, String> custom = (Map<String, String>) groupDoc.get(customFieldField);
 		for (final String field: custom.keySet()) {
-			b.withCustomField(new NumberedCustomField(field), custom.get(field));
-		}
-	}
-
-	private interface BuildConsumer<T> {
-		
-		void apply(T t) throws MissingParameterException, IllegalParameterException;
-	}
-		
-	private <T> void addList(
-			final BuildConsumer<T> cons,
-			final Document groupDoc,
-			final String field,
-			final Class<T> type)
-			throws MissingParameterException, IllegalParameterException {
-		// can't be null assuming the field is set correctly
-		@SuppressWarnings("unchecked")
-		final List<T> items = (List<T>) groupDoc.get(field);
-		for (final T item: items) {
-			cons.apply(item);
+			fieldConsumer.accept(new NumberedCustomField(field), custom.get(field));
 		}
 	}
 	
+	private Set<UserName> getUserSet(final Document grp, final String field)
+			throws MissingParameterException, IllegalParameterException {
+		@SuppressWarnings("unchecked")
+		final List<String> users = (List<String>) grp.get(field);
+		final Set<UserName> ret = new HashSet<>();
+		for (final String s: users) {
+			ret.add(new UserName(s));
+		}
+		return ret;
+	}
+
+	private Map<UserName, GroupUser> getMembers(final Document grp)
+			throws MissingParameterException, IllegalParameterException {
+		@SuppressWarnings("unchecked")
+		final List<Document> members = (List<Document>) grp.get(Fields.GROUP_MEMBERS);
+		final Map<UserName, GroupUser> ret = new HashMap<>();
+		for (final Document m: members) {
+			final UserName u = new UserName(m.getString(Fields.GROUP_MEMBER_NAME));
+			final GroupUser.Builder b = GroupUser.getBuilder(
+					u, m.getDate(Fields.GROUP_MEMBER_JOIN_DATE).toInstant());
+			addCustomFields(
+					(f, v) -> b.withCustomField(f, v), Fields.GROUP_MEMBER_CUSTOM_FIELDS, m);
+			ret.put(u, b.build());
+		}
+		return ret;
+	}
+
 	@Override
-	public void addMember(final GroupID groupID, final UserName member, final Instant modDate)
+	public void addMember(final GroupID groupID, final GroupUser member, final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
-		addUser(groupID, member, modDate, false);
+		requireNonNull(member, "member");
+		try {
+			addUser(groupID, member.getName(), toDoc(member), modDate, false);
+		} catch (NoSuchUserException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 	
 	@Override
 	public void addAdmin(final GroupID groupID, final UserName admin, final Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException {
-		checkNotNull(admin, "admin");
-		addUser(groupID, admin, modDate, true);
+			throws NoSuchGroupException, GroupsStorageException, UserIsMemberException,
+				NoSuchUserException {
+		requireNonNull(admin, "admin");
+		addUser(groupID, admin, admin.getName(), modDate, true);
 	}
 
 	private void addUser(
 			final GroupID groupID,
 			final UserName member,
+			final Object memberDocument,
 			final Instant modDate,
 			final boolean asAdmin)
-			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
-		checkNotNull(groupID, "groupID");
-		checkNotNull(member, "member");
-		checkNotNull(modDate, "modDate");
+			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException,
+				NoSuchUserException {
+		requireNonNull(groupID, "groupID");
+		requireNonNull(modDate, "modDate");
 		
 		final Document notEqualToMember = new Document("$ne", member.getName());
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
 				.append(Fields.GROUP_OWNER, notEqualToMember)
-				.append(Fields.GROUP_ADMINS, notEqualToMember);
-		if (!asAdmin) {
-			query.append(Fields.GROUP_MEMBERS, notEqualToMember);
-		}
+				.append(Fields.GROUP_ADMINS, notEqualToMember)
+				.append(Fields.GROUP_MEMBERS + Fields.FIELD_SEP + Fields.GROUP_MEMBER_NAME,
+						asAdmin ? member.getName() : notEqualToMember);
 			
 		final Document modification =
 				new Document("$addToSet", new Document(
-						asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS, member.getName()))
+						asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS, memberDocument))
 				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
-		
-		if (asAdmin) {
-			modification.append("$pull", new Document(Fields.GROUP_MEMBERS, member.getName()));
-		}
 		
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, modification);
@@ -658,7 +690,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final GroupID groupID,
 			final UserName member,
 			final boolean asAdmin)
-			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException {
+			throws GroupsStorageException, NoSuchGroupException, UserIsMemberException,
+				NoSuchUserException {
 		final Group g = getGroup(groupID); // will throw no such group
 		if (g.getOwner().equals(member)) {
 			throw new UserIsMemberException(String.format(
@@ -671,6 +704,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 		} else if (g.getMembers().contains(member) && !asAdmin) {
 			throw new UserIsMemberException(String.format(
 					"User %s is already a member of group %s",
+					member.getName(), groupID.getName()));
+		} else if (!g.getMembers().contains(member) && asAdmin) {
+			// so yeah, this is lazy and maybe there's a better mongo data structure that means
+			// we can add admins directly. However, it's pretty trivial to add them as is,
+			// the current data structure works, so YAGNI
+			throw new NoSuchUserException(String.format(
+					"User %s must be a member of group %s before admin promotion",
 					member.getName(), groupID.getName()));
 		} else {
 			/* this *could* be caused by a race condition if owner/admins/members change or group
@@ -694,6 +734,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 		demoteMember(groupID, member, modDate, false);
 	}
 	
+	@Override
+	public void demoteAdmin(final GroupID groupID, final UserName admin, final Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		checkNotNull(admin, "admin");
+		demoteMember(groupID, admin, modDate, true);
+	}
+	
 	private void demoteMember(
 			final GroupID groupID,
 			final UserName member,
@@ -702,15 +749,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
 		checkNotNull(groupID, "groupID");
 		checkNotNull(modDate, "modDate");
-		final String field = asAdmin ? Fields.GROUP_ADMINS : Fields.GROUP_MEMBERS;
-		
+		final String field = asAdmin ? Fields.GROUP_ADMINS :
+				Fields.GROUP_MEMBERS + Fields.FIELD_SEP + Fields.GROUP_MEMBER_NAME;
+		final Document notEqualToMember = new Document("$ne", member.getName());
 		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(Fields.GROUP_OWNER, notEqualToMember)
 				.append(field, member.getName());
+		if (!asAdmin) {
+			query.append(Fields.GROUP_ADMINS, notEqualToMember);
+		}
 	
-		final Document mod = new Document("$pull", new Document(field, member.getName()))
-				.append("$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
+		final Document mod = new Document(
+				"$set", new Document(Fields.GROUP_MODIFICATION, Date.from(modDate)));
 		if (asAdmin) {
-			mod.append("$addToSet", new Document(Fields.GROUP_MEMBERS, member.getName()));
+			mod.append("$pull", new Document(Fields.GROUP_ADMINS, member.getName()));
+		} else {
+			mod.append("$pull", new Document(Fields.GROUP_MEMBERS,
+					new Document(Fields.GROUP_MEMBER_NAME, member.getName())));
 		}
 		
 		try {
@@ -726,14 +781,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throw wrapMongoException(e);
 		}
 	}
-	
-	@Override
-	public void demoteAdmin(final GroupID groupID, final UserName admin, final Instant modDate)
-			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
-		checkNotNull(admin, "admin");
-		demoteMember(groupID, admin, modDate, true);
-	}
-	
+
 	@Override
 	public void addResource(
 			final GroupID groupID,

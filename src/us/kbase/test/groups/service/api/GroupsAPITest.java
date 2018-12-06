@@ -33,6 +33,7 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
@@ -70,24 +71,30 @@ public class GroupsAPITest {
 	private static <T> Optional<T> op(T item) {
 		return Optional.ofNullable(item);
 	}
+
+	//TODO MEMBERFIELDS expose in full group view
 	
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
 	static {
 		try {
 			GROUP_MIN = Group.getBuilder(
-					new GroupID("id"), new GroupName("name"), new UserName("u"),
+					new GroupID("id"), new GroupName("name"),
+					GroupUser.getBuilder(new UserName("u"), inst(10000)).build(),
 					new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 					.build();
 			GROUP_MAX = Group.getBuilder(
-					new GroupID("id2"), new GroupName("name2"), new UserName("u2"),
+					new GroupID("id2"), new GroupName("name2"),
+					GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
 					new CreateAndModTimes(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 					.withDescription("desc")
-					.withMember(new UserName("foo"))
-					.withMember(new UserName("bar"))
-					.withAdministrator(new UserName("whee"))
-					.withAdministrator(new UserName("whoo"))
+					.withMember(GroupUser.getBuilder(new UserName("foo"), inst(20000)).build())
+					.withMember(GroupUser.getBuilder(new UserName("bar"), inst(20000)).build())
+					.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(20000))
+							.build())
+					.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(20000))
+							.build())
 					.withCustomField(new NumberedCustomField("field-1"), "my val")
 					.withCustomField(new NumberedCustomField("otherfield"), "fieldval")
 					.build();

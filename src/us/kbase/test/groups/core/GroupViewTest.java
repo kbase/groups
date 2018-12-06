@@ -21,6 +21,7 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -38,13 +39,18 @@ public class GroupViewTest {
 			final ResourceType ws = new ResourceType("workspace");
 			final ResourceType cat = new ResourceType("catalogmethod");
 			GROUP = Group.getBuilder(
-					new GroupID("id"), new GroupName("name"), new UserName("user"),
+					new GroupID("id"), new GroupName("name"),
+					GroupUser.getBuilder(new UserName("user"), inst(10000)).build(),
 					new CreateAndModTimes(
 							Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-					.withAdministrator(new UserName("a1"))
-					.withAdministrator(new UserName("a2"))
-					.withMember(new UserName("m1"))
-					.withMember(new UserName("m2"))
+					.withAdministrator(GroupUser.getBuilder(new UserName("a1"), inst(20000))
+							.build())
+					.withAdministrator(GroupUser.getBuilder(new UserName("a2"), inst(20000))
+							.build())
+					.withMember(GroupUser.getBuilder(new UserName("m1"), inst(20000))
+							.build())
+					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(20000))
+							.build())
 					.withDescription("desc")
 					.withResource(ws, new ResourceDescriptor(new ResourceID("45")))
 					.withResource(ws, new ResourceDescriptor(new ResourceID("2")))
