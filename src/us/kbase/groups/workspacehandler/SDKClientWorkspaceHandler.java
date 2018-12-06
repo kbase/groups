@@ -254,7 +254,6 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			wsinfo = client.administer(new UObject(ImmutableMap.of(
 					"command", "getWorkspaceInfo", "params", wsi)))
 					.asClassInstance(WS_INFO_TYPEREF);
-			//TODO NNOW include description in wsinfo
 			final UObject d = client.administer(new UObject(ImmutableMap.of(
 					"command", "getWorkspaceDescription", "params", wsi)));
 			desc = d == null ? null : d.asScalar();

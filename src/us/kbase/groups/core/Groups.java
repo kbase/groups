@@ -540,17 +540,6 @@ public class Groups {
 		}
 	}
 	
-	private void addMemberToKnownGoodGroup(final GroupID groupID, final UserName newMember)
-			throws GroupsStorageException, UserIsMemberException {
-		try {
-			storage.addMember(groupID, newMember, clock.instant());
-		} catch (NoSuchGroupException e) {
-			// shouldn't happen
-			throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
-					groupID.getName(), e.getMessage()), e);
-		}
-	}
-	
 	/** Cancel a request.
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request to cancel.
@@ -667,7 +656,14 @@ public class Groups {
 				ResourceHandlerException, ResourceExistsException {
 		if (request.getResourceType().equals(GroupRequest.USER_TYPE)) {
 			final UserName target = toUserName(request);
-			addMemberToKnownGoodGroup(groupID, target);
+			final Instant now = clock.instant();
+			try {
+				storage.addMember(groupID, GroupUser.getBuilder(target, now).build(), now);
+			} catch (NoSuchGroupException e) {
+				// shouldn't happen
+				throw new RuntimeException(String.format("Group %s unexpectedly doesn't exist: %s",
+						groupID.getName(), e.getMessage()), e);
+			}
 			return new HashSet<>(Arrays.asList(target));
 		} else {
 			return addResourceAndGetAdmins(groupID, request);
@@ -1031,14 +1027,14 @@ public class Groups {
 			final Token userToken,
 			final GroupID groupID,
 			final ResourceType type,
-			final ResourceID resourceID)
+			final ResourceID resource)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, NoSuchResourceTypeException,
 				NoSuchResourceException, ResourceHandlerException {
 		checkNotNull(userToken, "userToken");
 		checkNotNull(groupID, "groupID");
 		checkNotNull(type, "type");
-		checkNotNull(resourceID, "resource");
+		checkNotNull(resource, "resource");
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
 		if (!g.isMember(user)) {
@@ -1046,12 +1042,12 @@ public class Groups {
 					user.getName(), g.getGroupID().getName()));
 		}
 		final ResourceHandler h = getHandler(type);
-		if (!g.containsResource(type, resourceID)) {
+		if (!g.containsResource(type, resource)) {
 			throw new NoSuchResourceException(String.format("Group %s does not contain %s %s",
-					groupID.getName(), type.getName(), resourceID.getName()));
+					groupID.getName(), type.getName(), resource.getName()));
 		}
 		try {
-			h.setReadPermission(resourceID, user);
+			h.setReadPermission(resource, user);
 		} catch (IllegalResourceIDException e) {
 			// since the resourceID is in the group
 			throw new RuntimeException("This should be impossible", e);

@@ -27,6 +27,7 @@ import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
@@ -80,14 +81,14 @@ public class MongoGroupsStorageStartupTest {
 		//check startup works with the config object in place
 		final MongoGroupsStorage ms = new MongoGroupsStorage(db);
 		
-		ms.createGroup(Group.getBuilder(
-				new GroupID("id"), new GroupName("name"), new UserName("u"),
+		final GroupUser u = GroupUser.getBuilder(new UserName("u"), Instant.ofEpochMilli(10000))
+				.build();
+		ms.createGroup(Group.getBuilder(new GroupID("id"), new GroupName("name"), u,
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.build());
 		
 		assertThat("incorrect group", ms.getGroup(new GroupID("id")), is(
-				Group.getBuilder(
-						new GroupID("id"), new GroupName("name"), new UserName("u"),
+				Group.getBuilder(new GroupID("id"), new GroupName("name"), u,
 						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 						.build()));
 	}
