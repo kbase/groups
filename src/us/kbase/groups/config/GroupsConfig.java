@@ -33,21 +33,8 @@ import us.kbase.common.service.JsonServerSyslog.RpcInfo;
 import us.kbase.common.service.JsonServerSyslog.SyslogOutput;
 
 /** A configuration for the Groups software package. Loads the configuration from
- * the ini file section "groups" with the keys
- * 
- * <pre>
- * mongo-host
- * mongo-db
- * mongo-user
- * mongo-pwd
- * auth-url
- * workspace-url
- * allow-insecure-urls
- * dont-trust-x-ip-headers
- * </pre>
- * 
- * The last key is optional and instructs the server to ignore the X-Real-IP and X-Forwarded-For
- * headers if set to {@link #TRUE}.
+ * the ini file section "groups". See the documentation and example deploy.cfg file for keys
+ * and key values.
  * 
  * @author gaprice@lbl.gov
  *
@@ -78,10 +65,14 @@ public class GroupsConfig {
 	
 	// field validators
 	private static final String KEY_PREFIX_FIELD = "field-";
-	private static final String KEY_SUFFIX_FIELD_VALIDATOR = "-validator";
+	private static final String KEY_PREFIX_USER = "user";
+	private static final String KEY_PREFIX_USER_FIELD = "field-" + KEY_PREFIX_USER +"-";
+	private static final String KEY_SUFFIX_VALIDATOR = "validator";
+	private static final String KEY_SUFFIX_FIELD_VALIDATOR = "-" + KEY_SUFFIX_VALIDATOR;
 	private static final String KEY_SUFFIX_FIELD_IS_NUMBERED = "-is-numbered";
 	private static final String KEY_SUFFIX_FIELD_IS_PUBLIC = "-is-public";
 	private static final String KEY_SUFFIX_FIELD_SHOW_IN_LIST = "-show-in-list";
+	private static final String KEY_SUFFIX_FIELD_IS_USER_SETTABLE = "-is-user-settable";
 	private static final String KEY_SUFFIX_FIELD_PARAM = "-param-";
 	
 	public static final String TRUE = "true";
@@ -100,6 +91,7 @@ public class GroupsConfig {
 	private final boolean ignoreIPHeaders;
 	private final boolean allowInsecureURLs;
 	private final Set<FieldValidatorConfiguration> fieldConfigs;
+	private final Set<FieldValidatorConfiguration> userFieldConfigs;
 
 	/** Create a new configuration.
 	 * 
@@ -167,7 +159,9 @@ public class GroupsConfig {
 		mongoPwd = mongop.isPresent() ?
 				Optional.of(mongop.get().toCharArray()) : Optional.absent();
 		mongop = null; //GC
-		fieldConfigs = getFieldConfigs(cfg);
+		final Fields fields = getFields(cfg);
+		fieldConfigs = getFieldConfigs(cfg, fields.fields, KEY_PREFIX_FIELD);
+		userFieldConfigs = getFieldConfigs(cfg, fields.userFields, KEY_PREFIX_USER_FIELD);
 	}
 
 	private Token getToken(final String paramName, final Map<String, String> cfg)
@@ -180,12 +174,14 @@ public class GroupsConfig {
 		}
 	}
 	
-	private Set<FieldValidatorConfiguration> getFieldConfigs(final Map<String, String> cfg)
+	private Set<FieldValidatorConfiguration> getFieldConfigs(
+			final Map<String, String> cfg,
+			final Set<CustomField> fields,
+			final String prefix)
 			throws GroupsConfigurationException {
-		final Set<CustomField> fields = getFields(cfg);
 		final Set<FieldValidatorConfiguration> configs = new HashSet<>();
 		for (final CustomField field: fields) {
-			final String pre = KEY_PREFIX_FIELD + field.getName();
+			final String pre = prefix + field.getName();
 			final String valclass = getString(pre + KEY_SUFFIX_FIELD_VALIDATOR, cfg, true);
 			final boolean isNumbered = TRUE.equals(
 					getString(pre + KEY_SUFFIX_FIELD_IS_NUMBERED, cfg));
@@ -193,6 +189,8 @@ public class GroupsConfig {
 					getString(pre + KEY_SUFFIX_FIELD_IS_PUBLIC, cfg));
 			final boolean isShowInList = TRUE.equals(
 					getString(pre + KEY_SUFFIX_FIELD_SHOW_IN_LIST, cfg));
+			final boolean isUserSettable = TRUE.equals(
+					getString(pre + KEY_SUFFIX_FIELD_IS_USER_SETTABLE, cfg));
 			final Map<String, String> params = getParams(pre + KEY_SUFFIX_FIELD_PARAM, cfg);
 			final FieldValidatorConfiguration.Builder b = FieldValidatorConfiguration
 					.getBuilder(field, valclass)
@@ -200,6 +198,7 @@ public class GroupsConfig {
 						.withNullableIsNumberedField(isNumbered)
 						.withNullableIsPublicField(isPublic)
 						.withNullableIsMinimalViewField(isShowInList)
+						.withNullableIsUserSettable(isUserSettable)
 						.build());
 			for (final Entry<String, String> e: params.entrySet()) {
 				b.withConfigurationEntry(e.getKey(), e.getValue());
@@ -232,28 +231,54 @@ public class GroupsConfig {
 		}
 		return Collections.unmodifiableMap(params);
 	}
+	
+	private static class Fields {
+		private Set<CustomField> fields;
+		private Set<CustomField> userFields;
+		
+		private Fields(final Set<CustomField> fields, final Set<CustomField> userFields) {
+			this.fields = fields;
+			this.userFields = userFields;
+		}
+	}
 
-	private Set<CustomField> getFields(final Map<String, String> cfg)
+	private Fields getFields(final Map<String, String> cfg)
 			throws GroupsConfigurationException {
 		final Set<CustomField> fields = new HashSet<>();
+		final Set<CustomField> userFields = new HashSet<>();
 		for (final String s: cfg.keySet()) {
 			// can't be null
-			if (s.startsWith(KEY_PREFIX_FIELD)) {
-				final String[] split = s.split("-", 3);
-				if (split.length < 3) {
+			if (s.startsWith(KEY_PREFIX_FIELD) && s.endsWith(KEY_SUFFIX_FIELD_VALIDATOR)) {
+				final String[] split = s.split("-", 4);
+				if (split.length < 3 || !KEY_SUFFIX_VALIDATOR.equals(split[split.length - 1])) {
 					throw new GroupsConfigurationException(String.format(
 							"Error building configuration for field in " +
-							"section %s of config file %s: Unknown field parameter %s",
+							"section %s of config file %s: Illegal validator key %s",
 							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), s));
 				}
-				if (split[1].trim().isEmpty()) {
+				final int fieldIndex;
+				final Set<CustomField> fieldSet;
+				if (split.length == 3) {
+					fieldIndex = 1;
+					fieldSet = fields;
+				} else {
+					fieldIndex = 2;
+					fieldSet = userFields;
+					if (!KEY_PREFIX_USER.equals(split[1])) {
+						throw new GroupsConfigurationException(String.format(
+								"Error building configuration for field in " +
+								"section %s of config file %s: Illegal validator key %s",
+								CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), s));
+					}
+				}
+				if (split[fieldIndex].trim().isEmpty()) {
 					throw new GroupsConfigurationException(String.format(
 							"Error building configuration for field in " +
 							"section %s of config file %s: Missing field name from parameter %s",
 							CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), s));
 				}
 				try {
-					fields.add(new CustomField(split[1].trim()));
+					fieldSet.add(new CustomField(split[fieldIndex].trim()));
 				} catch (MissingParameterException | IllegalParameterException e) {
 					throw new GroupsConfigurationException(String.format(
 							"Error building configuration for field in " +
@@ -262,7 +287,7 @@ public class GroupsConfig {
 				}
 			}
 		}
-		return fields;
+		return new Fields(fields, userFields);
 	}
 
 	// returns null if no string
@@ -485,6 +510,14 @@ public class GroupsConfig {
 	 */
 	public Set<FieldValidatorConfiguration> getFieldConfigurations() {
 		return fieldConfigs;
+	}
+	
+	
+	/** Get the configurations for the user field validators.
+	 * @return the configurations.
+	 */
+	public Set<FieldValidatorConfiguration> getUserFieldConfigurations() {
+		return userFieldConfigs;
 	}
 	
 }

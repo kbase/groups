@@ -22,6 +22,7 @@ public class FieldConfigurationTest {
 		assertThat("incorrect num", c.isNumberedField(), is(false));
 		assertThat("incorrect priv", c.isPublicField(), is(false));
 		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect user set", c.isUserSettable(), is(false));
 	}
 	
 	@Test
@@ -30,14 +31,17 @@ public class FieldConfigurationTest {
 				.withNullableIsMinimalViewField(true)
 				.withNullableIsNumberedField(true)
 				.withNullableIsPublicField(true)
+				.withNullableIsUserSettable(true)
 				.withNullableIsMinimalViewField(null)
 				.withNullableIsNumberedField(null)
 				.withNullableIsPublicField(null)
+				.withNullableIsUserSettable(false)
 				.build();
 		
 		assertThat("incorrect num", c.isNumberedField(), is(false));
 		assertThat("incorrect priv", c.isPublicField(), is(false));
 		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect user set", c.isUserSettable(), is(false));
 	}
 	
 	@Test
@@ -46,16 +50,18 @@ public class FieldConfigurationTest {
 				.withNullableIsMinimalViewField(true)
 				.withNullableIsNumberedField(true)
 				.withNullableIsPublicField(true)
+				.withNullableIsUserSettable(true)
 				.withNullableIsMinimalViewField(false)
 				.withNullableIsNumberedField(false)
 				.withNullableIsPublicField(false)
+				.withNullableIsUserSettable(false)
 				.build();
 		
 		assertThat("incorrect num", c.isNumberedField(), is(false));
 		assertThat("incorrect priv", c.isPublicField(), is(false));
 		assertThat("incorrect list", c.isMinimalViewField(), is(false));
+		assertThat("incorrect user set", c.isUserSettable(), is(false));
 	}
-	
 	
 	@Test
 	public void buildMaximal() throws Exception {
@@ -63,11 +69,12 @@ public class FieldConfigurationTest {
 				.withNullableIsMinimalViewField(true)
 				.withNullableIsNumberedField(true)
 				.withNullableIsPublicField(true)
+				.withNullableIsUserSettable(true)
 				.build();
-				
 				
 		assertThat("incorrect num", c.isNumberedField(), is(true));
 		assertThat("incorrect priv", c.isPublicField(), is(true));
 		assertThat("incorrect list", c.isMinimalViewField(), is(true));
+		assertThat("incorrect user set", c.isUserSettable(), is(true));
 	}
 }

@@ -509,7 +509,8 @@ must be configured by server administrators in the `deploy.cfg` configuration fi
 Attempting to create or update a group with a field that is not configured will result in an
 error. The maximum field size (including numbered fields, see below) is 50 Unicode code points.
 
-At minimum, a field validator must be associated with each configured field. The validator
+At minimum, a field validator must be associated with each configured field. Any other
+configuration keys for a field are ignored if a validator is not configured. The validator
 checks that the value of the field meets some criteria that depends on the validator.
 If the field does not meet those criteria the group creation or update fails.
 
@@ -573,6 +574,32 @@ keep the number of fields in the group list small.
 
 Removing this setting will result in the field no longer being visible in groups lists
 for all extant and future fields.
+
+### User fields
+
+Custom fields can also be applied to group members. To create a user field, substitute the
+`field-` prefix with `field-user-`:
+
+```
+field-user-myfield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+```
+
+All the previous field modifiers apply (using the `field-user-` prefix), but the group
+list setting only affects the owner's fields, since administrators and members are not
+visible in the group list, and the public modifier only affects the owner's and
+administrators' fields, since the members list is private.
+
+User fields have an additional setting that allows standard members, rather than only the owner
+and administrators, to set the field for their own record:
+
+```
+field-user-myfield-is-user-settable=true
+```
+
+This setting is ignored for non-user fields.
+
+Any value other than `true` for `field-user-<field name>-is-user-settable` is treated
+as false.
 
 ### Validator parameters
 
