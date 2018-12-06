@@ -9,14 +9,18 @@ public class FieldConfiguration {
 	private final boolean isNumberedField;
 	private final boolean isPublicField;
 	private final boolean isMinimalViewField;
+	// this only applies to user fields. consider making a subclass? Seems like a lot of complication
+	private final boolean isUserSettable;
 	
 	private FieldConfiguration(
 			final boolean isNumberedField,
 			final boolean isPublicField,
-			final boolean isMinimalViewField) {
+			final boolean isMinimalViewField,
+			final boolean isUserSettable) {
 		this.isNumberedField = isNumberedField;
 		this.isPublicField = isPublicField;
 		this.isMinimalViewField = isMinimalViewField;
+		this.isUserSettable = isUserSettable;
 	}
 
 	/** Get whether the field may be a numbered field, as specified by
@@ -42,6 +46,13 @@ public class FieldConfiguration {
 		return isMinimalViewField;
 	}
 
+	/** Get whether a user field may be changed by the user rather than just administrators.
+	 * @return whether a standard user can set the field.
+	 */
+	public boolean isUserSettable() {
+		return isUserSettable;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -49,6 +60,7 @@ public class FieldConfiguration {
 		result = prime * result + (isMinimalViewField ? 1231 : 1237);
 		result = prime * result + (isNumberedField ? 1231 : 1237);
 		result = prime * result + (isPublicField ? 1231 : 1237);
+		result = prime * result + (isUserSettable ? 1231 : 1237);
 		return result;
 	}
 
@@ -73,6 +85,9 @@ public class FieldConfiguration {
 		if (isPublicField != other.isPublicField) {
 			return false;
 		}
+		if (isUserSettable != other.isUserSettable) {
+			return false;
+		}
 		return true;
 	}
 	
@@ -92,6 +107,7 @@ public class FieldConfiguration {
 		private boolean isNumberedField = false;
 		private boolean isPublicField = false;
 		private boolean isMinimalViewField = false;
+		private boolean isUserSettable = false;
 		
 		private Builder() {}
 		
@@ -127,6 +143,17 @@ public class FieldConfiguration {
 			return this;
 		}
 		
+		/** Set whether the field may be set by the user the field is attached to, rather than
+		 * just administrators. Only applies to user fields.
+		 * @param isUserSettable whether the user can set the field. Null results in a false
+		 * (the default) value.
+		 * @return this builder.
+		 */
+		public Builder withNullableIsUserSettable(final Boolean isUserSettable) {
+			this.isUserSettable = bool(isUserSettable);
+			return this;
+		}
+		
 		// null == false
 		private boolean bool(final Boolean b) {
 			return b != null && b;
@@ -136,7 +163,8 @@ public class FieldConfiguration {
 		 * @return a new configuration.
 		 */
 		public FieldConfiguration build() {
-			return new FieldConfiguration(isNumberedField, isPublicField, isMinimalViewField);
+			return new FieldConfiguration(isNumberedField, isPublicField, isMinimalViewField,
+					isUserSettable);
 		}
 	}
 
