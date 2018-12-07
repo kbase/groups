@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
@@ -21,6 +22,7 @@ import us.kbase.groups.core.exceptions.NoSuchUserException;
 import us.kbase.groups.core.exceptions.RequestExistsException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestStatusType;
@@ -129,6 +131,22 @@ public interface GroupsStorage {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	void demoteAdmin(GroupID groupID, UserName member, Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
+	
+	/** Update user properties.
+	 * @param groupID the ID of the group to update.
+	 * @param member the user to update.
+	 * @param fields the fields to update.
+	 * @param modDate the modification date to apply to the group.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void updateUser(
+			GroupID groupID,
+			UserName member,
+			Map<NumberedCustomField, StringField> fields,
+			Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	
 	/** Add a resource to a group.
