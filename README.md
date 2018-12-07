@@ -694,7 +694,7 @@ can support ~30k-800k resources per group assuming no group users.
 Users without custom fields take ~30-150 bytes, depending on the user name, and so the MongoDB
 backend can support ~100k-500k users per group assuming no group resources.
 
-Resources and users space consumption can be combined more or less linearly - more users means
+Resources' and users' space consumption can be combined more or less linearly - more users means
 less space for resources and vice versa.
 
 User custom fields can drastically change the byte requirement for users - for example, adding
