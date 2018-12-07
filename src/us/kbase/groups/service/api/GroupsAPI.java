@@ -311,7 +311,6 @@ public class GroupsAPI {
 		groups.removeMember(getToken(token, true), new GroupID(groupID), new UserName(member));
 	}
 
-	//TODO MEMBERFIELDS update docs for new structure
 	private Map<String, Object> toGroupJSON(final GroupView g) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());

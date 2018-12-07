@@ -8,6 +8,24 @@ Build status (master):
 
 ## API Data structures
 
+### User
+
+Represent a member of a group.
+
+```
+{
+    "name": <the user's user name>,
+    "joined": <the date the user joined the group in epoch ms>,
+    "custom": {
+        <custom field 1>: <custom value 1>,
+        ...
+        <custom field N>: <custom value N>
+    }
+}
+```
+
+See `Custom fields`, in particular `User fields`, below.
+
 ### Group
 
 Represents a group of users and associated data.
@@ -16,9 +34,9 @@ Represents a group of users and associated data.
 {
     "id": <the group ID>,
     "name": <the group name>,
-    "owner": <the username of the group owner>,
-    "admins": <an array of usernames of admins of the group>,
-    "members": <an array of usernames of members of the group>,
+    "owner": <the User data for the group owner>,
+    "admins": <an array of User data of admins of the group>,
+    "members": <an array of User data of members of the group>,
     "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
@@ -577,6 +595,8 @@ for all extant and future fields.
 
 ### User fields
 
+**WARNING**: See Implementation notes below.
+
 Custom fields can also be applied to group members. To create a user field, substitute the
 `field-` prefix with `field-user-`:
 
@@ -660,6 +680,30 @@ field-feast-param-allowed-values=lambs, sloths, carp, orangutans, breakfast cere
 
 Checks that the value is a valid [Gravatar hash](https://en.gravatar.com/site/implement/hash/).
 Has no parameters.
+
+## Implementation notes
+
+Currently the only backend supported is MongoDB, which supports a maximum 16MB document size.
+As per MongoDB recommendation and to support atomic queries and filters, the group users and
+resources (but not requests) are included in the group document. This means there is a maximum
+number of users and resources per group.
+
+Resources take ~20-550 bytes, depending on the resource ID size, and so the MongoDB backend
+can support ~30k-800k resources per group assuming no group users.
+
+Users without custom fields take ~30-150 bytes, depending on the user name, and so the MongoDB
+backend can support ~100k-500k users per group assuming no group resources.
+
+Resources' and users' space consumption can be combined more or less linearly - more users means
+less space for resources and vice versa.
+
+User custom fields can drastically change the byte requirement for users - for example, adding
+a 5000 (the maximum) Unicode code point text field means a user can consume 20kB (assuming all
+the characters are outside the Basic Multilingual Plane), which means that as few as 800 users
+could cause the group document to exceed the MongoDB limit and cause write errors.
+
+As such, discretion should be used when defining custom fields for users, and it is recommended
+that the fields be kept few and small in size.
 
 ## Requirements
 
