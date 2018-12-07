@@ -1,6 +1,7 @@
 package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.core.request.GroupRequest.USER_TYPE;
 
 import java.time.Clock;
@@ -16,8 +17,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -197,6 +200,120 @@ public class Groups {
 					user.getName(), updateParams.getGroupID().getName()));
 		}
 		storage.updateGroup(updateParams, clock.instant());
+	}
+	
+	/** Update a user's fields.
+	 * The user must be either a group administrator or the user to be updated.
+	 * @param userToken the user's token.
+	 * @param groupID the group to update.
+	 * @param member the member to update.
+	 * @param fields the update to apply to the member.
+	 * @throws UnauthorizedException if the user is not a group administrator or the member
+	 * to be updated.
+	 * @throws NoSuchUserException if the group does not contain the user. This exception
+	 * is only thrown is the user is a group administrator.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no group with the provided ID.
+	 * @throws UnauthorizedException if the user is not a group administrator.
+	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
+	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
+	 * @throws FieldValidatorException if a validator could not validate the field.
+	 */
+	public void updateUser(
+			final Token userToken,
+			final GroupID groupID,
+			final UserName member,
+			final Map<NumberedCustomField, StringField> fields)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, UnauthorizedException, NoSuchUserException,
+				IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
+		requireNonNull(userToken, "userToken");
+		requireNonNull(groupID, "groupID");
+		requireNonNull(member, "member");
+		requireNonNull(fields, "fields");
+		for (final Entry<NumberedCustomField, StringField> e: fields.entrySet()) {
+			requireNonNull(e.getKey(), "Null key in fields");
+			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
+					e.getKey().getField()));
+		}
+		if (hasNoUpdates(fields)) {
+			return;
+		}
+		final UserName user = userHandler.getUser(userToken);
+		final Group g = storage.getGroup(groupID);
+		checkUserUpdatePermission(member, user, g);
+
+		validateUserCustomFields(fields);
+		if (!g.isAdministrator(user)) {
+			for (final NumberedCustomField f: fields.keySet()) {
+				if (!validators.getUserFieldConfiguration(f.getFieldRoot()).isUserSettable()) {
+					throw new UnauthorizedException(String.format(
+							"User %s is not authorized to set field %s for group %s",
+							user.getName(), f.getField(), groupID.getName()));
+				}
+			}
+		}
+		// ok to throw no such member here because either
+		// 1) the user is an admin
+		// 2) the user is changing their own fields and were a member a few milliseconds ago
+		storage.updateUser(groupID, member, fields, clock.instant());
+	}
+
+	private void checkUserUpdatePermission(
+			final UserName member,
+			final UserName user,
+			final Group group)
+			throws NoSuchUserException, UnauthorizedException {
+		// should admins be able to update each other's fields? For now yes, might need
+		// to change later. If an admin is being a dbag the owner should demote them.
+		if (!group.isMember(member)) {
+			if (group.isMember(user)) {
+				throw new NoSuchUserException(String.format("User %s is not a member of group %s",
+						member.getName(), group.getGroupID().getName()));
+			} else {
+				// don't throw a "user X is not member of group Y" here. That effectively makes
+				// the member list public
+				throw updateUserUnauthorizedException(member, user, group);
+			}
+		} else if (!group.isAdministrator(user) && !user.equals(member)) {
+			// this needs to be identical to the error above so that non-members can't tell the
+			// difference between the two errors. Otherwise they can tell if a user is a member
+			// of the group
+			throw updateUserUnauthorizedException(member, user, group);
+		}
+	}
+
+	private UnauthorizedException updateUserUnauthorizedException(
+			final UserName member,
+			final UserName user,
+			final Group group) {
+		return new UnauthorizedException(String.format(
+				"User %s is not authorized to change record of user %s in group %s",
+				user.getName(), member.getName(), group.getGroupID().getName()));
+	}
+	
+	private void validateUserCustomFields(final Map<NumberedCustomField, StringField> fields)
+			throws IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
+		for (final NumberedCustomField f: fields.keySet()) {
+			final FieldItem<String> value = fields.get(f);
+			if (value.hasItem()) {
+				try {
+					validators.validateUserField(f, value.get());
+				} catch (MissingParameterException e) {
+					throw new RuntimeException(
+							"This should be impossible. Please turn reality off and on again", e);
+				}
+			}
+		}
+	}
+	
+	// totally stupid. Get rid of StringField here. OptionalString class which treats
+	// whitespace only strings like nulls would be useful.
+	private boolean hasNoUpdates(final Map<NumberedCustomField, StringField> fields) {
+		return fields.isEmpty() || new HashSet<>(fields.values())
+				.equals(new HashSet<>(Arrays.asList(FieldItem.noAction())));
 	}
 	
 	/** Get a view of a group.
