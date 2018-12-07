@@ -90,9 +90,7 @@ public class GroupViewTest {
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
-							.withCustomField(new NumberedCustomField("f-1"), "val")
-							.build()));
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
 		
 		getMemberFail(gv, new UserName("a1"));
 		getMemberFail(gv, new UserName("a2"));
@@ -143,16 +141,11 @@ public class GroupViewTest {
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
-							.withCustomField(new NumberedCustomField("f-1"), "val")
-							.build()));
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
-				is(GroupUser.getBuilder(new UserName("a1"), inst(60000))
-						.withCustomField(new NumberedCustomField("admin"), "yar")
-						.build()));
+				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
-				is(GroupUser.getBuilder(new UserName("a2"), inst(30000))
-						.build()));
+				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
 		
 		getMemberFail(gv, new UserName("m1"));
 		getMemberFail(gv, new UserName("m2"));
@@ -248,7 +241,10 @@ public class GroupViewTest {
 	
 	@Test
 	public void customFieldVisibility() throws Exception {
-		GroupView gv = GroupView.getBuilder(GROUP, null).build();
+		GroupView gv = GroupView.getBuilder(GROUP, null)
+				.withMinimalViewUserFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
 		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
 		
 		gv = GroupView.getBuilder(GROUP, null)
@@ -276,7 +272,7 @@ public class GroupViewTest {
 		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field2"), "val2")));
 		
-		gv = GroupView.getBuilder(GROUP, new UserName("user"))
+		gv = GroupView.getBuilder(GROUP, new UserName("m1"))
 				.build();
 		assertThat("incorrect field", gv.getCustomFields(), is(Collections.emptyMap()));
 		
@@ -286,12 +282,120 @@ public class GroupViewTest {
 		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val")));
 		
-		gv = GroupView.getBuilder(GROUP, new UserName("user"))
+		gv = GroupView.getBuilder(GROUP, new UserName("a1"))
 				.withStandardView(true)
 				.build();
 		assertThat("incorrect field", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val",
 				new NumberedCustomField("field2"), "val2")));
+	}
+	
+	@Test
+	public void userCustomFieldVisibility() throws Exception {
+		final UserName owner = new UserName("o");
+		final UserName admin = new UserName("a");
+		final UserName member = new UserName("m");
+		final Group g = Group.getBuilder(new GroupID("i"), new GroupName("n"),
+				GroupUser.getBuilder(owner, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build(),
+				new CreateAndModTimes(inst(1000)))
+				.withMember(GroupUser.getBuilder(member, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(admin, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build())
+				.build();
+		GroupView gv = GroupView.getBuilder(g, null)
+				.withPublicFieldDeterminer(f -> true)
+				.withMinimalViewFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1)).build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+		
+		gv = GroupView.getBuilder(g, null)
+				.withMinimalViewUserFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1)).build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+
+		gv = GroupView.getBuilder(g, null)
+				.withMinimalViewUserFieldDeterminer(f -> f.getField().equals("field"))
+				.withPublicUserFieldDeterminer(f -> f.getField().equals("field2"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1)).build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+
+		gv = GroupView.getBuilder(g, null)
+				.withMinimalViewUserFieldDeterminer(f -> f.getField().equals("field"))
+				.withPublicUserFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+
+		gv = GroupView.getBuilder(g, null)
+				.withStandardView(true)
+				.withPublicUserFieldDeterminer(f -> f.getField().equals("field2"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1))
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build()));
+		assertThat("incorrect user fields", gv.getMember(admin),
+				is(GroupUser.getBuilder(admin, inst(1))
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build()));
+		getMemberFail(gv, member);
+
+		gv = GroupView.getBuilder(g, new UserName("m"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1)).build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+
+		gv = GroupView.getBuilder(g, new UserName("o"))
+				.withMinimalViewUserFieldDeterminer(f -> f.getField().equals("field"))
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.build()));
+		getMemberFail(gv, admin);
+		getMemberFail(gv, member);
+		
+		gv = GroupView.getBuilder(g, new UserName("m"))
+				.withStandardView(true)
+				.build();
+		assertThat("incorrect user fields", gv.getMember(owner),
+				is(GroupUser.getBuilder(owner, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build()));
+		assertThat("incorrect user fields", gv.getMember(admin),
+				is(GroupUser.getBuilder(admin, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build()));
+		assertThat("incorrect user fields", gv.getMember(member),
+				is(GroupUser.getBuilder(member, inst(1))
+						.withCustomField(new NumberedCustomField("field"), "val")
+						.withCustomField(new NumberedCustomField("field2"), "val2")
+						.build()));
 	}
 
 	@Test
@@ -358,6 +462,26 @@ public class GroupViewTest {
 	public void withMinimalViewFieldDeterminerFail() throws Exception {
 		try {
 			GroupView.getBuilder(GROUP, null).withMinimalViewFieldDeterminer(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("isMinimalView"));
+		}
+	}
+	
+	@Test
+	public void withPublicUserFieldDeterminerFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP, null).withPublicUserFieldDeterminer(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("isPublic"));
+		}
+	}
+	
+	@Test
+	public void withMinimalViewUserFieldDeterminerFail() throws Exception {
+		try {
+			GroupView.getBuilder(GROUP, null).withMinimalViewUserFieldDeterminer(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("isMinimalView"));
