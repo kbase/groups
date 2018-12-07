@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -52,6 +53,7 @@ import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -777,6 +779,114 @@ public class MongoGroupsStorage implements GroupsStorage {
 			// if it matched it got modified, so don't check
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
+		}
+	}
+	
+	// somewhat similar to update group. Tried to extract common methods, but it's too 
+	// different not to be a disaster
+	@Override
+	public void updateUser(
+			final GroupID groupID,
+			final UserName member,
+			// TODO CODE there's no need for StringField here. Absent = no change, Optional.empty() == remove
+			// except that Optional allows whitespace only strings, bleah. Maybe a StringOptional class?
+			final Map<NumberedCustomField, StringField> fields,
+			final Instant modDate)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		updateUserCheckForNulls(groupID, member, fields, modDate);
+		if (hasNoUpdates(fields)) {
+			return;
+		}
+		final List<Document> memberQueryOr = new LinkedList<>();
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				// This 1) finds the position of the member to alter, and
+				// 2) ensures that we actually alter the member (see memberQueryOr updates in
+				// fn below) before setting the mod date
+				// 3) keeps the update atomic
+				.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
+						new Document(Fields.GROUP_MEMBER_NAME, member.getName())
+						.append("$or", memberQueryOr)));
+		final Document set = new Document(Fields.GROUP_MODIFICATION, Date.from(modDate));
+		
+		// see further explanation re memberQueryOr updates in this fn
+		final Document update = updateUserBuildUpdateAndModifyQuery(fields, memberQueryOr, set);
+		try {
+			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
+			if (res.getMatchedCount() != 1) {
+				final Group g = getGroup(groupID); //throws no such group
+				// there's a *tiny* possibility that the user could've been added between
+				// the match failing and now, which would mean the function doesn't error
+				// when it should.
+				// So improbable not worth worrying about.
+				if (!g.isMember(member)) {
+					throw new NoSuchUserException(String.format(
+							"User %s is not a member of group %s",
+							member.getName(), groupID.getName()));
+				}
+				// otherwise we don't care - the update made no changes.
+			}
+			// if it matches, it gets modified, so we don't check
+		} catch (MongoException e) {
+			throw wrapMongoException(e);
+		}
+	}
+
+	// this is really just a part of the calling method, but pulled out to make things
+	// slightly less unreadable
+	// TODO CODE this might be shareable with updateGroup - try later
+	private Document updateUserBuildUpdateAndModifyQuery(
+			final Map<NumberedCustomField, StringField> fields,
+			final List<Document> memberQueryOr,
+			final Document set) {
+		final String fieldQueryPrefix = Fields.GROUP_MEMBER_CUSTOM_FIELDS + Fields.FIELD_SEP;
+		// now use the member position to set the fields
+		final String fieldUpdatePrefix = Fields.GROUP_MEMBERS + ".$." +
+				Fields.GROUP_MEMBER_CUSTOM_FIELDS + Fields.FIELD_SEP;
+		final Document unset = new Document();
+		for (final NumberedCustomField ncf: fields.keySet()) {
+			final FieldItem<String> item = fields.get(ncf);
+			if (item.hasAction()) {
+				final String updateField = fieldUpdatePrefix + ncf.getField();
+				// check that the field is different. At least one field must be different
+				// for the update to occur
+				memberQueryOr.add(new Document(fieldQueryPrefix + ncf.getField(),
+						new Document("$ne", item.orNull())));
+				if (item.hasItem()) {
+					set.append(updateField, item.get());
+				} else {
+					unset.append(updateField, "");
+				}
+			}
+		}
+		// set has the mod date in it, so always include
+		final Document update = new Document("$set", set);
+		if (!unset.isEmpty()) {
+			update.append("$unset", unset);
+		}
+		return update;
+	}
+	
+
+	// totally stupid. Get rid of StringField here. OptionalString class which treats
+	// whitespace only strings like nulls would be useful.
+	private boolean hasNoUpdates(final Map<NumberedCustomField, StringField> fields) {
+		return fields.isEmpty() || new HashSet<>(fields.values())
+				.equals(new HashSet<>(Arrays.asList(FieldItem.noAction())));
+	}
+
+	private void updateUserCheckForNulls(
+			final GroupID groupID,
+			final UserName member,
+			final Map<NumberedCustomField, StringField> fields,
+			final Instant modDate) {
+		requireNonNull(groupID, "groupID");
+		requireNonNull(member, "member");
+		requireNonNull(fields, "fields");
+		requireNonNull(modDate, "modDate");
+		for (final Entry<NumberedCustomField, StringField> e: fields.entrySet()) {
+			requireNonNull(e.getKey(), "Null key in fields");
+			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
+					e.getKey().getField()));
 		}
 	}
 

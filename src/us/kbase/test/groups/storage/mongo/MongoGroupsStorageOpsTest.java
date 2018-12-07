@@ -364,7 +364,7 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
-	public void updateCustomFields() throws Exception {
+	public void updateGroupCustomFields() throws Exception {
 		final GroupID gid = new GroupID("gid");
 		manager.storage.createGroup(Group.getBuilder(
 				gid, new GroupName("newname"), toGUser("uname"),
@@ -1257,6 +1257,382 @@ public class MongoGroupsStorageOpsTest {
 			final Exception expected) {
 		try {
 			manager.storage.demoteAdmin(gid, member, modDate);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void updateUserSingleField() throws Exception {
+		// we won't repeat this for every user since the code doesn't make a distinction.
+		// there are tests later that test updating the owner, admin, and member.
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.withAdministrator(toGUser("admin"))
+				.withMember(toGUser("member"))
+				.build());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.from("val")),
+				inst(75000));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(75000)))
+						.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+								.withCustomField(new NumberedCustomField("f1-3"), "val")
+								.build())
+						.withMember(toGUser("member"))
+						.build())));
+		
+		// should do nothing
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.from("val")),
+				inst(80000));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(75000)))
+						.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+								.withCustomField(new NumberedCustomField("f1-3"), "val")
+								.build())
+						.withMember(toGUser("member"))
+						.build())));
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.remove()),
+				inst(80000));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(80000)))
+						.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+								.build())
+						.withMember(toGUser("member"))
+						.build())));
+		
+		// should do nothing
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.remove()),
+				inst(90000));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(
+						new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(80000)))
+						.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+								.build())
+						.withMember(toGUser("member"))
+						.build())));
+	}
+	
+	@Test
+	public void updateOwnerFields() throws Exception {
+		uOFCreateAndUpdateGroup(new UserName("own"));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(new GroupID("gid"), new GroupName("name3"),
+						getUOFUpdate(new UserName("own")),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(60000)))
+						.withAdministrator(getUOFStart(new UserName("admin")))
+						.withMember(getUOFStart(new UserName("member")))
+						.build())));
+	}
+	
+	@Test
+	public void updateAdminFields() throws Exception {
+		uOFCreateAndUpdateGroup(new UserName("admin"));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(new GroupID("gid"), new GroupName("name3"),
+						getUOFStart(new UserName("own")),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(60000)))
+						.withAdministrator(getUOFUpdate(new UserName("admin")))
+						.withMember(getUOFStart(new UserName("member")))
+						.build())));
+	}
+	
+	@Test
+	public void updateMemberFields() throws Exception {
+		uOFCreateAndUpdateGroup(new UserName("member"));
+		
+		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
+				is((Group.getBuilder(new GroupID("gid"), new GroupName("name3"),
+						getUOFStart(new UserName("own")),
+						new CreateAndModTimes(Instant.ofEpochMilli(40000),
+								Instant.ofEpochMilli(60000)))
+						.withAdministrator(getUOFStart(new UserName("admin")))
+						.withMember(getUOFUpdate(new UserName("member")))
+						.build())));
+	}
+	
+	@Test
+	public void updateUserManyFields() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.withAdministrator(toGUser("admin"))
+				.withMember(toGUser("member"))
+				.build());
+
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("member"),
+				ImmutableMap.of(
+						new NumberedCustomField("foo-1"), StringField.from("valfoo"),
+						new NumberedCustomField("bar"), StringField.remove(),
+						new NumberedCustomField("baz"), StringField.noAction(),
+						new NumberedCustomField("foo-2"), StringField.from("valfoo2"),
+						new NumberedCustomField("foo-3"), StringField.from("valfoo3")),
+				inst(70000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(70000)))
+						.withAdministrator(toGUser("admin"))
+						.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000))
+								.withCustomField(new NumberedCustomField("foo-1"), "valfoo")
+								.withCustomField(new NumberedCustomField("foo-2"), "valfoo2")
+								.withCustomField(new NumberedCustomField("foo-3"), "valfoo3")
+								.build())
+						.build()));
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("member"),
+				ImmutableMap.of(
+						new NumberedCustomField("foo-1"), StringField.remove(),
+						new NumberedCustomField("foo-3"), StringField.from("valfoo42"),
+						new NumberedCustomField("bar"), StringField.remove(),
+						new NumberedCustomField("baz"), StringField.noAction(),
+						new NumberedCustomField("foo-2"), StringField.noAction()),
+				inst(90000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(90000)))
+						.withAdministrator(toGUser("admin"))
+						.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000))
+								.withCustomField(new NumberedCustomField("foo-2"), "valfoo2")
+								.withCustomField(new NumberedCustomField("foo-3"), "valfoo42")
+								.build())
+						.build()));
+	}
+	
+	@Test
+	public void updateFieldsNoopEmptyMap() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				Collections.emptyMap(),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+	
+	// this is a good example of why NoAction isn't needed here
+	@Test
+	public void updateFieldsNoopNoAction() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.noAction(),
+						new NumberedCustomField("f2"), StringField.noAction()),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+	
+	@Test
+	public void updateFieldsNoopNoChangeFromUpdateNoAction() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(
+						new NumberedCustomField("fieldtwo"), StringField.noAction()),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+	
+	@Test
+	public void updateFieldsNoopNoChangeFromUpdateRemove() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(
+						new NumberedCustomField("nosuchfield"), StringField.remove()),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+	
+	@Test
+	public void updateFieldsNoopNoChangeFromUpdateChange() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(
+						new NumberedCustomField("fieldtwo"), StringField.from("keep")),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+	
+	@Test
+	public void updateFieldsNoopNoChangeFromUpdateManyFields() throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				new UserName("admin"),
+				ImmutableMap.of(
+						new NumberedCustomField("newfield"), StringField.remove(),
+						new NumberedCustomField("newfield2"), StringField.noAction(),
+						new NumberedCustomField("fieldthree-22"), StringField.from("alter"),
+						new NumberedCustomField("fieldtwo"), StringField.noAction()),
+				inst(60000));
+		
+		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
+				is(getUOFGroup()));
+	}
+
+	private void uOFCreateAndUpdateGroup(final UserName toUpdate) throws Exception {
+		manager.storage.createGroup(getUOFGroup());
+		
+		manager.storage.updateUser(
+				new GroupID("gid"),
+				toUpdate,
+				ImmutableMap.of(
+						new NumberedCustomField("newfield"), StringField.from("new"),
+						new NumberedCustomField("field-1"), StringField.remove(),
+						new NumberedCustomField("fieldthree-22"), StringField.from("done"),
+						new NumberedCustomField("fieldtwo"), StringField.noAction()),
+				inst(60000));
+	}
+
+	private Group getUOFGroup() throws Exception {
+		return Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"),
+				getUOFStart(new UserName("own")),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(getUOFStart(new UserName("admin")))
+				.withMember(getUOFStart(new UserName("member")))
+				.build();
+	}
+
+	private GroupUser getUOFUpdate(final UserName name) throws Exception {
+		return GroupUser.getBuilder(name, inst(10000))
+				.withCustomField(new NumberedCustomField("newfield"), "new")
+				.withCustomField(new NumberedCustomField("fieldtwo"), "keep")
+				.withCustomField(new NumberedCustomField("fieldthree-22"), "done")
+				.withCustomField(new NumberedCustomField("fieldfour-45"), "keep2")
+				.build();
+	}
+
+	private GroupUser getUOFStart(final UserName userName) throws Exception {
+		return GroupUser.getBuilder(userName, inst(10000))
+				.withCustomField(new NumberedCustomField("field-1"), "remove")
+				.withCustomField(new NumberedCustomField("fieldtwo"), "keep")
+				.withCustomField(new NumberedCustomField("fieldthree-22"), "alter")
+				.withCustomField(new NumberedCustomField("fieldfour-45"), "keep2")
+				.build();
+	}
+	
+	@Test
+	public void updateUserFailNulls() throws Exception {
+		final GroupID g = new GroupID("g");
+		final UserName n = new UserName("n");
+		final Map<NumberedCustomField, StringField> f = new HashMap<>();
+		final Instant i = inst(1);
+		
+		updateUserFail(null, n, f, i, new NullPointerException("groupID"));
+		updateUserFail(g, null, f, i, new NullPointerException("member"));
+		updateUserFail(g, n, null, i, new NullPointerException("fields"));
+		updateUserFail(g, n, f, null, new NullPointerException("modDate"));
+		
+		f.put(null, StringField.remove());
+		updateUserFail(g, n, f, i, new NullPointerException("Null key in fields"));
+		
+		f.clear();
+		f.put(new NumberedCustomField("f"), null);
+		updateUserFail(g, n, f, i, new NullPointerException("Null value for key f in fields"));
+	}
+	
+	@Test
+	public void updateUserFailNoSuchGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("m"), inst(1))
+						.withCustomField(new NumberedCustomField("f"), "val")
+						.build())
+				.build());
+		
+		updateUserFail(
+				new GroupID("gid1"),
+				new UserName("m"),
+				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				inst(40000),
+				new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void updateUserFailNoSuchUser() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("m"), inst(1))
+						.withCustomField(new NumberedCustomField("f"), "val")
+						.build())
+				.build());
+		
+		updateUserFail(
+				new GroupID("gid"),
+				new UserName("m1"),
+				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				inst(40000),
+				new NoSuchUserException("User m1 is not a member of group gid"));
+	}
+	
+	private void updateUserFail(
+			final GroupID gid,
+			final UserName name,
+			final Map<NumberedCustomField, StringField> fields,
+			final Instant modDate,
+			final Exception expected) {
+		try {
+			manager.storage.updateUser(gid, name, fields, modDate);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

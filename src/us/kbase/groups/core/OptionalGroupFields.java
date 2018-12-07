@@ -151,6 +151,8 @@ public class OptionalGroupFields {
 			return this;
 		}
 		
+		// TODO CODE there's no need for StringField here. Absent = no change, Optional.empty() == remove
+		// except that Optional allows whitespace only strings, bleah. Maybe a StringOptional class?
 		/** Add a custom field to the set of fields.
 		 * @param field the field.
 		 * @param value the value of the field.
