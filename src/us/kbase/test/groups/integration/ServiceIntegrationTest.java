@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -45,6 +46,7 @@ import us.kbase.common.test.RegexMatcher;
 import us.kbase.groups.core.exceptions.GroupsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
+import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory;
 import us.kbase.groups.notifications.SLF4JNotifierFactory;
 import us.kbase.test.auth2.MapBuilder;
@@ -207,10 +209,10 @@ public class ServiceIntegrationTest {
 		sec.add("field-f1-is-numbered", "true");
 		sec.add("field-f1-param-max-length", "4");
 		sec.add("field-f2-validator", SimpleFieldValidatorFactory.class.getName());
-		//TODO MEMBERFIELDS test
 		sec.add("field-user-f1-validator", SimpleFieldValidatorFactory.class.getName());
 		sec.add("field-user-f1-is-numbered", "true");
 		sec.add("field-user-f1-param-max-length", "4");
+		sec.add("field-user-f1-is-user-settable", "true");
 		sec.add("field-user-f2-validator", SimpleFieldValidatorFactory.class.getName());
 		
 		final Path deploy = Files.createTempFile(TEMP_DIR, "cli_test_deploy", ".cfg");
@@ -569,6 +571,132 @@ public class ServiceIntegrationTest {
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));
+	}
+	
+	//TODO TEST add more updateUser tests as needed. Not comprehensive ATM.
+	
+	@Test
+	public void updateUser() throws Exception {
+		createGroupAndAddUser("myid", TOKEN1, TOKEN2, "user2");
+		
+		// update user
+		final URI updateUserTarget = UriBuilder.fromUri(HOST).path("/group/myid/user/user2/update")
+				.build();
+		
+		final Builder updateUserReq = CLI.target(updateUserTarget).request()
+				.header("authorization", TOKEN2);
+
+		final Response updateUserRes = updateUserReq.put(Entity.json(ImmutableMap.of("custom",
+				ImmutableMap.of("f1-3", "vala   \t  "))));
+		
+		assertThat("incorrect response code", updateUserRes.getStatus(), is(204));
+		
+		// check user record
+		final Map<String, Object> g3 = getGroup("myid", TOKEN2);
+		
+		checkSingleMemberCorrect(g3, "user2", ImmutableMap.of("f1-3", "vala"));
+	}
+	
+	@Test
+	public void updateUserFailUnauthorizedToSetField() throws Exception {
+		createGroupAndAddUser("myid", TOKEN1, TOKEN2, "user2");
+		
+		// update user
+		final URI updateUserTarget = UriBuilder.fromUri(HOST).path("/group/myid/user/user2/update")
+				.build();
+		
+		final Builder updateUserReq = CLI.target(updateUserTarget).request()
+				.header("authorization", TOKEN2);
+
+		final Response updateUserRes = updateUserReq.put(Entity.json(ImmutableMap.of("custom",
+				ImmutableMap.of("f2", "val"))));
+		
+		failRequestJSON(updateUserRes, 403, "Forbidden", new UnauthorizedException(
+				"User user2 is not authorized to set field f2 for group myid"));
+	}
+
+	// note ownerToken must be TOKEN1 for now
+	private void createGroupAndAddUser(
+			final String gid,
+			final String ownerToken,
+			final String userToken,
+			final String userName) {
+		// create group
+		final URI createTarget = UriBuilder.fromUri(HOST).path("/group/" + gid).build();
+		
+		final Builder req = CLI.target(createTarget).request().header("authorization", ownerToken);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of("name", "myname")));
+		
+		assertSimpleGroupCorrect(res, gid, "myname", null, Collections.emptyMap());
+		
+		// request group membership
+		final URI reqUserTarget = UriBuilder.fromUri(HOST)
+				.path("/group/" + gid + "/requestmembership").build();
+		final Builder reqUser = CLI.target(reqUserTarget).request()
+				.header("authorization", userToken);
+		
+		final Response reqRes = reqUser.post(Entity.json(""));
+		
+		assertThat("incorrect response code", reqRes.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> g = reqRes.readEntity(Map.class);
+		final String id = (String) g.get("id");
+		
+		// approve group membership
+		final URI acceptUserTarget = UriBuilder.fromUri(HOST)
+				.path("/request/id/" + id + "/accept").build();
+		final Builder acceptUser = CLI.target(acceptUserTarget).request()
+				.header("authorization", ownerToken);
+		
+		final Response acceptRes = acceptUser.put(Entity.json(""));
+		
+		assertThat("incorrect response code", acceptRes.getStatus(), is(200));
+		
+		// check user record
+		final Map<String, Object> g2 = getGroup(gid, userToken);
+		
+		checkSingleMemberCorrect(g2, userName, Collections.emptyMap());
+	}
+
+	private Map<String, Object> getGroup(final String gid, final String token) {
+		final URI getGrpTarget = UriBuilder.fromUri(HOST).path("/group/" + gid).build();
+		
+		final Builder getGrpReq = CLI.target(getGrpTarget).request()
+				.header("authorization", token);
+
+		final Response getGrpRes = getGrpReq.get();
+		
+		assertThat("incorrect response code", getGrpRes.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> g = getGrpRes.readEntity(Map.class);
+		return g;
+	}
+
+	private void checkSingleMemberCorrect(
+			final Map<String, Object> group,
+			final String name,
+			final Map<String, Object> custom) {
+		@SuppressWarnings("unchecked")
+		final List<Map<String, Object>> users = (List<Map<String, Object>>) group.get("members");
+		assertThat("incorrect user count", users.size(), is(1));
+		final Map<String, Object> user = users.get(0);
+		
+		assertUserCorrect(user, name, custom);
+	}
+
+	private void assertUserCorrect(
+			final Map<String, Object> user,
+			final String name,
+			final Map<String, Object> custom) {
+		final long joined = (long) user.get("joined");
+		user.remove("joined");
+		TestCommon.assertCloseToNow(joined);
+		
+		assertThat("incorrect user", user, is(ImmutableMap.of(
+				"name", name, "custom", custom)));
 	}
 }
 	
