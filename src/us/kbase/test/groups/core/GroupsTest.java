@@ -3,8 +3,10 @@ package us.kbase.test.groups.core;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -17,6 +19,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -514,6 +517,270 @@ public class GroupsTest {
 		}
 	}
 
+	@Test
+	public void updateUserAsAdmin() throws Exception {
+		updateUserAsAdmin(new UserName("admin"), new UserName("member"));
+		updateUserAsAdmin(new UserName("admin"), new UserName("admin"));
+		updateUserAsAdmin(new UserName("admin"), new UserName("owner"));
+		updateUserAsAdmin(new UserName("owner"), new UserName("owner"));
+		updateUserAsAdmin(new UserName("owner"), new UserName("admin"));
+		updateUserAsAdmin(new UserName("owner"), new UserName("member"));
+	}
+
+	private void updateUserAsAdmin(final UserName user, final UserName target) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(user);
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.build());
+		
+		when(mocks.clock.instant()).thenReturn(inst(25000));
+		
+		mocks.groups.updateUser(new Token("t"), new GroupID("gid"), target,
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2"),
+						new NumberedCustomField("f3"), StringField.remove(),
+						new NumberedCustomField("f4"), StringField.noAction()));
+		
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f2"), "val2");
+		verifyNoMoreInteractions(mocks.validators);
+		
+		verify(mocks.storage).updateUser(new GroupID("gid"), target,
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2"),
+						new NumberedCustomField("f3"), StringField.remove(),
+						new NumberedCustomField("f4"), StringField.noAction()),
+				inst(25000));
+	}
+	
+	@Test
+	public void updateUserSelf() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("member"));
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.build());
+		
+		final FieldConfiguration uset = FieldConfiguration.getBuilder()
+				.withNullableIsUserSettable(true).build();
+		
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f2"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f3"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f4"))).thenReturn(uset);
+		
+		when(mocks.clock.instant()).thenReturn(inst(25000));
+		
+		mocks.groups.updateUser(new Token("t"), new GroupID("gid"), new UserName("member"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2"),
+						new NumberedCustomField("f3"), StringField.remove(),
+						new NumberedCustomField("f4"), StringField.noAction()));
+		
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f2"), "val2");
+		
+		verify(mocks.storage).updateUser(new GroupID("gid"), new UserName("member"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2"),
+						new NumberedCustomField("f3"), StringField.remove(),
+						new NumberedCustomField("f4"), StringField.noAction()),
+				inst(25000));
+	}
+	
+	@Test
+	public void updateUserNoUpdateEmptyMap() throws Exception {
+		// nothing should happen
+		initTestMocks().groups.updateUser(new Token("t"), new GroupID("i"), new UserName("n"),
+				Collections.emptyMap());
+	}
+	
+	@Test
+	public void updateUserNoUpdateNoAction() throws Exception {
+		// nothing should happen
+		initTestMocks().groups.updateUser(new Token("t"), new GroupID("i"), new UserName("n"),
+				ImmutableMap.of(new NumberedCustomField("f"), StringField.noAction(),
+						new NumberedCustomField("f2"), StringField.noAction()));
+	}
+	
+	@Test
+	public void updateUserFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		final Token t = new Token("t");
+		final GroupID gid = new GroupID("g");
+		final UserName n = new UserName("n");
+		final Map<NumberedCustomField, StringField> f = new HashMap<>();
+		
+		updateUserFail(g, null, gid, n, f, new NullPointerException("userToken"));
+		updateUserFail(g, t, null, n, f, new NullPointerException("groupID"));
+		updateUserFail(g, t, gid, null, f, new NullPointerException("member"));
+		updateUserFail(g, t, gid, n, null, new NullPointerException("fields"));
+		
+		f.put(null, StringField.remove());
+		updateUserFail(g, t, gid, n, f, new NullPointerException("Null key in fields"));
+		
+		f.clear();
+		f.put(new NumberedCustomField("f"), null);
+		updateUserFail(g, t, gid, n, f, new NullPointerException(
+				"Null value for key f in fields"));
+	}
+	
+	@Test
+	public void updateUserFailNoSuchMemberUserInGroup() throws Exception {
+		updateUserFail(new UserName("member"), new UserName("nonmember"),
+				new NoSuchUserException("User nonmember is not a member of group gid"));
+	}
+	
+	@Test
+	public void updateUserFailNoSuchMemberUserNotInGroup() throws Exception {
+		updateUserFail(new UserName("alsononmember"), new UserName("nonmember"),
+				new UnauthorizedException("User alsononmember is not authorized to change " +
+						"record of user nonmember in group gid"));
+	}
+	
+	@Test
+	public void updateUserFailAttemptByStandardMemberToChangeOtherRecord() throws Exception {
+		updateUserFail(new UserName("member"), new UserName("member2"),
+				new UnauthorizedException("User member is not authorized to change " +
+						"record of user member2 in group gid"));
+	}
+	
+	@Test
+	public void updateUserFailAttemptByNonMemberToChangeOtherRecord() throws Exception {
+		updateUserFail(new UserName("nonmember"), new UserName("member"),
+				new UnauthorizedException("User nonmember is not authorized to change " +
+						"record of user member in group gid"));
+	}
+	
+	private void updateUserFail(
+			final UserName user,
+			final UserName target,
+			final Exception expected)
+			throws Exception {
+		final TestMocks mocks = initTestMocks();
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(user);
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member2"), inst(1)).build())
+				.build());
+		
+		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), target,
+				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				expected);
+	}
+
+	@Test
+	public void updateUserFailMissingParameterOnValidate() throws Exception {
+		// this can never actually happen, but we do it for sweet sweet coverage
+		final TestMocks mocks = initTestMocks();
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member2"), inst(1)).build())
+				.build());
+
+		doThrow(new MissingParameterException("foo"))
+				.when(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
+		
+		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1")),
+				new RuntimeException(
+						"This should be impossible. Please turn reality off and on again"));
+	}
+	
+	@Test
+	public void updateUserFailIllegalParameterOnValidate() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member2"), inst(1)).build())
+				.build());
+
+		doThrow(new IllegalParameterException("bar"))
+				.when(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
+		
+		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1")),
+				new IllegalParameterException("bar"));
+	}
+	
+	@Test
+	public void updateUserSelfFailNotUserSettable() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("member"));
+		
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("n"),
+				GroupUser.getBuilder(new UserName("owner"), inst(5000)).build(),
+				new CreateAndModTimes(inst(5000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(1)).build())
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(1)).build())
+				.build());
+		
+		final FieldConfiguration uset = FieldConfiguration.getBuilder()
+				.withNullableIsUserSettable(true).build();
+		
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f2")))
+				.thenReturn(FieldConfiguration.getBuilder().build()); // not settable
+		when(mocks.validators.getUserFieldConfiguration(new CustomField("f3"))).thenReturn(uset);
+		
+		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
+				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2"),
+						new NumberedCustomField("f3"), StringField.remove()),
+				new UnauthorizedException(
+						"User member is not authorized to set field f2 for group gid"));
+		
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
+		verify(mocks.validators).validateUserField(new NumberedCustomField("f2"), "val2");
+
+		verify(mocks.storage, never()).updateUser(any(), any(), any(), any());
+	}
+	
+	private void updateUserFail(
+			final Groups g,
+			final Token t,
+			final GroupID gid,
+			final UserName target,
+			final Map<NumberedCustomField, StringField> fields,
+			final Exception expected) {
+		try {
+			g.updateUser(t, gid, target, fields);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 	@Test
 	public void getGroupNoTokenNoResources() throws Exception {
 		final TestMocks mocks = initTestMocks();
