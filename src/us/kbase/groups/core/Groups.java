@@ -209,14 +209,13 @@ public class Groups {
 	 * @param member the member to update.
 	 * @param fields the update to apply to the member.
 	 * @throws UnauthorizedException if the user is not a group administrator or the member
-	 * to be updated.
-	 * @throws NoSuchUserException if the group does not contain the user. This exception
-	 * is only thrown is the user is a group administrator.
+	 * to be updated, or the member tries to update a restricted field.
+	 * @throws NoSuchUserException if the group does not contain the member. This exception
+	 * is only thrown is the user is a group member.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no group with the provided ID.
-	 * @throws UnauthorizedException if the user is not a group administrator.
 	 * @throws NoSuchCustomFieldException if a custom field in the update is not configured.
 	 * @throws IllegalParameterException if a custom field in the update has an illegal value.
 	 * @throws FieldValidatorException if a validator could not validate the field.

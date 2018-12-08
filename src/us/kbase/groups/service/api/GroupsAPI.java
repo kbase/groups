@@ -92,6 +92,32 @@ public class GroupsAPI {
 				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
+	private static Map<NumberedCustomField, StringField> getCustomFieldsAndTypeCheck(
+			final Object customFields,
+			final String fieldName)
+			throws IllegalParameterException, MissingParameterException {
+		// jackson errors are too ugly, so we do it ourselves
+		if (customFields == null) {
+			return Collections.emptyMap();
+		}
+		if (!(customFields instanceof Map)) {
+			throw new IllegalParameterException("'" + fieldName + "' field must be a mapping");
+		}
+		// we'll assume the map keys are strings, since it's coming in as json.
+		@SuppressWarnings("unchecked")
+		final Map<String, String> map = (Map<String, String>) customFields;
+		final Map<NumberedCustomField, StringField> ret = new HashMap<>();
+		for (final String s: map.keySet()) {
+			if (map.get(s) != null && !(map.get(s) instanceof String)) {
+				throw new IllegalParameterException(String.format(
+						"Value of '%s' field in 'custom' map is not a string", s));
+			}
+			ret.put(new NumberedCustomField(s), isNullOrEmpty(map.get(s)) ?
+					StringField.remove() : StringField.from(map.get(s)));
+		}
+		return ret;
+	}
+	
 	public static class CreateOrUpdateGroupJSON extends IncomingJSON {
 		
 		@JsonProperty(Fields.GROUP_NAME)
@@ -127,38 +153,15 @@ public class GroupsAPI {
 
 		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
 				throws IllegalParameterException, MissingParameterException {
-			final Map<String, String> customFields = getCustomFieldsAndTypeCheck();
+			final Map<NumberedCustomField, StringField> customFields = getCustomFieldsAndTypeCheck(
+					this.customFields, Fields.GROUP_CUSTOM_FIELDS);
 			final Builder b = OptionalGroupFields.getBuilder();
-			if (customFields != null) {
-				for (final String k: customFields.keySet()) {
-					if (!ignoreMissingValues || !isNullOrEmpty(customFields.get(k))) {
-						b.withCustomField(new NumberedCustomField(k),
-								getStringField(Optional.ofNullable(customFields.get(k))));
-					}
+			for (final NumberedCustomField k: customFields.keySet()) {
+				if (!ignoreMissingValues || customFields.get(k).hasItem()) {
+					b.withCustomField(k, customFields.get(k));
 				}
 			}
 			return b;
-		}
-
-		private Map<String, String> getCustomFieldsAndTypeCheck()
-				throws IllegalParameterException {
-			// jackson errors are too ugly, so we do it ourselves
-			if (customFields == null) {
-				return null;
-			}
-			if (!(customFields instanceof Map)) {
-				throw new IllegalParameterException("'custom' field must be a mapping");
-			}
-			// we'll assume the map keys are strings, since it's coming in as json.
-			@SuppressWarnings("unchecked")
-			final Map<String, String> map = (Map<String, String>) customFields;
-			for (final String s: map.keySet()) {
-				if (map.get(s) != null && !(map.get(s) instanceof String)) {
-					throw new IllegalParameterException(String.format(
-							"Value of '%s' field in 'custom' map is not a string", s));
-				}
-			}
-			return map;
 		}
 
 		// handles case where the optional itself is null
@@ -332,7 +335,6 @@ public class GroupsAPI {
 		return ret;
 	}
 	
-	
 	private Map<String, Object> toUserJson(final GroupUser user) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
@@ -373,6 +375,41 @@ public class GroupsAPI {
 		return ret;
 	}
 
+	public static class UpdateUserJSON extends IncomingJSON {
+		
+		@JsonProperty(Fields.GROUP_MEMBER_CUSTOM_FIELDS)
+		private Object customFields;
+
+		@SuppressWarnings("unused")
+		private UpdateUserJSON() {} // default constructor for Jackson
+		
+		// this constructor is for testing.
+		public UpdateUserJSON(final Object customFields) {
+			this.customFields = customFields;
+		}
+	}
+	
+	@PUT
+	@Path(ServicePaths.GROUP_USER_ID_UPDATE)
+	public void updateUser(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID,
+			@PathParam(Fields.GROUP_MEMBER) final String member,
+			final UpdateUserJSON update)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				IllegalParameterException, NoSuchCustomFieldException, MissingParameterException,
+				GroupsStorageException, FieldValidatorException {
+		checkIncomingJson(update);
+		final Map<NumberedCustomField, StringField> customFields = getCustomFieldsAndTypeCheck(
+				update.customFields, Fields.GROUP_MEMBER_CUSTOM_FIELDS);
+		if (customFields.isEmpty()) {
+			throw new MissingParameterException("No fields provided to update");
+		}
+		groups.updateUser(getToken(token, true), new GroupID(groupID), new UserName(member),
+				customFields);
+	}
+	
 	@PUT
 	@Path(ServicePaths.GROUP_USER_ID_ADMIN)
 	public void promoteMember(

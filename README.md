@@ -356,6 +356,29 @@ DELETE /group/<group id>/user/<user name>/admin
 
 The user must be the group owner.
 
+### Update a user's fields
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/user/<user name>/update
+{
+    "custom": {
+        <custom field 1>: <custom value 1>,
+        ...
+        <custom field N>: <custom value N>
+    }
+}
+```
+
+The user must be a group administrator or the user whose fields are to be updated.
+
+If a custom fields are missing, it is not altered.
+If fields are `null`, they are removed. Otherwise they are set to the new value.
+
+See `Custom fields` below for information on custom fields.
+
+Whitespace only strings are treated as `null`.
+
 ### Add a resource to a group
 
 ```
