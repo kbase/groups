@@ -5,7 +5,8 @@ export default class {
     
   constructor(rootElement) {
     this.rootElement = rootElement;
-    this.serviceUrl = 'http://localhost:8080/';
+//    this.serviceUrl = 'http://localhost:8080/';
+    this.serviceUrl = 'http://gavinisrad.com/groups/';
     this.authUrl = 'https://ci.kbase.us/services/auth/';
     this.token = null;
     this.user = null;
@@ -274,7 +275,7 @@ export default class {
                           <tr id="${s(g.id)}">
                             <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
-                            <td>${s(g.owner)}</td>
+                            <td>${s(g.owner.name)}</td>
                             <td>${s(c)}</td>
                             <td>${s(m)}</td>
                           </tr>
@@ -305,6 +306,30 @@ export default class {
       });
   }
   
+  getUserRow(user, role, button1name, button1id, button2name, button2id) {
+      const s = this.sanitize;
+      const j = new Date(user.joined).toLocaleString();
+      let d = `<tr>
+                   <th>${s(user.name)}</th>
+                   <td>
+                     <input id="settitle_val_${s(user.name)}" value="${s(user.custom.title)}"/>
+                     <button id="settitle_${s(user.name)}" class="btn btn-primary">Set</button>
+                   </td>
+                   <td>${s(role)}</td>
+                   <td>${j}</td>
+                   <td>
+                 `;
+      
+      if (button1name) {
+          d += `<button id="${button1id}" class="btn btn-primary">${button1name}</button>`;
+      }
+      if (button2name) {
+          d += `<button id="${button2id}" class="btn btn-primary">${button2name}</button>`;
+      }
+      d += `</td></tr>`;
+      return d;
+  }
+  
   renderGroup(groupid) {
       $('#error').text("");
       fetch(this.serviceUrl + "group/" + groupid, {"headers": this.getHeaders()})
@@ -317,48 +342,39 @@ export default class {
                   const s = this.sanitize;
                   const members = json.members;
                   const admins = json.admins;
-                  const priv = !members.includes(this.user) && !admins.includes(this.user) &&
-                      json.owner != this.user;
+                  // TODO edit user title
                   let g =
                       `
                       <table class="table">
                         <tbody>
                           <tr><th>ID</th><td>${this.getGravatar(json)}${s(json.id)}</td></tr>
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
-                          <tr><th>Owner</th><td>${s(json.owner)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(json.description)}</td></tr>
                         </tbody>
                       </table>
-                      <div><button id="editgroup" class="btn btn-primary">Edit</button></div>
-                      `
-                  if (priv) {
-                      g += `<div>*** Group membership is private ***</div>`;
-                  } else {
-                      g += `<div>Members</div><table class="table"><tbody>`;
-                      for (const m of members) {
-                          g += `<tr><td>${s(m)}</td>
-                                  <td>
-                                    <button id="remove_${s(m)}" class="btn btn-primary">Remove
-                                        </button>
-                                  </td>
-                                  <td>
-                                    <button id="promote_${s(m)}" class="btn btn-primary">Promote
-                                        </button>
-                                  </td>
-                                </tr>`
-                      }
-                      g += `</tbody></table>`;
-                  }
-                  g += `<div>Administrators</div><table class="table"><tbody>`;
+                      <div>
+                        <button id="editgroup" class="btn btn-primary">Edit</button>
+                      </div>
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th scope="col">User</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Joined</th>
+                            <th scope="col">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                      ` + this.getUserRow(json.owner, 'Owner');
                   for (const a of admins) {
-                      g += `<tr><td>${s(a)}</td>
-                              <td>
-                                <button id="demote_${s(a)}" class="btn btn-primary">Humiliate
-                                    </button>
-                              </td>
-                            </tr>`
+                      g += this.getUserRow(a, "Admin", "Humiliate", `demote_${s(a.name)}`);
+                  }
+                  for (const mem of members) {
+                      g += this.getUserRow(mem, "Member", "Promote", `promote_${s(mem.name)}`,
+                              "Remove", `remove_${s(mem.name)}`);
                   }
                   g += `</tbody></table>
                         <div>Workspaces</div>
@@ -441,6 +457,7 @@ export default class {
                           Requests for group</button>
                       </div>
                       `;
+                  //TODO set title button
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#editgroup').on('click', () => {
@@ -464,19 +481,17 @@ export default class {
                       const meth = $('#addmeth').val();
                       this.addResource(groupid, "catalogmethod", meth);
                   });
-                  if (!priv) {
-                      for (const m of members) {
-                          $(`#remove_${s(m)}`).on('click', () => {
-                              this.removeMember(groupid, m);
-                          });
-                          $(`#promote_${s(m)}`).on('click', () => {
-                              this.promoteMember(groupid, m);
-                          });
-                      }
+                  for (const m of members) {
+                      $(`#remove_${s(m.name)}`).on('click', () => {
+                          this.removeMember(groupid, m.name);
+                      });
+                      $(`#promote_${s(m.name)}`).on('click', () => {
+                          this.promoteMember(groupid, m.name);
+                      });
                   }
                   for (const a of admins) {
-                      $(`#demote_${s(a)}`).on('click', () => {
-                          this.demoteAdmin(groupid, a);
+                      $(`#demote_${s(a.name)}`).on('click', () => {
+                          this.demoteAdmin(groupid, a.name);
                       });
                   }
                   for (const ws of json.resources.workspace) {
