@@ -63,6 +63,7 @@ import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.GroupsAPI;
 import us.kbase.groups.service.api.GroupsAPI.CreateOrUpdateGroupJSON;
+import us.kbase.groups.service.api.GroupsAPI.UpdateUserJSON;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
 
@@ -1195,6 +1196,147 @@ public class GroupsAPITest {
 			final Exception expected) {
 		try {
 			new GroupsAPI(g).demoteAdmin(token, groupid, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void updateUserNullFields() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final Map<String, String> fields = new HashMap<>();
+		fields.put("f1", null);
+		fields.put("f2", null);
+		
+		
+		new GroupsAPI(g).updateUser("   tok  ", "   gid  \t  ", "user",
+				new UpdateUserJSON(fields));
+		
+		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
+				ImmutableMap.of(new NumberedCustomField("f1"), StringField.remove(),
+						new NumberedCustomField("f2"), StringField.remove()));
+	}
+
+	@Test
+	public void updateUserEmptyFields() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final Map<String, String> fields = new HashMap<>();
+		fields.put("f1", "  \t    ");
+		fields.put("f2", "     \t    ");
+		
+		
+		new GroupsAPI(g).updateUser("   tok  ", "   gid  \t  ", "user",
+				new UpdateUserJSON(fields));
+		
+		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
+				ImmutableMap.of(new NumberedCustomField("f1"), StringField.remove(),
+						new NumberedCustomField("f2"), StringField.remove()));
+	}
+	
+	@Test
+	public void updateUserPopulatedFields() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final Map<String, String> fields = new HashMap<>();
+		fields.put("f1", "   val1  ");
+		fields.put("f2", "  \t    val2");
+		
+		
+		new GroupsAPI(g).updateUser("   tok  ", "   gid  \t  ", "user",
+				new UpdateUserJSON(fields));
+		
+		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
+				ImmutableMap.of(new NumberedCustomField("f1"), StringField.from("val1"),
+						new NumberedCustomField("f2"), StringField.from("val2")));
+	}
+	
+	@Test
+	public void updateUserFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		final UpdateUserJSON j = new UpdateUserJSON(ImmutableMap.of("f", "v"));
+		
+		updateUserFail(g, null, "i", "u", j,
+				new NoTokenProvidedException("No token provided"));
+		updateUserFail(g, "    \t    ", "i", "u", j,
+				new NoTokenProvidedException("No token provided"));
+		updateUserFail(g, "t", null, "u", j,
+				new MissingParameterException("group id"));
+		updateUserFail(g, "t", "   \t   ", "u", j,
+				new MissingParameterException("group id"));
+		updateUserFail(g, "t", "i", null, j,
+				new MissingParameterException("user name"));
+		updateUserFail(g, "t", "i", "  \t    ", j,
+				new MissingParameterException("user name"));
+		updateUserFail(g, "t", "i", "u", null,
+				new MissingParameterException("Missing JSON body"));
+		updateUserFail(g, "t", "i", "u", new UpdateUserJSON(null),
+				new MissingParameterException("No fields provided to update"));
+		updateUserFail(g, "t", "i", "u", new UpdateUserJSON(Collections.emptyMap()),
+				new MissingParameterException("No fields provided to update"));
+	}
+	
+	@Test
+	public void updateUserFailExtraProperties() throws Exception {
+		final Groups g = mock(Groups.class);
+		final UpdateUserJSON b = new UpdateUserJSON(ImmutableMap.of("a", "b"));
+		b.setAdditionalProperties("foo", "bar");
+
+		updateUserFail(g, "t", "i", "u", b, new IllegalParameterException(
+				"Unexpected parameters in request: foo"));
+	}
+	
+	@Test
+	public void updateUserFailCustomNotMap() throws Exception {
+		final Groups g = mock(Groups.class);
+		final UpdateUserJSON b = new UpdateUserJSON("customstr");
+
+		updateUserFail(g, "t", "i", "u", b, new IllegalParameterException(
+				"'custom' field must be a mapping"));
+	}
+	
+	@Test
+	public void updateUserFailCustomNotStringValue() throws Exception {
+		final Groups g = mock(Groups.class);
+		final UpdateUserJSON b = new UpdateUserJSON(
+				ImmutableMap.of("foo-1", Collections.emptyList()));
+
+		updateUserFail(g, "t", "i", "u", b, new IllegalParameterException(
+				"Value of 'foo-1' field in 'custom' map is not a string"));
+	}
+	
+	@Test
+	public void updateUserFailBadCustomField() throws Exception {
+		final Groups g = mock(Groups.class);
+		final UpdateUserJSON b = new UpdateUserJSON(ImmutableMap.of("foo-1-1", "yay"));
+
+		updateUserFail(g, "t", "i", "u", b, new IllegalParameterException(
+				"Suffix after - of field foo-1-1 must be an integer > 0"));
+	}
+	
+	@Test
+	public void updateUserFailNoSuchGroup() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		doThrow(new NoSuchUserException("foo")).when(g).updateUser(
+				new Token("tok"), new GroupID("i"), new UserName("n"),
+				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()));
+
+		updateUserFail(g, "tok", "  i", "n", new UpdateUserJSON(ImmutableMap.of("f", "  ")),
+				new NoSuchUserException("foo"));
+	}
+	
+	private void updateUserFail(
+			final Groups g,
+			final String token,
+			final String groupID,
+			final String user,
+			final UpdateUserJSON body,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).updateUser(token, groupID, user, body);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
