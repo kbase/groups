@@ -451,27 +451,17 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document query = new Document(Fields.GROUP_ID, update.getGroupID().getName())
 				.append("$or", or);
 		final Document set = new Document(Fields.GROUP_MODIFICATION, Date.from(modDate));
-		final Document unset = new Document();
 		
 		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
 		final OptionalGroupFields opts = update.getOptionalFields();
 		buildUpdate(or, set, opts.getDescription(), Fields.GROUP_DESCRIPTION, n -> n.get());
-		for (final NumberedCustomField ncf: opts.getCustomFields()) {
-			final String field = Fields.GROUP_CUSTOM_FIELDS + Fields.FIELD_SEP + ncf.getField();
-			final FieldItem<String> item = opts.getCustomValue(ncf);
-			if (item.hasAction()) {
-				or.add(new Document(field, new Document("$ne", item.orNull())));
-				if (item.hasItem()) {
-					set.append(field, item.get());
-				} else {
-					unset.append(field, "");
-				}
-			}
-		}
-		final Document mod = new Document("$set", set);
-		if (!unset.isEmpty()) {
-			mod.append("$unset", unset);
-		}
+		final Document mod = buildQueryAndUpdateForCustomFields(
+				opts.getCustomFields(),
+				f -> opts.getCustomValue(f),
+				Fields.GROUP_CUSTOM_FIELDS + Fields.FIELD_SEP,
+				Fields.GROUP_CUSTOM_FIELDS + Fields.FIELD_SEP,
+				or,
+				set);
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, mod);
 			if (res.getMatchedCount() != 1) {
@@ -482,6 +472,56 @@ public class MongoGroupsStorage implements GroupsStorage {
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
+	}
+	
+	/** This method is for updating custom fields in groups and users. It modifies the
+	 * query in place (queryOr) to ensure the query *does not* match documents where the
+	 * custom field changes would not modify the document (other fields in the or document
+	 * might make the query match, of course). The set document (which is expected to already
+	 * contain at least one update, and so is always contained in the returned document)
+	 * is updated in place to update the custom fields to their new value.
+	 * @param fields the custom fields.
+	 * @param valueGetter a function to get the value of a custom field.
+	 * @param queryFieldPrefix the prefix for the custom field query field. The actual field
+	 * name is added to this prefix to point to the custom field. 
+	 * @param updateFieldPrefix the prefix for the custom field update field. The update
+	 * will be applied to this field.
+	 * @param queryOr a list that will be modified in place with conditions that match the 
+	 * negation of the custom field update. Thus at least one update must actually make a change
+	 * to the document for the query to match.
+	 * @param set a document that will be modified in place to update the custom fields.
+	 * @return the overall update document, containing the set document as well as an
+	 * unset document.
+	 */
+	private Document buildQueryAndUpdateForCustomFields(
+			final Set<NumberedCustomField> fields,
+			final Function<NumberedCustomField, FieldItem<String>> valueGetter,
+			final String queryFieldPrefix,
+			final String updateFieldPrefix,
+			final List<Document> queryOr,
+			final Document set) {
+		final Document unset = new Document();
+		for (final NumberedCustomField ncf: fields) {
+			final FieldItem<String> item = valueGetter.apply(ncf);
+			if (item.hasAction()) {
+				final String updateField = updateFieldPrefix + ncf.getField();
+				// check that the field is different. At least one field must be different
+				// for the update to occur
+				queryOr.add(new Document(queryFieldPrefix + ncf.getField(),
+						new Document("$ne", item.orNull())));
+				if (item.hasItem()) {
+					set.append(updateField, item.get());
+				} else {
+					unset.append(updateField, "");
+				}
+			}
+		}
+		// set has the mod date in it, so always include
+		final Document update = new Document("$set", set);
+		if (!unset.isEmpty()) {
+			update.append("$unset", unset);
+		}
+		return update;
 	}
 	
 	private <T> void buildUpdate(
@@ -782,8 +822,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
-	// somewhat similar to update group. Tried to extract common methods, but it's too 
-	// different not to be a disaster
 	@Override
 	public void updateUser(
 			final GroupID groupID,
@@ -805,11 +843,19 @@ public class MongoGroupsStorage implements GroupsStorage {
 				// 3) keeps the update atomic
 				.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
 						new Document(Fields.GROUP_MEMBER_NAME, member.getName())
-						.append("$or", memberQueryOr)));
+								.append("$or", memberQueryOr)));
 		final Document set = new Document(Fields.GROUP_MODIFICATION, Date.from(modDate));
 		
 		// see further explanation re memberQueryOr updates in this fn
-		final Document update = updateUserBuildUpdateAndModifyQuery(fields, memberQueryOr, set);
+		final Document update = buildQueryAndUpdateForCustomFields(
+				fields.keySet(),
+				f -> fields.get(f),
+				Fields.GROUP_MEMBER_CUSTOM_FIELDS + Fields.FIELD_SEP,
+				// now use the member position to set the fields
+				Fields.GROUP_MEMBERS + ".$." + Fields.GROUP_MEMBER_CUSTOM_FIELDS +
+						Fields.FIELD_SEP,
+				memberQueryOr,
+				set);
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
 			if (res.getMatchedCount() != 1) {
@@ -830,42 +876,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throw wrapMongoException(e);
 		}
 	}
-
-	// this is really just a part of the calling method, but pulled out to make things
-	// slightly less unreadable
-	// TODO CODE this might be shareable with updateGroup - try later
-	private Document updateUserBuildUpdateAndModifyQuery(
-			final Map<NumberedCustomField, StringField> fields,
-			final List<Document> memberQueryOr,
-			final Document set) {
-		final String fieldQueryPrefix = Fields.GROUP_MEMBER_CUSTOM_FIELDS + Fields.FIELD_SEP;
-		// now use the member position to set the fields
-		final String fieldUpdatePrefix = Fields.GROUP_MEMBERS + ".$." +
-				Fields.GROUP_MEMBER_CUSTOM_FIELDS + Fields.FIELD_SEP;
-		final Document unset = new Document();
-		for (final NumberedCustomField ncf: fields.keySet()) {
-			final FieldItem<String> item = fields.get(ncf);
-			if (item.hasAction()) {
-				final String updateField = fieldUpdatePrefix + ncf.getField();
-				// check that the field is different. At least one field must be different
-				// for the update to occur
-				memberQueryOr.add(new Document(fieldQueryPrefix + ncf.getField(),
-						new Document("$ne", item.orNull())));
-				if (item.hasItem()) {
-					set.append(updateField, item.get());
-				} else {
-					unset.append(updateField, "");
-				}
-			}
-		}
-		// set has the mod date in it, so always include
-		final Document update = new Document("$set", set);
-		if (!unset.isEmpty()) {
-			update.append("$unset", unset);
-		}
-		return update;
-	}
-	
 
 	// totally stupid. Get rid of StringField here. OptionalString class which treats
 	// whitespace only strings like nulls would be useful.
