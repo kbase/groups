@@ -10,6 +10,7 @@ import org.junit.Test;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -93,9 +94,9 @@ public class OptionalGroupFieldsTest {
 	public void buildMaximal() throws Exception {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
 				.withDescription(StringField.from("   foo    "))
-				.withCustomField(new NumberedCustomField("foo-1"), StringField.from("  val  "))
-				.withCustomField(new NumberedCustomField("foo"), StringField.remove())
-				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
+				.withCustomField(new NumberedCustomField("foo-1"), OptionalString.of("  val  "))
+				.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
+				.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 				.build();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.from("foo")));
@@ -104,17 +105,17 @@ public class OptionalGroupFieldsTest {
 				set(new NumberedCustomField("foo-1"), new NumberedCustomField("foo"),
 						new NumberedCustomField("bar"))));
 		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("foo-1")),
-				is(StringField.from("val")));
+				is(OptionalString.of("val")));
 		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("foo")),
-				is(StringField.remove()));
+				is(OptionalString.empty()));
 		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
-				is(StringField.noAction()));
+				is(OptionalString.empty()));
 	}
 	
 	@Test
 	public void buildWithCustomFieldWithUpdate() throws Exception {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
-				.withCustomField(new NumberedCustomField("bar"), StringField.remove())
+				.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 				.build();
 		
 		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
@@ -122,32 +123,18 @@ public class OptionalGroupFieldsTest {
 		assertThat("incorrect fields", ofg.getCustomFields(), is(
 				set(new NumberedCustomField("bar"))));
 		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
-				is(StringField.remove()));
+				is(OptionalString.empty()));
 	}
 	
 	@Test
-	public void buildWithCustomFieldNoUpdate() throws Exception {
-		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
-				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
-				.build();
-		
-		assertThat("incorrect desc", ofg.getDescription(), is(FieldItem.noAction()));
-		assertThat("incorrect update", ofg.hasUpdate(), is(false));
-		assertThat("incorrect fields", ofg.getCustomFields(), is(
-				set(new NumberedCustomField("bar"))));
-		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
-				is(StringField.noAction()));
-	}
-
-	@Test
 	public void withCustomFieldFail() throws Exception {
-		failWithCustomField(null, StringField.noAction(), new NullPointerException("field"));
+		failWithCustomField(null, OptionalString.empty(), new NullPointerException("field"));
 		failWithCustomField(new NumberedCustomField("a"), null, new NullPointerException("value"));
 	}
 	
 	private void failWithCustomField(
 			final NumberedCustomField field,
-			final StringField value,
+			final OptionalString value,
 			final Exception expected) {
 		try {
 			OptionalGroupFields.getBuilder().withCustomField(field, value);
@@ -160,7 +147,7 @@ public class OptionalGroupFieldsTest {
 	@Test
 	public void getCustomValueFail() throws Exception {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
-				.withCustomField(new NumberedCustomField("bar"), StringField.noAction())
+				.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 				.build();
 
 		failGetCustomValue(ofg, null, new NullPointerException("field"));

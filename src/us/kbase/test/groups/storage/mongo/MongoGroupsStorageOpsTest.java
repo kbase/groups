@@ -38,6 +38,7 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
@@ -339,7 +340,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-1"),
-								StringField.from("yay!"))
+								OptionalString.of("yay!"))
 						.build())
 				.build(),
 				inst(90000));
@@ -352,7 +353,7 @@ public class MongoGroupsStorageOpsTest {
 		
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("foo-1"), StringField.remove())
+						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.build())
 				.build(),
 				inst(100000));
@@ -374,15 +375,13 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-1"),
-								StringField.from("valfoo"))
+								OptionalString.of("valfoo"))
 						.withCustomField(new NumberedCustomField("bar"),
-								StringField.remove())
-						.withCustomField(new NumberedCustomField("baz"),
-								StringField.noAction())
+								OptionalString.empty())
 						.withCustomField(new NumberedCustomField("foo-2"),
-								StringField.from("valfoo2"))
+								OptionalString.of("valfoo2"))
 						.withCustomField(new NumberedCustomField("foo-3"),
-								StringField.from("valfoo3"))
+								OptionalString.of("valfoo3"))
 						.build())
 				.build(),
 				inst(90000));
@@ -397,16 +396,10 @@ public class MongoGroupsStorageOpsTest {
 		
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("foo-1"),
-								StringField.remove())
+						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("foo-3"),
-								StringField.from("valfoo42"))
-						.withCustomField(new NumberedCustomField("bar"),
-								StringField.remove())
-						.withCustomField(new NumberedCustomField("baz"),
-								StringField.noAction())
-						.withCustomField(new NumberedCustomField("foo-2"),
-								StringField.noAction())
+								OptionalString.of("valfoo42"))
+						.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 						.build())
 				.build(),
 				inst(100000));
@@ -434,8 +427,9 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("newname"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("other desc"))
-						.withCustomField(new NumberedCustomField("foo-2"), StringField.remove())
-						.withCustomField(new NumberedCustomField("foo-3"), StringField.from("meh"))
+						.withCustomField(new NumberedCustomField("foo-2"), OptionalString.empty())
+						.withCustomField(new NumberedCustomField("foo-3"),
+								OptionalString.of("meh"))
 						.build())
 				.build(),
 				inst(30001));
@@ -450,15 +444,18 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void updateGroupNoopMinimalNoAction() throws Exception {
-		updateGroupNoopMinimal(StringField.noAction());
+		updateGroupNoopMinimal(StringField.noAction(), OptionalString.empty());
 	}
 	
 	@Test
 	public void updateGroupNoopMinimalRemove() throws Exception {
-		updateGroupNoopMinimal(StringField.remove());
+		updateGroupNoopMinimal(StringField.remove(), OptionalString.empty());
 	}
 
-	private void updateGroupNoopMinimal(final StringField action) throws Exception {
+	private void updateGroupNoopMinimal(
+			final StringField descAction,
+			final OptionalString cfAction)
+			throws Exception {
 		// tests updating a group with identical contents. Ensure the mod date isn't set.
 		final GroupID gid = new GroupID("gid");
 		manager.storage.createGroup(Group.getBuilder(
@@ -469,8 +466,8 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(action)
-						.withCustomField(new NumberedCustomField("yay"), action)
+						.withDescription(descAction)
+						.withCustomField(new NumberedCustomField("yay"), cfAction)
 						.build())
 				.build(),
 				inst(50000));
@@ -498,9 +495,9 @@ public class MongoGroupsStorageOpsTest {
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("my desc"))
 						.withCustomField(new NumberedCustomField("thatlast"),
-								StringField.from("test was a bit rude"))
+								OptionalString.of("test was a bit rude"))
 						.withCustomField(new NumberedCustomField("yesi-1"),
-								StringField.from("agree it was a bit"))
+								OptionalString.of("agree it was a bit"))
 						.build())
 				.build(),
 				inst(50000));
@@ -529,7 +526,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.build())
 				.build(),
 				inst(50000));
@@ -545,7 +542,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.build())
 				.build(),
 				inst(760000));
@@ -561,7 +558,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.noAction())
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.build())
 				.build(),
 				inst(60000));
@@ -577,7 +574,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("yay!"))
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.build())
 				.build(),
 				inst(80000));
@@ -594,8 +591,8 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("yay!"))
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
-						.withCustomField(new NumberedCustomField("baz"), StringField.from("bat"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
+						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
 						.build())
 				.build(),
 				inst(100000));
@@ -613,8 +610,8 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("yay!"))
-						.withCustomField(new NumberedCustomField("foo"), StringField.remove())
-						.withCustomField(new NumberedCustomField("baz"), StringField.from("bat"))
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
+						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
 						.build())
 				.build(),
 				inst(100000));
@@ -1277,7 +1274,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateUser(
 				new GroupID("gid"),
 				new UserName("admin"),
-				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.from("val")),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), OptionalString.of("val")),
 				inst(75000));
 		
 		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
@@ -1294,7 +1291,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateUser(
 				new GroupID("gid"),
 				new UserName("admin"),
-				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.from("val")),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), OptionalString.of("val")),
 				inst(80000));
 		
 		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
@@ -1310,7 +1307,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateUser(
 				new GroupID("gid"),
 				new UserName("admin"),
-				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), OptionalString.empty()),
 				inst(80000));
 		
 		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
@@ -1326,7 +1323,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateUser(
 				new GroupID("gid"),
 				new UserName("admin"),
-				ImmutableMap.of(new NumberedCustomField("f1-3"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f1-3"), OptionalString.empty()),
 				inst(90000));
 		
 		assertThat("incorrect update", manager.storage.getGroup(new GroupID("gid")),
@@ -1394,11 +1391,10 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				new UserName("member"),
 				ImmutableMap.of(
-						new NumberedCustomField("foo-1"), StringField.from("valfoo"),
-						new NumberedCustomField("bar"), StringField.remove(),
-						new NumberedCustomField("baz"), StringField.noAction(),
-						new NumberedCustomField("foo-2"), StringField.from("valfoo2"),
-						new NumberedCustomField("foo-3"), StringField.from("valfoo3")),
+						new NumberedCustomField("foo-1"), OptionalString.of("valfoo"),
+						new NumberedCustomField("bar"), OptionalString.empty(),
+						new NumberedCustomField("foo-2"), OptionalString.of("valfoo2"),
+						new NumberedCustomField("foo-3"), OptionalString.of("valfoo3")),
 				inst(70000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
@@ -1416,11 +1412,9 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				new UserName("member"),
 				ImmutableMap.of(
-						new NumberedCustomField("foo-1"), StringField.remove(),
-						new NumberedCustomField("foo-3"), StringField.from("valfoo42"),
-						new NumberedCustomField("bar"), StringField.remove(),
-						new NumberedCustomField("baz"), StringField.noAction(),
-						new NumberedCustomField("foo-2"), StringField.noAction()),
+						new NumberedCustomField("foo-1"), OptionalString.empty(),
+						new NumberedCustomField("foo-3"), OptionalString.of("valfoo42"),
+						new NumberedCustomField("bar"), OptionalString.empty()),
 				inst(90000));
 		
 		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
@@ -1448,37 +1442,6 @@ public class MongoGroupsStorageOpsTest {
 				is(getUOFGroup()));
 	}
 	
-	// this is a good example of why NoAction isn't needed here
-	@Test
-	public void updateFieldsNoopNoAction() throws Exception {
-		manager.storage.createGroup(getUOFGroup());
-		
-		manager.storage.updateUser(
-				new GroupID("gid"),
-				new UserName("admin"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.noAction(),
-						new NumberedCustomField("f2"), StringField.noAction()),
-				inst(60000));
-		
-		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
-				is(getUOFGroup()));
-	}
-	
-	@Test
-	public void updateFieldsNoopNoChangeFromUpdateNoAction() throws Exception {
-		manager.storage.createGroup(getUOFGroup());
-		
-		manager.storage.updateUser(
-				new GroupID("gid"),
-				new UserName("admin"),
-				ImmutableMap.of(
-						new NumberedCustomField("fieldtwo"), StringField.noAction()),
-				inst(60000));
-		
-		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
-				is(getUOFGroup()));
-	}
-	
 	@Test
 	public void updateFieldsNoopNoChangeFromUpdateRemove() throws Exception {
 		manager.storage.createGroup(getUOFGroup());
@@ -1487,7 +1450,7 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				new UserName("admin"),
 				ImmutableMap.of(
-						new NumberedCustomField("nosuchfield"), StringField.remove()),
+						new NumberedCustomField("nosuchfield"), OptionalString.empty()),
 				inst(60000));
 		
 		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
@@ -1502,7 +1465,7 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				new UserName("admin"),
 				ImmutableMap.of(
-						new NumberedCustomField("fieldtwo"), StringField.from("keep")),
+						new NumberedCustomField("fieldtwo"), OptionalString.of("keep")),
 				inst(60000));
 		
 		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
@@ -1517,10 +1480,8 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				new UserName("admin"),
 				ImmutableMap.of(
-						new NumberedCustomField("newfield"), StringField.remove(),
-						new NumberedCustomField("newfield2"), StringField.noAction(),
-						new NumberedCustomField("fieldthree-22"), StringField.from("alter"),
-						new NumberedCustomField("fieldtwo"), StringField.noAction()),
+						new NumberedCustomField("newfield"), OptionalString.empty(),
+						new NumberedCustomField("fieldthree-22"), OptionalString.of("alter")),
 				inst(60000));
 		
 		assertThat("noop update failed", manager.storage.getGroup(new GroupID("gid")),
@@ -1534,10 +1495,9 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"),
 				toUpdate,
 				ImmutableMap.of(
-						new NumberedCustomField("newfield"), StringField.from("new"),
-						new NumberedCustomField("field-1"), StringField.remove(),
-						new NumberedCustomField("fieldthree-22"), StringField.from("done"),
-						new NumberedCustomField("fieldtwo"), StringField.noAction()),
+						new NumberedCustomField("newfield"), OptionalString.of("new"),
+						new NumberedCustomField("field-1"), OptionalString.empty(),
+						new NumberedCustomField("fieldthree-22"), OptionalString.of("done")),
 				inst(60000));
 	}
 
@@ -1573,7 +1533,7 @@ public class MongoGroupsStorageOpsTest {
 	public void updateUserFailNulls() throws Exception {
 		final GroupID g = new GroupID("g");
 		final UserName n = new UserName("n");
-		final Map<NumberedCustomField, StringField> f = new HashMap<>();
+		final Map<NumberedCustomField, OptionalString> f = new HashMap<>();
 		final Instant i = inst(1);
 		
 		updateUserFail(null, n, f, i, new NullPointerException("groupID"));
@@ -1581,7 +1541,7 @@ public class MongoGroupsStorageOpsTest {
 		updateUserFail(g, n, null, i, new NullPointerException("fields"));
 		updateUserFail(g, n, f, null, new NullPointerException("modDate"));
 		
-		f.put(null, StringField.remove());
+		f.put(null, OptionalString.empty());
 		updateUserFail(g, n, f, i, new NullPointerException("Null key in fields"));
 		
 		f.clear();
@@ -1602,7 +1562,7 @@ public class MongoGroupsStorageOpsTest {
 		updateUserFail(
 				new GroupID("gid1"),
 				new UserName("m"),
-				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f"), OptionalString.empty()),
 				inst(40000),
 				new NoSuchGroupException("gid1"));
 	}
@@ -1620,7 +1580,7 @@ public class MongoGroupsStorageOpsTest {
 		updateUserFail(
 				new GroupID("gid"),
 				new UserName("m1"),
-				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f"), OptionalString.empty()),
 				inst(40000),
 				new NoSuchUserException("User m1 is not a member of group gid"));
 	}
@@ -1628,7 +1588,7 @@ public class MongoGroupsStorageOpsTest {
 	private void updateUserFail(
 			final GroupID gid,
 			final UserName name,
-			final Map<NumberedCustomField, StringField> fields,
+			final Map<NumberedCustomField, OptionalString> fields,
 			final Instant modDate,
 			final Exception expected) {
 		try {

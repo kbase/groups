@@ -42,6 +42,7 @@ import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
@@ -254,9 +255,8 @@ public class GroupsTest {
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("desc"))
 						.withCustomField(new NumberedCustomField("foo-26"),
-								StringField.from("yay"))
-						.withCustomField(new NumberedCustomField("a"), StringField.remove())
-						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+								OptionalString.of("yay"))
+						.withCustomField(new NumberedCustomField("a"), OptionalString.empty())
 						.build())
 				.build());
 		
@@ -311,7 +311,7 @@ public class GroupsTest {
 		failCreateGroup(mocks.groups, new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.withCustomField(new NumberedCustomField("var"), OptionalString.of("7"))
 						.build())
 				.build(),
 				new NoSuchCustomFieldException("var"));
@@ -328,7 +328,7 @@ public class GroupsTest {
 		failCreateGroup(mocks.groups, new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.withCustomField(new NumberedCustomField("var"), OptionalString.of("7"))
 						.build())
 				.build(),
 				new RuntimeException(
@@ -422,9 +422,8 @@ public class GroupsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-26"),
-								StringField.from("yay"))
-						.withCustomField(new NumberedCustomField("a"), StringField.remove())
-						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+								OptionalString.of("yay"))
+						.withCustomField(new NumberedCustomField("a"), OptionalString.empty())
 						.build())
 				.build());
 		
@@ -435,9 +434,8 @@ public class GroupsTest {
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-26"),
-								StringField.from("yay"))
-						.withCustomField(new NumberedCustomField("a"), StringField.remove())
-						.withCustomField(new NumberedCustomField("b"), StringField.noAction())
+								OptionalString.of("yay"))
+						.withCustomField(new NumberedCustomField("a"), OptionalString.empty())
 						.build())
 				.build(),
 				inst(30000));
@@ -462,7 +460,7 @@ public class GroupsTest {
 		failUpdateGroup(mocks.groups, new Token("token"), GroupUpdateParams
 				.getBuilder(new GroupID("bar"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.withCustomField(new NumberedCustomField("var"), OptionalString.of("7"))
 						.build())
 				.build(),
 				new RuntimeException(
@@ -479,7 +477,7 @@ public class GroupsTest {
 		failUpdateGroup(mocks.groups, new Token("token"), GroupUpdateParams
 				.getBuilder(new GroupID("bar"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withCustomField(new NumberedCustomField("var"), StringField.from("7"))
+						.withCustomField(new NumberedCustomField("var"), OptionalString.of("7"))
 						.build())
 				.build(),
 				new IllegalParameterException("foo"));
@@ -543,20 +541,18 @@ public class GroupsTest {
 		when(mocks.clock.instant()).thenReturn(inst(25000));
 		
 		mocks.groups.updateUser(new Token("t"), new GroupID("gid"), target,
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2"),
-						new NumberedCustomField("f3"), StringField.remove(),
-						new NumberedCustomField("f4"), StringField.noAction()));
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2"),
+						new NumberedCustomField("f3"), OptionalString.empty()));
 		
 		verify(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
 		verify(mocks.validators).validateUserField(new NumberedCustomField("f2"), "val2");
 		verifyNoMoreInteractions(mocks.validators);
 		
 		verify(mocks.storage).updateUser(new GroupID("gid"), target,
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2"),
-						new NumberedCustomField("f3"), StringField.remove(),
-						new NumberedCustomField("f4"), StringField.noAction()),
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2"),
+						new NumberedCustomField("f3"), OptionalString.empty()),
 				inst(25000));
 	}
 	
@@ -584,19 +580,17 @@ public class GroupsTest {
 		when(mocks.clock.instant()).thenReturn(inst(25000));
 		
 		mocks.groups.updateUser(new Token("t"), new GroupID("gid"), new UserName("member"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2"),
-						new NumberedCustomField("f3"), StringField.remove(),
-						new NumberedCustomField("f4"), StringField.noAction()));
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2"),
+						new NumberedCustomField("f3"), OptionalString.empty()));
 		
 		verify(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
 		verify(mocks.validators).validateUserField(new NumberedCustomField("f2"), "val2");
 		
 		verify(mocks.storage).updateUser(new GroupID("gid"), new UserName("member"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2"),
-						new NumberedCustomField("f3"), StringField.remove(),
-						new NumberedCustomField("f4"), StringField.noAction()),
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2"),
+						new NumberedCustomField("f3"), OptionalString.empty()),
 				inst(25000));
 	}
 	
@@ -608,27 +602,19 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void updateUserNoUpdateNoAction() throws Exception {
-		// nothing should happen
-		initTestMocks().groups.updateUser(new Token("t"), new GroupID("i"), new UserName("n"),
-				ImmutableMap.of(new NumberedCustomField("f"), StringField.noAction(),
-						new NumberedCustomField("f2"), StringField.noAction()));
-	}
-	
-	@Test
 	public void updateUserFailNulls() throws Exception {
 		final Groups g = initTestMocks().groups;
 		final Token t = new Token("t");
 		final GroupID gid = new GroupID("g");
 		final UserName n = new UserName("n");
-		final Map<NumberedCustomField, StringField> f = new HashMap<>();
+		final Map<NumberedCustomField, OptionalString> f = new HashMap<>();
 		
 		updateUserFail(g, null, gid, n, f, new NullPointerException("userToken"));
 		updateUserFail(g, t, null, n, f, new NullPointerException("groupID"));
 		updateUserFail(g, t, gid, null, f, new NullPointerException("member"));
 		updateUserFail(g, t, gid, n, null, new NullPointerException("fields"));
 		
-		f.put(null, StringField.remove());
+		f.put(null, OptionalString.empty());
 		updateUserFail(g, t, gid, n, f, new NullPointerException("Null key in fields"));
 		
 		f.clear();
@@ -682,7 +668,7 @@ public class GroupsTest {
 				.build());
 		
 		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), target,
-				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f"), OptionalString.empty()),
 				expected);
 	}
 
@@ -705,7 +691,7 @@ public class GroupsTest {
 				.when(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
 		
 		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1")),
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1")),
 				new RuntimeException(
 						"This should be impossible. Please turn reality off and on again"));
 	}
@@ -728,7 +714,7 @@ public class GroupsTest {
 				.when(mocks.validators).validateUserField(new NumberedCustomField("f-1"), "val1");
 		
 		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1")),
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1")),
 				new IllegalParameterException("bar"));
 	}
 	
@@ -754,9 +740,9 @@ public class GroupsTest {
 		when(mocks.validators.getUserFieldConfiguration(new CustomField("f3"))).thenReturn(uset);
 		
 		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
-				ImmutableMap.of(new NumberedCustomField("f-1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2"),
-						new NumberedCustomField("f3"), StringField.remove()),
+				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2"),
+						new NumberedCustomField("f3"), OptionalString.empty()),
 				new UnauthorizedException(
 						"User member is not authorized to set field f2 for group gid"));
 		
@@ -771,7 +757,7 @@ public class GroupsTest {
 			final Token t,
 			final GroupID gid,
 			final UserName target,
-			final Map<NumberedCustomField, StringField> fields,
+			final Map<NumberedCustomField, OptionalString> fields,
 			final Exception expected) {
 		try {
 			g.updateUser(t, gid, target, fields);

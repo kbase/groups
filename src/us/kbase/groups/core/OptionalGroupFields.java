@@ -20,11 +20,11 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 public class OptionalGroupFields {
 	
 	private final FieldItem<String> description;
-	private final Map<NumberedCustomField, FieldItem<String>> customFields;
+	private final Map<NumberedCustomField, OptionalString> customFields;
 
 	private OptionalGroupFields(
 			final FieldItem<String> description,
-			final Map<NumberedCustomField, FieldItem<String>> customFields) {
+			final Map<NumberedCustomField, OptionalString> customFields) {
 		this.description = description;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
@@ -36,15 +36,11 @@ public class OptionalGroupFields {
 		return description;
 	}
 	
-	/** True if for any of the items {@link FieldItem#hasAction()} is true, false otherwise.
+	/** Returns true if at least one field require an update.
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		boolean hasUpdate = false;
-		for (final FieldItem<String> s: customFields.values()) {
-			hasUpdate = hasUpdate || s.hasAction();
-		}
-		return description.hasAction() || hasUpdate;
+		return description.hasAction() || !customFields.isEmpty();
 	}
 	
 	/** Get any custom fields included in the fields.
@@ -58,7 +54,7 @@ public class OptionalGroupFields {
 	 * @param field the field.
 	 * @return the value.
 	 */
-	public FieldItem<String> getCustomValue(final NumberedCustomField field) {
+	public OptionalString getCustomValue(final NumberedCustomField field) {
 		checkNotNull(field, "field");
 		if (!customFields.containsKey(field)) {
 			throw new IllegalArgumentException("No such field " + field.getField());
@@ -126,7 +122,7 @@ public class OptionalGroupFields {
 	public static class Builder {
 
 		private FieldItem<String> description = FieldItem.noAction();
-		private final Map<NumberedCustomField, FieldItem<String>> customFields = new HashMap<>();
+		private final Map<NumberedCustomField, OptionalString> customFields = new HashMap<>();
 		
 		private Builder() {}
 		
@@ -151,14 +147,15 @@ public class OptionalGroupFields {
 			return this;
 		}
 		
-		// TODO CODE there's no need for StringField here. Absent = no change, Optional.empty() == remove
-		// except that Optional allows whitespace only strings, bleah. Maybe a StringOptional class?
 		/** Add a custom field to the set of fields.
 		 * @param field the field.
-		 * @param value the value of the field.
+		 * @param value the value of the field. An {@link OptionalString#empty()} value indicates
+		 * the field should be removed.
 		 * @return this builder.
 		 */
-		public Builder withCustomField(final NumberedCustomField field, final StringField value) {
+		public Builder withCustomField(
+				final NumberedCustomField field,
+				final OptionalString value) {
 			checkNotNull(field, "field");
 			checkNotNull(value, "value");
 			customFields.put(field, value);

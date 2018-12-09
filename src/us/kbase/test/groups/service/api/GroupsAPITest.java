@@ -37,6 +37,7 @@ import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -317,9 +318,9 @@ public class GroupsAPITest {
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("my desc"))
 						.withCustomField(new NumberedCustomField("foo-23"),
-								StringField.from("yay"))
+								OptionalString.of("yay"))
 						.withCustomField(new NumberedCustomField("doodybutt"),
-								StringField.from("yo"))
+								OptionalString.of("yo"))
 						.build())
 				.build()))
 				.thenReturn(GroupView.getBuilder(GROUP_MIN, new UserName("u"))
@@ -443,8 +444,8 @@ public class GroupsAPITest {
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), StringField.remove())
-						.withCustomField(new NumberedCustomField("bar"), StringField.remove())
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
+						.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 						.build())
 				.build());
 	}
@@ -457,8 +458,8 @@ public class GroupsAPITest {
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), StringField.remove())
-						.withCustomField(new NumberedCustomField("bar"), StringField.remove())
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
+						.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 						.build())
 				.build());
 	}
@@ -475,9 +476,9 @@ public class GroupsAPITest {
 						.withOptionalFields(OptionalGroupFields.getBuilder()
 								.withDescription(StringField.from("desc"))
 								.withCustomField(new NumberedCustomField("foo"),
-										StringField.from("baz"))
+										OptionalString.of("baz"))
 								.withCustomField(new NumberedCustomField("bar"),
-										StringField.from("bat"))
+										OptionalString.of("bat"))
 								.build())
 						.build());
 	}
@@ -1215,8 +1216,8 @@ public class GroupsAPITest {
 				new UpdateUserJSON(fields));
 		
 		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
-				ImmutableMap.of(new NumberedCustomField("f1"), StringField.remove(),
-						new NumberedCustomField("f2"), StringField.remove()));
+				ImmutableMap.of(new NumberedCustomField("f1"), OptionalString.empty(),
+						new NumberedCustomField("f2"), OptionalString.empty()));
 	}
 
 	@Test
@@ -1232,8 +1233,8 @@ public class GroupsAPITest {
 				new UpdateUserJSON(fields));
 		
 		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
-				ImmutableMap.of(new NumberedCustomField("f1"), StringField.remove(),
-						new NumberedCustomField("f2"), StringField.remove()));
+				ImmutableMap.of(new NumberedCustomField("f1"), OptionalString.empty(),
+						new NumberedCustomField("f2"), OptionalString.empty()));
 	}
 	
 	@Test
@@ -1249,8 +1250,8 @@ public class GroupsAPITest {
 				new UpdateUserJSON(fields));
 		
 		verify(g).updateUser(new Token("   tok  "), new GroupID("gid"), new UserName("user"),
-				ImmutableMap.of(new NumberedCustomField("f1"), StringField.from("val1"),
-						new NumberedCustomField("f2"), StringField.from("val2")));
+				ImmutableMap.of(new NumberedCustomField("f1"), OptionalString.of("val1"),
+						new NumberedCustomField("f2"), OptionalString.of("val2")));
 	}
 	
 	@Test
@@ -1322,7 +1323,7 @@ public class GroupsAPITest {
 		
 		doThrow(new NoSuchUserException("foo")).when(g).updateUser(
 				new Token("tok"), new GroupID("i"), new UserName("n"),
-				ImmutableMap.of(new NumberedCustomField("f"), StringField.remove()));
+				ImmutableMap.of(new NumberedCustomField("f"), OptionalString.empty()));
 
 		updateUserFail(g, "tok", "  i", "n", new UpdateUserJSON(ImmutableMap.of("f", "  ")),
 				new NoSuchUserException("foo"));

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
@@ -13,6 +12,7 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.Groups;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
@@ -136,7 +136,8 @@ public interface GroupsStorage {
 	/** Update user properties.
 	 * @param groupID the ID of the group to update.
 	 * @param member the user to update.
-	 * @param fields the fields to update.
+	 * @param fields the fields to update. An {@link OptionalString#empty()} value indicates
+	 * the field should be removed.
 	 * @param modDate the modification date to apply to the group.
 	 * @throws NoSuchGroupException if there is no group with the given ID.
 	 * @throws NoSuchUserException if the user is not a member of the group.
@@ -145,7 +146,7 @@ public interface GroupsStorage {
 	void updateUser(
 			GroupID groupID,
 			UserName member,
-			Map<NumberedCustomField, StringField> fields,
+			Map<NumberedCustomField, OptionalString> fields,
 			Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	

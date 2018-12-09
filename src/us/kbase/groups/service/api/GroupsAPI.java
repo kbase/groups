@@ -2,7 +2,6 @@ package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
-import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,6 +38,7 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -92,7 +92,7 @@ public class GroupsAPI {
 				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
-	private static Map<NumberedCustomField, StringField> getCustomFieldsAndTypeCheck(
+	private static Map<NumberedCustomField, OptionalString> getCustomFieldsAndTypeCheck(
 			final Object customFields,
 			final String fieldName)
 			throws IllegalParameterException, MissingParameterException {
@@ -106,14 +106,13 @@ public class GroupsAPI {
 		// we'll assume the map keys are strings, since it's coming in as json.
 		@SuppressWarnings("unchecked")
 		final Map<String, String> map = (Map<String, String>) customFields;
-		final Map<NumberedCustomField, StringField> ret = new HashMap<>();
+		final Map<NumberedCustomField, OptionalString> ret = new HashMap<>();
 		for (final String s: map.keySet()) {
 			if (map.get(s) != null && !(map.get(s) instanceof String)) {
 				throw new IllegalParameterException(String.format(
 						"Value of '%s' field in 'custom' map is not a string", s));
 			}
-			ret.put(new NumberedCustomField(s), isNullOrEmpty(map.get(s)) ?
-					StringField.remove() : StringField.from(map.get(s)));
+			ret.put(new NumberedCustomField(s), OptionalString.ofEmptyable(map.get(s)));
 		}
 		return ret;
 	}
@@ -153,11 +152,11 @@ public class GroupsAPI {
 
 		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
 				throws IllegalParameterException, MissingParameterException {
-			final Map<NumberedCustomField, StringField> customFields = getCustomFieldsAndTypeCheck(
+			final Map<NumberedCustomField, OptionalString> customFields = getCustomFieldsAndTypeCheck(
 					this.customFields, Fields.GROUP_CUSTOM_FIELDS);
 			final Builder b = OptionalGroupFields.getBuilder();
 			for (final NumberedCustomField k: customFields.keySet()) {
-				if (!ignoreMissingValues || customFields.get(k).hasItem()) {
+				if (!ignoreMissingValues || customFields.get(k).isPresent()) {
 					b.withCustomField(k, customFields.get(k));
 				}
 			}
@@ -401,7 +400,7 @@ public class GroupsAPI {
 				IllegalParameterException, NoSuchCustomFieldException, MissingParameterException,
 				GroupsStorageException, FieldValidatorException {
 		checkIncomingJson(update);
-		final Map<NumberedCustomField, StringField> customFields = getCustomFieldsAndTypeCheck(
+		final Map<NumberedCustomField, OptionalString> customFields = getCustomFieldsAndTypeCheck(
 				update.customFields, Fields.GROUP_MEMBER_CUSTOM_FIELDS);
 		if (customFields.isEmpty()) {
 			throw new MissingParameterException("No fields provided to update");

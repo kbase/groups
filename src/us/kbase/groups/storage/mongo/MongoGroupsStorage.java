@@ -47,13 +47,13 @@ import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -495,25 +495,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 	 */
 	private Document buildQueryAndUpdateForCustomFields(
 			final Set<NumberedCustomField> fields,
-			final Function<NumberedCustomField, FieldItem<String>> valueGetter,
+			final Function<NumberedCustomField, OptionalString> valueGetter,
 			final String queryFieldPrefix,
 			final String updateFieldPrefix,
 			final List<Document> queryOr,
 			final Document set) {
 		final Document unset = new Document();
 		for (final NumberedCustomField ncf: fields) {
-			final FieldItem<String> item = valueGetter.apply(ncf);
-			if (item.hasAction()) {
-				final String updateField = updateFieldPrefix + ncf.getField();
-				// check that the field is different. At least one field must be different
-				// for the update to occur
-				queryOr.add(new Document(queryFieldPrefix + ncf.getField(),
-						new Document("$ne", item.orNull())));
-				if (item.hasItem()) {
-					set.append(updateField, item.get());
-				} else {
-					unset.append(updateField, "");
-				}
+			final OptionalString item = valueGetter.apply(ncf);
+			final String updateField = updateFieldPrefix + ncf.getField();
+			// check that the field is different. At least one field must be different
+			// for the update to occur
+			queryOr.add(new Document(queryFieldPrefix + ncf.getField(),
+					new Document("$ne", item.orNull())));
+			if (item.isPresent()) {
+				set.append(updateField, item.get());
+			} else {
+				unset.append(updateField, "");
 			}
 		}
 		// set has the mod date in it, so always include
@@ -826,13 +824,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public void updateUser(
 			final GroupID groupID,
 			final UserName member,
-			// TODO CODE there's no need for StringField here. Absent = no change, Optional.empty() == remove
-			// except that Optional allows whitespace only strings, bleah. Maybe a StringOptional class?
-			final Map<NumberedCustomField, StringField> fields,
+			final Map<NumberedCustomField, OptionalString> fields,
 			final Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
 		updateUserCheckForNulls(groupID, member, fields, modDate);
-		if (hasNoUpdates(fields)) {
+		if (fields.isEmpty()) {
 			return;
 		}
 		final List<Document> memberQueryOr = new LinkedList<>();
@@ -877,23 +873,16 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 
-	// totally stupid. Get rid of StringField here. OptionalString class which treats
-	// whitespace only strings like nulls would be useful.
-	private boolean hasNoUpdates(final Map<NumberedCustomField, StringField> fields) {
-		return fields.isEmpty() || new HashSet<>(fields.values())
-				.equals(new HashSet<>(Arrays.asList(FieldItem.noAction())));
-	}
-
 	private void updateUserCheckForNulls(
 			final GroupID groupID,
 			final UserName member,
-			final Map<NumberedCustomField, StringField> fields,
+			final Map<NumberedCustomField, OptionalString> fields,
 			final Instant modDate) {
 		requireNonNull(groupID, "groupID");
 		requireNonNull(member, "member");
 		requireNonNull(fields, "fields");
 		requireNonNull(modDate, "modDate");
-		for (final Entry<NumberedCustomField, StringField> e: fields.entrySet()) {
+		for (final Entry<NumberedCustomField, OptionalString> e: fields.entrySet()) {
 			requireNonNull(e.getKey(), "Null key in fields");
 			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
 					e.getKey().getField()));

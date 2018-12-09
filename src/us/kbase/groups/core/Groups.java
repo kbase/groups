@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -159,8 +158,8 @@ public class Groups {
 	private void validateCustomFields(final OptionalGroupFields optFields)
 			throws IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
 		for (final NumberedCustomField f: optFields.getCustomFields()) {
-			final FieldItem<String> value = optFields.getCustomValue(f);
-			if (value.hasItem()) {
+			final OptionalString value = optFields.getCustomValue(f);
+			if (value.isPresent()) {
 				try {
 					validators.validate(f, value.get());
 				} catch (MissingParameterException e) {
@@ -207,7 +206,8 @@ public class Groups {
 	 * @param userToken the user's token.
 	 * @param groupID the group to update.
 	 * @param member the member to update.
-	 * @param fields the update to apply to the member.
+	 * @param fields the update to apply to the member. An {@link OptionalString#empty()} value
+	 * indicates the field should be removed.
 	 * @throws UnauthorizedException if the user is not a group administrator or the member
 	 * to be updated, or the member tries to update a restricted field.
 	 * @throws NoSuchUserException if the group does not contain the member. This exception
@@ -224,7 +224,7 @@ public class Groups {
 			final Token userToken,
 			final GroupID groupID,
 			final UserName member,
-			final Map<NumberedCustomField, StringField> fields)
+			final Map<NumberedCustomField, OptionalString> fields)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, UnauthorizedException, NoSuchUserException,
 				IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
@@ -232,13 +232,13 @@ public class Groups {
 		requireNonNull(groupID, "groupID");
 		requireNonNull(member, "member");
 		requireNonNull(fields, "fields");
-		for (final Entry<NumberedCustomField, StringField> e: fields.entrySet()) {
+		if (fields.isEmpty()) {
+			return;
+		}
+		for (final Entry<NumberedCustomField, OptionalString> e: fields.entrySet()) {
 			requireNonNull(e.getKey(), "Null key in fields");
 			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
 					e.getKey().getField()));
-		}
-		if (hasNoUpdates(fields)) {
-			return;
 		}
 		final UserName user = userHandler.getUser(userToken);
 		final Group g = storage.getGroup(groupID);
@@ -293,11 +293,11 @@ public class Groups {
 				user.getName(), member.getName(), group.getGroupID().getName()));
 	}
 	
-	private void validateUserCustomFields(final Map<NumberedCustomField, StringField> fields)
+	private void validateUserCustomFields(final Map<NumberedCustomField, OptionalString> fields)
 			throws IllegalParameterException, NoSuchCustomFieldException, FieldValidatorException {
 		for (final NumberedCustomField f: fields.keySet()) {
-			final FieldItem<String> value = fields.get(f);
-			if (value.hasItem()) {
+			final OptionalString value = fields.get(f);
+			if (value.isPresent()) {
 				try {
 					validators.validateUserField(f, value.get());
 				} catch (MissingParameterException e) {
@@ -306,13 +306,6 @@ public class Groups {
 				}
 			}
 		}
-	}
-	
-	// totally stupid. Get rid of StringField here. OptionalString class which treats
-	// whitespace only strings like nulls would be useful.
-	private boolean hasNoUpdates(final Map<NumberedCustomField, StringField> fields) {
-		return fields.isEmpty() || new HashSet<>(fields.values())
-				.equals(new HashSet<>(Arrays.asList(FieldItem.noAction())));
 	}
 	
 	/** Get a view of a group.
