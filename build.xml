@@ -281,6 +281,7 @@
         <test name="us.kbase.test.groups.core.GroupViewTest"/>
         <test name="us.kbase.test.groups.core.NameTest"/>
         <test name="us.kbase.test.groups.core.OptionalGroupFieldsTest"/>
+        <test name="us.kbase.test.groups.core.OptionalStringTest"/>
         <test name="us.kbase.test.groups.core.TokenTest"/>
         <test name="us.kbase.test.groups.core.UserNameTest"/>
         <test name="us.kbase.test.groups.core.fieldvalidation.CustomFieldTest"/>

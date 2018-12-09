@@ -18,6 +18,7 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.FieldItem.StringField;
@@ -50,9 +51,9 @@ public class GroupCreationParamsTest {
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.fromNullable("    my desc    "))
 						.withCustomField(new NumberedCustomField("whee-1"),
-								StringField.from("he bit my widdle nose"))
+								OptionalString.of("he bit my widdle nose"))
 						.withCustomField(new NumberedCustomField("whee-2"),
-								StringField.from("oh you brute"))
+								OptionalString.of("oh you brute"))
 						.build())
 				.build();
 		
@@ -61,9 +62,9 @@ public class GroupCreationParamsTest {
 		assertThat("incorrect desc", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
 				.withDescription(StringField.from("my desc"))
 				.withCustomField(new NumberedCustomField("whee-1"),
-						StringField.from("he bit my widdle nose"))
+						OptionalString.of("he bit my widdle nose"))
 				.withCustomField(new NumberedCustomField("whee-2"),
-						StringField.from("oh you brute"))
+						OptionalString.of("oh you brute"))
 				.build()));
 	}
 
@@ -125,9 +126,8 @@ public class GroupCreationParamsTest {
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withDescription(StringField.from("yay"))
-						.withCustomField(new NumberedCustomField("foo"), StringField.from("bar"))
-						.withCustomField(new NumberedCustomField("foo-1"), StringField.remove())
-						.withCustomField(new NumberedCustomField("foo-1"), StringField.noAction())
+						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
+						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.build())
 				.build();
 		
