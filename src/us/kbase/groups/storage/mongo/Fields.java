@@ -34,13 +34,13 @@ public class Fields {
 	/** The group description. */
 	public static final String GROUP_DESCRIPTION = "desc";
 	/** The group custom fields. */
-	public static final String GROUP_CUSTOM_FIELDS = "custom";
+	public static final String GROUP_CUSTOM_FIELDS = "cust";
 	
 	// members fields
 	/** A group member name. */
 	public static final String GROUP_MEMBER_NAME = "user";
 	/** Custom fields for a group member. */
-	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "custom";
+	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "cust";
 	/** A member's join date. */
 	public static final String GROUP_MEMBER_JOIN_DATE = "join";
 	

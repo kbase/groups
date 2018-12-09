@@ -5,8 +5,7 @@ export default class {
     
   constructor(rootElement) {
     this.rootElement = rootElement;
-//    this.serviceUrl = 'http://localhost:8080/';
-    this.serviceUrl = 'http://gavinisrad.com/groups/';
+    this.serviceUrl = 'http://localhost:8080/';
     this.authUrl = 'https://ci.kbase.us/services/auth/';
     this.token = null;
     this.user = null;
@@ -330,6 +329,24 @@ export default class {
       return d;
   }
   
+  setTitle(groupid, user, title) {
+      fetch(this.serviceUrl + "group/" + groupid + "/user/" + user + "/update",
+              {"method": "PUT",
+               "headers": this.getHeaders(),
+               "body": JSON.stringify({"custom": {"title": title}})
+               }).then( (response) => {
+                   if (response.ok) {
+                       this.renderGroup(groupid);
+                   } else {
+                       response.text().then( (err) => {
+                           this.handleError(err);
+                       });
+                   }
+               }).catch( (err) => {
+                   this.handleError(err);
+               });
+  }
+  
   renderGroup(groupid) {
       $('#error').text("");
       fetch(this.serviceUrl + "group/" + groupid, {"headers": this.getHeaders()})
@@ -481,6 +498,10 @@ export default class {
                       const meth = $('#addmeth').val();
                       this.addResource(groupid, "catalogmethod", meth);
                   });
+                  $(`#settitle_${s(json.owner.name)}`).on('click', () => {
+                      const title = $(`#settitle_val_${s(json.owner.name)}`).val();
+                      this.setTitle(groupid, json.owner.name, title);
+                  });
                   for (const m of members) {
                       $(`#remove_${s(m.name)}`).on('click', () => {
                           this.removeMember(groupid, m.name);
@@ -488,10 +509,18 @@ export default class {
                       $(`#promote_${s(m.name)}`).on('click', () => {
                           this.promoteMember(groupid, m.name);
                       });
+                      $(`#settitle_${s(m.name)}`).on('click', () => {
+                          const title = $(`#settitle_val_${s(m.name)}`).val();
+                          this.setTitle(groupid, m.name, title);
+                      });
                   }
                   for (const a of admins) {
                       $(`#demote_${s(a.name)}`).on('click', () => {
                           this.demoteAdmin(groupid, a.name);
+                      });
+                      $(`#settitle_${s(a.name)}`).on('click', () => {
+                          const title = $(`#settitle_val_${s(a.name)}`).val();
+                          this.setTitle(groupid, a.name, title);
                       });
                   }
                   for (const ws of json.resources.workspace) {
