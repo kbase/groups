@@ -37,7 +37,6 @@ Represents a group of users and associated data.
     "owner": <the User data for the group owner>,
     "admins": <an array of User data of admins of the group>,
     "members": <an array of User data of members of the group>,
-    "description": <a description of the group>,
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
     "resources":
@@ -230,7 +229,6 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>
 {
     "name": <an arbitrary group name>,
-    "description": <the description of the group, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -259,7 +257,6 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>/update
 {
     "name": <an arbitrary group name, optional>,
-    "description": <the description of the group, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...

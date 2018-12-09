@@ -50,7 +50,6 @@ import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
-import us.kbase.groups.core.FieldItem;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
@@ -386,7 +385,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.GROUP_RESOURCES, resources)
 				.append(Fields.GROUP_CREATION, Date.from(group.getCreationDate()))
 				.append(Fields.GROUP_MODIFICATION, Date.from(group.getModificationDate()))
-				.append(Fields.GROUP_DESCRIPTION, group.getDescription().orElse(null))
 				.append(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
 		for (final ResourceType t: group.getResourceTypes()) {
 			resources.put(t.getName(), group.getResources(t).stream()
@@ -454,7 +452,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		
 		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
 		final OptionalGroupFields opts = update.getOptionalFields();
-		buildUpdate(or, set, opts.getDescription(), Fields.GROUP_DESCRIPTION, n -> n.get());
 		final Document mod = buildQueryAndUpdateForCustomFields(
 				opts.getCustomFields(),
 				f -> opts.getCustomValue(f),
@@ -535,19 +532,6 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
-	private <T> void buildUpdate(
-			final List<Document> or,
-			final Document set,
-			final FieldItem<T> item,
-			final String field,
-			final Function<FieldItem<T>, Object> getValue) {
-		if (item.hasAction()) {
-			final Object value = item.hasItem() ? getValue.apply(item) : null;
-			or.add(new Document(field, new Document("$ne", value)));
-			set.append(field, value);
-		}
-	}
-
 	@Override
 	public Group getGroup(final GroupID groupID)
 			throws GroupsStorageException, NoSuchGroupException {
@@ -606,8 +590,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					members.remove(owner),
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
-							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
-					.withDescription(grp.getString(Fields.GROUP_DESCRIPTION));
+							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()));
 			getUserSet(grp, Fields.GROUP_ADMINS).stream().forEach(a ->
 					b.withAdministrator(members.remove(a)));
 			members.values().stream().forEach(m -> b.withMember(m));
@@ -625,7 +608,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 			addCustomFields((f, v) -> b.withCustomField(f, v), Fields.GROUP_CUSTOM_FIELDS, grp);
 			return b.build();
-		} catch (MissingParameterException | IllegalParameterException |
+		} catch (MissingParameterException | IllegalParameterException | NullPointerException |
 				IllegalArgumentException e) {
 			throw new GroupsStorageException(
 					"Unexpected value in database: " + e.getMessage(), e);

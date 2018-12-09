@@ -21,7 +21,6 @@ import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupCreationParamsTest {
@@ -49,7 +48,6 @@ public class GroupCreationParamsTest {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.fromNullable("    my desc    "))
 						.withCustomField(new NumberedCustomField("whee-1"),
 								OptionalString.of("he bit my widdle nose"))
 						.withCustomField(new NumberedCustomField("whee-2"),
@@ -60,7 +58,6 @@ public class GroupCreationParamsTest {
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect desc", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
-				.withDescription(StringField.from("my desc"))
 				.withCustomField(new NumberedCustomField("whee-1"),
 						OptionalString.of("he bit my widdle nose"))
 				.withCustomField(new NumberedCustomField("whee-2"),
@@ -125,7 +122,6 @@ public class GroupCreationParamsTest {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("yay"))
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.build())
@@ -139,7 +135,6 @@ public class GroupCreationParamsTest {
 				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withCustomField(new NumberedCustomField("foo"), "bar")
-				.withDescription("yay")
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));

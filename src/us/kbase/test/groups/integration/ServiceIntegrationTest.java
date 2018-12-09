@@ -351,10 +351,9 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.put(Entity.json(ImmutableMap.of(
 				"name", "myname",
-				"description", "mydesc",
 				"custom", ImmutableMap.of("f1-62", "yay!", "f2", "yo"))));
 
-		assertSimpleGroupCorrect(res, "myid", "myname", "mydesc",
+		assertSimpleGroupCorrect(res, "myid", "myname",
 				ImmutableMap.of("f1-62", "yay!", "f2", "yo"));
 		
 		assertGroupExists("myid", true);
@@ -375,29 +374,17 @@ public class ServiceIntegrationTest {
 		
 		final ImmutableMap<String, String> custom = ImmutableMap.of("f1-62", "yay!");
 		
-		assertSimpleGroupCorrect("myid", "myname", "mydesc", custom);
-		
-		final Builder req4 = updateTarget.request().header("authorization", TOKEN1);
-		
-		final Response res4 = req4.put(Entity.json(MapBuilder.<String, Object>newHashMap()
-				// no name so no change
-				.with("description", null) // remove
-				.build()));
-
-		assertThat("incorrect response code", res4.getStatus(), is(204));
-		
-		assertSimpleGroupCorrect("myid", "myname", null, custom);
+		assertSimpleGroupCorrect("myid", "myname", custom);
 		
 		final Builder req5 = updateTarget.request().header("authorization", TOKEN1);
 		
 		final Response res5 = req5.put(Entity.json(MapBuilder.<String, Object>newHashMap()
 				.with("name", "new name")
-				.with("description", "new desc")
 				.build()));
 
 		assertThat("incorrect response code", res5.getStatus(), is(204));
 		
-		assertSimpleGroupCorrect("myid", "new name", "new desc", custom);
+		assertSimpleGroupCorrect("myid", "new name", custom);
 	}
 	
 	private void assertGroupExists(final String gid, boolean exists) {
@@ -421,7 +408,6 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.put(Entity.json(ImmutableMap.of(
 				"name", "myname",
-				"description", "mydesc",
 				"custom", ImmutableMap.of("foo", 1))));
 		
 		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
@@ -437,7 +423,6 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.put(Entity.json(ImmutableMap.of(
 				"name", "myname",
-				"description", "mydesc",
 				"custom", ImmutableMap.of("f2-1", "val"))));
 		
 		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
@@ -456,7 +441,6 @@ public class ServiceIntegrationTest {
 		
 		final Response res = req.put(Entity.json(ImmutableMap.of(
 				"name", "myname",
-				"description", "mydesc",
 				"custom", ImmutableMap.of("f2", looong.substring(0, 5001)))));
 		
 		failRequestJSON(res, 400, "Bad Request", new IllegalParameterException(
@@ -470,12 +454,9 @@ public class ServiceIntegrationTest {
 		final WebTarget groupTarget = CLI.target(target);
 		final Builder req = groupTarget.request().header("authorization", TOKEN1);
 
-		final Response res = req.put(Entity.json(ImmutableMap.of(
-				"name", "myname",
-				"description", "mydesc")));
+		final Response res = req.put(Entity.json(ImmutableMap.of("name", "myname")));
 
-		assertSimpleGroupCorrect(res, "myid", "myname", "mydesc",
-				Collections.emptyMap());
+		assertSimpleGroupCorrect(res, "myid", "myname", Collections.emptyMap());
 
 		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
 		
@@ -497,12 +478,9 @@ public class ServiceIntegrationTest {
 		final WebTarget groupTarget = CLI.target(target);
 		final Builder req = groupTarget.request().header("authorization", TOKEN1);
 
-		final Response res = req.put(Entity.json(ImmutableMap.of(
-				"name", "myname",
-				"description", "mydesc")));
+		final Response res = req.put(Entity.json(ImmutableMap.of("name", "myname")));
 
-		assertSimpleGroupCorrect(res, "myid", "myname", "mydesc",
-				Collections.emptyMap());
+		assertSimpleGroupCorrect(res, "myid", "myname", Collections.emptyMap());
 
 		final URI updateURI = UriBuilder.fromUri(HOST).path("/group/myid/update").build();
 		
@@ -520,7 +498,6 @@ public class ServiceIntegrationTest {
 	private void assertSimpleGroupCorrect(
 			final String groupID,
 			final String name,
-			final String desc,
 			final Map<String, String> custom) {
 		final URI target = UriBuilder.fromUri(HOST).path("/group/" + groupID).build();
 		
@@ -529,7 +506,7 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.get();
 		
-		assertSimpleGroupCorrect(res, groupID, name, desc, custom);
+		assertSimpleGroupCorrect(res, groupID, name, custom);
 	}
 	
 	// assumes user = user1, and all lists are empty
@@ -537,7 +514,6 @@ public class ServiceIntegrationTest {
 			final Response res,
 			final String groupID,
 			final String name,
-			final String desc,
 			final Map<String, String> custom) {
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		
@@ -561,7 +537,6 @@ public class ServiceIntegrationTest {
 				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
 				.with("members", Collections.emptyList())
 				.with("name", name)
-				.with("description", desc)
 				.with("id", groupID)
 				.with("resources", ImmutableMap.of(
 						"workspace", Collections.emptyList(),
@@ -628,7 +603,7 @@ public class ServiceIntegrationTest {
 
 		final Response res = req.put(Entity.json(ImmutableMap.of("name", "myname")));
 		
-		assertSimpleGroupCorrect(res, gid, "myname", null, Collections.emptyMap());
+		assertSimpleGroupCorrect(res, gid, "myname", Collections.emptyMap());
 		
 		// request group membership
 		final URI reqUserTarget = UriBuilder.fromUri(HOST)

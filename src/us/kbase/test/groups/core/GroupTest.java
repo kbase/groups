@@ -8,7 +8,6 @@ import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Optional;
 
 import org.junit.Test;
 
@@ -48,7 +47,6 @@ public class GroupTest {
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
 				is(set(new UserName("foo"))));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
-		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", g.getMembers(), is(set()));
 		assertThat("incorrect admins", g.getAdministrators(), is(set()));
@@ -70,7 +68,6 @@ public class GroupTest {
 						.withCustomField(new NumberedCustomField("yay"), "boo")
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withDescription("    \tmy desc     ")
 				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(35000)).build())
 				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(6000))
 						.withCustomField(new NumberedCustomField("f"), "v")
@@ -101,7 +98,6 @@ public class GroupTest {
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
 				is(set(new UserName("foo"), new UserName("whee"), new UserName("whoo"))));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
-		assertThat("incorrect desc", g.getDescription(), is(Optional.of("my desc")));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(),
 				is(set(new UserName("bar"), new UserName("baz"))));
@@ -143,23 +139,6 @@ public class GroupTest {
 						.build()));
 	}
 	
-	@Test
-	public void buildWithEmptyDescription() throws Exception {
-		buildWithEmptyDescription(null);
-		buildWithEmptyDescription("   \t     ");
-	}
-	
-	private void buildWithEmptyDescription(final String description) throws Exception {
-		final Group g = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"),
-				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withDescription(description)
-				.build();
-
-		assertThat("incorrect desc", g.getDescription(), is(Optional.empty()));
-	}
-
 	@Test
 	public void immutable() throws Exception {
 		final Group g = Group.getBuilder(
@@ -317,32 +296,6 @@ public class GroupTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-	
-	@Test
-	public void withDescriptionFail() throws Exception {
-		final String uni = "a₸𐍆"; // length 5, 4 code points, 11 bytes in utf-8
-		final StringBuilder b = new StringBuilder();
-		for (int i = 0; i < 1250; i++) {
-			b.append(uni);
-		}
-		
-		final Builder build = Group.getBuilder(
-				new GroupID("id"), new GroupName("name"),
-				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
-		
-		build.withDescription(b.toString()); // should pass
-		
-		b.append("a");
-		
-		try {
-			build.withDescription(b.toString());
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
-					"description must be <= 5000 Unicode code points"));
 		}
 	}
 	

@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,6 @@ import us.kbase.groups.core.OptionalString;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -141,7 +141,6 @@ public class MongoGroupsStorageOpsTest {
 						.withCustomField(new NumberedCustomField("f"), "val")
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("desc")
 				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 						.withCustomField(new NumberedCustomField("field"), "value")
 						.build())
@@ -171,7 +170,6 @@ public class MongoGroupsStorageOpsTest {
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-						.withDescription("desc")
 						.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 								.withCustomField(new NumberedCustomField("field"), "value")
 								.build())
@@ -259,12 +257,15 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.build());
+		
+		// missing input parameter
 		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
 				new Document("$set", new Document("name", "")));
 		
 		failGetGroup(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
 		
+		// illegal parameter
 		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
 				new Document("$set", new Document("name", "foo").append("own", "a*b")));
 	
@@ -272,14 +273,21 @@ public class MongoGroupsStorageOpsTest {
 				"Unexpected value in database: 30010 Illegal user name: " +
 				"Illegal character in user name a*b: *"));
 		
+		// null pointer
 		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
 				new Document("$set", new Document("own", "uname")
-						.append("desc",
-						TestCommon.LONG1001 + TestCommon.LONG1001 + TestCommon.LONG1001 +
-						TestCommon.LONG1001 + TestCommon.LONG1001)));
+						.append("create", null)));
 	
 		failGetGroup(new GroupID("gid"), new GroupsStorageException(
-				"Unexpected value in database: description must be <= 5000 Unicode code points"));
+				"Unexpected value in database: null"));
+		
+		// illegal argument
+		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
+				new Document("$set", new Document("create", Date.from(inst(40000)))));
+	
+		failGetGroup(new GroupID("gid"), new GroupsStorageException(
+				"Unexpected value in database: creation time must be before modification time"));
+
 	}
 	
 	@Test
@@ -314,29 +322,6 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(40000)))
 				.build()));
 		
-		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("my desc")).build())
-				.build(),
-				inst(50000)); // naughty naughty
-		
-		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
-				gid, new GroupName("newname"), toGUser("uname"),
-				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
-				.withDescription("my desc")
-				.build()));
-		
-		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
-				.build(),
-				inst(567842));
-		
-		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
-				gid, new GroupName("newname"), toGUser("uname"),
-				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(567842)))
-				.build()));
-
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-1"),
@@ -418,7 +403,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("my desc")
 				.withCustomField(new NumberedCustomField("foo-2"), "valfoo2")
 				.withCustomField(new NumberedCustomField("foo-3"), "valfoo42")
 				.build());
@@ -426,7 +410,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("newname"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("other desc"))
 						.withCustomField(new NumberedCustomField("foo-2"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("foo-3"),
 								OptionalString.of("meh"))
@@ -437,25 +420,12 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("newname"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30001)))
-				.withDescription("other desc")
 				.withCustomField(new NumberedCustomField("foo-3"), "meh")
 				.build()));
 	}
 	
 	@Test
-	public void updateGroupNoopMinimalNoAction() throws Exception {
-		updateGroupNoopMinimal(StringField.noAction(), OptionalString.empty());
-	}
-	
-	@Test
 	public void updateGroupNoopMinimalRemove() throws Exception {
-		updateGroupNoopMinimal(StringField.remove(), OptionalString.empty());
-	}
-
-	private void updateGroupNoopMinimal(
-			final StringField descAction,
-			final OptionalString cfAction)
-			throws Exception {
 		// tests updating a group with identical contents. Ensure the mod date isn't set.
 		final GroupID gid = new GroupID("gid");
 		manager.storage.createGroup(Group.getBuilder(
@@ -466,8 +436,7 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(descAction)
-						.withCustomField(new NumberedCustomField("yay"), cfAction)
+						.withCustomField(new NumberedCustomField("yay"), OptionalString.empty())
 						.build())
 				.build(),
 				inst(50000));
@@ -485,7 +454,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("my desc")
 				.withCustomField(new NumberedCustomField("thatlast"), "test was a bit rude")
 				.withCustomField(new NumberedCustomField("yesi-1"), "agree it was a bit")
 				.build());
@@ -493,7 +461,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("my desc"))
 						.withCustomField(new NumberedCustomField("thatlast"),
 								OptionalString.of("test was a bit rude"))
 						.withCustomField(new NumberedCustomField("yesi-1"),
@@ -505,7 +472,6 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("my desc")
 				.withCustomField(new NumberedCustomField("thatlast"), "test was a bit rude")
 				.withCustomField(new NumberedCustomField("yesi-1"), "agree it was a bit")
 				.build()));
@@ -517,47 +483,13 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("my desc")
 				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.build());
-		
-		// remove desc
-		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
-				.withName(new GroupName("name"))
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
-						.build())
-				.build(),
-				inst(50000));
-		
-		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
-				gid, new GroupName("name"), toGUser("uname"),
-				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
-				.withCustomField(new NumberedCustomField("foo"), "bar")
-				.build()));
-		
-		// removing again should not update the mod time
-		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
-				.withName(new GroupName("name"))
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove())
-						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
-						.build())
-				.build(),
-				inst(760000));
-		
-		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
-				gid, new GroupName("name"), toGUser("uname"),
-				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(50000)))
-				.withCustomField(new NumberedCustomField("foo"), "bar")
-				.build()));
 		
 		// new name
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.noAction())
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.build())
 				.build(),
@@ -569,28 +501,10 @@ public class MongoGroupsStorageOpsTest {
 				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.build()));
 		
-		// new desc
-		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
-				.withName(new GroupName("new name"))
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("yay!"))
-						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
-						.build())
-				.build(),
-				inst(80000));
-		
-		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
-				gid, new GroupName("new name"), toGUser("uname"),
-				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(80000)))
-				.withDescription("yay!")
-				.withCustomField(new NumberedCustomField("foo"), "bar")
-				.build()));
-		
 		//new custom field
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("yay!"))
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
 						.build())
@@ -600,7 +514,6 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("new name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(100000)))
-				.withDescription("yay!")
 				.withCustomField(new NumberedCustomField("foo"), "bar")
 				.withCustomField(new NumberedCustomField("baz"), "bat")
 				.build()));
@@ -609,7 +522,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("new name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("yay!"))
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
 						.build())
@@ -619,7 +531,6 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("new name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(100000)))
-				.withDescription("yay!")
 				.withCustomField(new NumberedCustomField("baz"), "bat")
 				.build()));
 	}
@@ -676,7 +587,6 @@ public class MongoGroupsStorageOpsTest {
 						.withCustomField(new NumberedCustomField("field"), "val")
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(10000)))
-				.withDescription("desc1")
 				.withMember(GroupUser.getBuilder(new UserName("foo1"), inst(60000))
 						.withCustomField(new NumberedCustomField("thing"), "er")
 						.withCustomField(new NumberedCustomField("otherthing"), "otherer")
@@ -693,7 +603,6 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("fid"), new GroupName("name2"), toGUser("uname2"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-				.withDescription("desc2")
 				.withMember(toGUser("foo2"))
 				.build());
 		
@@ -707,7 +616,6 @@ public class MongoGroupsStorageOpsTest {
 										.build(),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000),
 										Instant.ofEpochMilli(10000)))
-								.withDescription("desc1")
 								.withMember(GroupUser.getBuilder(new UserName("foo1"), inst(60000))
 										.withCustomField(new NumberedCustomField("thing"), "er")
 										.withCustomField(new NumberedCustomField("otherthing"), "otherer")
@@ -725,7 +633,6 @@ public class MongoGroupsStorageOpsTest {
 								new GroupID("fid"), new GroupName("name2"), toGUser("uname2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(20000),
 										Instant.ofEpochMilli(30000)))
-								.withDescription("desc2")
 								.withMember(toGUser("foo2"))
 								.build(),
 						Group.getBuilder(

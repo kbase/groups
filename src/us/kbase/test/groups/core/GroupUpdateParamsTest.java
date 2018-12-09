@@ -9,11 +9,12 @@ import java.util.Optional;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import us.kbase.groups.core.FieldItem.StringField;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.OptionalGroupFields;
+import us.kbase.groups.core.OptionalString;
 import us.kbase.test.groups.TestCommon;
 
 public class GroupUpdateParamsTest {
@@ -39,13 +40,15 @@ public class GroupUpdateParamsTest {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withName(new GroupName("n"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
+						.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+						.build())
 				.build();
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(Optional.of(new GroupName("n"))));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build()));
+				.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+				.build()));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 	
@@ -54,13 +57,15 @@ public class GroupUpdateParamsTest {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withNullableName(new GroupName("n"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
+						.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+						.build())
 				.build();
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(Optional.of(new GroupName("n"))));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build()));
+				.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+				.build()));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 	
@@ -70,13 +75,15 @@ public class GroupUpdateParamsTest {
 				.withName(new GroupName("n"))
 				.withNullableName(null)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
+						.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+						.build())
 				.build();
 		
 		assertThat("incorrect id", p.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect name", p.getGroupName(), is(Optional.empty()));
 		assertThat("incorrect fields", p.getOptionalFields(), is(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build()));
+				.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+				.build()));
 		assertThat("incorrect update", p.hasUpdate(), is(true));
 	}
 
@@ -93,7 +100,8 @@ public class GroupUpdateParamsTest {
 	public void hasUpdateWithOptFields() throws Exception {
 		final GroupUpdateParams p = GroupUpdateParams.getBuilder(new GroupID("id"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
+						.withCustomField(new NumberedCustomField("f"), OptionalString.empty())
+						.build())
 				.build();
 		
 		assertThat("incorrect update", p.hasUpdate(), is(true));
