@@ -10,7 +10,7 @@ Build status (master):
 
 ### User
 
-Represent a member of a group.
+Represents a member of a group.
 
 ```
 {
@@ -433,7 +433,7 @@ POST /request/id/<request id>/getperm
 
 The request type must be `Request`, the resource type cannot be `user`,
 and the user must be a group administrator. Read permissions are only granted if the user
-has no explicit permission to the resource and the resource is not publicly readable
+has no explicit permission to the resource and the resource is not publicly readable.
 
 ### Listing requests
 
@@ -707,9 +707,9 @@ Has no parameters.
 ## Implementation notes
 
 Currently the only backend supported is MongoDB, which supports a maximum 16MB document size.
-As per MongoDB recommendation and to support atomic queries and filters, the group users and
-resources (but not requests) are included in the group document. This means there is a maximum
-number of users and resources per group.
+As per MongoDB recommendation and to support atomic updates, queries and filters, the group
+users and resources (but not requests) are included in the group document. This means there
+is a maximum number of users and resources per group.
 
 Resources take ~20-550 bytes, depending on the resource ID size, and so the MongoDB backend
 can support ~30k-800k resources per group assuming no group users.
