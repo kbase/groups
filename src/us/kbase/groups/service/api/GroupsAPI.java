@@ -28,7 +28,6 @@ import javax.ws.rs.core.MediaType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -121,8 +120,6 @@ public class GroupsAPI {
 		
 		@JsonProperty(Fields.GROUP_NAME)
 		private Optional<String> groupName;
-		@JsonProperty(Fields.GROUP_DESCRIPTION)
-		private Optional<String> description;
 		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
 		private Object customFields;
 
@@ -134,10 +131,8 @@ public class GroupsAPI {
 		// value.
 		public CreateOrUpdateGroupJSON(
 				final Optional<String> groupName,
-				final Optional<String> description,
 				final Object customFields) {
 			this.groupName = groupName;
-			this.description = description;
 			this.customFields = customFields;
 		}
 
@@ -145,15 +140,14 @@ public class GroupsAPI {
 				throws MissingParameterException, IllegalParameterException {
 			return GroupCreationParams.getBuilder(groupID, new GroupName(fromNullable(groupName)))
 					.withOptionalFields(getOptionalFieldsBuilder(true)
-							.withDescription(StringField.fromNullable(fromNullable(description)))
 							.build())
 					.build();
 		}
 
 		private Builder getOptionalFieldsBuilder(final boolean ignoreMissingValues)
 				throws IllegalParameterException, MissingParameterException {
-			final Map<NumberedCustomField, OptionalString> customFields = getCustomFieldsAndTypeCheck(
-					this.customFields, Fields.GROUP_CUSTOM_FIELDS);
+			final Map<NumberedCustomField, OptionalString> customFields =
+					getCustomFieldsAndTypeCheck(this.customFields, Fields.GROUP_CUSTOM_FIELDS);
 			final Builder b = OptionalGroupFields.getBuilder();
 			for (final NumberedCustomField k: customFields.keySet()) {
 				if (!ignoreMissingValues || customFields.get(k).isPresent()) {
@@ -178,7 +172,6 @@ public class GroupsAPI {
 			return GroupUpdateParams.getBuilder(groupID)
 					.withNullableName(fromNullable(groupName, s -> new GroupName(s)))
 					.withOptionalFields(getOptionalFieldsBuilder(false)
-							.withDescription(getStringField(description))
 							.build())
 					.build();
 		}
@@ -194,15 +187,6 @@ public class GroupsAPI {
 			}
 		}
 		
-		private StringField getStringField(final Optional<String> s) {
-			if (s == null) {
-				return StringField.noAction();
-			} else if (!s.isPresent() || s.get().trim().isEmpty()) {
-				return StringField.remove();
-			} else {
-				return StringField.from(s.get());
-			}
-		}
 	}
 	
 	@PUT
@@ -322,7 +306,6 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_CREATION, g.getCreationDate().toEpochMilli());
 		ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().toEpochMilli());
 		if (g.isStandardView()) {
-			ret.put(Fields.GROUP_DESCRIPTION, g.getDescription().orElse(null));
 			ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));
 			ret.put(Fields.GROUP_ADMINS, toMemberList(g.getAdministrators(), g));
 			final Map<String, Object> resources = new HashMap<>();

@@ -31,8 +31,6 @@ public class Fields {
 	public static final String GROUP_CREATION = "create";
 	/** The group modification date. */
 	public static final String GROUP_MODIFICATION = "mod";
-	/** The group description. */
-	public static final String GROUP_DESCRIPTION = "desc";
 	/** The group custom fields. */
 	public static final String GROUP_CUSTOM_FIELDS = "cust";
 	

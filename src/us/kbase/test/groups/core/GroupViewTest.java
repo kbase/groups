@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.Test;
 
@@ -55,7 +54,6 @@ public class GroupViewTest {
 					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(84000))
 							.withCustomField(new NumberedCustomField("user-6"), "yay")
 							.build())
-					.withDescription("desc")
 					.withResource(ws, new ResourceDescriptor(new ResourceID("45")))
 					.withResource(ws, new ResourceDescriptor(new ResourceID("2")))
 					.withResource(cat, new ResourceDescriptor(new ResourceID("m.n")))
@@ -81,7 +79,6 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
 		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
-		assertThat("incorrect desc", gv.getDescription(), is(Optional.empty()));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
@@ -122,7 +119,6 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
 		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
-		assertThat("incorrect desc", gv.getDescription(), is(Optional.of("desc")));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect own", gv.getOwner(), is(new UserName("user")));
@@ -177,7 +173,6 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(inst(10000)));
 		assertThat("incorrect mod", gv.getModificationDate(), is(inst(20000)));
-		assertThat("incorrect desc", gv.getDescription(), is(Optional.of("desc")));
 		assertThat("incorrect name", gv.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", gv.getMembers(),
 				is(set(new UserName("m1"), new UserName("m2"))));

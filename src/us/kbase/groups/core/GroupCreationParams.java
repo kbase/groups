@@ -53,8 +53,7 @@ public class GroupCreationParams {
 	public Group toGroup(final UserName owner, final CreateAndModTimes times) {
 		final us.kbase.groups.core.Group.Builder b = Group.getBuilder(
 				groupID, groupName, GroupUser.getBuilder(owner, times.getCreationTime()).build(),
-				times)
-				.withDescription(opfields.getDescription().orNull());
+				times);
 		opfields.getCustomFields().stream().filter(f -> opfields.getCustomValue(f).isPresent())
 				.forEach(f -> b.withCustomField(f, opfields.getCustomValue(f).get()));
 		return b.build();

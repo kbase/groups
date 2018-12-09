@@ -2,14 +2,12 @@ package us.kbase.groups.core;
 
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.exceptOnEmpty;
-import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,8 +25,6 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class Group {
 	
-	public static final int MAX_DESCRIPTION_CODE_POINTS = 5000;
-	
 	private final GroupID groupID;
 	private final GroupName groupName;
 	private final UserName owner;
@@ -37,7 +33,6 @@ public class Group {
 	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
 	private final Instant creationDate;
 	private final Instant modificationDate;
-	private final Optional<String> description;
 	private final Map<NumberedCustomField, String> customFields;
 	
 	private Group(
@@ -48,7 +43,6 @@ public class Group {
 			final Set<UserName> admins,
 			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
 			final CreateAndModTimes times,
-			final Optional<String> description,
 			final Map<NumberedCustomField, String> customFields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
@@ -58,7 +52,6 @@ public class Group {
 		this.resources = Collections.unmodifiableMap(resources);
 		this.creationDate = times.getCreationTime();
 		this.modificationDate = times.getModificationTime();
-		this.description = description;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
@@ -173,13 +166,6 @@ public class Group {
 		return modificationDate;
 	}
 
-	/** Get the description of the group, if any.
-	 * @return the description or {@link Optional#empty()}.
-	 */
-	public Optional<String> getDescription() {
-		return description;
-	}
-	
 	/** Get any custom fields associated with the group.
 	 * @return the custom fields.
 	 */
@@ -237,12 +223,11 @@ public class Group {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
+		result = prime * result + ((allMembers == null) ? 0 : allMembers.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
-		result = prime * result + ((allMembers == null) ? 0 : allMembers.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resources == null) ? 0 : resources.hashCode());
@@ -268,6 +253,13 @@ public class Group {
 		} else if (!admins.equals(other.admins)) {
 			return false;
 		}
+		if (allMembers == null) {
+			if (other.allMembers != null) {
+				return false;
+			}
+		} else if (!allMembers.equals(other.allMembers)) {
+			return false;
+		}
 		if (creationDate == null) {
 			if (other.creationDate != null) {
 				return false;
@@ -282,13 +274,6 @@ public class Group {
 		} else if (!customFields.equals(other.customFields)) {
 			return false;
 		}
-		if (description == null) {
-			if (other.description != null) {
-				return false;
-			}
-		} else if (!description.equals(other.description)) {
-			return false;
-		}
 		if (groupID == null) {
 			if (other.groupID != null) {
 				return false;
@@ -301,13 +286,6 @@ public class Group {
 				return false;
 			}
 		} else if (!groupName.equals(other.groupName)) {
-			return false;
-		}
-		if (allMembers == null) {
-			if (other.allMembers != null) {
-				return false;
-			}
-		} else if (!allMembers.equals(other.allMembers)) {
 			return false;
 		}
 		if (modificationDate == null) {
@@ -363,7 +341,6 @@ public class Group {
 		private final Set<UserName> admins = new HashSet<>();
 		private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources =
 				new HashMap<>();
-		private Optional<String> description = Optional.empty();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
 		private Builder(
@@ -377,26 +354,6 @@ public class Group {
 			this.owner = owner.getName();
 			this.allMembers.put(owner.getName(), owner);
 			this.times = requireNonNull(times, "times");
-		}
-		
-		/** Add a group description. The maximum description size is
-		 * {@link Group#MAX_DESCRIPTION_CODE_POINTS} Unicode code points.
-		 * @param description the new description. If null or whitespace only, the description
-		 * is set to {@link Optional#empty()}. The description will be {@link String#trim()}ed.
-		 * @return this builder.
-		 */
-		public Builder withDescription(final String description) {
-			if (isNullOrEmpty(description)) {
-				this.description = Optional.empty();
-			} else {
-				if (description.codePointCount(0, description.length()) >
-						MAX_DESCRIPTION_CODE_POINTS) {
-					throw new IllegalArgumentException(
-							"description must be <= 5000 Unicode code points");
-				}
-				this.description = Optional.of(description.trim());
-			}
-			return this;
 		}
 		
 		/** Add a member to the builder.
@@ -467,7 +424,7 @@ public class Group {
 		 */
 		public Group build() {
 			return new Group(groupID, groupName, owner, allMembers, admins, resources,
-					times, description, customFields);
+					times, customFields);
 		}
 	}
 	

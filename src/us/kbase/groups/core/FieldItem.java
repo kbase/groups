@@ -12,6 +12,8 @@ import static us.kbase.groups.util.Util.exceptOnEmpty;
  */
 public class FieldItem<T> {
 	
+	//TODO CODE this is currently unused, but could be useful in the future. Move to 'attic' package?
+	
 	private static final byte HAS_ITEM = 1;
 	private static final byte NO_ACTION = 0;
 	private static final byte REMOVE = -1;

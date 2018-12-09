@@ -1,16 +1,12 @@
 package us.kbase.groups.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static us.kbase.groups.util.Util.checkString;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import us.kbase.groups.core.FieldItem.StringField;
-import us.kbase.groups.core.exceptions.IllegalParameterException;
-import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 
 /** Optional fields associated with a {@link Group}. 
@@ -19,28 +15,17 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
  */
 public class OptionalGroupFields {
 	
-	private final FieldItem<String> description;
 	private final Map<NumberedCustomField, OptionalString> customFields;
 
-	private OptionalGroupFields(
-			final FieldItem<String> description,
-			final Map<NumberedCustomField, OptionalString> customFields) {
-		this.description = description;
+	private OptionalGroupFields(final Map<NumberedCustomField, OptionalString> customFields) {
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
-	/** Get the description of the group.
-	 * @return the description.
-	 */
-	public FieldItem<String> getDescription() {
-		return description;
-	}
-	
 	/** Returns true if at least one field require an update.
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		return description.hasAction() || !customFields.isEmpty();
+		return !customFields.isEmpty();
 	}
 	
 	/** Get any custom fields included in the fields.
@@ -67,7 +52,6 @@ public class OptionalGroupFields {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		return result;
 	}
 
@@ -90,13 +74,6 @@ public class OptionalGroupFields {
 		} else if (!customFields.equals(other.customFields)) {
 			return false;
 		}
-		if (description == null) {
-			if (other.description != null) {
-				return false;
-			}
-		} else if (!description.equals(other.description)) {
-			return false;
-		}
 		return true;
 	}
 	
@@ -107,8 +84,7 @@ public class OptionalGroupFields {
 		return new Builder();
 	}
 	
-	/** Get the default set of {@link OptionalGroupFields}, where all of the fields are set to
-	 * {@link FieldItem#noAction()}.
+	/** Get the default set of {@link OptionalGroupFields}, which contains no field updates.
 	 * @return the fields.
 	 */
 	public static OptionalGroupFields getDefault() {
@@ -121,31 +97,9 @@ public class OptionalGroupFields {
 	 */
 	public static class Builder {
 
-		private FieldItem<String> description = FieldItem.noAction();
 		private final Map<NumberedCustomField, OptionalString> customFields = new HashMap<>();
 		
 		private Builder() {}
-		
-		/** Add a group description. The maximum description size is
-		 * {@link Group#MAX_DESCRIPTION_CODE_POINTS} Unicode code points.
-		 * @param description the new description.
-		 * @return this builder.
-		 * @throws IllegalParameterException if the description is too long.
-		 */
-		public Builder withDescription(final StringField description)
-				throws IllegalParameterException {
-			checkNotNull(description, "description");
-			if (description.hasItem()) {
-				try {
-					checkString(description.get(), "description",
-							Group.MAX_DESCRIPTION_CODE_POINTS);
-				} catch (MissingParameterException e) {
-					throw new RuntimeException("This should be impossible");
-				}
-			}
-			this.description = description;
-			return this;
-		}
 		
 		/** Add a custom field to the set of fields.
 		 * @param field the field.
@@ -166,7 +120,7 @@ public class OptionalGroupFields {
 		 * @return the fields.
 		 */
 		public OptionalGroupFields build() {
-			return new OptionalGroupFields(description, customFields);
+			return new OptionalGroupFields(customFields);
 		}
 	}
 	

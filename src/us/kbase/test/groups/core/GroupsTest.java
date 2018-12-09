@@ -47,7 +47,6 @@ import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -246,14 +245,12 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("desc"))
 						.withCustomField(new NumberedCustomField("foo-26"),
 								OptionalString.of("yay"))
 						.withCustomField(new NumberedCustomField("a"), OptionalString.empty())
@@ -266,14 +263,12 @@ public class GroupsTest {
 		verify(mocks.storage).createGroup(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		assertThat("incorrect group", ret, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build(), new UserName("foo"))
 				.withStandardView(true)
@@ -774,7 +769,6 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withMember(toGUser("baz"))
 				.build());
 
@@ -783,7 +777,6 @@ public class GroupsTest {
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.build(), null)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("workspace"))
@@ -800,7 +793,6 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
@@ -827,7 +819,6 @@ public class GroupsTest {
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("desc")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), null)
 				.withStandardView(true)
@@ -904,7 +895,6 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("other desc")
 				.withMember(toGUser("baz"))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
@@ -958,7 +948,6 @@ public class GroupsTest {
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withDescription("other desc")
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.withMember(toGUser("baz"))
@@ -1106,7 +1095,6 @@ public class GroupsTest {
 						Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-								.withDescription("desc")
 								.withMember(toGUser("whee"))
 								.withAdministrator(toGUser("whoo"))
 								.build()
@@ -1122,7 +1110,6 @@ public class GroupsTest {
 						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-								.withDescription("desc")
 								.withAdministrator(toGUser("whoo"))
 								.build(), null)
 								.build())

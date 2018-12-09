@@ -30,7 +30,6 @@ public class GroupView {
 	private final Instant modificationDate; // all views
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard
-	private final Optional<String> description; // standard
 	
 	// standard, but contents depend on view. 
 	// minimal - owner only
@@ -71,11 +70,9 @@ public class GroupView {
 		if (!standardView) {
 			members = getEmptyImmutableSet();
 			admins = getEmptyImmutableSet();
-			description = Optional.empty();
 			userInfo.put(owner, filterFields(group.getMember(owner), upub, umin));
 		} else {
 			admins = group.getAdministrators();
-			description = group.getDescription();
 			if (!isMember) {
 				group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
 						u, filterFields(group.getMember(u), upub, umin)));
@@ -187,14 +184,6 @@ public class GroupView {
 		return modificationDate;
 	}
 
-	/** Get the optional description of the group. {@link Optional#empty()} if not provided
-	 * or the view is minimal
-	 * @return the description.
-	 */
-	public Optional<String> getDescription() {
-		return description;
-	}
-	
 	/** Get the types of the resources included in this view.
 	 * @return the resource types.
 	 */
@@ -231,7 +220,6 @@ public class GroupView {
 		result = prime * result + ((admins == null) ? 0 : admins.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + (isMember ? 1231 : 1237);
@@ -275,13 +263,6 @@ public class GroupView {
 				return false;
 			}
 		} else if (!customFields.equals(other.customFields)) {
-			return false;
-		}
-		if (description == null) {
-			if (other.description != null) {
-				return false;
-			}
-		} else if (!description.equals(other.description)) {
 			return false;
 		}
 		if (groupID == null) {

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
-import us.kbase.groups.core.FieldItem.StringField;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
@@ -91,7 +90,6 @@ public class GroupsAPITest {
 					GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
 					new CreateAndModTimes(
 							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-					.withDescription("desc")
 					.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
 							.withCustomField(new NumberedCustomField("whee"), "whoo")
 							.build())
@@ -120,7 +118,6 @@ public class GroupsAPITest {
 					"custom", ImmutableMap.of("f-1", "val", "something", "nothing")))
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
-			.with("description", null)
 			.with("resources", Collections.emptyMap())
 			.with("members", Collections.emptyList())
 			.with("admins", Collections.emptyList())
@@ -150,7 +147,6 @@ public class GroupsAPITest {
 					"custom", Collections.emptyMap()))
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
-			.with("description", "desc")
 			.with("members", Arrays.asList(
 					ImmutableMap.of(
 							"name", "bar",
@@ -187,7 +183,6 @@ public class GroupsAPITest {
 			.with("moddate", 30000L)
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
-			.with("description", "desc")
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList(
 					ImmutableMap.of(
@@ -277,24 +272,21 @@ public class GroupsAPITest {
 	
 	@Test
 	public void createGroupMinimalNulls() throws Exception {
-		createGroupMinimal(null, null);
+		createGroupMinimal(null);
 	}
 	
 	@Test
 	public void createGroupMinimalEmptyOptional() throws Exception {
-		createGroupMinimal(Optional.empty(), MapBuilder.<String, String>newHashMap()
-				.with("key", null).build());
+		createGroupMinimal(MapBuilder.<String, String>newHashMap().with("key", null).build());
 	}
 	
 	@Test
 	public void createGroupMinimalWhitespace() throws Exception {
-		createGroupMinimal(Optional.of("    \t    "), MapBuilder.<String, String>newHashMap()
+		createGroupMinimal(MapBuilder.<String, String>newHashMap()
 				.with("key", "    \t    ").build());
 	}
 	
-	private void createGroupMinimal(
-			final Optional<String> noInput,
-			final Map<String, String> custom)
+	private void createGroupMinimal(final Map<String, String> custom)
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		
@@ -304,7 +296,7 @@ public class GroupsAPITest {
 						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup(
-				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), noInput, custom));
+				"toke", "gid", new CreateOrUpdateGroupJSON(op("name"), custom));
 		
 		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
 	}
@@ -316,7 +308,6 @@ public class GroupsAPITest {
 		when(g.createGroup(new Token("toke"), GroupCreationParams.getBuilder(
 				new GroupID("gid"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.from("my desc"))
 						.withCustomField(new NumberedCustomField("foo-23"),
 								OptionalString.of("yay"))
 						.withCustomField(new NumberedCustomField("doodybutt"),
@@ -327,7 +318,7 @@ public class GroupsAPITest {
 						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).createGroup("toke", "gid",
-				new CreateOrUpdateGroupJSON(op("name"), op("my desc"),
+				new CreateOrUpdateGroupJSON(op("name"),
 						ImmutableMap.of("foo-23", "yay", "doodybutt", "yo")));
 		
 		assertThat("incorrect group", ret, is(GROUP_MIN_JSON_STD));
@@ -336,20 +327,20 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailNullsAndWhitespace() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null);
 		
 		failCreateGroup(g, null, "i", b, new NoTokenProvidedException("No token provided"));
 		failCreateGroup(g, "  \t  ", "i", b, new NoTokenProvidedException("No token provided"));
 		failCreateGroup(g, "t", null, b, new MissingParameterException("group id"));
 		failCreateGroup(g, "t", "   \t  ", b, new MissingParameterException("group id"));
 		failCreateGroup(g, "t", "i", null, new MissingParameterException("Missing JSON body"));
-		failCreateGroup(g, "t", "i", new CreateOrUpdateGroupJSON(null, null, null),
+		failCreateGroup(g, "t", "i", new CreateOrUpdateGroupJSON(null, null),
 				new MissingParameterException("group name"));
 		failCreateGroup(g, "t", "i",
-				new CreateOrUpdateGroupJSON(Optional.empty(), null, null),
+				new CreateOrUpdateGroupJSON(Optional.empty(), null),
 				new MissingParameterException("group name"));
 		failCreateGroup(g, "t", "i",
-				new CreateOrUpdateGroupJSON(op("   \t    "), null, null),
+				new CreateOrUpdateGroupJSON(op("   \t    "), null),
 				new MissingParameterException("group name"));
 		
 	}
@@ -357,7 +348,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailExtraProperties() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null);
 		b.setAdditionalProperties("foo", "bar");
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
@@ -368,7 +359,7 @@ public class GroupsAPITest {
 	public void createGroupFailCustomNotMap() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, "customstr");
+				op("n"), "customstr");
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
 				"'custom' field must be a mapping"));
@@ -378,7 +369,7 @@ public class GroupsAPITest {
 	public void createGroupFailCustomNotStringValue() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, ImmutableMap.of("foo-1", Collections.emptyList()));
+				op("n"), ImmutableMap.of("foo-1", Collections.emptyList()));
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Value of 'foo-1' field in 'custom' map is not a string"));
@@ -388,7 +379,7 @@ public class GroupsAPITest {
 	public void createGroupFailBadCustomField() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, ImmutableMap.of("foo-1-1", "yay"));
+				op("n"), ImmutableMap.of("foo-1-1", "yay"));
 
 		failCreateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Suffix after - of field foo-1-1 must be an integer > 0"));
@@ -397,7 +388,7 @@ public class GroupsAPITest {
 	@Test
 	public void createGroupFailGroupExists() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(op("n"), null);
 
 		when(g.createGroup(new Token("t"), GroupCreationParams.getBuilder(
 				new GroupID("i"), new GroupName("n")).build()))
@@ -422,28 +413,26 @@ public class GroupsAPITest {
 	
 	@Test
 	public void updateGroupAllNulls() throws Exception {
-		updateGroup(null, null, null, GroupUpdateParams.getBuilder(new GroupID("gid"))
+		updateGroup(null, null, GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.build());
 	}
 	
 	@Test
 	public void updateGroupAllEmpty() throws Exception {
 		final Optional<String> mt = Optional.empty();
-		updateGroup(mt, mt, Collections.emptyMap(),
+		updateGroup(mt, Collections.emptyMap(),
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
-				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove()).build())
+				.withOptionalFields(OptionalGroupFields.getBuilder().build())
 				.build());
 	}
 	
 	@Test
 	public void updateGroupNullCustom() throws Exception {
 		final Optional<String> mt = Optional.empty();
-		updateGroup(mt, mt, MapBuilder.<String, String>newHashMap()
+		updateGroup(mt, MapBuilder.<String, String>newHashMap()
 				.with("foo", null).with("bar", null).build(),
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove())
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 						.build())
@@ -453,11 +442,10 @@ public class GroupsAPITest {
 	@Test
 	public void updateGroupAllWhitespace() throws Exception {
 		final Optional<String> ws = Optional.ofNullable("   \t    ");
-		updateGroup(ws, ws, MapBuilder.<String, String>newHashMap()
+		updateGroup(ws, MapBuilder.<String, String>newHashMap()
 				.with("foo", "   \t   ").with("bar", "   \t    ").build(),
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
-						.withDescription(StringField.remove())
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 						.build())
@@ -468,13 +456,11 @@ public class GroupsAPITest {
 	public void updateGroupWithValues() throws Exception {
 		updateGroup(
 				Optional.of("    name   "),
-				Optional.of("   desc    "),
 				MapBuilder.<String, String>newHashMap()
 						.with("foo", "baz").with("bar", "bat").build(),
 				GroupUpdateParams.getBuilder(new GroupID("gid"))
 						.withName(new GroupName("name"))
 						.withOptionalFields(OptionalGroupFields.getBuilder()
-								.withDescription(StringField.from("desc"))
 								.withCustomField(new NumberedCustomField("foo"),
 										OptionalString.of("baz"))
 								.withCustomField(new NumberedCustomField("bar"),
@@ -485,14 +471,13 @@ public class GroupsAPITest {
 	
 	private void updateGroup(
 			final Optional<String> groupName,
-			final Optional<String> description,
 			final Map<String, String> custom,
 			final GroupUpdateParams expected)
 			throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		new GroupsAPI(g).updateGroup("tok", "    gid   ",
-				new CreateOrUpdateGroupJSON(groupName, description, custom));
+				new CreateOrUpdateGroupJSON(groupName, custom));
 		
 		verify(g).updateGroup(new Token("tok"), expected);
 	}
@@ -500,7 +485,7 @@ public class GroupsAPITest {
 	@Test
 	public void updateGroupFailNullsAndWhitespace() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null);
 		
 		failUpdateGroup(g, null, "i", b, new NoTokenProvidedException("No token provided"));
 		failUpdateGroup(g, "  \t  ", "i", b, new NoTokenProvidedException("No token provided"));
@@ -512,7 +497,7 @@ public class GroupsAPITest {
 	@Test
 	public void updateGroupFailExtraProperties() throws Exception {
 		final Groups g = mock(Groups.class);
-		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null, null);
+		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(null, null);
 		b.setAdditionalProperties("foo", "bar");
 
 		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
@@ -523,7 +508,7 @@ public class GroupsAPITest {
 	public void updateGroupFailCustomNotMap() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, "customstr");
+				op("n"), "customstr");
 
 		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
 				"'custom' field must be a mapping"));
@@ -533,7 +518,7 @@ public class GroupsAPITest {
 	public void updateGroupFailCustomNotStringValue() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, ImmutableMap.of("foo-1", Collections.emptyList()));
+				op("n"), ImmutableMap.of("foo-1", Collections.emptyList()));
 
 		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Value of 'foo-1' field in 'custom' map is not a string"));
@@ -543,7 +528,7 @@ public class GroupsAPITest {
 	public void updateGroupFailBadCustomField() throws Exception {
 		final Groups g = mock(Groups.class);
 		final CreateOrUpdateGroupJSON b = new CreateOrUpdateGroupJSON(
-				op("n"), null, ImmutableMap.of("foo-1-1", "yay"));
+				op("n"), ImmutableMap.of("foo-1-1", "yay"));
 
 		failUpdateGroup(g, "t", "i", b, new IllegalParameterException(
 				"Suffix after - of field foo-1-1 must be an integer > 0"));
@@ -560,7 +545,7 @@ public class GroupsAPITest {
 								.build());
 
 		failUpdateGroup(g, "tok", "  gid", new CreateOrUpdateGroupJSON(
-				Optional.ofNullable("name"), null, null),
+				Optional.ofNullable("name"), null),
 				new NoSuchGroupException("gid"));
 	}
 	
