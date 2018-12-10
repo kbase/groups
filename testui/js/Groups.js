@@ -359,7 +359,6 @@ export default class {
                   const s = this.sanitize;
                   const members = json.members;
                   const admins = json.admins;
-                  // TODO edit user title
                   let g =
                       `
                       <table class="table">
@@ -368,7 +367,7 @@ export default class {
                           <tr><th>Name</th><td>${s(json.name)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
-                          <tr><th>Description</th><td>${s(json.description)}</td></tr>
+                          <tr><th>Description</th><td>${s(json.custom.description)}</td></tr>
                         </tbody>
                       </table>
                       <div>
@@ -474,7 +473,6 @@ export default class {
                           Requests for group</button>
                       </div>
                       `;
-                  //TODO set title button
                   //TODO CODE inactivate button if group member
                   $('#groups').html(g);
                   $('#editgroup').on('click', () => {
@@ -986,7 +984,6 @@ export default class {
       if (!this.checkToken()) {
           return;
       }
-      // TODO handle setting the group type correctly
       // note name is required on create, not on update. Since I'm lazy I'm just making it not required
       if (!group.custom) {
           group.custom = '';
@@ -1015,7 +1012,7 @@ export default class {
               <label for="groupdesc">Description</label>
               <input class="form-control" id="groupdesc" aria-describedby="deschelp"
                 placeholder="Enter group description (optional)"
-                ${this.getValueTerm(group.description)} />
+                ${this.getValueTerm(group.custom.description)} />
               <small id="deschelp" class="form-text text-muted">
                 An arbitrary description of the group.
               </small>
@@ -1043,8 +1040,8 @@ export default class {
                 {"method": "PUT",
                  "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name,
-                                         "description": desc,
-                                         "custom": {"gravatarhash": grav}})
+                                         "custom": {"gravatarhash": grav,
+                                                    "description": desc}})
                  }).then( (response) => {
                      if (response.ok) {
                          this.renderGroup(id);
