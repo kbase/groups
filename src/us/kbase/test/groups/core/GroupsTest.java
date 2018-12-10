@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -1072,7 +1073,8 @@ public class GroupsTest {
 		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("ex")
 				.withNullableSortAscending(false)
-				.build()))
+				.build(),
+				null))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(null, GetGroupsParams.getBuilder()
@@ -1088,7 +1090,8 @@ public class GroupsTest {
 		
 		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("someex")
-				.build()))
+				.build(),
+				null))
 				.thenReturn(Arrays.asList(
 						getGroupsBuilder()
 								.build(),
@@ -1125,7 +1128,7 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("m1"))).thenReturn(new UserName("m1"));
 		when(mocks.userHandler.getUser(new Token("m2"))).thenReturn(new UserName("m2"));
-		when(mocks.storage.getGroups(mtparams))
+		when(mocks.storage.getGroups(eq(mtparams), any()))
 				.thenReturn(Arrays.asList(getGroupsBuilder()
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
 						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
@@ -1186,6 +1189,44 @@ public class GroupsTest {
 				.withAdministrator(toGUser("a1"));
 	}
 
+	@Test
+	public void getGroupsWithUser() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final GetGroupsParams ggp = GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("foo")
+				.build();
+		
+		final Group g3 = Group.getBuilder(new GroupID("g3"), new GroupName("n3"),
+				GroupUser.getBuilder(new UserName("o3"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		final Group g1 = Group.getBuilder(new GroupID("g1"), new GroupName("n1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		final Group g2 = Group.getBuilder(new GroupID("g2"), new GroupName("n2"),
+				GroupUser.getBuilder(new UserName("o2"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.withIsPrivate(true)
+				.withMember(GroupUser.getBuilder(new UserName("m1"), inst(20000)).build())
+				.build();
+		
+		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
+		when(mocks.storage.getGroups(ggp, null)).thenReturn(Arrays.asList(g1, g3));
+		when(mocks.storage.getGroups(ggp, new UserName("m1")))
+				.thenReturn(Arrays.asList(g1, g2, g3));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(null, ggp),
+				is(Arrays.asList(GroupView.getBuilder(g1, null).build(),
+						GroupView.getBuilder(g3, null).build())));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("t1"), ggp),
+				is(Arrays.asList(GroupView.getBuilder(g1, new UserName("m1")).build(),
+						GroupView.getBuilder(g2, new UserName("m1")).build(),
+						GroupView.getBuilder(g3, new UserName("m1")).build())));
+	}
+	
 	@Test
 	public void getGroupsFail() throws Exception {
 		try {

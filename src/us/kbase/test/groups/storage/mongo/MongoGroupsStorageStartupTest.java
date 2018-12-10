@@ -217,6 +217,14 @@ public class MongoGroupsStorageStartupTest {
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("priv", 1).append("id", 1))
+						.append("name", "priv_1_id_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("memb.user", 1).append("id", 1))
+						.append("name", "memb.user_1_id_1")
 						.append("ns", col)
 				)));
 	}
