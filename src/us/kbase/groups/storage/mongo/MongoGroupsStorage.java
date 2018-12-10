@@ -379,6 +379,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document u = new Document(
 				Fields.GROUP_ID, group.getGroupID().getName())
 				.append(Fields.GROUP_NAME, group.getGroupName().getName())
+				.append(Fields.GROUP_IS_PRIVATE, group.isPrivate())
 				.append(Fields.GROUP_OWNER, group.getOwner().getName())
 				.append(Fields.GROUP_MEMBERS, toMembersDocList(group))
 				.append(Fields.GROUP_ADMINS, toStringList(group.getAdministrators()))
@@ -590,7 +591,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 					members.remove(owner),
 					new CreateAndModTimes(
 							grp.getDate(Fields.GROUP_CREATION).toInstant(),
-							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()));
+							grp.getDate(Fields.GROUP_MODIFICATION).toInstant()))
+					.withIsPrivate(grp.getBoolean(Fields.GROUP_IS_PRIVATE));
 			getUserSet(grp, Fields.GROUP_ADMINS).stream().forEach(a ->
 					b.withAdministrator(members.remove(a)));
 			members.values().stream().forEach(m -> b.withMember(m));

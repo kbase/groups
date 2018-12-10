@@ -46,6 +46,7 @@ public class GroupTest {
 		assertThat("incorrect id", g.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
 				is(set(new UserName("foo"))));
+		assertThat("incorrect is private", g.isPrivate(), is(false));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect members", g.getMembers(), is(set()));
@@ -68,6 +69,7 @@ public class GroupTest {
 						.withCustomField(new NumberedCustomField("yay"), "boo")
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withIsPrivate(true)
 				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(35000)).build())
 				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(6000))
 						.withCustomField(new NumberedCustomField("f"), "v")
@@ -97,6 +99,7 @@ public class GroupTest {
 		assertThat("incorrect id", g.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect admin own", g.getAdministratorsAndOwner(),
 				is(set(new UserName("foo"), new UserName("whee"), new UserName("whoo"))));
+		assertThat("incorrect is private", g.isPrivate(), is(true));
 		assertThat("incorrect create", g.getCreationDate(), is(Instant.ofEpochMilli(10000)));
 		assertThat("incorrect name", g.getGroupName(), is(new GroupName("name")));
 		assertThat("incorrect member", g.getMembers(),

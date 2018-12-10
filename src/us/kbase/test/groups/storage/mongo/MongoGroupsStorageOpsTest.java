@@ -141,6 +141,7 @@ public class MongoGroupsStorageOpsTest {
 						.withCustomField(new NumberedCustomField("f"), "val")
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withIsPrivate(true)
 				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 						.withCustomField(new NumberedCustomField("field"), "value")
 						.build())
@@ -170,6 +171,7 @@ public class MongoGroupsStorageOpsTest {
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+						.withIsPrivate(true)
 						.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 								.withCustomField(new NumberedCustomField("field"), "value")
 								.build())
