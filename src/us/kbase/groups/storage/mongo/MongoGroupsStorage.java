@@ -453,6 +453,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		
 		buildUpdate(or, set, update.getGroupName(), Fields.GROUP_NAME, n -> n.get().getName());
 		final OptionalGroupFields opts = update.getOptionalFields();
+		buildUpdate(or, set, opts.isPrivate(), Fields.GROUP_IS_PRIVATE, p -> p.get());
 		final Document mod = buildQueryAndUpdateForCustomFields(
 				opts.getCustomFields(),
 				f -> opts.getCustomValue(f),
