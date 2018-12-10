@@ -121,6 +121,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
 		// find by owner
 		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
+		// find public groups and sort by ID (not needed?)
+		groups.put(Arrays.asList(Fields.GROUP_IS_PRIVATE, Fields.GROUP_ID), null);
+		// find groups by member and sort by ID
+		groups.put(Arrays.asList(
+				Fields.GROUP_MEMBERS + Fields.FIELD_SEP + Fields.GROUP_MEMBER_NAME,
+				Fields.GROUP_ID), null);
 		INDEXES.put(COL_GROUPS, groups);
 		
 		// requests indexes
@@ -559,13 +565,21 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public List<Group> getGroups(final GetGroupsParams params) throws GroupsStorageException {
+	public List<Group> getGroups(final GetGroupsParams params, final UserName user)
+			throws GroupsStorageException {
 		checkNotNull(params, "params");
 		final List<Group> ret = new LinkedList<>();
 		final Document query = new Document();
 		if (params.getExcludeUpTo().isPresent()) {
 			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
 			query.append(Fields.GROUP_ID, new Document(inequality, params.getExcludeUpTo().get()));
+		}
+		if (user == null) {
+			query.append(Fields.GROUP_IS_PRIVATE, false);
+		} else {
+			query.append("$or", Arrays.asList(new Document(Fields.GROUP_IS_PRIVATE, false),
+					new Document(Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
+							Fields.GROUP_MEMBER_NAME, user.getName())));
 		}
 		try {
 			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS).find(query)

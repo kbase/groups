@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -647,7 +648,7 @@ public class MongoGroupsStorageOpsTest {
 	@Test
 	public void getGroupsEmpty() throws Exception {
 		assertThat("incorrect get groups",
-				manager.storage.getGroups(GetGroupsParams.getBuilder().build()),
+				manager.storage.getGroups(GetGroupsParams.getBuilder().build(), null),
 				is(Collections.emptyList()));
 	}
 	
@@ -685,7 +686,7 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		assertThat("incorrect get group", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().build()), is(Arrays.asList(
+				GetGroupsParams.getBuilder().build(), null), is(Arrays.asList(
 						Group.getBuilder(new GroupID("aid"), new GroupName("name1"),
 								GroupUser.getBuilder(new UserName("uname1"), inst(12000))
 										.withCustomField(
@@ -696,11 +697,13 @@ public class MongoGroupsStorageOpsTest {
 										Instant.ofEpochMilli(10000)))
 								.withMember(GroupUser.getBuilder(new UserName("foo1"), inst(60000))
 										.withCustomField(new NumberedCustomField("thing"), "er")
-										.withCustomField(new NumberedCustomField("otherthing"), "otherer")
+										.withCustomField(new NumberedCustomField("otherthing"),
+												"otherer")
 										.build())
 								.withMember(toGUser("bar1"))
 								.withAdministrator(toGUser("admin"))
-								.withAdministrator(GroupUser.getBuilder(new UserName("a1"), inst(70000))
+								.withAdministrator(GroupUser.getBuilder(
+										new UserName("a1"), inst(70000))
 										.withCustomField(new NumberedCustomField("yay"), "boo")
 										.build())
 
@@ -719,6 +722,52 @@ public class MongoGroupsStorageOpsTest {
 										Instant.ofEpochMilli(50000)))
 								.build()
 						)));
+	}
+	
+	@Test
+	public void getGroupsPublicAndPrivate() throws Exception {
+		final Group g1 = Group.getBuilder(
+				new GroupID("g1"), new GroupName("na"), toGUser("o"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("m1"))
+				.withIsPrivate(true)
+				.build();
+		final Group g2 = Group.getBuilder(
+				new GroupID("g2"), new GroupName("na"), toGUser("o1"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("m1"))
+				.build();
+		final Group g3 = Group.getBuilder(
+				new GroupID("g3"), new GroupName("na"), toGUser("o1"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withIsPrivate(true)
+				.withAdministrator(toGUser("a"))
+				.withAdministrator(toGUser("m1"))
+				.build();
+		final Group g4 = Group.getBuilder(
+				new GroupID("g4"), new GroupName("na"), toGUser("o1"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withIsPrivate(true)
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("m"))
+				.build();
+		manager.storage.createGroup(g1);
+		manager.storage.createGroup(g2);
+		manager.storage.createGroup(g3);
+		manager.storage.createGroup(g4);
+		
+		final GetGroupsParams p = GetGroupsParams.getBuilder().build();
+		
+		assertThat("incorrect groups", manager.storage.getGroups(p, null),
+				is(Arrays.asList(g2)));
+		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("o")),
+				is(Arrays.asList(g1, g2)));
+		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("a")),
+				is(Arrays.asList(g2, g3)));
+		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("m")),
+				is(Arrays.asList(g2, g4)));
 	}
 	
 	@Test
@@ -796,13 +845,64 @@ public class MongoGroupsStorageOpsTest {
 		assertGroupListCorrect("g300", 201, 0);
 	}
 	
+	@Test
+	public void getGroupsLimitWithPrivateGroups() throws Exception {
+		for (int i = 1; i < 220; i++) {
+			final String id = String.format("g%03d%s", i, (i % 2 == 0 ? "priv" : "pub"));
+			final Group.Builder b = Group.getBuilder(
+					new GroupID(id), new GroupName("g" + 1), toGUser("n"),
+					new CreateAndModTimes(inst(1000)));
+			if (i % 2 == 0) {
+				b.withIsPrivate(true).withMember(toGUser("m"));
+			}
+			manager.storage.createGroup(b.build());
+		}
+		final List<Group> resNull = manager.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("g010").build(), null);
+		final List<Group> resNonMember = manager.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("g010").build(), new UserName("nonmember"));
+		
+		final List<String> expected = new LinkedList<>();
+		for (int i = 11; i < 210; i += 2) {
+			expected.add(String.format("g%03dpub", i));
+		}
+		
+		assertThat("incorrect list size", resNull.size(), is(100));
+		assertThat("incorrect list size", resNonMember.size(), is(100));
+		assertThat("incorrect list size", expected.size(), is(100));
+		
+		for (int i = 0; i < resNull.size(); i++) {
+			assertThat("incorrect group " + i, resNull.get(i).getGroupID().getName(),
+					is(expected.get(i)));
+			assertThat("incorrect group " + i, resNonMember.get(i).getGroupID().getName(),
+					is(expected.get(i)));
+		}
+		
+		final List<Group> res2 = manager.storage.getGroups(GetGroupsParams.getBuilder()
+				.withNullableExcludeUpTo("g010").build(), new UserName("m"));
+		
+		final List<String> expected2 = new LinkedList<>();
+		for (int i = 10; i < 110; i += 1) {
+			expected2.add(String.format("g%03d%s", i,  (i % 2 == 0 ? "priv" : "pub")));
+		}
+		
+		assertThat("incorrect list size", res2.size(), is(100));
+		assertThat("incorrect list size", expected2.size(), is(100));
+		
+		for (int i = 0; i < res2.size(); i++) {
+			assertThat("incorrect group " + i, res2.get(i).getGroupID().getName(),
+					is(expected2.get(i)));
+		}
+		
+	}
+	
 	private <T> void assertGroupListCorrect(
 			final String excludeUpTo,
 			final int start,
 			final int size)
 			throws Exception {
 		final List<Group> res = manager.storage.getGroups(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo(excludeUpTo).build());
+				.withNullableExcludeUpTo(excludeUpTo).build(), null);
 		assertThat("incorrect size", res.size(), is(size));
 		int i = start;
 		for (final Group g: res) {
@@ -815,13 +915,13 @@ public class MongoGroupsStorageOpsTest {
 	
 	private void checkGroupsList(final GetGroupsParams p, final List<Group> expected)
 			throws GroupsStorageException {
-		assertThat("incorrect groups", manager.storage.getGroups(p), is(expected));
+		assertThat("incorrect groups", manager.storage.getGroups(p, null), is(expected));
 	}
 	
 	@Test
 	public void getGroupsFail() throws Exception {
 		try {
-			manager.storage.getGroups(null);
+			manager.storage.getGroups(null, new UserName("foo"));
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));

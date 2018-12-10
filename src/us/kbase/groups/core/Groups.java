@@ -398,7 +398,7 @@ public class Groups {
 	
 	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
-	 * @param userToken the user's token.
+	 * @param userToken the user's token. If null, only public groups are returned.
 	 * @param params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
@@ -409,7 +409,7 @@ public class Groups {
 			throws GroupsStorageException, InvalidTokenException, AuthenticationException {
 		checkNotNull(params, "params");
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroups(params).stream()
+		return storage.getGroups(params, user).stream()
 				.map(g -> GroupView.getBuilder(g, user)
 						.withMinimalViewFieldDeterminer(
 								f -> validators.getConfiguration(f.getFieldRoot())

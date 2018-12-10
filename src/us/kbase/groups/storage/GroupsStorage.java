@@ -76,13 +76,14 @@ public interface GroupsStorage {
 	 */
 	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
 	
-	/** Get all the groups in the system, sorted by the group ID.
+	/** Get groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.
 	 * @param params the parameters for getting the groups.
+	 * @param user an optional user. If no user is provided, only public groups are returned.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<Group> getGroups(GetGroupsParams params) throws GroupsStorageException;
+	List<Group> getGroups(GetGroupsParams params, UserName user) throws GroupsStorageException;
 	
 	/** Add a member to a group.
 	 * @param groupID the ID of the group.
