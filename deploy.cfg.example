@@ -38,9 +38,12 @@ dont-trust-x-ip-headers=false
 
 # Any custom fields can be configured here, for example:
 # field-gravatarhash-validator=us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
+# field-gravatarhash-is-public=true
+# field-gravatarhash-show-in-list=true
 #
-# field-somefield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
-# field-somefield-param-max-length=20
+# field-description-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
+# field-description-is-public=true
+# field-description-param-allow-linefeeds-and-tabs=true
 #
 # User fields can also be configured:
 # field-user-title-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
