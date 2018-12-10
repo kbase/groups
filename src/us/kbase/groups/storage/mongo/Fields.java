@@ -21,6 +21,8 @@ public class Fields {
 	public static final String GROUP_ID = "id";
 	/** The group name. */
 	public static final String GROUP_NAME = "name";
+	/** Whether the group is private or not. */
+	public static final String GROUP_IS_PRIVATE = "priv";
 	/** The username of the group owner. */
 	public static final String GROUP_OWNER = "own";
 	/** The group administrators. */
