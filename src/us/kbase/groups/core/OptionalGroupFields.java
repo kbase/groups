@@ -1,10 +1,11 @@
 package us.kbase.groups.core;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
@@ -15,9 +16,13 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
  */
 public class OptionalGroupFields {
 	
+	private final Optional<Boolean> isPrivate;
 	private final Map<NumberedCustomField, OptionalString> customFields;
 
-	private OptionalGroupFields(final Map<NumberedCustomField, OptionalString> customFields) {
+	private OptionalGroupFields(
+			final Optional<Boolean> isPrivate,
+			final Map<NumberedCustomField, OptionalString> customFields) {
+		this.isPrivate = isPrivate;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
@@ -25,7 +30,15 @@ public class OptionalGroupFields {
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		return !customFields.isEmpty();
+		return isPrivate.isPresent() || !customFields.isEmpty();
+	}
+	
+	/** Get any update to the group privacy field. {@link Optional#empty()} indicates no update
+	 * is required.
+	 * @return the privacy update.
+	 */
+	public Optional<Boolean> isPrivate() {
+		return isPrivate;
 	}
 	
 	/** Get any custom fields included in the fields.
@@ -40,8 +53,7 @@ public class OptionalGroupFields {
 	 * @return the value.
 	 */
 	public OptionalString getCustomValue(final NumberedCustomField field) {
-		checkNotNull(field, "field");
-		if (!customFields.containsKey(field)) {
+		if (!customFields.containsKey(requireNonNull(field, "field"))) {
 			throw new IllegalArgumentException("No such field " + field.getField());
 		}
 		return customFields.get(field);
@@ -52,6 +64,7 @@ public class OptionalGroupFields {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
+		result = prime * result + ((isPrivate == null) ? 0 : isPrivate.hashCode());
 		return result;
 	}
 
@@ -72,6 +85,13 @@ public class OptionalGroupFields {
 				return false;
 			}
 		} else if (!customFields.equals(other.customFields)) {
+			return false;
+		}
+		if (isPrivate == null) {
+			if (other.isPrivate != null) {
+				return false;
+			}
+		} else if (!isPrivate.equals(other.isPrivate)) {
 			return false;
 		}
 		return true;
@@ -97,9 +117,22 @@ public class OptionalGroupFields {
 	 */
 	public static class Builder {
 
+		private Optional<Boolean> isPrivate = Optional.empty();
 		private final Map<NumberedCustomField, OptionalString> customFields = new HashMap<>();
 		
 		private Builder() {}
+		
+		/** Set the privacy state of the group. A null value indicates no change should be made
+		 * to the current (or default) value.
+		 * @param isPrivate true to make the group private, false for public, null for no change /
+		 * default.
+		 * @return this builder.
+		 */
+		public Builder withNullableIsPrivate(final Boolean isPrivate) {
+			this.isPrivate = Optional.ofNullable(isPrivate);
+			return this;
+		}
+		
 		
 		/** Add a custom field to the set of fields.
 		 * @param field the field.
@@ -110,9 +143,7 @@ public class OptionalGroupFields {
 		public Builder withCustomField(
 				final NumberedCustomField field,
 				final OptionalString value) {
-			checkNotNull(field, "field");
-			checkNotNull(value, "value");
-			customFields.put(field, value);
+			customFields.put(requireNonNull(field, "field"), requireNonNull(value, "value"));
 			return this;
 		}
 		
@@ -120,7 +151,7 @@ public class OptionalGroupFields {
 		 * @return the fields.
 		 */
 		public OptionalGroupFields build() {
-			return new OptionalGroupFields(customFields);
+			return new OptionalGroupFields(isPrivate, customFields);
 		}
 	}
 	

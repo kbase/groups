@@ -5,6 +5,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -25,6 +27,7 @@ public class OptionalGroupFieldsTest {
 		final OptionalGroupFields ofg = OptionalGroupFields.getDefault();
 		
 		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect priv", ofg.isPrivate(), is(Optional.empty()));
 		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
@@ -33,18 +36,32 @@ public class OptionalGroupFieldsTest {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder().build();
 		
 		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect priv", ofg.isPrivate(), is(Optional.empty()));
 		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
+	}
+	
+	@Test
+	public void buildWithNulls() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withNullableIsPrivate(null)
+				.build();
+		
+		assertThat("incorrect update", ofg.hasUpdate(), is(false));
+		assertThat("incorrect priv", ofg.isPrivate(), is(Optional.empty()));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));		
 	}
 	
 	@Test
 	public void buildMaximal() throws Exception {
 		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withNullableIsPrivate(false)
 				.withCustomField(new NumberedCustomField("foo-1"), OptionalString.of("  val  "))
 				.withCustomField(new NumberedCustomField("foo"), OptionalString.empty())
 				.withCustomField(new NumberedCustomField("bar"), OptionalString.empty())
 				.build();
 		
 		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect priv", ofg.isPrivate(), is(Optional.of(false)));
 		assertThat("incorrect fields", ofg.getCustomFields(), is(
 				set(new NumberedCustomField("foo-1"), new NumberedCustomField("foo"),
 						new NumberedCustomField("bar"))));
@@ -54,6 +71,17 @@ public class OptionalGroupFieldsTest {
 				is(OptionalString.empty()));
 		assertThat("incorrect val", ofg.getCustomValue(new NumberedCustomField("bar")),
 				is(OptionalString.empty()));
+	}
+	
+	@Test
+	public void buildWithIsPrivateWithUpdate() throws Exception {
+		final OptionalGroupFields ofg = OptionalGroupFields.getBuilder()
+				.withNullableIsPrivate(true)
+				.build();
+		
+		assertThat("incorrect update", ofg.hasUpdate(), is(true));
+		assertThat("incorrect priv", ofg.isPrivate(), is(Optional.of(true)));
+		assertThat("incorrect fields", ofg.getCustomFields(), is(set()));
 	}
 	
 	@Test
