@@ -233,7 +233,8 @@ export default class {
   
   renderGroups(order, excludeupto) {
       $('#error').text("");
-      fetch(this.getListURL(this.serviceUrl + "group", 0, order, excludeupto))
+      fetch(this.getListURL(this.serviceUrl + "group", 0, order, excludeupto),
+              {"headers": this.getHeaders()})
         .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
@@ -252,6 +253,8 @@ export default class {
                           <input type="text" id="excludeupto" value="${s(excludeupto)}"
                             placeholder="excludeupto group ID"/>
                           <button id="listgroups" class="btn btn-primary">Submit</button>
+                          <input type="text" id="getgroupid" placeholder="get a specific group"/>
+                          <button id="getgroup" class="btn btn-primary">Get</button>
                         </span>
                       </div>
                       <table class="table">
@@ -287,6 +290,10 @@ export default class {
                       const e = $("#excludeupto").val();
                       this.renderGroups(o, e)
                   });
+                  $('#getgroup').on('click', () => {
+                      const gid = $("#getgroupid").val();
+                      this.renderGroup(gid);
+                  });
                   for (const g of json) {
                       $(`#${s(g.id)}`).on('click', () => {
                           this.renderGroup(g.id);
@@ -306,6 +313,9 @@ export default class {
   }
   
   getUserRow(user, role, button1name, button1id, button2name, button2id) {
+      if (!user) {
+          return '';
+      }
       const s = this.sanitize;
       const j = new Date(user.joined).toLocaleString();
       let d = `<tr>
@@ -353,21 +363,37 @@ export default class {
         .then( (response) => {
           if (response.ok) {
               response.json().then( (json) => {
+                  let c, m, n, d, members, admins;
+                  const priv = json['private'] && !json.ismember;
                   // TODO NOW break up this monstrosity
-                  const c = new Date(json.createdate).toLocaleString();
-                  const m = new Date(json.moddate).toLocaleString();
+                  if (priv) {
+                      const p = "Group is private";
+                      c = p;
+                      m = p;
+                      n = p;
+                      d = p;
+                      members = [];
+                      admins = [];
+                      json.resources = {'workspace': [], 'catalogmethod': []};
+                  } else {
+                      c = new Date(json.createdate).toLocaleString();
+                      m = new Date(json.moddate).toLocaleString();
+                      n = json.name;
+                      d = json.custom.description
+                      members = json.members;
+                      admins = json.admins;
+                  }
                   const s = this.sanitize;
-                  const members = json.members;
-                  const admins = json.admins;
                   let g =
                       `
                       <table class="table">
                         <tbody>
                           <tr><th>ID</th><td>${this.getGravatar(json)}${s(json.id)}</td></tr>
-                          <tr><th>Name</th><td>${s(json.name)}</td></tr>
+                          <tr><th>Name</th><td>${s(n)}</td></tr>
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
-                          <tr><th>Description</th><td>${s(json.custom.description)}</td></tr>
+                          <tr><th>Description</th><td>${s(d)}</td></tr>
+                          <tr><th>Private</th><td>${s(json.private)}</td></tr>
                         </tbody>
                       </table>
                       <div>
@@ -496,10 +522,12 @@ export default class {
                       const meth = $('#addmeth').val();
                       this.addResource(groupid, "catalogmethod", meth);
                   });
-                  $(`#settitle_${s(json.owner.name)}`).on('click', () => {
-                      const title = $(`#settitle_val_${s(json.owner.name)}`).val();
-                      this.setTitle(groupid, json.owner.name, title);
-                  });
+                  if (!priv) {
+                      $(`#settitle_${s(json.owner.name)}`).on('click', () => {
+                          const title = $(`#settitle_val_${s(json.owner.name)}`).val();
+                          this.setTitle(groupid, json.owner.name, title);
+                      });
+                  }
                   for (const m of members) {
                       $(`#remove_${s(m.name)}`).on('click', () => {
                           this.removeMember(groupid, m.name);
@@ -550,7 +578,7 @@ export default class {
   }
   
   getGravatar(group) {
-      if (!group.custom.gravatarhash) {
+      if (!group.custom || !group.custom.gravatarhash) {
           return "";
       }
       const url = "https://www.gravatar.com/avatar/" + group.custom.gravatarhash + "?s=80&r=pg";
@@ -988,6 +1016,7 @@ export default class {
       if (!group.custom) {
           group.custom = '';
       }
+      const checked = group['private'] ? 'checked' : '';
       const input = 
           `
           <div>
@@ -1006,6 +1035,14 @@ export default class {
                 placeholder="Enter group name" ${this.getValueTerm(group.name)} />
               <small id="namehelp" class="form-text text-muted">
                 An arbitrary name for the group.
+              </small>
+            </div>
+            <div class="form-group">
+              <label for="grouppriv">Private</label>
+              <input type="checkbox" class="form-control" id="grouppriv"
+                aria-describedby="privhelp" ${checked} />
+              <small id="privhelp" class="form-text text-muted">
+                Whether the group is private.
               </small>
             </div>
             <div class="form-group">
@@ -1032,14 +1069,16 @@ export default class {
       $('#groups').html(input);
       $('#creategroupinput').on('click', () => {
           //TODO Do validation
-          let id = $('#groupid').val();
-          let name = $('#groupname').val();
-          let desc = $('#groupdesc').val();
-          let grav = $('#groupgravatar').val();
+          const id = $('#groupid').val();
+          const name = $('#groupname').val();
+          const desc = $('#groupdesc').val();
+          const grav = $('#groupgravatar').val();
+          const checkedinput = $('#grouppriv').prop('checked');
           fetch(this.serviceUrl + "group/" + id + urlsuffix,
                 {"method": "PUT",
                  "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name,
+                                         "private": checkedinput,
                                          "custom": {"gravatarhash": grav,
                                                     "description": desc}})
                  }).then( (response) => {
