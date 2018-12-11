@@ -21,17 +21,21 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class GroupView {
 	
+	//TODO CODE there could be a lot of optimizations to avoid fetching data that we just discard in the view.
+	
 	// group fields
 	private final GroupID groupID; // all views
-	private final GroupName groupName; // all views
-	private final UserName owner; // all views
-	private final Map<NumberedCustomField, String> customFields; // all views
-	private final Instant creationDate; // all views
-	private final Instant modificationDate; // all views
+	private final Optional<GroupName> groupName; // all views except private
+	private final Optional<UserName> owner; // all views except private
+	// contents depend on view
+	private final Map<NumberedCustomField, String> customFields;
+	private final Optional<Instant> creationDate; // all views except private
+	private final Optional<Instant> modificationDate; // all views except private
 	private final Set<UserName> members; // member
-	private final Set<UserName> admins; // standard
+	private final Set<UserName> admins; // standard except private
 	
-	// standard, but contents depend on view. 
+	// standard, but contents depend on view.
+	// private - nothing
 	// minimal - owner only
 	// not member - owner & admins
 	// standard - all
@@ -43,6 +47,7 @@ public class GroupView {
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
 	private final boolean isMember;
+	private final boolean isPrivate;
 	
 	private GroupView(
 			final Group group,
@@ -55,32 +60,45 @@ public class GroupView {
 			final Function<NumberedCustomField, Boolean> isUserMinimalViewField) {
 		this.isStandardView = standardView;
 		this.isMember = isMember;
-		this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
-		
-		// group properties
+		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
-		this.groupName = group.getGroupName();
-		this.owner = group.getOwner();
-		this.customFields = getCustomFields(
-				group.getCustomFields(), isPublicField, isMinimalViewField);
-		this.creationDate = group.getCreationDate();
-		this.modificationDate = group.getModificationDate();
-		final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
-		final Function<NumberedCustomField, Boolean> umin = isUserMinimalViewField;
-		if (!standardView) {
-			members = getEmptyImmutableSet();
-			admins = getEmptyImmutableSet();
-			userInfo.put(owner, filterFields(group.getMember(owner), upub, umin));
+		if (isPrivateView()) {
+			this.resourceInfo = Collections.emptyMap();
+			this.groupName = Optional.empty();
+			this.owner = Optional.empty();
+			this.creationDate = Optional.empty();
+			this.modificationDate = Optional.empty();
+			this.members = Collections.emptySet();
+			this.admins = Collections.emptySet();
+			this.customFields = Collections.emptyMap();
 		} else {
-			admins = group.getAdministrators();
-			if (!isMember) {
-				group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
-						u, filterFields(group.getMember(u), upub, umin)));
-				members = getEmptyImmutableSet();
+			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
+			
+			// group properties
+			this.groupName = Optional.of(group.getGroupName());
+			this.owner = Optional.of(group.getOwner());
+			this.customFields = getCustomFields(
+					group.getCustomFields(), isPublicField, isMinimalViewField);
+			this.creationDate = Optional.of(group.getCreationDate());
+			this.modificationDate = Optional.of(group.getModificationDate());
+			final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
+			final Function<NumberedCustomField, Boolean> umin = isUserMinimalViewField;
+			if (!standardView) {
+				members = Collections.emptySet();
+				admins = Collections.emptySet();
+				userInfo.put(group.getOwner(),
+						filterFields(group.getMember(group.getOwner()), upub, umin));
 			} else {
-				members = group.getMembers();
-				group.getAllMembers().stream().forEach(u -> userInfo.put(
-						u, filterFields(group.getMember(u), upub, umin)));
+				admins = group.getAdministrators();
+				if (!isMember) {
+					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
+							u, filterFields(group.getMember(u), upub, umin)));
+					members = Collections.emptySet();
+				} else {
+					members = group.getMembers();
+					group.getAllMembers().stream().forEach(u -> userInfo.put(
+							u, filterFields(group.getMember(u), upub, umin)));
+				}
 			}
 		}
 	}
@@ -110,10 +128,6 @@ public class GroupView {
 		return Collections.unmodifiableMap(ret);
 	}
 
-	private <T> Set<T> getEmptyImmutableSet() {
-		return Collections.unmodifiableSet(Collections.emptySet());
-	}
-
 	/** Get the type of the view.
 	 * @return true if the view is a standard view, false if the view is minimal.
 	 */
@@ -128,6 +142,21 @@ public class GroupView {
 		return isMember;
 	}
 
+	/** Get whether the group is private.
+	 * @return true if the group is private.
+	 */
+	public boolean isPrivate() {
+		return isPrivate;
+	}
+	
+	/** Get whether this is a private view of the group, where only the group ID is visible.
+	 * The equivalent of {@link #isPrivate} && !{@link #isMember()}.
+	 * @return true if this is a private view of the group.
+	 */
+	public boolean isPrivateView() {
+		return isPrivate && !isMember;
+	}
+	
 	/** Get the group ID.
 	 * @return the ID.
 	 */
@@ -135,10 +164,10 @@ public class GroupView {
 		return groupID;
 	}
 
-	/** Get the group name.
+	/** Get the group name. Empty if the view is a private view.
 	 * @return the name.
 	 */
-	public GroupName getGroupName() {
+	public Optional<GroupName> getGroupName() {
 		return groupName;
 	}
 
@@ -149,10 +178,10 @@ public class GroupView {
 		return customFields;
 	}
 	
-	/** Get the owner of the group.
+	/** Get the owner of the group. Empty if the view is a private view.
 	 * @return the owner.
 	 */
-	public UserName getOwner() {
+	public Optional<UserName> getOwner() {
 		return owner;
 	}
 
@@ -170,17 +199,17 @@ public class GroupView {
 		return admins;
 	}
 	
-	/** Get the creation date of the group.
+	/** Get the creation date of the group. Empty if the view is a private view.
 	 * @return the creation date.
 	 */
-	public Instant getCreationDate() {
+	public Optional<Instant> getCreationDate() {
 		return creationDate;
 	}
 
-	/** Get the modification date of the group.
+	/** Get the modification date of the group. Empty if the view is a private view.
 	 * @return the modification date.
 	 */
-	public Instant getModificationDate() {
+	public Optional<Instant> getModificationDate() {
 		return modificationDate;
 	}
 
@@ -223,6 +252,7 @@ public class GroupView {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + (isMember ? 1231 : 1237);
+		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + (isStandardView ? 1231 : 1237);
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
@@ -280,6 +310,9 @@ public class GroupView {
 			return false;
 		}
 		if (isMember != other.isMember) {
+			return false;
+		}
+		if (isPrivate != other.isPrivate) {
 			return false;
 		}
 		if (isStandardView != other.isStandardView) {

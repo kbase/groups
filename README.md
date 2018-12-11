@@ -33,6 +33,8 @@ Represents a group of users and associated data.
 ```
 {
     "id": <the group ID>,
+    "private": <true if the group is private, false otherwise>,
+    "ismember": <true if the user accessing the group is a member, false otherwise>,
     "name": <the group name>,
     "owner": <the User data for the group owner>,
     "admins": <an array of User data of admins of the group>,
@@ -210,6 +212,8 @@ are included.
 
 A maximum of 100 groups are returned.
 
+Private groups are not included unless the user is a member of the group.
+
 The query parameters are all optional:
 * `order` - `asc` to sort the groups in order of their group IDs, `desc` to sort the groups
   in reverse order. If omitted the sort order is set to `asc`.
@@ -286,6 +290,9 @@ GET /group/<group id>
 
 RETURNS: A Group.
 ```
+
+If the user is not a member of the group or no authorization is provided and the group is
+private, only the `groupid`, `private`, and `ismember` fields are included.
 
 If no authorization is provided, the members list is empty, only public custom fields are included,
 and only public resources associated with the group are returned.
