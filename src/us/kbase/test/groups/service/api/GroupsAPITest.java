@@ -28,6 +28,7 @@ import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
+import us.kbase.groups.core.Group.Builder;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -75,6 +76,7 @@ public class GroupsAPITest {
 
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
+	private static final Group GROUP_PRIV;
 	static {
 		try {
 			GROUP_MIN = Group.getBuilder(
@@ -85,7 +87,7 @@ public class GroupsAPITest {
 							.build(),
 					new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 					.build();
-			GROUP_MAX = Group.getBuilder(
+			final Builder b = Group.getBuilder(
 					new GroupID("id2"), new GroupName("name2"),
 					GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
 					new CreateAndModTimes(
@@ -101,8 +103,9 @@ public class GroupsAPITest {
 							.withCustomField(new NumberedCustomField("bar"), "baz")
 							.build())
 					.withCustomField(new NumberedCustomField("field-1"), "my val")
-					.withCustomField(new NumberedCustomField("otherfield"), "fieldval")
-					.build();
+					.withCustomField(new NumberedCustomField("otherfield"), "fieldval");
+			GROUP_MAX = b.build();
+			GROUP_PRIV = b.withIsPrivate(true).build();
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("Fix your tests newb", e);
 		}
@@ -111,6 +114,8 @@ public class GroupsAPITest {
 	private static final Map<String, Object> GROUP_MIN_JSON_STD = MapBuilder
 			.<String, Object>newHashMap()
 			.with("id", "id")
+			.with("private", false)
+			.with("ismember", true)
 			.with("name", "name")
 			.with("owner", ImmutableMap.of(
 					"name", "u",
@@ -127,6 +132,8 @@ public class GroupsAPITest {
 	private static final Map<String, Object> GROUP_MIN_JSON_MIN = MapBuilder
 			.<String, Object>newHashMap()
 			.with("id", "id")
+			.with("private", false)
+			.with("ismember", false)
 			.with("name", "name")
 			.with("owner", ImmutableMap.of(
 					"name", "u",
@@ -140,6 +147,8 @@ public class GroupsAPITest {
 	private static final Map<String, Object> GROUP_MAX_JSON_STD = MapBuilder
 			.<String, Object>newHashMap()
 			.with("id", "id2")
+			.with("private", false)
+			.with("ismember", true)
 			.with("name", "name2")
 			.with("owner", ImmutableMap.of(
 					"name", "u2",
@@ -174,6 +183,8 @@ public class GroupsAPITest {
 	private static final Map<String, Object> GROUP_MAX_JSON_NON = MapBuilder
 			.<String, Object>newHashMap()
 			.with("id", "id2")
+			.with("private", false)
+			.with("ismember", false)
 			.with("name", "name2")
 			.with("owner", ImmutableMap.of(
 					"name", "u2",
@@ -201,6 +212,8 @@ public class GroupsAPITest {
 	private static final Map<String, Object> GROUP_MAX_JSON_MIN = MapBuilder
 			.<String, Object>newHashMap()
 			.with("id", "id2")
+			.with("private", false)
+			.with("ismember", true)
 			.with("name", "name2")
 			.with("owner", ImmutableMap.of(
 					"name", "u2",
@@ -209,6 +222,13 @@ public class GroupsAPITest {
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("custom", ImmutableMap.of("field-1", "my val"))
+			.build();
+	
+	private static final Map<String, Object> GROUP_MAX_JSON_PRIV = MapBuilder
+			.<String, Object>newHashMap()
+			.with("id", "id2")
+			.with("private", true)
+			.with("ismember", false)
 			.build();
 
 	@Test
@@ -604,6 +624,37 @@ public class GroupsAPITest {
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
 		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_NON));
+	}
+	
+	@Test
+	public void getGroupPrivate() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("t"), new GroupID("id"))).thenReturn(
+				GroupView.getBuilder(GROUP_PRIV, new UserName("nonmember"))
+						.withStandardView(true)
+						.build());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("t", "id");
+		
+		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_PRIV));
+	}
+	
+	@Test
+	public void getGroupPrivateMember() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("t"), new GroupID("id"))).thenReturn(
+				GroupView.getBuilder(GROUP_PRIV, new UserName("bar"))
+						.withStandardView(true)
+						.build());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("t", "id");
+		
+		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
+		expected.put("private", true);
+		
+		assertThat("incorrect group", ret, is(expected));
 	}
 	
 	@Test
