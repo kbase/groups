@@ -118,10 +118,53 @@ public class GroupCreationParamsTest {
 	}
 	
 	@Test
+	public void toGroupPublicNull() throws Exception {
+		final GroupCreationParams p = GroupCreationParams.getBuilder(
+				new GroupID("id"), new GroupName("name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullableIsPrivate(null)
+						.build())
+				.build();
+		
+		final Group g = p.toGroup(new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)));
+		
+		final Group expected = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.build();
+		
+		assertThat("incorrect group", g, is(expected));
+	}
+	
+	@Test
+	public void toGroupPublic() throws Exception {
+		final GroupCreationParams p = GroupCreationParams.getBuilder(
+				new GroupID("id"), new GroupName("name"))
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullableIsPrivate(false)
+						.build())
+				.build();
+		
+		final Group g = p.toGroup(new UserName("foo"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)));
+		
+		final Group expected = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.build();
+		
+		assertThat("incorrect group", g, is(expected));
+	}
+	
+	@Test
 	public void toGroupMaximal() throws Exception {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullableIsPrivate(true)
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.build())
@@ -135,6 +178,7 @@ public class GroupCreationParamsTest {
 				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 				.withCustomField(new NumberedCustomField("foo"), "bar")
+				.withIsPrivate(true)
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));
