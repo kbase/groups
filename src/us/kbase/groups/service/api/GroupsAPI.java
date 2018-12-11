@@ -2,6 +2,7 @@ package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
+import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -119,7 +120,9 @@ public class GroupsAPI {
 	public static class CreateOrUpdateGroupJSON extends IncomingJSON {
 		
 		@JsonProperty(Fields.GROUP_NAME)
-		private Optional<String> groupName;
+		private String groupName;
+		@JsonProperty(Fields.GROUP_IS_PRIVATE)
+		private Boolean isPrivate;
 		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
 		private Object customFields;
 
@@ -129,16 +132,20 @@ public class GroupsAPI {
 		// this constructor is for testing. Jackson *must* inject the fields so that the
 		// optionals can be null, which distinguishes a missing field from a field with a null
 		// value.
+		// 18/12/10 ok, there are no optionals anymore, but we'll leave this here in case we
+		// want to add them again.
 		public CreateOrUpdateGroupJSON(
-				final Optional<String> groupName,
+				final String groupName,
+				final Boolean isPrivate,
 				final Object customFields) {
 			this.groupName = groupName;
+			this.isPrivate = isPrivate;
 			this.customFields = customFields;
 		}
 
 		private GroupCreationParams toCreateParams(final GroupID groupID)
 				throws MissingParameterException, IllegalParameterException {
-			return GroupCreationParams.getBuilder(groupID, new GroupName(fromNullable(groupName)))
+			return GroupCreationParams.getBuilder(groupID, new GroupName(groupName))
 					.withOptionalFields(getOptionalFieldsBuilder(true)
 							.build())
 					.build();
@@ -148,7 +155,8 @@ public class GroupsAPI {
 				throws IllegalParameterException, MissingParameterException {
 			final Map<NumberedCustomField, OptionalString> customFields =
 					getCustomFieldsAndTypeCheck(this.customFields, Fields.GROUP_CUSTOM_FIELDS);
-			final Builder b = OptionalGroupFields.getBuilder();
+			final Builder b = OptionalGroupFields.getBuilder()
+					.withNullableIsPrivate(isPrivate);
 			for (final NumberedCustomField k: customFields.keySet()) {
 				if (!ignoreMissingValues || customFields.get(k).isPresent()) {
 					b.withCustomField(k, customFields.get(k));
@@ -157,11 +165,6 @@ public class GroupsAPI {
 			return b;
 		}
 
-		// handles case where the optional itself is null
-		private <T> T fromNullable(final Optional<T> nullable) {
-			return nullable == null ? null : nullable.orElse(null);
-		}
-		
 		private interface FuncExcept<T, R> {
 			
 			R apply(T item) throws IllegalParameterException, MissingParameterException;
@@ -177,14 +180,10 @@ public class GroupsAPI {
 		}
 		
 		private <T> T fromNullable(
-				final Optional<String> nullable,
+				final String nullable,
 				final FuncExcept<String, T> getValue)
 				throws IllegalParameterException, MissingParameterException {
-			if (nullable == null || !nullable.isPresent() || nullable.get().trim().isEmpty()) {
-				return null;
-			} else {
-				return getValue.apply(nullable.get().trim());
-			}
+			return isNullOrEmpty(nullable) ? null : getValue.apply(nullable.trim());
 		}
 		
 	}

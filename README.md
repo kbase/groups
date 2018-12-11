@@ -233,6 +233,7 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>
 {
     "name": <an arbitrary group name>,
+    "private": <true for a private group, false (the default) for public, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -248,7 +249,7 @@ and hyphens, and be no longer than 100 characters.
 
 The group name must be no longer than 256 Unicode code points.
 
-The group description must be no longer than 5000 Unicode code points.
+If `private` is null or missing altogether, the group is set as public.
 
 See `Custom fields` below for information on custom fields.
 
@@ -261,6 +262,7 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>/update
 {
     "name": <an arbitrary group name, optional>,
+    "private": <true for a private group, false for public, optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -273,9 +275,9 @@ The user must be a group administrator.
 
 The constraints on the parameters are the same as for the creation parameters.
 
-If `name` is `null` or missing altogether, it are not altered.
+If `name` or `private` are `null` or missing altogether, they are not altered.
 
-If the `description` field or custom fields are missing, they are not altered.
+If custom fields are missing, they are not altered.
 If they are `null`, they are removed. Otherwise they are set to the new value.
 
 See `Custom fields` below for information on custom fields.
