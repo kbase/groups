@@ -328,11 +328,15 @@ public class Groups {
 		final Group g = storage.getGroup(groupID);
 		final UserName user = getOptionalUser(userToken);
 		final GroupView.Builder b = startViewBuild(g, user)
+				// this seems odd. Maybe there's a better way to deal with this?
 				.withPublicFieldDeterminer(
 						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false))
+				.withPublicUserFieldDeterminer(
+						f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
 								.map(c -> c.isPublicField()).orElse(false));
 		for (final ResourceType type: g.getResourceTypes()) {
-			processGroupType(g, user, type, b);
+			b.withResource(type, getResourceInfo(g, user, type));
 		}
 		return b.build();
 	}
@@ -351,11 +355,10 @@ public class Groups {
 		return b;
 	}
 	
-	private void processGroupType(
+	private ResourceInformationSet getResourceInfo(
 			final Group g,
 			final UserName user,
-			final ResourceType type,
-			final GroupView.Builder b)
+			final ResourceType type)
 			throws ResourceHandlerException, NoSuchGroupException, GroupsStorageException {
 		final ResourceHandler h;
 		try {
@@ -377,7 +380,6 @@ public class Groups {
 					"Illegal data associated with group %s: %s",
 					g.getGroupID().getName(), e.getMessage()), e);
 		}
-		b.withResource(type, info);
 		for (final ResourceID rid: info.getNonexistentResources()) {
 			try {
 				storage.removeResource(g.getGroupID(), type, rid, clock.instant());
@@ -385,6 +387,7 @@ public class Groups {
 				// do nothing, if the resource isn't there fine.
 			}
 		}
+		return info;
 	}
 
 	/** Check if a group exists based on the group ID.
@@ -412,11 +415,18 @@ public class Groups {
 		final UserName user = getOptionalUser(userToken);
 		return storage.getGroups(params, user).stream()
 				.map(g -> GroupView.getBuilder(g, user)
+						// this seems odd. Maybe there's a better way to deal with this?
 						.withMinimalViewFieldDeterminer(
 								f -> validators.getConfigOrEmpty(f.getFieldRoot())
 										.map(c -> c.isMinimalViewField()).orElse(false))
 						.withPublicFieldDeterminer(
 								f -> validators.getConfigOrEmpty(f.getFieldRoot())
+										.map(c -> c.isPublicField()).orElse(false))
+						.withMinimalViewUserFieldDeterminer(
+								f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
+										.map(c -> c.isMinimalViewField()).orElse(false))
+						.withPublicUserFieldDeterminer(
+								f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
 										.map(c -> c.isPublicField()).orElse(false))
 						.build())
 				.collect(Collectors.toList());

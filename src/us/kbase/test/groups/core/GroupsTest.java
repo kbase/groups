@@ -785,6 +785,8 @@ public class GroupsTest {
 				.build()));
 	}
 	
+	// DRY up these next 3 later
+	
 	@Test
 	public void getGroupNoToken() throws Exception {
 		// can get public resources
@@ -793,9 +795,23 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("private-43"), "upriv")
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(toGUser("baz"))
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000))
+						.withCustomField(new NumberedCustomField("private-44"), "upriv2")
+						.withCustomField(new NumberedCustomField("public-25"), "upub2")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc2")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("bat"), inst(30000))
+						.withCustomField(new NumberedCustomField("private-45"), "upriv3")
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc3")
+						.build())
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -813,6 +829,14 @@ public class GroupsTest {
 						.build()));
 		when(mocks.validators.getConfigOrEmpty(new CustomField("noconfig")))
 				.thenReturn(Optional.empty());
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("private"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(false)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("public"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("noconfig")))
+				.thenReturn(Optional.empty());
 		
 		when(mocks.wsHandler.getResourceInformation(
 				null, set(new ResourceID("92"), new ResourceID("86")), true))
@@ -824,12 +848,19 @@ public class GroupsTest {
 		final GroupView g = mocks.groups.getGroup(null, new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
+				.withAdministrator(GroupUser.getBuilder(new UserName("bat"), inst(30000))
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.build())
 				.build(), null)
 				.withStandardView(true)
 				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(null)
@@ -846,10 +877,23 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("private-43"), "upriv")
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withMember(toGUser("baz"))
-				.withAdministrator(toGUser("whoo"))
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000))
+						.withCustomField(new NumberedCustomField("private-44"), "upriv2")
+						.withCustomField(new NumberedCustomField("public-25"), "upub2")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc2")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(30000))
+						.withCustomField(new NumberedCustomField("private-45"), "upriv3")
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc3")
+						.build())
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -878,17 +922,31 @@ public class GroupsTest {
 						.build()));
 		when(mocks.validators.getConfigOrEmpty(new CustomField("noconfig")))
 				.thenReturn(Optional.empty());
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("private"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(false)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("public"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("noconfig")))
+				.thenReturn(Optional.empty());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withAdministrator(toGUser("whoo"))
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(30000))
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.build())
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), new UserName("whee"))
 				.withStandardView(true)
 				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
 				.withResourceType(new ResourceType("catalogmethod"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
 						.getBuilder(new UserName("whee"))
@@ -905,9 +963,23 @@ public class GroupsTest {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("private-43"), "upriv")
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(toGUser("baz"))
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000))
+						.withCustomField(new NumberedCustomField("private-44"), "upriv2")
+						.withCustomField(new NumberedCustomField("public-25"), "upub2")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc2")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(30000))
+						.withCustomField(new NumberedCustomField("private-45"), "upriv3")
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc3")
+						.build())
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
@@ -955,11 +1027,25 @@ public class GroupsTest {
 				new ResourceID("34"), inst(5600));
 		
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
-				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000))
+						.withCustomField(new NumberedCustomField("private-43"), "upriv")
+						.withCustomField(new NumberedCustomField("public-24"), "upub")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc")
+						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000))
+						.withCustomField(new NumberedCustomField("private-44"), "upriv2")
+						.withCustomField(new NumberedCustomField("public-25"), "upub2")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc2")
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(30000))
+						.withCustomField(new NumberedCustomField("private-45"), "upriv3")
+						.withCustomField(new NumberedCustomField("public-26"), "upub3")
+						.withCustomField(new NumberedCustomField("noconfig"), "unoc3")
+						.build())
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
-				.withMember(toGUser("baz"))
 				.build(), new UserName("baz"))
 				.withStandardView(true)
 				.withResource(new ResourceType("workspace"), ResourceInformationSet
@@ -1101,7 +1187,12 @@ public class GroupsTest {
 				.build(),
 				null))
 				.thenReturn(Arrays.asList(
-						getGroupsBuilder()
+						Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						.withMember(toGUser("m1"))
+						.withAdministrator(toGUser("a1"))
 								.build(),
 						Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
@@ -1115,7 +1206,12 @@ public class GroupsTest {
 				.withNullableExcludeUpTo("someex")
 				.build()),
 				is(Arrays.asList(
-						GroupView.getBuilder(getGroupsBuilder()
+						GroupView.getBuilder(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						.withMember(toGUser("m1"))
+						.withAdministrator(toGUser("a1"))
 								.build(), null)
 								.build(),
 						GroupView.getBuilder(Group.getBuilder(
@@ -1125,6 +1221,18 @@ public class GroupsTest {
 								.build(), null)
 								.build())
 						));
+	}
+	
+	private GroupUser gGWCFWithCF(final GroupUser.Builder b) throws Exception {
+		return b
+				.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
+				.withCustomField(new NumberedCustomField("minpriv-7"), "uminpriv")
+				.withCustomField(new NumberedCustomField("pub-8"), "upub")
+				.withCustomField(new NumberedCustomField("priv-9"), "upriv")
+				// mockito returns Optional.empty() by default, so no need to mock
+				.withCustomField(new NumberedCustomField("missingmin"), "umissingonmin")
+				.withCustomField(new NumberedCustomField("missingpub"), "umissingonpub")
+				.build();
 	}
 	
 	@Test
@@ -1137,7 +1245,15 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("m1"))).thenReturn(new UserName("m1"));
 		when(mocks.userHandler.getUser(new Token("m2"))).thenReturn(new UserName("m2"));
 		when(mocks.storage.getGroups(eq(mtparams), any()))
-				.thenReturn(Arrays.asList(getGroupsBuilder()
+				.thenReturn(Arrays.asList(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"),
+						gGWCFWithCF(GroupUser.getBuilder(new UserName("o1"), inst(10000))),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+						.withMember(gGWCFWithCF(GroupUser.getBuilder(new UserName("m1"),
+								inst(20000))))
+						.withAdministrator(gGWCFWithCF(GroupUser.getBuilder(new UserName("a1"),
+								inst(30000))))
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
 						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
 						.withCustomField(new NumberedCustomField("pub-8"), "pub")
@@ -1165,47 +1281,93 @@ public class GroupsTest {
 						.withNullableIsMinimalViewField(true)
 						.build()));
 
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("minpub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder()
+						.withNullableIsPublicField(true)
+						.withNullableIsMinimalViewField(true)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("minpriv"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("pub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("priv"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().build()));
+		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("missingpub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder()
+						.withNullableIsMinimalViewField(true)
+						.build()));
+
+
 		
 		// null user
 		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
-				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"),
+						GroupUser.getBuilder(new UserName("o1"), inst(10000))
+								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
+								.build(),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						// these are basically dummies to test the is member logic in group view
+						.withMember(toGUser("m1"))
+						.withAdministrator(toGUser("a1"))
 						.build(),
 						null)
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
+						.withMinimalViewUserFieldDeterminer(f -> true)
+						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
 		
 		// non member
 		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"),
+						GroupUser.getBuilder(new UserName("o1"), inst(10000))
+								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
+								.build(),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+						// these are basically dummies to test the is member logic in group view
+						.withMember(toGUser("m1"))
+						.withAdministrator(toGUser("a1"))
 						.build(),
 						new UserName("m2"))
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
+						.withMinimalViewUserFieldDeterminer(f -> true)
+						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
 		
 		//member
 		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
+				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
+						new GroupID("id1"), new GroupName("name1"),
+						GroupUser.getBuilder(new UserName("o1"), inst(10000))
+								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
+								.withCustomField(new NumberedCustomField("minpriv-7"), "uminpriv")
+								.withCustomField(new NumberedCustomField("missingpub"),
+										"umissingonpub")
+								.build(),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
 						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
 						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
+						// these are basically dummies to test the is member logic in group view
+						.withMember(toGUser("m1"))
+						.withAdministrator(toGUser("a1"))
 						.build(),
 						new UserName("m1"))
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
+						.withMinimalViewUserFieldDeterminer(f -> true)
+						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
-	}
-
-	private Group.Builder getGroupsBuilder() throws Exception {
-		return Group.getBuilder(
-				new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
-				new CreateAndModTimes(
-						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-				.withMember(toGUser("m1"))
-				.withAdministrator(toGUser("a1"));
 	}
 
 	@Test
