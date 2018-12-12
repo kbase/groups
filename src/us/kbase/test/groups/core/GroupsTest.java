@@ -568,10 +568,10 @@ public class GroupsTest {
 		final FieldConfiguration uset = FieldConfiguration.getBuilder()
 				.withNullableIsUserSettable(true).build();
 		
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f"))).thenReturn(uset);
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f2"))).thenReturn(uset);
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f3"))).thenReturn(uset);
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f4"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f2"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f3"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f4"))).thenReturn(uset);
 		
 		when(mocks.clock.instant()).thenReturn(inst(25000));
 		
@@ -730,10 +730,10 @@ public class GroupsTest {
 		final FieldConfiguration uset = FieldConfiguration.getBuilder()
 				.withNullableIsUserSettable(true).build();
 		
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f"))).thenReturn(uset);
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f2")))
+		when(mocks.validators.getUserFieldConfig(new CustomField("f"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f2")))
 				.thenReturn(FieldConfiguration.getBuilder().build()); // not settable
-		when(mocks.validators.getUserFieldConfiguration(new CustomField("f3"))).thenReturn(uset);
+		when(mocks.validators.getUserFieldConfig(new CustomField("f3"))).thenReturn(uset);
 		
 		updateUserFail(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("member"),
 				ImmutableMap.of(new NumberedCustomField("f-1"), OptionalString.of("val1"),
@@ -789,6 +789,7 @@ public class GroupsTest {
 	public void getGroupNoToken() throws Exception {
 		// can get public resources
 		// tests that there's still a resource entry in the group view if missing from the group
+		// also tests that fields without a field config are treated as private
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
@@ -801,12 +802,17 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("86")))
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
+				.withCustomField(new NumberedCustomField("noconfig"), "noc")
 				.build());
 
-		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
-		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		when(mocks.validators.getConfigOrEmpty(new CustomField("private"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(false)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("public"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("noconfig")))
+				.thenReturn(Optional.empty());
 		
 		when(mocks.wsHandler.getResourceInformation(
 				null, set(new ResourceID("92"), new ResourceID("86")), true))
@@ -852,6 +858,7 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("86")))
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
+				.withCustomField(new NumberedCustomField("noconfig"), "noc")
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
 
@@ -863,10 +870,14 @@ public class GroupsTest {
 						.withResourceField(new ResourceID("57"), "name", "my ws2")
 						.build());
 		
-		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
-		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		when(mocks.validators.getConfigOrEmpty(new CustomField("private"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(false)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("public"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("noconfig")))
+				.thenReturn(Optional.empty());
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
@@ -936,10 +947,7 @@ public class GroupsTest {
 		doThrow(new NoSuchResourceException("86")).when(mocks.storage)
 				.removeResource(new GroupID("bar"), new ResourceType("workspace"),
 						new ResourceID("86"), inst(5600));
-		when(mocks.validators.getConfiguration(new CustomField("private"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(false).build());
-		when(mocks.validators.getConfiguration(new CustomField("public"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
+		// no config returns needed since user is member GroupView won't check
 		
 		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
 		
@@ -1134,19 +1142,29 @@ public class GroupsTest {
 						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
 						.withCustomField(new NumberedCustomField("pub-8"), "pub")
 						.withCustomField(new NumberedCustomField("priv-9"), "priv")
+						// mockito returns Optional.empty() by default, so no need to mock
+						.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
+						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
 						.build()));
 		
-		when(mocks.validators.getConfiguration(new CustomField("minpub"))).thenReturn(
-				FieldConfiguration.getBuilder()
+		when(mocks.validators.getConfigOrEmpty(new CustomField("minpub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder()
 						.withNullableIsPublicField(true)
 						.withNullableIsMinimalViewField(true)
-						.build());
-		when(mocks.validators.getConfiguration(new CustomField("minpriv"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true).build());
-		when(mocks.validators.getConfiguration(new CustomField("pub"))).thenReturn(
-				FieldConfiguration.getBuilder().withNullableIsPublicField(true).build());
-		when(mocks.validators.getConfiguration(new CustomField("priv"))).thenReturn(
-				FieldConfiguration.getBuilder().build());
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("minpriv"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("pub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().withNullableIsPublicField(true)
+						.build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("priv"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder().build()));
+		when(mocks.validators.getConfigOrEmpty(new CustomField("missingpub"))).thenReturn(
+				Optional.of(FieldConfiguration.getBuilder()
+						.withNullableIsMinimalViewField(true)
+						.build()));
+
 		
 		// null user
 		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
@@ -1173,6 +1191,7 @@ public class GroupsTest {
 				is(Arrays.asList(GroupView.getBuilder(getGroupsBuilder()
 						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
 						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
 						.build(),
 						new UserName("m1"))
 						.withMinimalViewFieldDeterminer(f -> true)

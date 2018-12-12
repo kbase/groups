@@ -6,6 +6,7 @@ import static us.kbase.groups.util.Util.checkString;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -123,29 +124,53 @@ public class FieldValidators {
 	
 	/** Get the configuration for a field.
 	 * @param field the field to check.
+	 * @throws IllegalArgumentException if the field does not exist.
 	 * @return the configuration.
 	 */
-	public FieldConfiguration getConfiguration(final CustomField field) {
-		return getConfiguration(field, validators, fieldConfig);
+	public FieldConfiguration getConfig(final CustomField field) {
+		return getConfigOrThrow(field, validators, fieldConfig);
 	}
 	
 	/** Get the configuration for a user field.
 	 * @param field the field to check.
+	 * @throws IllegalArgumentException if the field does not exist.
 	 * @return the configuration.
 	 */
-	public FieldConfiguration getUserFieldConfiguration(final CustomField field) {
-		return getConfiguration(field, userValidators, userFieldConfig);
+	public FieldConfiguration getUserFieldConfig(final CustomField field) {
+		return getConfigOrThrow(field, userValidators, userFieldConfig);
+	}
+	
+	/** Get the configuration for a field, or {@link Optional#empty()} if the field does not exist.
+	 * @param field the field to check.
+	 * @return the configuration.
+	 */
+	public Optional<FieldConfiguration> getConfigOrEmpty(final CustomField field) {
+		return getConfig(field, validators, fieldConfig);
+	}
+	
+	/** Get the configuration for a user field, or {@link Optional#empty()} if the field does
+	 * not exist.
+	 * @param field the field to check.
+	 * @return the configuration.
+	 */
+	public Optional<FieldConfiguration> getUserFieldConfigOrEmpty(final CustomField field) {
+		return getConfig(field, userValidators, userFieldConfig);
 	}
 
-	private FieldConfiguration getConfiguration(
+	private Optional<FieldConfiguration> getConfig(
 			final CustomField field,
 			final Map<CustomField, FieldValidator> validators,
 			final Map<CustomField, FieldConfiguration> fieldConfig) {
 		checkNotNull(field, "field");
-		if (!validators.containsKey(field)) {
-			throw new IllegalArgumentException("No such custom field: " + field.getName());
-		}
-		return fieldConfig.get(field);
+		return Optional.ofNullable(fieldConfig.get(field));
+	}
+	
+	private FieldConfiguration getConfigOrThrow(
+			final CustomField field,
+			final Map<CustomField, FieldValidator> validators,
+			final Map<CustomField, FieldConfiguration> fieldConfig) {
+		return getConfig(field, validators, fieldConfig).orElseThrow(
+				() -> new IllegalArgumentException("No such custom field: " + field.getName()));
 	}
 	
 	/** Get a builder for a {@link FieldValidators}.
