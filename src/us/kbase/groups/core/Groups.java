@@ -247,7 +247,7 @@ public class Groups {
 		validateUserCustomFields(fields);
 		if (!g.isAdministrator(user)) {
 			for (final NumberedCustomField f: fields.keySet()) {
-				if (!validators.getUserFieldConfiguration(f.getFieldRoot()).isUserSettable()) {
+				if (!validators.getUserFieldConfig(f.getFieldRoot()).isUserSettable()) {
 					throw new UnauthorizedException(String.format(
 							"User %s is not authorized to set field %s for group %s",
 							user.getName(), f.getField(), groupID.getName()));
@@ -329,7 +329,8 @@ public class Groups {
 		final UserName user = getOptionalUser(userToken);
 		final GroupView.Builder b = startViewBuild(g, user)
 				.withPublicFieldDeterminer(
-						f -> validators.getConfiguration(f.getFieldRoot()).isPublicField());
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false));
 		for (final ResourceType type: g.getResourceTypes()) {
 			processGroupType(g, user, type, b);
 		}
@@ -412,11 +413,11 @@ public class Groups {
 		return storage.getGroups(params, user).stream()
 				.map(g -> GroupView.getBuilder(g, user)
 						.withMinimalViewFieldDeterminer(
-								f -> validators.getConfiguration(f.getFieldRoot())
-										.isMinimalViewField())
+								f -> validators.getConfigOrEmpty(f.getFieldRoot())
+										.map(c -> c.isMinimalViewField()).orElse(false))
 						.withPublicFieldDeterminer(
-								f -> validators.getConfiguration(f.getFieldRoot())
-										.isPublicField())
+								f -> validators.getConfigOrEmpty(f.getFieldRoot())
+										.map(c -> c.isPublicField()).orElse(false))
 						.build())
 				.collect(Collectors.toList());
 	}

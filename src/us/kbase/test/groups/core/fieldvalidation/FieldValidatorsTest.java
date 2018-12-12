@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -67,14 +69,25 @@ public class FieldValidatorsTest {
 				new CustomField("foo"), new CustomField("bar"))));
 		assertThat("incorrect user fields", vs.getValidationTargetUserFields(), is(set(
 				new CustomField("foo"), new CustomField("baz"))));
-		assertThat("incorrect config", vs.getConfiguration(new CustomField("foo")),
+		assertThat("incorrect config", vs.getConfig(new CustomField("foo")),
 				is(FieldConfiguration.getBuilder().build()));
-		assertThat("incorrect config", vs.getConfiguration(new CustomField("bar")),
+		assertThat("incorrect config", vs.getConfig(new CustomField("bar")),
 				is(FieldConfiguration.getBuilder().withNullableIsMinimalViewField(true).build()));
-		assertThat("incorrect user config", vs.getUserFieldConfiguration(new CustomField("foo")),
+		assertThat("incorrect user config", vs.getUserFieldConfig(new CustomField("foo")),
 				is(FieldConfiguration.getBuilder().withNullableIsUserSettable(true).build()));
-		assertThat("incorrect user config", vs.getUserFieldConfiguration(new CustomField("baz")),
+		assertThat("incorrect user config", vs.getUserFieldConfig(new CustomField("baz")),
 				is(FieldConfiguration.getBuilder().build()));
+		
+		assertThat("incorrect config", vs.getConfigOrEmpty(new CustomField("foo")),
+				is(Optional.of(FieldConfiguration.getBuilder().build())));
+		assertThat("incorrect config", vs.getConfigOrEmpty(new CustomField("bar")),
+				is(Optional.of(FieldConfiguration.getBuilder()
+						.withNullableIsMinimalViewField(true).build())));
+		assertThat("incorrect user config", vs.getUserFieldConfigOrEmpty(new CustomField("foo")),
+				is(Optional.of(FieldConfiguration.getBuilder()
+						.withNullableIsUserSettable(true).build())));
+		assertThat("incorrect user config", vs.getUserFieldConfigOrEmpty(new CustomField("baz")),
+				is(Optional.of(FieldConfiguration.getBuilder().build())));
 	}
 	
 	@Test
@@ -176,33 +189,62 @@ public class FieldValidatorsTest {
 	}
 	
 	@Test
-	public void getConfigurationFail() throws Exception {
+	public void getConfigFail() throws Exception {
 		final FieldValidators vs = FieldValidators.getBuilder(1)
 				.withValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
 				.withUserFieldValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
 				.build();
 		
-		getConfigurationFail(vs, null, new NullPointerException("field"));
-		getConfigurationFail(vs, new CustomField("foa"),
+		getConfigFail(vs, null, new NullPointerException("field"));
+		getConfigFail(vs, new CustomField("foa"),
 				new IllegalArgumentException("No such custom field: foa"));
 	}
 	
-	private void getConfigurationFail(
+	private void getConfigFail(
 			final FieldValidators v,
 			final CustomField f,
 			final Exception expected) {
 		try {
-			v.getConfiguration(f);
+			v.getConfig(f);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 		try {
-			v.getUserFieldConfiguration(f);
+			v.getUserFieldConfig(f);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void getConfigOrEmptyFail() throws Exception {
+		try {
+			FieldValidators.getBuilder(1).build().getConfigOrEmpty(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("field"));
+		}
+		try {
+			FieldValidators.getBuilder(1).build().getUserFieldConfigOrEmpty(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("field"));
+		}
+	}
+
+	@Test
+	public void getConfigOrEmptyGetEmpty() throws Exception {
+		final FieldValidators vs = FieldValidators.getBuilder(1)
+				.withValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
+				.withUserFieldValidator(new CustomField("foo"), MTCFG, mock(FieldValidator.class))
+				.build();
+		
+		assertThat("incorrect config", vs.getConfigOrEmpty(new CustomField("foa")),
+				is(Optional.empty()));
+		assertThat("incorrect config", vs.getUserFieldConfigOrEmpty(new CustomField("foa")),
+				is(Optional.empty()));
 	}
 	
 	@Test

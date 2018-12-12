@@ -456,6 +456,7 @@ public class GroupView {
 			return this;
 		}
 		
+		//TODO NNOW use these next 2 in groups
 		/** Add a function that will be used to determine which user fields are public fields and
 		 * therefore viewable by all users, not just group members.
 		 * By default, no fields are considered to be public fields.
