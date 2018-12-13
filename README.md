@@ -680,7 +680,7 @@ Checks that the value contains no control characters, and, optionally, is below 
 Parameters:
 ```
 field-<field name>-param-max-length=<maximum value length in Unicode code points>
-field-<field name>-param-allow-linefeeds-and-tabs=<true for true, anything else for false>
+field-<field name>-param-allow-line-feeds-and-tabs=<true for true, anything else for false>
 ```
 
 All parameters are optional.
