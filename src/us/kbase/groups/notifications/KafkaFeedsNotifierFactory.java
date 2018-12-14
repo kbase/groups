@@ -130,7 +130,6 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				final String bootstrapServers,
 				final KafkaProducer<String, Map<String, Object>> client)
 				throws MissingParameterException, IllegalParameterException {
-			// TODO NNOW check topic characters. See https://stackoverflow.com/questions/37062904/what-are-apache-kafka-topic-name-limitations
 			this.topic = checkString(topic, "topic", 249);
 			final Matcher m = INVALID_TOPIC_CHARS.matcher(this.topic);
 			if (m.find()) {
