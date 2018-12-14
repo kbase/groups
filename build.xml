@@ -304,6 +304,7 @@
         <test name="us.kbase.test.groups.fieldvalidators.GravatarFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.fieldvalidators.SimpleFieldValidatorFactoryTest"/>
         <test name="us.kbase.test.groups.integration.ServiceIntegrationTest"/>
+        <test name="us.kbase.test.groups.notifications.KafkaFeedsNotifierFactoryTest"/>
         <test name="us.kbase.test.groups.service.LoggingFilterTest"/>
         <test name="us.kbase.test.groups.service.api.APICommonTest"/>
         <test name="us.kbase.test.groups.service.api.GroupsAPITest"/>
