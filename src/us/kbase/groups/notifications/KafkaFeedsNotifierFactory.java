@@ -43,7 +43,6 @@ import us.kbase.groups.core.resource.ResourceType;
 public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	
 	// TODO JAVADOC
-	// TODO TEST
 	// TODO TEST integration tests w/ just client & also full group server
 	
 	/* Since this is expected to deal with low volumes (basically just adding users to groups
@@ -88,6 +87,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		final String topic = (String) configuration.get(FEEDS_TOPIC);
 		final String bootstrapServers = checkString(
 				configuration.get(KCFG_BOOSTRAP_SERVERS), KAFKA + " " + KCFG_BOOSTRAP_SERVERS);
+		// maybe make this config accessible in the factory so it can be tested in integration tests
 		cfg.put(KCFG_BOOSTRAP_SERVERS, bootstrapServers);
 		cfg.put("acks", "all");
 		cfg.put("enable.idempotence", true);
@@ -117,7 +117,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		@Override
 		public byte[] serialize(final String topic, final Map<String, Object> data) {
 			try {
-				return MAPPER.writeValueAsBytes(data);
+				return MAPPER.writeValueAsBytes(requireNonNull(data, "data"));
 			} catch (JsonProcessingException e) {
 				throw new RuntimeException("Unserializable data sent to Kafka: " + e.getMessage(),
 						e);
