@@ -30,6 +30,7 @@
     <include name="ini4j/ini4j-0.5.2.jar"/>
     <!-- <include name="jcommander/jcommander-1.72.jar"/>-->
     <include name="mongo/mongo-java-driver-3.8.2.jar"/>
+    <include name="kafka/kafka-clients-2.1.0.jar"/>
     <!--<include name="snakeyaml/snakeyaml-1.18.jar"/>-->
     <include name="kbase/workspace/WorkspaceClient-0.8.0.jar"/>
     <include name="kbase/catalog/kbase-catalog-client-2.1.3.jar"/>

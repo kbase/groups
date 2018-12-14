@@ -50,10 +50,11 @@ public class UtilTest {
 	
 	@Test
 	public void checkString() throws Exception {
-		Util.checkString("foo", "bar");
-		Util.checkString(TestCommon.LONG1001, "name", 0);
-		Util.checkString("ok", "name", 2);
-		Util.checkString(" \n  ok   \t", "name", 2);
+		assertThat("incorrect check", Util.checkString("   foo    ", "bar"), is("foo"));
+		assertThat("incorrect check", Util.checkString(TestCommon.LONG1001, "name", 0),
+				is(TestCommon.LONG1001));
+		assertThat("incorrect check", Util.checkString("ok", "name", 2), is("ok"));
+		assertThat("incorrect check", Util.checkString(" \n  ok   \t", "name", 2), is("ok"));
 	}
 	
 	@Test
