@@ -27,7 +27,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
@@ -127,7 +126,6 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		@Override
 		public void notify(
 				final Collection<UserName> targets,
-				final Group group,
 				final GroupRequest request) {
 			postNotification(
 					targets,
