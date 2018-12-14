@@ -1,8 +1,8 @@
 package us.kbase.groups.notifications;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkString;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -44,6 +44,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	
 	// TODO JAVADOC
 	// TODO TEST
+	// TODO TEST integration tests w/ just client & also full group server
 	
 	/* Since this is expected to deal with low volumes (basically just adding users to groups
 	 * based on user input plus admins adding resources here and there), we do things
@@ -56,17 +57,20 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	 * 
 	 * If this turns out to be a bad plan, we may need to relax those requirements.
 	 * 
-	 * To improve reliability further, we'd need persistent storage of unsent feeds messages.
+	 * To improve reliability further, we'd need persistent storage of unsent feeds messages -
+	 * maybe a flag on the request object?.
 	 */
 	
+	private static final String KAFKA = "Kafka";
+	private static final String KCFG_BOOSTRAP_SERVERS = "bootstrap.servers";
 	private static final String OP = "operation";
 	private static final String OP_CANCEL = "cancel";
 	private static final String OP_NOTIFY = "notify";
 	private static final String SOURCE = "source";
 	private static final String GROUP_SOURCE = "groupsservice";
+	private static final String FEEDS_TOPIC = "feeds-topic";
+	private static final String KAFKA_FEEDS_TOPIC = KAFKA + " " + FEEDS_TOPIC;
 	
-	private static final String KCFG_BOOSTRAP_SERVERS = "bootstrap.servers";
-	private static final String KAFKA = "Kafka";
 	
 	// https://stackoverflow.com/questions/37062904/what-are-apache-kafka-topic-name-limitations
 	// Don't include . and _ because of
@@ -78,10 +82,10 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			throws IllegalParameterException, MissingParameterException {
 		requireNonNull(configuration, "configuration");
 		System.out.println("INIT KFNF NOTIFICATION AGENT - RUN PROTOCOL [HOMO SAPIENS SAPIENS " +
-				"LIQUIFICATION]");
+				"GLOBAL LIQUIFICATION]");
 		//TODO NNOW support other config options (ssl etc). Unfortunately will have to parse each key individually as different types are required.
 		final Map<String, Object> cfg = new HashMap<>();
-		final String topic = (String) configuration.get("feeds-topic");
+		final String topic = (String) configuration.get(FEEDS_TOPIC);
 		final String bootstrapServers = checkString(
 				configuration.get(KCFG_BOOSTRAP_SERVERS), KAFKA + " " + KCFG_BOOSTRAP_SERVERS);
 		cfg.put(KCFG_BOOSTRAP_SERVERS, bootstrapServers);
@@ -94,9 +98,11 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				new KafkaProducer<>(cfg, new StringSerializer(), new MapSerializer()));
 	}
 	
-	private static class MapSerializer implements Serializer<Map<String, Object>> {
+	public static class MapSerializer implements Serializer<Map<String, Object>> {
 
 		private static final ObjectMapper MAPPER = new ObjectMapper();
+		
+		public MapSerializer() {}
 		
 		@Override
 		public void close() {
@@ -130,18 +136,18 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				final String bootstrapServers,
 				final KafkaProducer<String, Map<String, Object>> client)
 				throws MissingParameterException, IllegalParameterException {
-			// TODO NNOW check topic characters. See https://stackoverflow.com/questions/37062904/what-are-apache-kafka-topic-name-limitations
-			this.topic = checkString(topic, "topic", 249);
+			this.topic = checkString(topic, KAFKA_FEEDS_TOPIC, 249);
 			final Matcher m = INVALID_TOPIC_CHARS.matcher(this.topic);
 			if (m.find()) {
-				throw new IllegalParameterException(String.format(
-						"Illegal character in topic name %s: %s", this.topic, m.group()));
+				throw new IllegalParameterException(String.format("Illegal character in %s %s: %s",
+						KAFKA_FEEDS_TOPIC, this.topic, m.group()));
 			}
-			this.client = checkNotNull(client, "client");
+			this.client = requireNonNull(client, "client");
 			try {
 				client.partitionsFor(this.topic); // check kafka is up
 			} catch (KafkaException e) {
-				// TODO CODE this blocks forever, not sure how to fix yet.
+				// TODO CODE this blocks forever, needs 2.2.0 for a fix.
+				// https://issues.apache.org/jira/browse/KAFKA-5503
 				client.close(0, TimeUnit.MILLISECONDS);
 				// might want a notifier exception here
 				throw new IllegalParameterException("Could not reach Kafka instance at " +
@@ -150,8 +156,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		}
 		
 		private void post(final Map<String, Object> message) {
-			final Future<RecordMetadata> res = client.send(
-					new ProducerRecord<String, Map<String,Object>>(topic, message));
+			final Future<RecordMetadata> res = client.send(new ProducerRecord<>(topic, message));
 			try {
 				res.get(35000, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException | TimeoutException e) {
@@ -164,9 +169,9 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		}
 		
 		@Override
-		public void notify(
-				final Collection<UserName> targets,
-				final GroupRequest request) {
+		public void notify(final Collection<UserName> targets, final GroupRequest request) {
+			checkNoNullsInCollection(targets, "targets");
+			requireNonNull(request, "request");
 			postNotification(
 					targets,
 					request.getRequester().getName(),
@@ -184,15 +189,14 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			post(ImmutableMap.of(
 					OP, OP_CANCEL,
 					SOURCE, GROUP_SOURCE,
-					"external_ids", Arrays.asList(requestID.getID())));
+					"external_ids", Arrays.asList(
+							requireNonNull(requestID, "requestID").getID())));
 		}
 
 		@Override
 		public void deny(final Collection<UserName> targets, final GroupRequest request) {
-			if (targets.isEmpty()) {
-				// currently deny is unused
-				return;
-			}
+			checkNoNullsInCollection(targets, "targets");
+			requireNonNull(request, "request");
 			postNotification(
 					targets,
 					GROUP_SOURCE,
@@ -207,6 +211,8 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 
 		@Override
 		public void accept(final Collection<UserName> targets, final GroupRequest request) {
+			checkNoNullsInCollection(targets, "targets");
+			requireNonNull(request, "request");
 			postNotification(
 					targets,
 					GROUP_SOURCE,
@@ -226,13 +232,15 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				final GroupID groupID,
 				final ResourceType type,
 				final ResourceID resource) {
+			requireNonNull(user, "user");
+			checkNoNullsInCollection(targets, "targets");
 			postNotification(
 					targets,
 					GROUP_SOURCE,
 					null,
-					groupID,
-					type,
-					resource,
+					requireNonNull(groupID, "groupID"),
+					requireNonNull(type, "type"),
+					requireNonNull(resource, "resource"),
 					null,
 					"updated",
 					"alert");
@@ -248,10 +256,12 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				final Instant expirationDate,
 				final String verb,
 				final String level) {
+			if (targets.isEmpty()) {
+				return;
+			}
 			final Map<String, Object> post = new HashMap<>();
 			post.put(OP, OP_NOTIFY);
-			post.put("users", targets.stream().map(t -> t.getName())
-					.collect(Collectors.toList()));
+			post.put("users", targets.stream().map(t -> t.getName()).collect(Collectors.toSet()));
 			post.put("target", Arrays.asList(resourceID.getName()));
 			post.put("level", level);
 			post.put("actor", actor);
