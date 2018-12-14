@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
-import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -40,16 +39,14 @@ public class SLF4JNotifierFactory implements NotificationsFactory {
 		@Override
 		public void notify(
 				final Collection<UserName> targets,
-				final Group group,
 				final GroupRequest request) {
 			LoggerFactory.getLogger(getClass()).info(String.format(
-					"Notifying %s of request %s %s for group %s (%s) adding %s %s " +
+					"Notifying %s of request %s %s for group %s adding %s %s " +
 					"requested by %s",
 					userNamesToStrings(targets),
 					request.getID().getID(),
 					request.getType().getRepresentation(),
 					request.getGroupID().getName(),
-					group.getGroupName().getName(),
 					request.getResourceType().getName(),
 					request.getResource().getResourceID().getName(),
 					request.getRequester().getName()));

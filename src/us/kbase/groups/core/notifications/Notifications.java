@@ -3,7 +3,6 @@ package us.kbase.groups.core.notifications;
 import java.util.Collection;
 import java.util.Set;
 
-import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.request.GroupRequest;
@@ -15,7 +14,7 @@ public interface Notifications {
 
 	// TODO JAVADOC
 	
-	void notify(Collection<UserName> targets, Group group, GroupRequest request);
+	void notify(Collection<UserName> targets, GroupRequest request);
 
 	void cancel(RequestID requestID);
 

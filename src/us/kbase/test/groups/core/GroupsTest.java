@@ -1445,12 +1445,6 @@ public class GroupsTest {
 		
 		verify(mocks.notifs).notify(
 				set(new UserName("own")),
-				Group.getBuilder(
-						new GroupID("bar"), new GroupName("name"), toGUser("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(toGUser("u1"))
-						.withMember(toGUser("u3"))
-						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("bar"), new UserName("foo"),
 						CreateModAndExpireTimes.getBuilder(
@@ -1594,13 +1588,6 @@ public class GroupsTest {
 		
 		verify(mocks.notifs).notify(
 				Arrays.asList(new UserName("foo")),
-				Group.getBuilder(
-						new GroupID("bar"), new GroupName("name"), toGUser("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(toGUser("u1"))
-						.withMember(toGUser("u3"))
-						.withAdministrator(toGUser("admin"))
-						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("bar"), new UserName("admin"),
 						CreateModAndExpireTimes.getBuilder(
@@ -4144,13 +4131,6 @@ public class GroupsTest {
 		
 		verify(mocks.notifs).notify(
 				set(new UserName("own"), new UserName("admin")),
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), toGUser("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(toGUser("u1"))
-						.withMember(toGUser("u3"))
-						.withAdministrator(toGUser("admin"))
-						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("catadmin"),
 						CreateModAndExpireTimes.getBuilder(
@@ -4211,13 +4191,6 @@ public class GroupsTest {
 		
 		verify(mocks.notifs).notify(
 				set(new UserName("ws1"), new UserName("ws2")),
-				Group.getBuilder(
-						new GroupID("gid"), new GroupName("name"), toGUser("own"),
-						new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-						.withMember(toGUser("u1"))
-						.withMember(toGUser("u3"))
-						.withAdministrator(toGUser("admin"))
-						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("admin"),
 						CreateModAndExpireTimes.getBuilder(

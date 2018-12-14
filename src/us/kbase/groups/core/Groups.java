@@ -519,7 +519,7 @@ public class Groups {
 				.withResource(resource)
 				.build();
 		storage.storeRequest(request);
-		notifications.notify(notifyTargets, group, request);
+		notifications.notify(notifyTargets, request);
 		return request;
 	}
 	

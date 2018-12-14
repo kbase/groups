@@ -1,5 +1,6 @@
 package us.kbase.groups.notifications;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkString;
 
@@ -13,6 +14,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -26,7 +29,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -65,6 +67,11 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	
 	private static final String KCFG_BOOSTRAP_SERVERS = "bootstrap.servers";
 	private static final String KAFKA = "Kafka";
+	
+	// https://stackoverflow.com/questions/37062904/what-are-apache-kafka-topic-name-limitations
+	// Don't include . and _ because of
+	// https://github.com/mcollina/ascoltatori/issues/165#issuecomment-267314016
+	private final static Pattern INVALID_TOPIC_CHARS = Pattern.compile("[^a-zA-Z0-9-]+");
 
 	@Override
 	public Notifications getNotifier(final Map<String, String> configuration)
@@ -125,7 +132,12 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 				throws MissingParameterException, IllegalParameterException {
 			// TODO NNOW check topic characters. See https://stackoverflow.com/questions/37062904/what-are-apache-kafka-topic-name-limitations
 			this.topic = checkString(topic, "topic", 249);
-			this.client = client;
+			final Matcher m = INVALID_TOPIC_CHARS.matcher(this.topic);
+			if (m.find()) {
+				throw new IllegalParameterException(String.format(
+						"Illegal character in topic name %s: %s", this.topic, m.group()));
+			}
+			this.client = checkNotNull(client, "client");
 			try {
 				client.partitionsFor(this.topic); // check kafka is up
 			} catch (KafkaException e) {
@@ -154,7 +166,6 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		@Override
 		public void notify(
 				final Collection<UserName> targets,
-				final Group group,
 				final GroupRequest request) {
 			postNotification(
 					targets,
