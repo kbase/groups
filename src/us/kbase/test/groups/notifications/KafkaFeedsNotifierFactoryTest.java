@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.inst;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
@@ -21,8 +22,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import javax.swing.JFrame;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -634,15 +633,12 @@ public class KafkaFeedsNotifierFactoryTest {
 	@Test
 	public void mapSerializerFailUnserializable() throws Exception {
 		final String e = "Unserializable data sent to Kafka: No serializer found for " +
-				"class javax.accessibility.AccessibleStateSet and no properties discovered " +
-				"to create BeanSerializer (to avoid exception, disable " +
+				"class java.io.ByteArrayOutputStream and no properties discovered to " +
+				"create BeanSerializer (to avoid exception, disable " +
 				"SerializationFeature.FAIL_ON_EMPTY_BEANS) ) (through reference chain: " +
-				"com.google.common.collect.SingletonImmutableBiMap[\"foo\"]->" +
-				"javax.swing.JFrame[\"accessibleContext\"]->" +
-				"javax.swing.AccessibleJFrame[\"accessibleStateSet\"])";
-		mapSerializerFail(ImmutableMap.of("foo", new JFrame()), new RuntimeException(e));
-		
-		
+				"com.google.common.collect.SingletonImmutableBiMap[\"foo\"])";
+		mapSerializerFail(ImmutableMap.of("foo", new ByteArrayOutputStream()),
+				new RuntimeException(e));
 	}
 	
 	@SuppressWarnings("resource")
