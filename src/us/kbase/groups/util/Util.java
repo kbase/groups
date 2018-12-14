@@ -40,12 +40,13 @@ public class Util {
 	/** Check that a string is non-null and has at least one non-whitespace character.
 	 * @param s the string to check.
 	 * @param name the name of the string to use in any error messages.
+	 * @return the trimmed string.
 	 * @throws MissingParameterException if the string fails the check.
 	 */
-	public static void checkString(final String s, final String name)
+	public static String checkString(final String s, final String name)
 			throws MissingParameterException {
 		try {
-			checkString(s, name, -1);
+			return checkString(s, name, -1);
 		} catch (IllegalParameterException e) {
 			throw new RuntimeException("Programming error: " +
 					e.getMessage(), e);
@@ -58,11 +59,12 @@ public class Util {
 	 * @param name the name of the string to use in any error messages.
 	 * @param max the maximum number of code points in the string. If 0 or less, the length is not
 	 * checked.
+	 * @return the trimmed string.
 	 * @throws MissingParameterException if the string is null or contains only whitespace
 	 * characters.
 	 * @throws IllegalParameterException if the string is too long.
 	 */
-	public static void checkString(
+	public static String checkString(
 			final String s,
 			final String name,
 			final int max)
@@ -70,11 +72,11 @@ public class Util {
 		if (isNullOrEmpty(s)) {
 			throw new MissingParameterException(name);
 		}
-		
 		if (max > 0 && codePoints(s.trim()) > max) {
 			throw new IllegalParameterException(
 					name + " size greater than limit " + max);
 		}
+		return s.trim();
 	}
 	
 	/** Return the number of code points in a string. Equivalent to
