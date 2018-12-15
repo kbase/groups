@@ -131,10 +131,7 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", false)
 			.with("name", "name")
-			.with("owner", ImmutableMap.of(
-					"name", "u",
-					"joined", 10000L,
-					"custom", ImmutableMap.of("something", "nothing")))
+			.with("owner", "u")
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
 			.with("custom", Collections.emptyMap())
@@ -211,10 +208,7 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", true)
 			.with("name", "name2")
-			.with("owner", ImmutableMap.of(
-					"name", "u2",
-					"joined", 20000L,
-					"custom", Collections.emptyMap()))
+			.with("owner", "u2")
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("custom", ImmutableMap.of("field-1", "my val"))
@@ -264,7 +258,6 @@ public class GroupsAPITest {
 						.withMinimalViewFieldDeterminer(f -> f.getField().equals("field-1"))
 						.build(),
 				GroupView.getBuilder(GROUP_MIN, new UserName("u2"))
-						.withMinimalViewUserFieldDeterminer(f -> f.getField().equals("something"))
 						.withPublicUserFieldDeterminer(f -> f.getField().equals("something"))
 						.build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)

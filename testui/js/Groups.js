@@ -277,7 +277,7 @@ export default class {
                           <tr id="${s(g.id)}">
                             <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
-                            <td>${s(g.owner.name)}</td>
+                            <td>${s(g.owner)}</td>
                             <td>${s(c)}</td>
                             <td>${s(m)}</td>
                           </tr>

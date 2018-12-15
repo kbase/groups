@@ -36,7 +36,7 @@ Represents a group of users and associated data.
     "private": <true if the group is private, false otherwise>,
     "ismember": <true if the user accessing the group is a member, false otherwise>,
     "name": <the group name>,
-    "owner": <the User data for the group owner>,
+    "owner": <the User data or user name for the group owner>,
     "admins": <an array of User data of admins of the group>,
     "members": <an array of User data of members of the group>,
     "createdate": <the group creation date in epoch ms>,
@@ -53,6 +53,9 @@ Represents a group of users and associated data.
     }
 }
 ```
+
+In a full view of the group, the owner field contains a `User` structure. In a group list view,
+the owner field contains only the user name of the owner.
 
 See `Resources` and `Custom fields` below.
 
@@ -209,6 +212,9 @@ RETURNS:
 A list of Groups. Only the id, name, owner, custom, createdate, and moddate fields
 are included.
 ```
+
+The owner field consists only of the user name for this endpoint. For all other endpoints,
+the owner field is a full `User` data structure.
 
 A maximum of 100 groups are returned.
 

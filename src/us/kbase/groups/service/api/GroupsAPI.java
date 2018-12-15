@@ -303,11 +303,12 @@ public class GroupsAPI {
 		ret.put(Fields.GROUP_IS_MEMBER, g.isMember());
 		if (!g.isPrivateView()) {
 			ret.put(Fields.GROUP_NAME, g.getGroupName().get().getName());
-			ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner().get())));
+			ret.put(Fields.GROUP_OWNER, g.getOwner().get().getName());
 			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g.getCustomFields()));
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
 			if (g.isStandardView()) {
+				ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner().get())));
 				ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));
 				ret.put(Fields.GROUP_ADMINS, toMemberList(g.getAdministrators(), g));
 				final Map<String, Object> resources = new HashMap<>();
