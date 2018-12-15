@@ -1,5 +1,7 @@
 package us.kbase.test.groups.notifications;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -8,9 +10,11 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.inst;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -606,6 +610,74 @@ public class KafkaFeedsNotifierFactoryTest {
 					"Could not reach Kafka instance at localhost:5467"));
 		}
 		verify(client).close(0, TimeUnit.MILLISECONDS);
+	}
+	
+	@Test
+	public void mapSerializer() throws Exception {
+		final KafkaFeedsNotifierFactory.MapSerializer mapSerializer =
+				new KafkaFeedsNotifierFactory.MapSerializer();
+		
+		mapSerializer.configure(null, false); // does nothing;
+		mapSerializer.close(); // does nothing
+		
+		final byte[] res = mapSerializer.serialize("ignored", ImmutableMap.of("foo", "bar"));
+		
+		assertThat("incorrect serialization", new String(res), is("{\"foo\":\"bar\"}"));
+	}
+	
+	@Test
+	public void mapSerializerFailNull() throws Exception {
+		mapSerializerFail(null, new NullPointerException("data"));
+	}
+
+	@Test
+	public void mapSerializerFailUnserializable() throws Exception {
+		final String e = "Unserializable data sent to Kafka: No serializer found for " +
+				"class java.io.ByteArrayOutputStream and no properties discovered to " +
+				"create BeanSerializer (to avoid exception, disable " +
+				"SerializationFeature.FAIL_ON_EMPTY_BEANS) ) (through reference chain: " +
+				"com.google.common.collect.SingletonImmutableBiMap[\"foo\"])";
+		mapSerializerFail(ImmutableMap.of("foo", new ByteArrayOutputStream()),
+				new RuntimeException(e));
+	}
+	
+	@SuppressWarnings("resource")
+	private void mapSerializerFail(final Map<String, Object> data, final Exception expected) {
+		try {
+			new KafkaFeedsNotifierFactory.MapSerializer().serialize("ignored", data);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	/* Tests for building the notifier with the factory. Can really only test failure
+	 * scenarios in unit tests.
+	 */
+
+	@Test
+	public void getNotifierFailNull() throws Exception {
+		getNotifierFail(null, new NullPointerException("configuration"));
+	}
+	
+	@Test
+	public void getNotifierFailBadBootstrapServer() throws Exception {
+		final Map<String, String> c = new HashMap<>();
+		c.put("boostrap.servers.wrong", null);
+		getNotifierFail(c, new MissingParameterException("Kafka bootstrap.servers"));
+		c.put("boostrap.servers", null);
+		getNotifierFail(c, new MissingParameterException("Kafka bootstrap.servers"));
+		c.put("boostrap.servers", "   \t      ");
+		getNotifierFail(c, new MissingParameterException("Kafka bootstrap.servers"));
+	}
+	
+	private void getNotifierFail(final Map<String, String> config, final Exception expected) {
+		try {
+			new KafkaFeedsNotifierFactory().getNotifier(config);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 }
