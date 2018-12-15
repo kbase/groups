@@ -2,6 +2,7 @@ package us.kbase.groups.core;
 
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.exceptOnEmpty;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -44,7 +45,8 @@ public class Group {
 			final Map<UserName, GroupUser> allMembers,
 			final Set<UserName> admins,
 			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
-			final CreateAndModTimes times,
+			final Instant creationDate,
+			final Instant modificationDate,
 			final Map<NumberedCustomField, String> customFields) {
 		this.groupID = groupID;
 		this.groupName = groupName;
@@ -53,8 +55,8 @@ public class Group {
 		this.allMembers = Collections.unmodifiableMap(allMembers);
 		this.admins = Collections.unmodifiableSet(admins);
 		this.resources = Collections.unmodifiableMap(resources);
-		this.creationDate = times.getCreationTime();
-		this.modificationDate = times.getModificationTime();
+		this.creationDate = creationDate;
+		this.modificationDate = modificationDate;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
@@ -160,6 +162,35 @@ public class Group {
 					type.getName(), resourceID.getName()));
 		}
 		return new ResourceDescriptor(resources.get(type).get(resourceID), resourceID);
+	}
+	
+	/** Get a copy of the group without the specified resources.
+	 * @param type the type of resources to remove.
+	 * @param resources the resources to remove.
+	 * @return a copy of the group less the resources.
+	 */
+	public Group removeResources(final ResourceType type, final Set<ResourceID> resources) {
+		requireNonNull(type, "type");
+		checkNoNullsInCollection(resources, "resources");
+		if (!this.resources.containsKey(type)) {
+			throw new IllegalArgumentException(String.format("No such resource type %s",
+					type.getName()));
+		}
+		final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> res = this.resources
+				.entrySet().stream().collect(Collectors.toMap(
+						e -> e.getKey(), e -> new HashMap<>(e.getValue())));
+		for (final ResourceID r: resources) {
+			if (res.get(type).remove(r) == null) {
+				throw new IllegalArgumentException(String.format("No such resource %s %s",
+						type.getName(), r.getName()));
+			}
+		}
+		if (res.get(type).isEmpty()) {
+			res.remove(type);
+		}
+		return new Group(groupID, groupName, owner, isPrivate, allMembers, admins, res,
+				creationDate, modificationDate, customFields);
+		
 	}
 
 	/** Get the date the group was created.
@@ -448,7 +479,7 @@ public class Group {
 		 */
 		public Group build() {
 			return new Group(groupID, groupName, owner, isPrivate, allMembers, admins, resources,
-					times, customFields);
+					times.getCreationTime(), times.getModificationTime(), customFields);
 		}
 	}
 	

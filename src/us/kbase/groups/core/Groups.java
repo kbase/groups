@@ -148,6 +148,8 @@ public class Groups {
 		storage.createGroup(createParams.toGroup(owner, new CreateAndModTimes(clock.instant())));
 		
 		try {
+			// this is a standard, isMember view and so all fields are visible without needing
+			// to specify field determiners
 			return startViewBuild(storage.getGroup(createParams.getGroupID()), owner).build();
 		} catch (NoSuchGroupException e) {
 			throw new RuntimeException(
@@ -325,8 +327,14 @@ public class Groups {
 	public GroupView getGroup(final Token userToken, final GroupID groupID)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, ResourceHandlerException {
-		final Group g = storage.getGroup(groupID);
+		Group g = storage.getGroup(groupID);
 		final UserName user = getOptionalUser(userToken);
+		final Map<ResourceType, ResourceInformationSet> resources = new HashMap<>();
+		for (final ResourceType type: g.getResourceTypes()) {
+			final ResourceInformationSet resourceInfo = getResourceInfo(g, user, type);
+			resources.put(type, resourceInfo);
+			g = g.removeResources(type, resourceInfo.getNonexistentResources());
+		}
 		final GroupView.Builder b = startViewBuild(g, user)
 				// this seems odd. Maybe there's a better way to deal with this?
 				.withPublicFieldDeterminer(
@@ -335,8 +343,8 @@ public class Groups {
 				.withPublicUserFieldDeterminer(
 						f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
 								.map(c -> c.isPublicField()).orElse(false));
-		for (final ResourceType type: g.getResourceTypes()) {
-			b.withResource(type, getResourceInfo(g, user, type));
+		for (final ResourceType type: resources.keySet()) {
+			b.withResource(type, resources.get(type).withoutNonexistentResources());
 		}
 		return b.build();
 	}
