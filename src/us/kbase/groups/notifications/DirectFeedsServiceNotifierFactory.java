@@ -69,7 +69,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 		private static final String AUTH_HEADER = "Authorization";
 		private final String url;
 		private final Token token;
-		private final String source; //TODO FEEDS remove when no longer necessary
+		private static final String SOURCE = "groupsservice";
 		
 		public DirectFeedsServiceNotifier(final String url, final Token token)
 				throws IllegalParameterException {
@@ -108,9 +108,6 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 					// this error seems crummy. Probably want a better errors.
 					throw new IllegalParameterException(
 							"Feeds notifier token must be a service token");
-				} else {
-					//TODO FEEDS remove when fixed
-					source = tokenInfo.get("service");
 				}
 			}
 		}
@@ -165,8 +162,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			//TODO FEEDS include denyReason?
 			post.put("context", ImmutableMap.of("resourcetype", resourceType.getName()));
 			
-			//TODO FEEDS remove later
-			post.put("source", source);
+			post.put("source", SOURCE);
 			
 			final URI target = UriBuilder.fromUri(url).path(PATH_CREATE).build();
 			
@@ -191,6 +187,7 @@ public class DirectFeedsServiceNotifierFactory implements NotificationsFactory {
 			final Builder req = wt.request().header(AUTH_HEADER, token.getToken());
 
 			final Response res = req.post(Entity.json(ImmutableMap.of(
+					"source", SOURCE,
 					"external_keys", Arrays.asList(requestID.getID()))));
 			
 			// TODO FEEDS check for failure - see https://github.com/kbase/feeds#expire-a-notification-right-away
