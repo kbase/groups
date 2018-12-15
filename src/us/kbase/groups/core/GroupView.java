@@ -56,8 +56,7 @@ public class GroupView {
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
-			final Function<NumberedCustomField, Boolean> isUserPublicField,
-			final Function<NumberedCustomField, Boolean> isUserMinimalViewField) {
+			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		this.isStandardView = standardView;
 		this.isMember = isMember;
 		this.isPrivate = group.isPrivate();
@@ -82,33 +81,30 @@ public class GroupView {
 			this.creationDate = Optional.of(group.getCreationDate());
 			this.modificationDate = Optional.of(group.getModificationDate());
 			final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
-			final Function<NumberedCustomField, Boolean> umin = isUserMinimalViewField;
 			if (!standardView) {
 				members = Collections.emptySet();
 				admins = Collections.emptySet();
-				userInfo.put(group.getOwner(),
-						filterFields(group.getMember(group.getOwner()), upub, umin));
 			} else {
 				admins = group.getAdministrators();
 				if (!isMember) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
-							u, filterFields(group.getMember(u), upub, umin)));
+							u, filterUserFields(group.getMember(u), upub)));
 					members = Collections.emptySet();
 				} else {
 					members = group.getMembers();
 					group.getAllMembers().stream().forEach(u -> userInfo.put(
-							u, filterFields(group.getMember(u), upub, umin)));
+							u, filterUserFields(group.getMember(u), upub)));
 				}
 			}
 		}
 	}
 	
-	private GroupUser filterFields(
+	// user fields are only visible in standard views.
+	private GroupUser filterUserFields(
 			final GroupUser member,
-			final Function<NumberedCustomField, Boolean> isUserPublicField,
-			final Function<NumberedCustomField, Boolean> isUserMinimalViewField) {
+			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		final GroupUser.Builder b = GroupUser.getBuilder(member.getName(), member.getJoinDate());
-		getCustomFields(member.getCustomFields(), isUserPublicField, isUserMinimalViewField)
+		getCustomFields(member.getCustomFields(), isUserPublicField, f -> false)
 				.entrySet().stream().forEach(e -> b.withCustomField(e.getKey(), e.getValue()));
 		return b.build();
 	}
@@ -231,7 +227,8 @@ public class GroupView {
 		return resourceInfo.get(type);
 	}
 	
-	/** Get a member's detailed information.
+	/** Get a member's detailed information. Only available in a standard view. In a minimal
+	 * view, this method will throw an illegal argument exception.
 	 * @param user the member.
 	 * @return the member's info.
 	 */
@@ -381,7 +378,6 @@ public class GroupView {
 		private Function<NumberedCustomField, Boolean> isPublicField = f -> false;
 		private Function<NumberedCustomField, Boolean> isMinimalViewField = f -> false;
 		private Function<NumberedCustomField, Boolean> isUserPublicField = f -> false;
-		private Function<NumberedCustomField, Boolean> isUserMinimalViewField = f -> false;
 		
 		private Builder(final Group group, final UserName user) {
 			this.group = requireNonNull(group, "group");
@@ -456,7 +452,6 @@ public class GroupView {
 			return this;
 		}
 		
-		//TODO NNOW use these next 2 in groups
 		/** Add a function that will be used to determine which user fields are public fields and
 		 * therefore viewable by all users, not just group members.
 		 * By default, no fields are considered to be public fields.
@@ -471,27 +466,12 @@ public class GroupView {
 			return this;
 		}
 		
-		/** Add a function that will be used to determine which user fields are viewable in a
-		 * non-standard (e.g. minimal) view.
-		 * By default, no fields are viewable in a minimal view.
-		 * The function must not return null.
-		 * @param isMinimalView a function that determines whether a custom user field is viewable
-		 * in a minimal view (true) or not (false).
-		 * @return this builder.
-		 */
-		public Builder withMinimalViewUserFieldDeterminer(
-				final Function<NumberedCustomField, Boolean> isMinimalView) {
-			this.isUserMinimalViewField = requireNonNull(isMinimalView, "isMinimalView");
-			return this;
-		}
-		
 		/** Build a new {@link GroupView}.
 		 * @return the view.
 		 */
 		public GroupView build() {
 			return new GroupView(group, isStandardView, group.isMember(user.orElse(null)),
-					resourceInfo, isPublicField, isMinimalViewField,
-					isUserPublicField, isUserMinimalViewField);
+					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
 		}
 		
 	}

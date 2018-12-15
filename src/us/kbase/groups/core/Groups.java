@@ -430,9 +430,6 @@ public class Groups {
 						.withPublicFieldDeterminer(
 								f -> validators.getConfigOrEmpty(f.getFieldRoot())
 										.map(c -> c.isPublicField()).orElse(false))
-						.withMinimalViewUserFieldDeterminer(
-								f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isMinimalViewField()).orElse(false))
 						.withPublicUserFieldDeterminer(
 								f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
 										.map(c -> c.isPublicField()).orElse(false))

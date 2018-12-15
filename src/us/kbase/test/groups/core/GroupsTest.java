@@ -1242,6 +1242,7 @@ public class GroupsTest {
 	@Test
 	public void getGroupsWithCustomFields() throws Exception {
 		// tests that the custom fields are displayed correctly
+		// note user custom fields are never displayed in list view
 		final TestMocks mocks = initTestMocks();
 		
 		final GetGroupsParams mtparams = GetGroupsParams.getBuilder().build();
@@ -1310,7 +1311,6 @@ public class GroupsTest {
 				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
 						new GroupID("id1"), new GroupName("name1"),
 						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
@@ -1322,7 +1322,6 @@ public class GroupsTest {
 						null)
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
-						.withMinimalViewUserFieldDeterminer(f -> true)
 						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
 		
@@ -1331,7 +1330,6 @@ public class GroupsTest {
 				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
 						new GroupID("id1"), new GroupName("name1"),
 						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
@@ -1343,7 +1341,6 @@ public class GroupsTest {
 						new UserName("m2"))
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
-						.withMinimalViewUserFieldDeterminer(f -> true)
 						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
 		
@@ -1352,10 +1349,6 @@ public class GroupsTest {
 				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
 						new GroupID("id1"), new GroupName("name1"),
 						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.withCustomField(new NumberedCustomField("minpub-6"), "uminpub")
-								.withCustomField(new NumberedCustomField("minpriv-7"), "uminpriv")
-								.withCustomField(new NumberedCustomField("missingpub"),
-										"umissingonpub")
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
@@ -1369,7 +1362,6 @@ public class GroupsTest {
 						new UserName("m1"))
 						.withMinimalViewFieldDeterminer(f -> true)
 						.withPublicFieldDeterminer(f -> true)
-						.withMinimalViewUserFieldDeterminer(f -> true)
 						.withPublicUserFieldDeterminer(f -> true)
 						.build())));
 	}
