@@ -8,6 +8,7 @@ import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -518,6 +519,147 @@ public class GroupTest {
 		final Group g = getBuilderWithResource();
 		try {
 			g.getResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void removeResourcesEmpty() throws Exception {
+		final Group g = getGroupForRemoveResources();
+		
+		final Group gnew = g.removeResources(new ResourceType("foo"), set());
+		
+		final Group original = getGroupForRemoveResources();
+		
+		assertThat("incorrect remove resources", gnew, is(original));
+		assertThat("original group unchanged", g, is(original));
+	}
+
+	private Group getGroupForRemoveResources() throws Exception {
+		return Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("c"),
+						new ResourceID("d")))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("e"),
+						new ResourceID("f")))
+				.withResource(new ResourceType("bar"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.build();
+	}
+	
+	@Test
+	public void removeResources() throws Exception {
+		final Group g = getGroupForRemoveResources();
+		
+		final Group gnew = g.removeResources(new ResourceType("foo"),
+				set(new ResourceID("b"), new ResourceID("f")));
+		
+		final Group expected = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("c"),
+						new ResourceID("d")))
+				.withResource(new ResourceType("bar"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.build();
+		assertThat("incorrect remove resources", gnew, is(expected));
+		
+		final Group original = getGroupForRemoveResources();
+		
+		assertThat("original group unchanged", g, is(original));
+	}
+	
+	@Test
+	public void removeResourcesAndType() throws Exception {
+		final Group g = getGroupForRemoveResources();
+		
+		final Group gnew = g.removeResources(new ResourceType("foo"),
+				set(new ResourceID("b"), new ResourceID("f"), new ResourceID("d")));
+		
+		final Group expected = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withResource(new ResourceType("bar"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.build();
+		assertThat("incorrect remove resources", gnew, is(expected));
+		
+		final Group original = getGroupForRemoveResources();
+		
+		assertThat("original group unchanged", g, is(original));
+	}
+	
+	@Test
+	public void removeResourcesFailNulls() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.build();
+		final ResourceType t = new ResourceType("t");
+
+		removeResourcesFail(g, null, set(), new NullPointerException("type"));
+		removeResourcesFail(g, t, null, new NullPointerException("resources"));
+		removeResourcesFail(g, t, set(new ResourceID("i"), null),
+				new NullPointerException("Null item in collection resources"));
+	}
+	
+	@Test
+	public void removeResourcesFailNoType() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.build();
+
+		removeResourcesFail(g, new ResourceType("bar"), set(),
+				new IllegalArgumentException("No such resource type bar"));
+	}
+	
+	@Test
+	public void removeResourcesFailNoResource() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")))
+				.withResource(new ResourceType("foo"), new ResourceDescriptor(
+						new ResourceAdministrativeID("d"),
+						new ResourceID("d")))
+				.build();
+
+		removeResourcesFail(g, new ResourceType("foo"),
+				set(new ResourceID("b"), new ResourceID("c")),
+				new IllegalArgumentException("No such resource foo c"));
+	}
+	
+	private void removeResourcesFail(
+			final Group g,
+			final ResourceType t,
+			final Set<ResourceID> r,
+			final Exception expected) {
+		try {
+			g.removeResources(t, r);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

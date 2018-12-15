@@ -986,6 +986,10 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("6")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("34")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")))
 				.withResource(new ResourceType("catalogmethod"),
 						new ResourceDescriptor(
 								new ResourceAdministrativeID("mod1"),
@@ -1000,7 +1004,7 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
-						new ResourceID("57")), false))
+						new ResourceID("57"), new ResourceID("86"), new ResourceID("34")), false))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("6"), "name", "my other ws")
