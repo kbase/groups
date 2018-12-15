@@ -430,9 +430,6 @@ public class Groups {
 						.withPublicFieldDeterminer(
 								f -> validators.getConfigOrEmpty(f.getFieldRoot())
 										.map(c -> c.isPublicField()).orElse(false))
-						.withPublicUserFieldDeterminer(
-								f -> validators.getUserFieldConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isPublicField()).orElse(false))
 						.build())
 				.collect(Collectors.toList());
 	}
