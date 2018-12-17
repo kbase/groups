@@ -778,6 +778,7 @@ public class GroupsTest {
 		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("baz"))
 				.build(), null)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("workspace"))
@@ -854,9 +855,12 @@ public class GroupsTest {
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
 				.withAdministrator(GroupUser.getBuilder(new UserName("bat"), inst(30000))
 						.withCustomField(new NumberedCustomField("public-26"), "upub3")
 						.build())
+				.withMember(GroupUser.getBuilder(new UserName("fake"), inst(1)).build())
 				.build(), null)
 				.withStandardView(true)
 				.withPublicFieldDeterminer(f -> true)
@@ -942,6 +946,11 @@ public class GroupsTest {
 				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(30000))
 						.withCustomField(new NumberedCustomField("public-26"), "upub3")
 						.build())
+				.withMember(GroupUser.getBuilder(new UserName("fake"), inst(1)).build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), new UserName("whee"))
 				.withStandardView(true)
@@ -1048,21 +1057,36 @@ public class GroupsTest {
 						.withCustomField(new NumberedCustomField("public-26"), "upub3")
 						.withCustomField(new NumberedCustomField("noconfig"), "unoc3")
 						.build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("6")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod1"),
+								new ResourceID("mod1.meth1")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(
+								new ResourceAdministrativeID("mod2"),
+								new ResourceID("mod2.meth2")))
 				.withCustomField(new NumberedCustomField("private-42"), "priv")
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
-				.build(), new UserName("baz"))
-				.withStandardView(true)
-				.withResource(new ResourceType("workspace"), ResourceInformationSet
-						.getBuilder(new UserName("baz"))
-						.withResourceField(new ResourceID("92"), "name", "my ws")
-						.withResourceField(new ResourceID("6"), "name", "my other ws")
-						.withResourceField(new ResourceID("57"), "name", "my ws2")
-						.build())
-				.withResource(new ResourceType("catalogmethod"), ResourceInformationSet
-						.getBuilder(new UserName("baz"))
-						.withResource(new ResourceID("mod2.meth2"))
-						.build())
-				.build()));
+				.build(),
+				new UserName("baz"))
+						.withStandardView(true)
+						.withResource(new ResourceType("workspace"), ResourceInformationSet
+								.getBuilder(new UserName("baz"))
+								.withResourceField(new ResourceID("92"), "name", "my ws")
+								.withResourceField(new ResourceID("6"), "name", "my other ws")
+								.withResourceField(new ResourceID("57"), "name", "my ws2")
+								.build())
+						.withResource(new ResourceType("catalogmethod"), ResourceInformationSet
+								.getBuilder(new UserName("baz"))
+								.withResource(new ResourceID("mod2.meth2"))
+								.build())
+						.build()));
 	}
 	
 	@Test
@@ -1216,11 +1240,13 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 						.withMember(toGUser("m1"))
 						.withAdministrator(toGUser("a1"))
-								.build(), null)
-								.build(),
+						.build(),
+						null)
+						.build(),
 						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("whee"))
 								.withAdministrator(toGUser("whoo"))
 								.build(), null)
 								.build())
