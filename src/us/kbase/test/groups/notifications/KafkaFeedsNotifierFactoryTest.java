@@ -184,7 +184,7 @@ public class KafkaFeedsNotifierFactoryTest {
 		
 		when(mocks.client.send(new ProducerRecord<String, Map<String,Object>>("mytopic2",
 				MapBuilder.<String, Object>newHashMap()
-				.with("operation", "cancel")
+				.with("operation", "expire")
 				.with("external_ids", Arrays.asList(id.toString()))
 				.with("source", "groupsservice")
 				.build())))
@@ -540,7 +540,7 @@ public class KafkaFeedsNotifierFactoryTest {
 		
 		when(mocks.client.send(new ProducerRecord<String, Map<String,Object>>("mytopic2",
 				MapBuilder.<String, Object>newHashMap()
-				.with("operation", "cancel")
+				.with("operation", "expire")
 				.with("external_ids", Arrays.asList(id.toString()))
 				.with("source", "groupsservice")
 				.build())))

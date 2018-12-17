@@ -63,7 +63,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	private static final String KAFKA = "Kafka";
 	private static final String KCFG_BOOSTRAP_SERVERS = "bootstrap.servers";
 	private static final String OP = "operation";
-	private static final String OP_CANCEL = "cancel";
+	private static final String OP_CANCEL = "expire";
 	private static final String OP_NOTIFY = "notify";
 	private static final String SOURCE = "source";
 	private static final String GROUP_SOURCE = "groupsservice";
