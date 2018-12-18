@@ -23,8 +23,12 @@ public class Fields {
 	public static final String GROUP_MEMBER = "member";
 	/** The group members. */
 	public static final String GROUP_MEMBERS = "members";
+	/** The count of the group members. */
+	public static final String GROUP_MEMBER_COUNT = "memcount";
 	/** The group resources. */
 	public static final String GROUP_RESOURCES = "resources";
+	/** The count of the group resources. */
+	public static final String GROUP_RESOURCE_COUNT = "rescount";
 	/** The group creation date. */
 	public static final String GROUP_CREATION = "createdate";
 	/** The group modification date. */

@@ -263,6 +263,9 @@ export default class {
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
                             <th scope="col">Owner</th>
+                            <th scope="col">Members</th>
+                            <th scope="col">Workspaces</th>
+                            <th scope="col">Apps</th>
                             <th scope="col">Created</th>
                             <th scope="col">Modified</th>
                           </tr>
@@ -278,6 +281,9 @@ export default class {
                             <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
                             <td>${s(g.owner)}</td>
+                            <td>${s(g.memcount)}</td>
+                            <td>${s(g.rescount.workspace)}</td>
+                            <td>${s(g.rescount.catalogmethod)}</td>
                             <td>${s(c)}</td>
                             <td>${s(m)}</td>
                           </tr>
@@ -393,6 +399,7 @@ export default class {
                           <tr><th>Created</th><td>${c}</td></tr>
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(d)}</td></tr>
+                          <tr><th>Members</th><td>${s(json.memcount)}</td></tr>
                           <tr><th>Private</th><td>${s(json.private)}</td></tr>
                         </tbody>
                       </table>

@@ -304,9 +304,15 @@ public class GroupsAPI {
 		if (!g.isPrivateView()) {
 			ret.put(Fields.GROUP_NAME, g.getGroupName().get().getName());
 			ret.put(Fields.GROUP_OWNER, g.getOwner().get().getName());
+			ret.put(Fields.GROUP_MEMBER_COUNT, g.getMemberCount().get());
 			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g.getCustomFields()));
 			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
+			final Map<String, Object> resourceCounts = new HashMap<>();
+			ret.put(Fields.GROUP_RESOURCE_COUNT, resourceCounts);
+			for (final ResourceType t: g.getResourceCounts().keySet()) {
+				resourceCounts.put(t.getName(), g.getResourceCounts().get(t));
+			}
 			if (g.isStandardView()) {
 				ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner().get())));
 				ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));

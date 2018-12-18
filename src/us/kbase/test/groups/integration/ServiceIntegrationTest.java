@@ -567,6 +567,8 @@ public class ServiceIntegrationTest {
 				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
 				.with("private", isPrivate)
 				.with("ismember", true)
+				.with("memcount", 1)
+				.with("rescount", Collections.emptyMap())
 				.with("members", Collections.emptyList())
 				.with("name", name)
 				.with("id", groupID)
