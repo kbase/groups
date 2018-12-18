@@ -19,6 +19,7 @@ public class GravatarFieldValidatorFactoryTest {
 	
 	private static final String KNOWN_GOOD = "87194228ef49d635fec5938099042b1d";
 	private static final int LEN = KNOWN_GOOD.length();
+	private static final String KNOWN_NO_ACCOUNT = KNOWN_GOOD.substring(0, LEN - 1) + "c";
 	
 	@Test
 	public void validate() throws Exception {
@@ -29,15 +30,30 @@ public class GravatarFieldValidatorFactoryTest {
 		v.validate(KNOWN_GOOD);
 		// check that extra characters pass
 		v.validate(KNOWN_GOOD + "Z");
+		// check that hashes with no corresponding image don't fail
+		v.validate(KNOWN_NO_ACCOUNT);
 	}
 	
 	@Test
 	public void validateStrictLength() throws Exception {
 		final FieldValidator v = new GravatarFieldValidatorFactory()
-				.getValidator(ImmutableMap.of("strict-length", "true"));
+				.getValidator(ImmutableMap.of("strict-length", "true", "image-exists", "false"));
 		
 		// if there's no error, the test passes
 		v.validate(KNOWN_GOOD);
+		// check that hashes with no corresponding image don't fail
+		v.validate(KNOWN_NO_ACCOUNT);
+	}
+	
+	@Test
+	public void validateWithAccount() throws Exception {
+		final FieldValidator v = new GravatarFieldValidatorFactory()
+				.getValidator(ImmutableMap.of("image-exists", "true", "strict-length", "t"));
+		
+		// if there's no error, the test passes
+		v.validate(KNOWN_GOOD);
+		// check that extra characters pass
+		v.validate(KNOWN_GOOD + "Z");
 	}
 	
 	@Test
@@ -59,10 +75,15 @@ public class GravatarFieldValidatorFactoryTest {
 		// missing last char
 		validateFail(v, KNOWN_GOOD.substring(0, LEN - 1), new IllegalFieldValueException(
 				"Gravatar hash less than 32 characters"));
+	}
+	
+	@Test
+	public void validateFailNoAccount() throws Exception {
+		final FieldValidator v = new GravatarFieldValidatorFactory()
+				.getValidator(ImmutableMap.of("image-exists", "true"));
 		// incorrect last char
-		validateFail(v, KNOWN_GOOD.substring(0, LEN - 1) + "c", new IllegalFieldValueException(
-				"Gravatar service does not recognize Gravatar hash " +
-				KNOWN_GOOD.substring(0, LEN - 1) + "c"));
+		validateFail(v, KNOWN_NO_ACCOUNT, new IllegalFieldValueException(
+				"Gravatar service does not recognize Gravatar hash " + KNOWN_NO_ACCOUNT));
 	}
 	
 	@Test
@@ -90,12 +111,13 @@ public class GravatarFieldValidatorFactoryTest {
 	@Test
 	public void validateFailGravatarError() throws Exception {
 		final Class<?> inner = GravatarFieldValidatorFactory.class.getDeclaredClasses()[0];
-		final Constructor<?> con = inner.getDeclaredConstructor(boolean.class, int.class);
+		final Constructor<?> con = inner.getDeclaredConstructor(
+				boolean.class, boolean.class, int.class);
 		con.setAccessible(true);
-		final FieldValidator instance = (FieldValidator) con.newInstance(false, 405);
+		final FieldValidator instance = (FieldValidator) con.newInstance(false, true, 405);
 		
 		try {
-			instance.validate(KNOWN_GOOD.substring(0, LEN - 1) + "c");
+			instance.validate(KNOWN_NO_ACCOUNT);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new FieldValidatorException(
