@@ -118,6 +118,8 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", true)
 			.with("name", "name")
+			.with("memcount", 1)
+			.with("rescount", Collections.emptyMap())
 			.with("owner", ImmutableMap.of(
 					"name", "u",
 					"joined", 10000L,
@@ -136,6 +138,8 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", false)
 			.with("name", "name")
+			.with("memcount", 1)
+			.with("rescount", Collections.emptyMap())
 			.with("owner", "u")
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
@@ -148,6 +152,8 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", true)
 			.with("name", "name2")
+			.with("memcount", 5)
+			.with("rescount", Collections.emptyMap())
 			.with("owner", ImmutableMap.of(
 					"name", "u2",
 					"joined", 20000L,
@@ -184,6 +190,8 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", false)
 			.with("name", "name2")
+			.with("memcount", 5)
+			.with("rescount", Collections.emptyMap())
 			.with("owner", ImmutableMap.of(
 					"name", "u2",
 					"joined", 20000L,
@@ -213,6 +221,8 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("ismember", true)
 			.with("name", "name2")
+			.with("memcount", 5)
+			.with("rescount", Collections.emptyMap())
 			.with("owner", "u2")
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
@@ -669,26 +679,26 @@ public class GroupsAPITest {
 						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1))
 				.build();
 		
-		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(GroupView.getBuilder(group, new UserName("whee"))
-						.withStandardView(true)
-						.withResourceType(new ResourceType("foo"))
-						.withResource(new ResourceType("workspace"),
-								ResourceInformationSet.getBuilder(new UserName("whee"))
-										.withResourceField(d1, "name", "name82")
-										.withResourceField(d1, "public", true)
-										.withResourceField(d1, "narrname", "narrname")
-										.withResourceField(d1, "perm", "Admin")
-										.withResourceField(d2, "name", "name45")
-										.withResourceField(d2, "public", false)
-										.withResourceField(d2, "narrname", null)
-										.withResourceField(d2, "perm", "None")
-										.build())
-						.withResource(new ResourceType("catalogmethod"),
-								ResourceInformationSet.getBuilder(new UserName("whee"))
-										.withResource(c1)
-										.build())
-						.build());
+		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("whee"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("foo"))
+				.withResource(new ResourceType("workspace"),
+						ResourceInformationSet.getBuilder(new UserName("whee"))
+								.withResourceField(d1, "name", "name82")
+								.withResourceField(d1, "public", true)
+								.withResourceField(d1, "narrname", "narrname")
+								.withResourceField(d1, "perm", "Admin")
+								.withResourceField(d2, "name", "name45")
+								.withResourceField(d2, "public", false)
+								.withResourceField(d2, "narrname", null)
+								.withResourceField(d2, "perm", "None")
+								.build())
+				.withResource(new ResourceType("catalogmethod"),
+						ResourceInformationSet.getBuilder(new UserName("whee"))
+								.withResource(c1)
+								.build());
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id"))).thenReturn(gv.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		final Map<String, Object> expected = new HashMap<>();
@@ -712,8 +722,21 @@ public class GroupsAPITest {
 								.with("perm", "Admin")
 								.build()
 						)));
+		expected.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
 		
 		assertThat("incorrect group", ret, is(expected));
+		
+		when(g.getGroups(new Token("toke2"), GetGroupsParams.getBuilder().build()))
+				.thenReturn(Arrays.asList(gv.withStandardView(false).build()));
+		
+		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null).get(0);
+		final Map<String, Object> expectedmin = new HashMap<>();
+		expectedmin.putAll(GROUP_MAX_JSON_MIN);
+		expectedmin.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
+		expectedmin.put("custom", Collections.emptyMap());
+
+		assertThat("incorrect group", retmin, is(expectedmin));
+
 	}
 	
 	@Test
