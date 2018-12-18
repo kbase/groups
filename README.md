@@ -730,8 +730,17 @@ field-feast-param-allowed-values=lambs, sloths, carp, orangutans, breakfast cere
 
 #### us.kbase.groups.fieldvalidators.GravatarFieldValidatorFactory
 
-Checks that the value is a valid [Gravatar hash](https://en.gravatar.com/site/implement/hash/).
-Has no parameters.
+Checks that the value is a valid [Gravatar hash](https://en.gravatar.com/site/implement/hash/),
+meaning that the first 32 characters of the string constitute a valid MD5.
+
+Parameters (all optional):
+```
+field-<field name>-param-strict-length=<'true' or any other value for false>
+```
+
+`strict-length` will cause the validator to throw an error if the field is not exactly 32
+characters, and is false by default. Gravatar allows for extra characters at the end of the hash.
+
 
 ## Implementation notes
 
