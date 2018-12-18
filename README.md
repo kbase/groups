@@ -39,7 +39,7 @@ Represents a group of users and associated data.
     "owner": <the User data or user name for the group owner>,
     "admins": <an array of User data of admins of the group>,
     "members": <an array of User data of members of the group>,
-    "memcnt": <the number of members in the group>
+    "memcount": <the number of members in the group>
     "createdate": <the group creation date in epoch ms>,
     "moddate": <the last modification date of the group in epoch ms>
     "resources":
@@ -47,7 +47,7 @@ Represents a group of users and associated data.
          ...
          <resource type N>: [<resource entry N-1>, ..., <resource entry N-N>]
          },
-    "rescnt":
+    "rescount":
         {<resource type 1>: <the number of resources of this type in the group>,
          ...
          <resource type N>: <the number of resources of this type in the group>
@@ -63,9 +63,12 @@ Represents a group of users and associated data.
 In a full view of the group, the owner field contains a `User` structure. In a group list view,
 the owner field contains only the user name of the owner.
 
-`rescnt` does not contain resource types for which the group has no resources (e.g. the
+`rescount` does not contain resource types for which the group has no resources (e.g. the
 count is zero). `resources` *does* contain empty lists for resources that are supported by
 the service but not included in the group for ease of iteration.
+
+Note that `rescount` may include deleted resources until the group is fetched from the detail
+view endpoint, at which point the deleted resources will be removed from the group.
 
 See `Resources` and `Custom fields` below.
 
@@ -219,8 +222,8 @@ AUTHORIZATION OPTIONAL
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, role, memcnt, rescnt, custom, createdate,
-and moddate fields are included.
+A list of Groups. Only the id, name, owner, role, memcount, rescount, custom,
+createdate, and moddate fields are included.
 ```
 
 The owner field consists only of the user name for this endpoint. For all other endpoints,
@@ -242,7 +245,7 @@ If the user is anonymous or not a member of the group, only custom fields that a
 group listable (see custom fields below) are included. If the user is a member of the group,
 all group listable fields are included.
 
-`rescnt` is empty for users that are not a member of the group.
+`rescount` is empty for users that are not a member of the group.
 
 ### Create a group
 
@@ -324,7 +327,7 @@ resources the user administrates are returned.
 If authorization is provided and the user is a member of the group, the members list is populated,
 all custom fields are included, and all group-associated resources are returned.
 
-`rescnt` is empty for users that are not a member of the group.
+`rescount` is empty for users that are not a member of the group.
 
 ### Check if a group ID exists
 
