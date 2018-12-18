@@ -20,9 +20,12 @@ import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.FieldValidatorFactory;
 import us.kbase.groups.core.fieldvalidation.IllegalFieldValueException;
 
-/** Validates that a gravatar hash is a valid MD5 and does not return a 404.
+/** Validates that a gravatar hash is a valid MD5.
  * Include "strict-length": "true" in the configuration to enforce an exact 32 character MD5.
  * If omitted, any extra characters are ignored (which is what Gravatar does).
+ * Include "image-exists": "true" in the configuration to enforce that an image is associated
+ * with the hash (see Default Image section at https://en.gravatar.com/site/implement/images/).
+
  * @author gaprice@lbl.gov
  *
  */
@@ -30,12 +33,16 @@ public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 
 	private static final String TRUE = "true";
 	private static final String STRICT_LENGTH = "strict-length";
+	private static final String IMAGE_EXISTS = "image-exists";
 	
 	@Override
 	public FieldValidator getValidator(final Map<String, String> configuration)
 			throws IllegalParameterException {
 		requireNonNull(configuration, "configuration");
-		return new GravatarFieldValidator(TRUE.equals(configuration.get(STRICT_LENGTH)), 404);
+		return new GravatarFieldValidator(
+				TRUE.equals(configuration.get(STRICT_LENGTH)),
+				TRUE.equals(configuration.get(IMAGE_EXISTS)),
+				404);
 	}
 	
 	private static class GravatarFieldValidator implements FieldValidator {
@@ -47,12 +54,15 @@ public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 		private static Pattern MD5CHARS = Pattern.compile("^[a-f0-9]+$");
 
 		private final boolean strictLength;
+		private final boolean imageExists;
 		private final int errorCode;
 		
 		private GravatarFieldValidator(
 				final boolean strictLength,
+				final boolean accountExists,
 				final int errorCode) { // errorCode here to allow for testing the status check
 			this.strictLength = strictLength;
+			this.imageExists = accountExists;
 			this.errorCode = errorCode;
 		}
 		
@@ -72,8 +82,9 @@ public class GravatarFieldValidatorFactory implements FieldValidatorFactory {
 			if (!m.find()) {
 				throw new IllegalFieldValueException("Gravatar hash is not a valid MD5 string");
 			}
-			
-			checkExists(fieldValue);
+			if (imageExists) {
+				checkExists(fieldValue);
+			}
 		}
 	
 	private void checkExists(final String fieldValue)
