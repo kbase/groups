@@ -116,7 +116,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("private", false)
-			.with("ismember", true)
+			.with("role", "owner")
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
@@ -136,7 +136,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("private", false)
-			.with("ismember", false)
+			.with("role", "none")
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
@@ -150,7 +150,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
-			.with("ismember", true)
+			.with("role", "owner")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -188,7 +188,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
-			.with("ismember", false)
+			.with("role", "none")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -219,7 +219,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
-			.with("ismember", true)
+			.with("role", "owner")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -233,7 +233,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", true)
-			.with("ismember", false)
+			.with("role", "none")
 			.build();
 
 	@Test
@@ -605,16 +605,18 @@ public class GroupsAPITest {
 		getGroup("foo", new Token("foo"));
 	}
 	
-	private void getGroup(final String token, final Token expected) throws Exception {
+	private void getGroup(final String token, final Token expectedToken) throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		when(g.getGroup(expected, new GroupID("id")))
+		when(g.getGroup(expectedToken, new GroupID("id")))
 				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("bar"))
 						.withStandardView(true).build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
+		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
+		expected.put("role", "member");
 		
-		assertThat("incorrect group", ret, is(GROUP_MAX_JSON_STD));
+		assertThat("incorrect group", ret, is(expected));
 	}
 	
 	@Test
@@ -660,6 +662,7 @@ public class GroupsAPITest {
 		
 		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
 		expected.put("private", true);
+		expected.put("role", "member");
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
@@ -679,11 +682,11 @@ public class GroupsAPITest {
 						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1))
 				.build();
 		
-		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("whee"))
+		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("whoo"))
 				.withStandardView(true)
 				.withResourceType(new ResourceType("foo"))
 				.withResource(new ResourceType("workspace"),
-						ResourceInformationSet.getBuilder(new UserName("whee"))
+						ResourceInformationSet.getBuilder(new UserName("whoo"))
 								.withResourceField(d1, "name", "name82")
 								.withResourceField(d1, "public", true)
 								.withResourceField(d1, "narrname", "narrname")
@@ -694,7 +697,7 @@ public class GroupsAPITest {
 								.withResourceField(d2, "perm", "None")
 								.build())
 				.withResource(new ResourceType("catalogmethod"),
-						ResourceInformationSet.getBuilder(new UserName("whee"))
+						ResourceInformationSet.getBuilder(new UserName("whoo"))
 								.withResource(c1)
 								.build());
 		
@@ -722,6 +725,7 @@ public class GroupsAPITest {
 								.with("perm", "Admin")
 								.build()
 						)));
+		expected.put("role", "admin");
 		expected.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
 		
 		assertThat("incorrect group", ret, is(expected));
@@ -732,6 +736,7 @@ public class GroupsAPITest {
 		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null).get(0);
 		final Map<String, Object> expectedmin = new HashMap<>();
 		expectedmin.putAll(GROUP_MAX_JSON_MIN);
+		expectedmin.put("role", "admin");
 		expectedmin.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
 		expectedmin.put("custom", Collections.emptyMap());
 

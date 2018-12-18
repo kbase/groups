@@ -102,7 +102,7 @@ public class GroupViewTest {
 		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
-		assertThat("incorrect is member", gv.isMember(), is(false));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
@@ -136,7 +136,7 @@ public class GroupViewTest {
 				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
-		assertThat("incorrect is member", gv.isMember(), is(true));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.member));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
@@ -169,7 +169,7 @@ public class GroupViewTest {
 		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
 		assertThat("incorrect own", gv.getOwner(), is(mt()));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
-		assertThat("incorrect is member", gv.isMember(), is(false));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
@@ -214,7 +214,7 @@ public class GroupViewTest {
 		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
-		assertThat("incorrect is member", gv.isMember(), is(false));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
 				new ResourceType("workspace"), new ResourceType("catalogmethod"))));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
@@ -271,7 +271,7 @@ public class GroupViewTest {
 		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
 		assertThat("incorrect own", gv.getOwner(), is(mt()));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
-		assertThat("incorrect is member", gv.isMember(), is(false));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
@@ -290,22 +290,26 @@ public class GroupViewTest {
 	
 	@Test
 	public void memberView() throws Exception {
-		memberView(GROUP, false);
-		memberView(PRIVGROUP, true);
+		memberView(GROUP, false, new UserName("a1"), GroupView.Role.admin);
+		memberView(PRIVGROUP, true, new UserName("user"), GroupView.Role.owner);
 	}
 
-	private void memberView(final Group group, final boolean priv)
+	private void memberView(
+			final Group group,
+			final boolean priv,
+			final UserName user,
+			final GroupView.Role role)
 			throws MissingParameterException, IllegalParameterException {
-		final GroupView gv = GroupView.getBuilder(group, new UserName("m1"))
+		final GroupView gv = GroupView.getBuilder(group, user)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("bar"))
 				.withResource(new ResourceType("workspace"), ResourceInformationSet.getBuilder(
-						new UserName("m1"))
+						user)
 						.withResource(new ResourceID("2"))
 						.withResource(new ResourceID("7"))
 						.build())
 				.withResource(new ResourceType("catalogmethod"), ResourceInformationSet.getBuilder(
-						new UserName("m1"))
+						user)
 						.withResource(new ResourceID("m.n"))
 						.build())
 				.build();
@@ -325,16 +329,16 @@ public class GroupViewTest {
 				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
-		assertThat("incorrect is member", gv.isMember(), is(true));
+		assertThat("incorrect role", gv.getRole(), is(role));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
-				is(ResourceInformationSet.getBuilder(new UserName("m1")).build()));
+				is(ResourceInformationSet.getBuilder(user).build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("workspace")),
-				is(ResourceInformationSet.getBuilder(new UserName("m1"))
+				is(ResourceInformationSet.getBuilder(user)
 						.withResource(new ResourceID("7"))
 						.withResource(new ResourceID("2"))
 						.build()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("catalogmethod")),
-				is(ResourceInformationSet.getBuilder(new UserName("m1"))
+				is(ResourceInformationSet.getBuilder(user)
 						.withResource(new ResourceID("m.n"))
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(

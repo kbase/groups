@@ -34,7 +34,7 @@ Represents a group of users and associated data.
 {
     "id": <the group ID>,
     "private": <true if the group is private, false otherwise>,
-    "ismember": <true if the user accessing the group is a member, false otherwise>,
+    "role": <'owner', 'admin', 'member', or 'none', as appropriate>,
     "name": <the group name>,
     "owner": <the User data or user name for the group owner>,
     "admins": <an array of User data of admins of the group>,
@@ -219,7 +219,7 @@ AUTHORIZATION OPTIONAL
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, memcnt, rescnt, custom, createdate,
+A list of Groups. Only the id, name, owner, role, memcnt, rescnt, custom, createdate,
 and moddate fields are included.
 ```
 
@@ -312,7 +312,7 @@ RETURNS: A Group.
 ```
 
 If the user is not a member of the group or no authorization is provided and the group is
-private, only the `groupid`, `private`, and `ismember` fields are included.
+private, only the `groupid`, `private`, and `role` fields are included.
 
 If no authorization is provided, the members list is empty, only public custom fields are included,
 and only public resources associated with the group are returned.

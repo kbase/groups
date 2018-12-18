@@ -12,7 +12,7 @@ public class Fields {
 	/** The group's privacy flag. */
 	public static final String GROUP_IS_PRIVATE = "private";
 	/** Whether the user is a member of the group. */
-	public static final String GROUP_IS_MEMBER = "ismember";
+	public static final String GROUP_ROLE = "role";
 	/** The group name. */
 	public static final String GROUP_NAME = "name";
 	/** The username of the group owner. */
