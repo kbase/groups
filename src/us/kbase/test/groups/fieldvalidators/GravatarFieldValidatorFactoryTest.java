@@ -14,25 +14,35 @@ import us.kbase.test.groups.TestCommon;
 
 public class GravatarFieldValidatorFactoryTest {
 	
+	private static final String KNOWN_GOOD = "87194228ef49d635fec5938099042b1d";
+	private static final int LEN = KNOWN_GOOD.length();
+	
 	@Test
 	public void validate() throws Exception {
 		final FieldValidator v = new GravatarFieldValidatorFactory().getValidator(null);
 		
-		v.validate("87194228ef49d635fec5938099042b1d");
 		// if there's no error, the test passes
+		v.validate(KNOWN_GOOD);
+		// check that extra characters pass
+		v.validate(KNOWN_GOOD + "Z");
 	}
 	
 	@Test
 	public void validateFailBadHash() throws Exception {
 		final FieldValidator v = new GravatarFieldValidatorFactory().getValidator(null);
+		validateFail(v, KNOWN_GOOD.substring(0, LEN - 1)); // missing last char
+		validateFail(v, KNOWN_GOOD.substring(0, LEN - 1) + "c"); // incorrect last char
+	}
+
+	private void validateFail(final FieldValidator v, final String value) throws Exception {
 		
 		try {
-			v.validate("87194228ef49d635fec5938099042b1");
+			v.validate(value);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new IllegalFieldValueException(
 					"Gravatar service does not recognize Gravatar hash " +
-					"87194228ef49d635fec5938099042b1"));
+					value));
 		}
 	}
 	
