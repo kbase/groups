@@ -9,8 +9,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
+import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 
@@ -33,10 +35,11 @@ public class GroupView {
 	private final Optional<Instant> modificationDate; // all views except private
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard except private
+	private final Optional<Integer> memberCount; // all views except private
+	private final Map<ResourceType, Integer> resourceCount; // empty for non-members
 	
 	// standard, but contents depend on view.
-	// private - nothing
-	// minimal - owner only
+	// minimal - nothing
 	// not member - owner & admins
 	// standard - all
 	private final Map<UserName, GroupUser> userInfo = new HashMap<>();
@@ -49,6 +52,7 @@ public class GroupView {
 	private final boolean isMember;
 	private final boolean isPrivate;
 	
+	// this class is starting to get a little hairy. Getting close to rethink/refactor time
 	private GroupView(
 			final Group group,
 			final boolean standardView,
@@ -70,8 +74,18 @@ public class GroupView {
 			this.members = Collections.emptySet();
 			this.admins = Collections.emptySet();
 			this.customFields = Collections.emptyMap();
+			this.memberCount = Optional.empty();
+			this.resourceCount = Collections.emptyMap();
 		} else {
+			this.memberCount = Optional.of(group.getAllMembers().size());
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
+			if (isMember) {
+				// since the user is a member, we know the view isn't private
+				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
+						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
+			} else {
+				this.resourceCount = Collections.emptyMap();
+			}
 			
 			// group properties
 			this.groupName = Optional.of(group.getGroupName());
@@ -187,6 +201,13 @@ public class GroupView {
 	public Set<UserName> getMembers() {
 		return members;
 	}
+	
+	/** Get the number of members in the group. Empty for private views.
+	 * @return the number group members.
+	 */
+	public Optional<Integer> getMemberCount() {
+		return memberCount;
+	}
 
 	/** Get the administrators of the group. Empty for minimal views.
 	 * @return the group administrators.
@@ -227,6 +248,13 @@ public class GroupView {
 		return resourceInfo.get(type);
 	}
 	
+	/** Get the count of each resource type contained in the group. Empty for non-members.
+	 * @return the resource counts per type.
+	 */
+	public Map<ResourceType, Integer> getResourceCounts() {
+		return resourceCount;
+	}
+	
 	/** Get a member's detailed information. Only available in a standard view. In a minimal
 	 * view, this method will throw an illegal argument exception.
 	 * @param user the member.
@@ -239,6 +267,9 @@ public class GroupView {
 		return userInfo.get(user);
 	}
 
+	// there's a lot of fields that are essentially redundant, but taking them out makes
+	// EqualsVerifier complain and I can't be arsed to fix it. Besides, the performance hit
+	// is likely negligible.
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -251,9 +282,11 @@ public class GroupView {
 		result = prime * result + (isMember ? 1231 : 1237);
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + (isStandardView ? 1231 : 1237);
+		result = prime * result + ((memberCount == null) ? 0 : memberCount.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
+		result = prime * result + ((resourceCount == null) ? 0 : resourceCount.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
 		result = prime * result + ((userInfo == null) ? 0 : userInfo.hashCode());
 		return result;
@@ -315,6 +348,13 @@ public class GroupView {
 		if (isStandardView != other.isStandardView) {
 			return false;
 		}
+		if (memberCount == null) {
+			if (other.memberCount != null) {
+				return false;
+			}
+		} else if (!memberCount.equals(other.memberCount)) {
+			return false;
+		}
 		if (members == null) {
 			if (other.members != null) {
 				return false;
@@ -334,6 +374,13 @@ public class GroupView {
 				return false;
 			}
 		} else if (!owner.equals(other.owner)) {
+			return false;
+		}
+		if (resourceCount == null) {
+			if (other.resourceCount != null) {
+				return false;
+			}
+		} else if (!resourceCount.equals(other.resourceCount)) {
 			return false;
 		}
 		if (resourceInfo == null) {
@@ -394,9 +441,10 @@ public class GroupView {
 			return this;
 		}
 		
-		/** Add resource information to the view.
+		/** Add resource information to the view. The resource type and the resource IDs for
+		 * that type must exist in the group, and the information set may not include
+		 * nonexistent resources.
 		 * Calling this method will overwrite any previous information for the type.
-		 * Any nonexistent resources in the information set will be discarded.
 		 * @param type the type of the resource.
 		 * @param info the information for the resource.
 		 * @return this builder.
@@ -407,7 +455,23 @@ public class GroupView {
 			if (!info.getUser().equals(user)) {
 				throw new IllegalArgumentException("User in info does not match user in builder");
 			}
-			resourceInfo.put(type, info.withoutNonexistentResources());
+			if (!info.getNonexistentResources().isEmpty()) {
+				throw new IllegalArgumentException(
+						"Nonexistent resources are not allowed in the information set");
+			}
+			if (!group.getResourceTypes().contains(type)) {
+				throw new IllegalArgumentException("Resource type does not exist in group: " +
+						type.getName());
+			}
+			for (final ResourceID rid: info.getResources()) {
+				if (!group.containsResource(type, rid)) {
+					throw new IllegalArgumentException(String.format(
+							"Resource %s of type %s does not exist in group",
+							rid.getName(), type.getName()));
+				}
+			}
+			
+			resourceInfo.put(type, info);
 			return this;
 		}
 		

@@ -83,28 +83,33 @@ public class GroupsAPITest {
 							.build(),
 					new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 					.build();
-			final Builder b = Group.getBuilder(
-					new GroupID("id2"), new GroupName("name2"),
-					GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
-					new CreateAndModTimes(
-							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
-					.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
-							.withCustomField(new NumberedCustomField("whee"), "whoo")
-							.build())
-					.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
-					.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
-							.build())
-					.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
-							.withCustomField(new NumberedCustomField("yay-6"), "boo")
-							.withCustomField(new NumberedCustomField("bar"), "baz")
-							.build())
-					.withCustomField(new NumberedCustomField("field-1"), "my val")
-					.withCustomField(new NumberedCustomField("otherfield"), "fieldval");
+			final Builder b = getGroupMaxBuilder();
 			GROUP_MAX = b.build();
 			GROUP_PRIV = b.withIsPrivate(true).build();
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("Fix your tests newb", e);
 		}
+	}
+
+	private static Builder getGroupMaxBuilder()
+			throws MissingParameterException, IllegalParameterException {
+		return Group.getBuilder(
+				new GroupID("id2"), new GroupName("name2"),
+				GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
+						.withCustomField(new NumberedCustomField("whee"), "whoo")
+						.build())
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
+						.withCustomField(new NumberedCustomField("yay-6"), "boo")
+						.withCustomField(new NumberedCustomField("bar"), "baz")
+						.build())
+				.withCustomField(new NumberedCustomField("field-1"), "my val")
+				.withCustomField(new NumberedCustomField("otherfield"), "fieldval");
 	}
 	
 	private static final Map<String, Object> GROUP_MIN_JSON_STD = MapBuilder
@@ -657,9 +662,15 @@ public class GroupsAPITest {
 		final ResourceID d2 = new ResourceID("45");
 		
 		final ResourceID c1 = new ResourceID("mod.meth");
+		final Group group = getGroupMaxBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1))
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d2))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1))
+				.build();
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id")))
-				.thenReturn(GroupView.getBuilder(GROUP_MAX, new UserName("whee"))
+				.thenReturn(GroupView.getBuilder(group, new UserName("whee"))
 						.withStandardView(true)
 						.withResourceType(new ResourceType("foo"))
 						.withResource(new ResourceType("workspace"),
