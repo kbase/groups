@@ -300,7 +300,7 @@ public class GroupsAPI {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
 		ret.put(Fields.GROUP_IS_PRIVATE, g.isPrivate());
-		ret.put(Fields.GROUP_IS_MEMBER, g.isMember());
+		ret.put(Fields.GROUP_ROLE, g.getRole().name());
 		if (!g.isPrivateView()) {
 			ret.put(Fields.GROUP_NAME, g.getGroupName().get().getName());
 			ret.put(Fields.GROUP_OWNER, g.getOwner().get().getName());

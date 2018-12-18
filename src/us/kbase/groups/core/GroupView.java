@@ -23,10 +23,25 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class GroupView {
 	
+	public enum Role {
+		/** Not a member of the group. */
+		none,
+		
+		/** A member of the group. */
+		member,
+		
+		/** An administrator of the group. */
+		admin,
+		
+		/** The owner of the group. */
+		owner;
+	}
+	
 	//TODO CODE there could be a lot of optimizations to avoid fetching data that we just discard in the view.
 	
 	// group fields
 	private final GroupID groupID; // all views
+	private final Role role; // all views except private
 	private final Optional<GroupName> groupName; // all views except private
 	private final Optional<UserName> owner; // all views except private
 	// contents depend on view
@@ -49,20 +64,19 @@ public class GroupView {
 	
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
-	private final boolean isMember;
 	private final boolean isPrivate;
 	
 	// this class is starting to get a little hairy. Getting close to rethink/refactor time
 	private GroupView(
 			final Group group,
 			final boolean standardView,
-			final boolean isMember,
+			final Role role,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
 			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		this.isStandardView = standardView;
-		this.isMember = isMember;
+		this.role = role;
 		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
 		if (isPrivateView()) {
@@ -79,12 +93,12 @@ public class GroupView {
 		} else {
 			this.memberCount = Optional.of(group.getAllMembers().size());
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
-			if (isMember) {
+			if (role.equals(Role.none)) {
+				this.resourceCount = Collections.emptyMap();
+			} else {
 				// since the user is a member, we know the view isn't private
 				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
 						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
-			} else {
-				this.resourceCount = Collections.emptyMap();
 			}
 			
 			// group properties
@@ -100,7 +114,7 @@ public class GroupView {
 				admins = Collections.emptySet();
 			} else {
 				admins = group.getAdministrators();
-				if (!isMember) {
+				if (role.equals(Role.none)) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
 							u, filterUserFields(group.getMember(u), upub)));
 					members = Collections.emptySet();
@@ -131,7 +145,7 @@ public class GroupView {
 		for (final NumberedCustomField f: customFields.keySet()) {
 			final boolean isPublic = isPublicField.apply(f);
 			final boolean isMinimal = isMinimalViewField.apply(f);
-			if ((isPublic || isMember) && (isMinimal || isStandardView)) {
+			if ((isPublic || !role.equals(Role.none)) && (isMinimal || isStandardView)) {
 				ret.put(f, customFields.get(f));
 			}
 		}
@@ -145,11 +159,11 @@ public class GroupView {
 		return isStandardView;
 	}
 	
-	/** Get whether the user is a member of the group.
+	/** Get the user's role within the group.
 	 * @return true if the user is a member.
 	 */
-	public boolean isMember() {
-		return isMember;
+	public Role getRole() {
+		return role;
 	}
 
 	/** Get whether the group is private.
@@ -160,11 +174,12 @@ public class GroupView {
 	}
 	
 	/** Get whether this is a private view of the group, where only the group ID is visible.
-	 * The equivalent of {@link #isPrivate} && !{@link #isMember()}.
+	 * The equivalent of {@link #isPrivate} && {@link #getRole()} equals
+	 * {@link GroupView#Role#none}.
 	 * @return true if this is a private view of the group.
 	 */
 	public boolean isPrivateView() {
-		return isPrivate && !isMember;
+		return isPrivate && role.equals(Role.none);
 	}
 	
 	/** Get the group ID.
@@ -279,7 +294,6 @@ public class GroupView {
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
-		result = prime * result + (isMember ? 1231 : 1237);
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + (isStandardView ? 1231 : 1237);
 		result = prime * result + ((memberCount == null) ? 0 : memberCount.hashCode());
@@ -288,6 +302,7 @@ public class GroupView {
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceCount == null) ? 0 : resourceCount.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
+		result = prime * result + ((role == null) ? 0 : role.hashCode());
 		result = prime * result + ((userInfo == null) ? 0 : userInfo.hashCode());
 		return result;
 	}
@@ -339,9 +354,6 @@ public class GroupView {
 		} else if (!groupName.equals(other.groupName)) {
 			return false;
 		}
-		if (isMember != other.isMember) {
-			return false;
-		}
 		if (isPrivate != other.isPrivate) {
 			return false;
 		}
@@ -388,6 +400,9 @@ public class GroupView {
 				return false;
 			}
 		} else if (!resourceInfo.equals(other.resourceInfo)) {
+			return false;
+		}
+		if (role != other.role) {
 			return false;
 		}
 		if (userInfo == null) {
@@ -534,8 +549,25 @@ public class GroupView {
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, isStandardView, group.isMember(user.orElse(null)),
+			return new GroupView(group, isStandardView, getRole(group, user),
 					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
+		}
+		
+		public Role getRole(final Group group, final Optional<UserName> user) {
+			Role r = Role.none;
+			if (user.isPresent()) {
+				final UserName u = user.get();
+				if (group.isMember(u)) {
+					r = Role.member;
+				}
+				if (group.isAdministrator(u)) {
+					r = Role.admin;
+				}
+				if (group.getOwner().equals(u)) {
+					r = Role.owner;
+				}
+			}
+			return r;
 		}
 		
 	}

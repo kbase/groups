@@ -263,6 +263,7 @@ export default class {
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
                             <th scope="col">Owner</th>
+                            <th scope="col">Role</th>
                             <th scope="col">Members</th>
                             <th scope="col">Workspaces</th>
                             <th scope="col">Apps</th>
@@ -281,6 +282,7 @@ export default class {
                             <th>${this.getGravatar(g)}${s(g.id)}</th>
                             <td>${s(g.name)}</td>
                             <td>${s(g.owner)}</td>
+                            <td>${s(g.role)}</td>
                             <td>${s(g.memcount)}</td>
                             <td>${s(g.rescount.workspace)}</td>
                             <td>${s(g.rescount.catalogmethod)}</td>
@@ -370,7 +372,7 @@ export default class {
           if (response.ok) {
               response.json().then( (json) => {
                   let c, m, n, d, members, admins;
-                  const priv = json['private'] && !json.ismember;
+                  const priv = json['private'] && json.role === "none";
                   // TODO NOW break up this monstrosity
                   if (priv) {
                       const p = "Group is private";
@@ -400,6 +402,7 @@ export default class {
                           <tr><th>Modified</th><td>${m}</td></tr>
                           <tr><th>Description</th><td>${s(d)}</td></tr>
                           <tr><th>Members</th><td>${s(json.memcount)}</td></tr>
+                          <tr><th>Role</th><td>${s(json.role)}</td></tr>
                           <tr><th>Private</th><td>${s(json.private)}</td></tr>
                         </tbody>
                       </table>
