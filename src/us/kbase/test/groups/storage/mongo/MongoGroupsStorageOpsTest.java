@@ -337,6 +337,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.build());
 		
+		// name
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withName(new GroupName("newname")).build(),
 				inst(40000));
@@ -346,6 +347,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(40000)))
 				.build()));
 		
+		// private
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(true)
@@ -384,6 +386,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(70000)))
 				.build()));
 		
+		// custom fields
 		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withCustomField(new NumberedCustomField("foo-1"),
@@ -408,6 +411,45 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("newname"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(100000)))
+				.build()));
+		
+		// private member list
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullablePrivateMemberList(false)
+						.build())
+				.build(),
+				inst(150000));
+
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(150000)))
+				.withPrivateMemberList(false)
+				.build()));
+
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullablePrivateMemberList(null)
+						.build())
+				.build(),
+				inst(160000));
+
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(150000)))
+				.withPrivateMemberList(false)
+				.build()));
+		
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullablePrivateMemberList(true)
+						.build())
+				.build(),
+				inst(170000));
+
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("newname"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(170000)))
 				.build()));
 	}
 	
@@ -466,6 +508,7 @@ public class MongoGroupsStorageOpsTest {
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withIsPrivate(false)
+				.withPrivateMemberList(true)
 				.withCustomField(new NumberedCustomField("foo-2"), "valfoo2")
 				.withCustomField(new NumberedCustomField("foo-3"), "valfoo42")
 				.build());
@@ -474,6 +517,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("newname"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(true)
+						.withNullablePrivateMemberList(false)
 						.withCustomField(new NumberedCustomField("foo-2"), OptionalString.empty())
 						.withCustomField(new NumberedCustomField("foo-3"),
 								OptionalString.of("meh"))
@@ -485,6 +529,7 @@ public class MongoGroupsStorageOpsTest {
 				gid, new GroupName("newname"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30001)))
 				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withCustomField(new NumberedCustomField("foo-3"), "meh")
 				.build()));
 	}
@@ -502,6 +547,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(null)
+						.withNullablePrivateMemberList(null)
 						.withCustomField(new NumberedCustomField("yay"), OptionalString.empty())
 						.build())
 				.build(),
@@ -521,6 +567,7 @@ public class MongoGroupsStorageOpsTest {
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withCustomField(new NumberedCustomField("thatlast"), "test was a bit rude")
 				.withCustomField(new NumberedCustomField("yesi-1"), "agree it was a bit")
 				.build());
@@ -529,6 +576,7 @@ public class MongoGroupsStorageOpsTest {
 				.withName(new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(true)
+						.withNullablePrivateMemberList(false)
 						.withCustomField(new NumberedCustomField("thatlast"),
 								OptionalString.of("test was a bit rude"))
 						.withCustomField(new NumberedCustomField("yesi-1"),
@@ -541,6 +589,7 @@ public class MongoGroupsStorageOpsTest {
 				gid, new GroupName("name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withCustomField(new NumberedCustomField("thatlast"), "test was a bit rude")
 				.withCustomField(new NumberedCustomField("yesi-1"), "agree it was a bit")
 				.build()));
@@ -631,6 +680,37 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
 				gid, new GroupName("new name"), toGUser("uname"),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(100000)))
+				.withCustomField(new NumberedCustomField("baz"), "bat")
+				.build()));
+		
+		// private member list
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullablePrivateMemberList(false)
+						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
+						.build())
+				.build(),
+				inst(170000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("new name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(170000)))
+				.withPrivateMemberList(false)
+				.withCustomField(new NumberedCustomField("baz"), "bat")
+				.build()));
+		
+		// remove private member list
+		manager.storage.updateGroup(GroupUpdateParams.getBuilder(gid)
+				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullablePrivateMemberList(true)
+						.withCustomField(new NumberedCustomField("baz"), OptionalString.of("bat"))
+						.build())
+				.build(),
+				inst(180000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(gid), is(Group.getBuilder(
+				gid, new GroupName("new name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(180000)))
 				.withCustomField(new NumberedCustomField("baz"), "bat")
 				.build()));
 	}
