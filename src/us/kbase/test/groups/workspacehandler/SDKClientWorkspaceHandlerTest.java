@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.common.service.JsonClientException;
 import us.kbase.common.service.ServerException;
+import us.kbase.common.service.Tuple11;
 import us.kbase.common.service.Tuple9;
 import us.kbase.common.service.UObject;
 import us.kbase.groups.core.UserName;
@@ -57,6 +58,8 @@ public class SDKClientWorkspaceHandlerTest {
 	private static final ResourceID RD21;
 	private static final ResourceID RD30;
 	private static final ResourceID RD31;
+	private static final ResourceID RD40;
+	private static final ResourceID RD41;
 	static {
 		try {
 			RD3 = new ResourceID("3");
@@ -70,6 +73,8 @@ public class SDKClientWorkspaceHandlerTest {
 			RD21 = new ResourceID("21");
 			RD30 = new ResourceID("30");
 			RD31 = new ResourceID("31");
+			RD40 = new ResourceID("40");
+			RD41 = new ResourceID("41");
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests", e);
 		}
@@ -297,33 +302,40 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD21)
 						.withNonexistentResource(RD30)
 						.withNonexistentResource(RD31)
+						.withNonexistentResource(RD40)
+						.withNonexistentResource(RD41)
 						.withResourceField(RD3, "name", "name3")
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "narrcreate", null)
 						.withResourceField(RD3, "perm", "Own")
 						.withResourceField(RD3, "description", "my desc")
 						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "narrcreate", 1500000000000L)
 						.withResourceField(RD5, "perm", "Admin")
 						.withResourceField(RD5, "description", null)
 						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD7, "name", "name7")
 						.withResourceField(RD7, "public", false)
 						.withResourceField(RD7, "narrname", null)
+						.withResourceField(RD7, "narrcreate", null)
 						.withResourceField(RD7, "perm", "Write")
 						.withResourceField(RD7, "description", "my desc7")
 						.withResourceField(RD7, "moddate", 31535999000L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "narrcreate", null)
 						.withResourceField(RD10, "perm", "Read")
 						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "narrcreate", null)
 						.withResourceField(RD11, "perm", "None")
 						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
@@ -341,27 +353,33 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD21)
 						.withNonexistentResource(RD30)
 						.withNonexistentResource(RD31)
+						.withNonexistentResource(RD40)
+						.withNonexistentResource(RD41)
 						.withResourceField(RD3, "name", "name3")
 						.withResourceField(RD3, "public", false)
 						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "narrcreate", null)
 						.withResourceField(RD3, "perm", "Own")
 						.withResourceField(RD3, "description", "my desc")
 						.withResourceField(RD3, "moddate", 1540606613000L)
 						.withResourceField(RD5, "name", "name5")
 						.withResourceField(RD5, "public", false)
 						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "narrcreate", 1500000000000L)
 						.withResourceField(RD5, "perm", "Admin")
 						.withResourceField(RD5, "description", null)
 						.withResourceField(RD5, "moddate", 0L)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "narrcreate", null)
 						.withResourceField(RD10, "perm", "Read")
 						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "narrcreate", null)
 						.withResourceField(RD11, "perm", "None")
 						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
@@ -389,15 +407,19 @@ public class SDKClientWorkspaceHandlerTest {
 						.withNonexistentResource(RD21)
 						.withNonexistentResource(RD30)
 						.withNonexistentResource(RD31)
+						.withNonexistentResource(RD40)
+						.withNonexistentResource(RD41)
 						.withResourceField(RD10, "name", "name10")
 						.withResourceField(RD10, "public", true)
 						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "narrcreate", null)
 						.withResourceField(RD10, "perm", "None")
 						.withResourceField(RD10, "description", "my desc10")
 						.withResourceField(RD10, "moddate", 1500000000000L)
 						.withResourceField(RD11, "name", "name11")
 						.withResourceField(RD11, "public", true)
 						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "narrcreate", null)
 						.withResourceField(RD11, "perm", "None")
 						.withResourceField(RD11, "description", "my desc11")
 						.withResourceField(RD11, "moddate", 549864182000L)
@@ -455,6 +477,14 @@ public class SDKClientWorkspaceHandlerTest {
 		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
 				ImmutableMap.of("user2", "w", "*", "r")))))
 				.when(c).administer(argThat(getPermissionsCommandMatcher(31)));
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user1", "r", "user2", "w", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(40)));
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user2", "w", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(41)));
 
 		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", "2018-10-27T02:16:53+0000", false,
 				Collections.emptyMap()))
@@ -463,6 +493,7 @@ public class SDKClientWorkspaceHandlerTest {
 		doReturn(getWorkspaceInfoResponse(5, "name5", "user3", "1970-01-01T00:00:00+0000", false,
 				ImmutableMap.of(
 						"is_temporary", "false",
+						"narrative", "6",
 						"narrative_nice_name", "narr_name")))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(5)));
 
@@ -493,6 +524,18 @@ public class SDKClientWorkspaceHandlerTest {
 				Collections.emptyMap()))
 				.when(c).administer(argThat(getWSInfoCommandMatcher(31)));
 		
+		doReturn(getWorkspaceInfoResponse(40, "name30", "user3", "dontprocess", true,
+				ImmutableMap.of(
+						"is_temporary", "false",
+						"narrative", "42")))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(40)));
+
+		doReturn(getWorkspaceInfoResponse(41, "name31", "user3", "dontprocess", true,
+				ImmutableMap.of(
+						"is_temporary", "false",
+						"narrative", "43")))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(41)));
+		
 		doReturn(new UObject("my desc")).when(c).administer(argThat(getWSDescCommandMatcher(3)));
 		doReturn(null).when(c).administer(argThat(getWSDescCommandMatcher(5)));
 		doReturn(new UObject("my desc7")).when(c).administer(argThat(getWSDescCommandMatcher(7)));
@@ -504,13 +547,25 @@ public class SDKClientWorkspaceHandlerTest {
 				.administer(argThat(getWSDescCommandMatcher(30)));
 		doThrow(new ServerException("No workspace with id 31 exists", -1, "n")).when(c)
 				.administer(argThat(getWSDescCommandMatcher(31)));
+		doReturn(new UObject("no desc")).when(c).administer(argThat(getWSDescCommandMatcher(40)));
+		doReturn(new UObject("no desc")).when(c).administer(argThat(getWSDescCommandMatcher(41)));
+
+		doReturn(getObjectInfoResponse("2017-07-14T02:40:00+0000"))
+				.when(c).administer(argThat(getObjectInfoCommandMatcher(5, 6, 1)));
+		doThrow(new ServerException(
+				"Object 42 cannot be accessed: Workspace 40 is deleted", -1, "n"))
+				.when(c).administer(argThat(getObjectInfoCommandMatcher(40, 42, 1)));
+		doThrow(new ServerException(
+				"Object 43 cannot be accessed: No workspace with id 41 exists", -1, "n"))
+				.when(c).administer(argThat(getObjectInfoCommandMatcher(41, 43, 1)));
 		
 		final ResourceInformationSet ri = h.getResourceInformation(
 				user,
 				set(new ResourceID("3"), new ResourceID("5"), new ResourceID("7"),
 						new ResourceID("8"), new ResourceID("9"), new ResourceID("10"),
 						new ResourceID("11"), new ResourceID("20"), new ResourceID("21"),
-						new ResourceID("30"), new ResourceID("31")),
+						new ResourceID("30"), new ResourceID("31"),
+						new ResourceID("40"), new ResourceID("41")),
 				administratedResourcesOnly);
 		
 		assertThat("incorrect resources", ri, is(expected));
@@ -528,6 +583,19 @@ public class SDKClientWorkspaceHandlerTest {
 				"params", ImmutableMap.of("id", wsid)));
 	}
 	
+	private UObjectArgumentMatcher getObjectInfoCommandMatcher(
+			final int wsid,
+			final int objid,
+			final int version) {
+		return new UObjectArgumentMatcher(ImmutableMap.of(
+				"command", "getObjectInfo",
+				"params", ImmutableMap.of("objects", Arrays.asList(
+						ImmutableMap.of(
+								"wsid", wsid,
+								"objid", objid,
+								"ver", version)))));
+	}
+	
 	private UObject getWorkspaceInfoResponse(
 			final int id,
 			final String name,
@@ -543,6 +611,15 @@ public class SDKClientWorkspaceHandlerTest {
 				.withE3(userName)
 				.withE7(isPublic ? "r" : "n")
 				.withE9(meta));
+		// other fields are currently unused in the handler
+	}
+	
+	private UObject getObjectInfoResponse(
+			final String timestamp) {
+		return new UObject(ImmutableMap.of(
+				"infos", Arrays.asList(new Tuple11<Long, String, String, String, Long, String,
+						Long, String,String, Long, Map<String, String>>()
+						.withE4(timestamp))));
 		// other fields are currently unused in the handler
 	}
 	
@@ -649,6 +726,131 @@ public class SDKClientWorkspaceHandlerTest {
 				.when(c).administer(argThat(getPermissionsCommandMatcher(24)));
 
 		doThrow(thrown).when(c).administer(argThat(getWSInfoCommandMatcher(24)));
+		
+		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+	}
+	
+	@Test
+	public void getResourceInformationFailGetDescriptionOtherServerException() throws Exception {
+		failGetResourceInfoOnGetDescriptionCall(
+				new ServerException("You pootied real bad I can smell it", -1, "n"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetDescriptionJsonClientException() throws Exception {
+		failGetResourceInfoOnGetDescriptionCall(
+				new JsonClientException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetDescriptionIOException() throws Exception {
+		failGetResourceInfoOnGetDescriptionCall(
+				new IOException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetDescriptionIllegalStateException() throws Exception {
+		failGetResourceInfoOnGetDescriptionCall(
+				new IllegalStateException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	private void failGetResourceInfoOnGetDescriptionCall(
+			final Exception thrown,
+			final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn(MIN_WS_VER);
+		when(c.getURL()).thenReturn(new URL("http://bat.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user1", "a", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(24)));
+
+		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", "2018-10-27T02:16:53+0000", false,
+				Collections.emptyMap()))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(24)));
+		
+		doThrow(thrown).when(c).administer(argThat(getWSDescCommandMatcher(24)));
+		
+		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoObjectDeleted() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new ServerException("Object 4 (name foo) in workspace 24 (name name3) " +
+						"has been deleted", -1, "n"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoNoObject() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new ServerException("No object with id 4 exists in workspace 4 (name foo)",
+						-1, "n"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoOtherServerException() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new ServerException("You pootied real bad I can smell it", -1, "n"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoJsonClientException() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new JsonClientException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoIOException() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new IOException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	@Test
+	public void getResourceInformationFailGetObjectInfoIllegalStateException() throws Exception {
+		failGetResourceInfoOnGetObjectInfoCall(
+				new IllegalStateException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://bat.com"));
+	}
+	
+	private void failGetResourceInfoOnGetObjectInfoCall(
+			final Exception thrown,
+			final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn(MIN_WS_VER);
+		when(c.getURL()).thenReturn(new URL("http://bat.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		doReturn(new UObject(ImmutableMap.of("perms", Arrays.asList(
+				ImmutableMap.of("user1", "a", "*", "r")))))
+				.when(c).administer(argThat(getPermissionsCommandMatcher(24)));
+
+		doReturn(getWorkspaceInfoResponse(24, "name3", "user1", "2018-10-27T02:16:53+0000", false,
+				ImmutableMap.of(
+						"is_temporary", "false",
+						"narrative", "4")))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(24)));
+		
+		doReturn(new UObject("my desc")).when(c)
+				.administer(argThat(getWSDescCommandMatcher(24)));
+		
+		doThrow(thrown).when(c).administer(argThat(getObjectInfoCommandMatcher(24, 4, 1)));
 		
 		failGetResourceInfo(h, set(new ResourceID("24")), expected);
 	}

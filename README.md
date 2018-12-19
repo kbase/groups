@@ -98,12 +98,16 @@ Represents information about a workspace.
     "rid": <the workspace ID>,
     "name": <the workspace name>,
     "narrname": <the name of the narrative contained in the workspace or null>
+    "narrcreate": <the creation date, in epoch ms, of the narrative or null>
     "public": <true if the workspace is public, false otherwise>
     "perm": <the user's permission for the workspace>,
     "description": <the workspace description or null>
     "moddate": <the modification date of the workspace in epoch ms>
 }
 ```
+
+`narrcreate` is the save date, in epoch ms, of the first version of the narrative contained in
+the workspace.
 
 `perm` is one of `None`, `Read`, `Write`, `Admin`, or `Own`.
 
@@ -881,11 +885,14 @@ see /design/*.md
     * Persistent queue
   * Feeds notification implementation is unclear - currently going straight to feeds, may go
     to Kafka instead.
+  * Retries in the workspace handler.
+  * Retries in the catalog handler.
 * Performance
   * Currently group workspaces are pulled 1 at a time w/ 2 WSS calls per group workspace
     * (WS) Update get_permissions_mass to allow returning error codes for inaccessible /
       deleted / missing workspace instead of erroring out
     * (WS) Add bulk call for get_workspace_info with same error handling option
+    * (WS) Add error codes to get_object_info3 and get_objects2
     * Cache results
   * Cache results of catalog service queries
 * Usability
@@ -894,7 +901,7 @@ see /design/*.md
   * Text search - need product team feedback
     * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
-    list
+    list. Private groups aren't exactly the same thing, I think.
   * When display user who denied request & reason? Need product team feedback
     * Currently request denials are not notified
   * System administration support - what do we need?
@@ -924,5 +931,4 @@ see /design/*.md
   * HTTP2 support
   * Reduce code duplication between services - see TODO.md
   * May need more field validators depending on UI needs
-    * Make private fields?
   * Although WS Admin read privs are no longer needed for groups, it'd still be good to finish.
