@@ -123,6 +123,8 @@ public class GroupsAPI {
 		private String groupName;
 		@JsonProperty(Fields.GROUP_IS_PRIVATE)
 		private Boolean isPrivate;
+		@JsonProperty(Fields.GROUP_MEMBERS_PRIVATE)
+		private Boolean isPrivateMembers;
 		@JsonProperty(Fields.GROUP_CUSTOM_FIELDS)
 		private Object customFields;
 
@@ -137,9 +139,11 @@ public class GroupsAPI {
 		public CreateOrUpdateGroupJSON(
 				final String groupName,
 				final Boolean isPrivate,
+				final Boolean isPrivateMembers,
 				final Object customFields) {
 			this.groupName = groupName;
 			this.isPrivate = isPrivate;
+			this.isPrivateMembers = isPrivateMembers;
 			this.customFields = customFields;
 		}
 
@@ -156,7 +160,8 @@ public class GroupsAPI {
 			final Map<NumberedCustomField, OptionalString> customFields =
 					getCustomFieldsAndTypeCheck(this.customFields, Fields.GROUP_CUSTOM_FIELDS);
 			final Builder b = OptionalGroupFields.getBuilder()
-					.withNullableIsPrivate(isPrivate);
+					.withNullableIsPrivate(isPrivate)
+					.withNullablePrivateMemberList(isPrivateMembers);
 			for (final NumberedCustomField k: customFields.keySet()) {
 				if (!ignoreMissingValues || customFields.get(k).isPresent()) {
 					b.withCustomField(k, customFields.get(k));

@@ -11,6 +11,8 @@ public class Fields {
 	public static final String GROUP_ID = "id";
 	/** The group's privacy flag. */
 	public static final String GROUP_IS_PRIVATE = "private";
+	/** The group's member list privacy flag. */
+	public static final String GROUP_MEMBERS_PRIVATE = "privatemembers";
 	/** Whether the user is a member of the group. */
 	public static final String GROUP_ROLE = "role";
 	/** The group name. */

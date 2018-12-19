@@ -54,7 +54,8 @@ public class GroupCreationParams {
 		final Group.Builder b = Group.getBuilder(
 				groupID, groupName, GroupUser.getBuilder(owner, times.getCreationTime()).build(),
 				times)
-				.withIsPrivate(opfields.isPrivate().orElse(false));
+				.withIsPrivate(opfields.isPrivate().orElse(false))
+				.withPrivateMemberList(opfields.isPrivateMemberList().orElse(true));
 		opfields.getCustomFields().stream().filter(f -> opfields.getCustomValue(f).isPresent())
 				.forEach(f -> b.withCustomField(f, opfields.getCustomValue(f).get()));
 		return b.build();
