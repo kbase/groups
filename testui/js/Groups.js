@@ -436,6 +436,7 @@ export default class {
                             <th scope="col">ID</th>
                             <th scope="col">Name</th>
                             <th scope="col">Narrative Name</th>
+                            <th scope="col">Narrative Created</th>
                             <th scope="col">Description</th>
                             <th scope="col">Mod date</th>
                             <th scope="col">Public</th>
@@ -447,10 +448,13 @@ export default class {
                        `;
                   for (const ws of json.resources.workspace) {
                       const wsm = new Date(ws.moddate).toLocaleString();
+                      const narrs = ws.narrcreate == null ? null :
+                          new Date(ws.narrcreate).toLocaleString();
                       g += `<tr>
                               <th>${s(ws.rid)}</th>
                               <td>${s(ws.name)}</td>
                               <td>${s(ws.narrname)}</td>
+                              <td>${s(narrs)}</td>
                               <td>${s(ws.description)}</td>
                               <td>${s(wsm)}</td>
                               <td>${s(ws.public)}</td>
