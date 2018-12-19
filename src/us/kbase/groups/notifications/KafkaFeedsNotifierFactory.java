@@ -82,7 +82,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		requireNonNull(configuration, "configuration");
 		System.out.println("INIT KFNF NOTIFICATION AGENT - RUN PROTOCOL [HOMO SAPIENS SAPIENS " +
 				"GLOBAL LIQUIFICATION]");
-		//TODO NNOW support other config options (ssl etc). Unfortunately will have to parse each key individually as different types are required.
+		//TODO FEEDS support other config options (ssl etc). Unfortunately will have to parse each key individually as different types are required.
 		final Map<String, Object> cfg = new HashMap<>();
 		final String topic = (String) configuration.get(FEEDS_TOPIC);
 		final String bootstrapServers = checkString(

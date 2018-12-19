@@ -23,6 +23,8 @@ public class Fields {
 	public static final String GROUP_NAME = "name";
 	/** Whether the group is private or not. */
 	public static final String GROUP_IS_PRIVATE = "priv";
+	/** Whether the group member list is private or not. */
+	public static final String GROUP_MEMBERS_PRIVATE = "privmem";
 	/** The username of the group owner. */
 	public static final String GROUP_OWNER = "own";
 	/** The group administrators. */

@@ -30,6 +30,7 @@ public class Group {
 	private final GroupName groupName;
 	private final UserName owner;
 	private final boolean isPrivate;
+	private final boolean privateMemberList;
 	private final Map<UserName, GroupUser> allMembers;
 	private final Set<UserName> admins;
 	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
@@ -42,6 +43,7 @@ public class Group {
 			final GroupName groupName,
 			final UserName owner,
 			final boolean isPrivate,
+			final boolean privateMemberList,
 			final Map<UserName, GroupUser> allMembers,
 			final Set<UserName> admins,
 			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
@@ -52,6 +54,7 @@ public class Group {
 		this.groupName = groupName;
 		this.owner = owner;
 		this.isPrivate = isPrivate;
+		this.privateMemberList = privateMemberList;
 		this.allMembers = Collections.unmodifiableMap(allMembers);
 		this.admins = Collections.unmodifiableSet(admins);
 		this.resources = Collections.unmodifiableMap(resources);
@@ -86,6 +89,14 @@ public class Group {
 	 */
 	public boolean isPrivate() {
 		return isPrivate;
+	}
+	
+	/** Get whether the member list is private or not. This does not affect the contents of
+	 * this class, but must be respected in external views.
+	 * @return true if the member list is private.
+	 */
+	public boolean isPrivateMemberList() {
+		return privateMemberList;
 	}
 	
 	/** Get the members of the group.
@@ -188,8 +199,8 @@ public class Group {
 		if (res.get(type).isEmpty()) {
 			res.remove(type);
 		}
-		return new Group(groupID, groupName, owner, isPrivate, allMembers, admins, res,
-				creationDate, modificationDate, customFields);
+		return new Group(groupID, groupName, owner, isPrivate, privateMemberList, allMembers,
+				admins, res, creationDate, modificationDate, customFields);
 		
 	}
 
@@ -272,6 +283,7 @@ public class Group {
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
+		result = prime * result + (privateMemberList ? 1231 : 1237);
 		result = prime * result + ((resources == null) ? 0 : resources.hashCode());
 		return result;
 	}
@@ -347,6 +359,9 @@ public class Group {
 		} else if (!owner.equals(other.owner)) {
 			return false;
 		}
+		if (privateMemberList != other.privateMemberList) {
+			return false;
+		}
 		if (resources == null) {
 			if (other.resources != null) {
 				return false;
@@ -382,6 +397,7 @@ public class Group {
 		private final GroupName groupName;
 		private final UserName owner;
 		private boolean isPrivate = false;
+		private boolean privateMemberList = true;
 		private final CreateAndModTimes times;
 		private final Map<UserName, GroupUser> allMembers = new HashMap<>();
 		private final Set<UserName> admins = new HashSet<>();
@@ -474,12 +490,23 @@ public class Group {
 			return this;
 		}
 		
+		/** Set the member list to private or public. This has no effect on the contents of
+		 * this class, but must be respected in external views.
+		 * @param privateMembers true to make the members list private, false for public.
+		 * @return this builder.
+		 */
+		public Builder withPrivateMemberList(final boolean privateMembers) {
+			this.privateMemberList = privateMembers;
+			return this;
+		}
+		
 		/** Build the {@link Group}.
 		 * @return the new group.
 		 */
 		public Group build() {
-			return new Group(groupID, groupName, owner, isPrivate, allMembers, admins, resources,
-					times.getCreationTime(), times.getModificationTime(), customFields);
+			return new Group(groupID, groupName, owner, isPrivate, privateMemberList, allMembers,
+					admins, resources, times.getCreationTime(), times.getModificationTime(),
+					customFields);
 		}
 	}
 	
