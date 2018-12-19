@@ -143,6 +143,7 @@ public class MongoGroupsStorageOpsTest {
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 						.withCustomField(new NumberedCustomField("field"), "value")
 						.build())
@@ -173,6 +174,7 @@ public class MongoGroupsStorageOpsTest {
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 						.withIsPrivate(true)
+						.withPrivateMemberList(false)
 						.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 								.withCustomField(new NumberedCustomField("field"), "value")
 								.build())
@@ -194,6 +196,25 @@ public class MongoGroupsStorageOpsTest {
 								new ResourceID("z")))
 						.withCustomField(new NumberedCustomField("foo-83"), "bar")
 						.withCustomField(new NumberedCustomField("whoo"), "whee")
+						.build()));
+	}
+	
+	@Test
+	public void getGroupWithDefaultPrivateMemberList() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withPrivateMemberList(false)
+				.build());
+		
+		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
+				new Document("$unset", new Document("privmem", "")));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(
+						new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+						new CreateAndModTimes(
+								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 						.build()));
 	}
 	
