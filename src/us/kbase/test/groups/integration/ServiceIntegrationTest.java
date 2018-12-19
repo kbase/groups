@@ -566,6 +566,7 @@ public class ServiceIntegrationTest {
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
 				.with("private", isPrivate)
+				.with("privatemembers", true)
 				.with("role", "owner")
 				.with("memcount", 1)
 				.with("rescount", Collections.emptyMap())
