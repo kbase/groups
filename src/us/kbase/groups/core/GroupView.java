@@ -175,7 +175,7 @@ public class GroupView {
 	
 	/** Get whether this is a private view of the group, where only the group ID is visible.
 	 * The equivalent of {@link #isPrivate} && {@link #getRole()} equals
-	 * {@link GroupView#Role#none}.
+	 * {@link Role#none}.
 	 * @return true if this is a private view of the group.
 	 */
 	public boolean isPrivateView() {

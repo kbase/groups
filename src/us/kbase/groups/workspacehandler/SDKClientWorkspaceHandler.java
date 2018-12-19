@@ -35,9 +35,12 @@ import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.workspace.GetObjectInfo3Params;
+import us.kbase.workspace.GetObjectInfo3Results;
 import us.kbase.workspace.GetPermissionsMassParams;
 import us.kbase.workspace.ListWorkspaceIDsParams;
 import us.kbase.workspace.ListWorkspaceIDsResults;
+import us.kbase.workspace.ObjectSpecification;
 import us.kbase.workspace.SetPermissionsParams;
 import us.kbase.workspace.WorkspaceClient;
 import us.kbase.workspace.WorkspaceIdentity;
@@ -249,6 +252,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		final Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>> wsinfo;
 		final String desc;
+		final NarrInfo narrInfo;
 		try {
 			final WorkspaceIdentity wsi = new WorkspaceIdentity().withId((long) wsid);
 			wsinfo = client.administer(new UObject(ImmutableMap.of(
@@ -257,7 +261,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			final UObject d = client.administer(new UObject(ImmutableMap.of(
 					"command", "getWorkspaceDescription", "params", wsi)));
 			desc = d == null ? null : d.asScalar();
-			//TODO NNOW get narrative creation date from narr ob v1, if no obj just add error message
+			narrInfo = getNarrativeName(wsinfo.getE1(), wsinfo.getE9());
 		} catch (ServerException e) {
 			if (getWorkspaceID(e) != null) { // deleted or missing
 				return null;
@@ -269,20 +273,43 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		}
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("name", wsinfo.getE2());
-		ret.put("narrname", getNarrativeName(wsinfo.getE9()));
+		ret.put("narrname", narrInfo.name);
+		ret.put("narrcreate", narrInfo.created);
 		ret.put("public", PERM_READ.equals(wsinfo.getE7()));
-		ret.put("moddate", OffsetDateTime.parse(wsinfo.getE4(), FMT).toInstant()
-				.toEpochMilli());
+		ret.put("moddate", timestampToEpochMS(wsinfo.getE4()));
 		ret.put("description", desc);
 		return new WSInfoOwner(ret, wsinfo.getE3());
 	}
 
-	private String getNarrativeName(final Map<String, String> meta) {
-		if ("false".equals(meta.get("is_temporary"))) {
-			// if nice name is null will return null, obviously
-			return meta.get("narrative_nice_name");
+	private long timestampToEpochMS(final String timestamp) {
+		return OffsetDateTime.parse(timestamp, FMT).toInstant().toEpochMilli();
+	}
+
+	private static class NarrInfo {
+		private String name;
+		private Long created; // the date of the 1st version of the narrative object
+		
+		private NarrInfo(final String name, final Long created) {
+			this.name = name;
+			this.created = created;
+		}
+	}
+	
+	private NarrInfo getNarrativeName(final long wsid, final Map<String, String> meta)
+			throws IOException, JsonClientException {
+		if ("false".equals(meta.get("is_temporary")) && meta.containsKey("narrative")) {
+			final String name = meta.get("narrative_nice_name");
+			final long narrativeID = Integer.parseInt(meta.get("narrative"));
+			final GetObjectInfo3Results objinfo = client.administer(new UObject(ImmutableMap.of(
+					"command", "getObjectInfo",
+					"params", new GetObjectInfo3Params()
+							.withObjects(Arrays.asList(new ObjectSpecification()
+									.withWsid(wsid).withObjid(narrativeID).withVer((long) 1))))))
+					.asClassInstance(GetObjectInfo3Results.class);
+			final Long saved = timestampToEpochMS(objinfo.getInfos().get(0).getE4());
+			return new NarrInfo(name, saved);
 		} else {
-			return null;
+			return new NarrInfo(null, null);
 		}
 	}
 	
@@ -334,8 +361,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		checkNotNull(resource, "resource");
 		checkNotNull(user, "user");
 		final long wsid = getWSID(resource);
-		final Map<String, String> perms = getPermissions(Arrays.asList(wsid), true)
-				.perms.get(0);
+		final Map<String, String> perms = getPermissions(Arrays.asList(wsid), true).perms.get(0);
 		if (!READ_PERMS.contains(perms.get(user.getName())) &&
 				!PERM_READ.equals(perms.get(GLOBAL_READ_USER))) {
 			// tiny chance for a race condition here
