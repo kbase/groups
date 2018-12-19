@@ -319,6 +319,7 @@ public class GroupsAPI {
 				resourceCounts.put(t.getName(), g.getResourceCounts().get(t));
 			}
 			if (g.isStandardView()) {
+				ret.put(Fields.GROUP_MEMBERS_PRIVATE, g.isPrivateMembersList().get());
 				ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner().get())));
 				ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));
 				ret.put(Fields.GROUP_ADMINS, toMemberList(g.getAdministrators(), g));

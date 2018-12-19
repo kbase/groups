@@ -65,6 +65,7 @@ public class GroupView {
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
 	private final boolean isPrivate;
+	private final Optional<Boolean> isPrivateMemberList;
 	
 	// this class is starting to get a little hairy. Getting close to rethink/refactor time
 	private GroupView(
@@ -90,6 +91,7 @@ public class GroupView {
 			this.customFields = Collections.emptyMap();
 			this.memberCount = Optional.empty();
 			this.resourceCount = Collections.emptyMap();
+			this.isPrivateMemberList = Optional.empty();
 		} else {
 			this.memberCount = Optional.of(group.getAllMembers().size());
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
@@ -110,11 +112,13 @@ public class GroupView {
 			this.modificationDate = Optional.of(group.getModificationDate());
 			final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
 			if (!standardView) {
+				isPrivateMemberList = Optional.empty();
 				members = Collections.emptySet();
 				admins = Collections.emptySet();
 			} else {
+				isPrivateMemberList = Optional.of(group.isPrivateMemberList());
 				admins = group.getAdministrators();
-				if (role.equals(Role.none)) {
+				if (role.equals(Role.none) && group.isPrivateMemberList()) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
 							u, filterUserFields(group.getMember(u), upub)));
 					members = Collections.emptySet();
@@ -173,6 +177,13 @@ public class GroupView {
 		return isPrivate;
 	}
 	
+	/** Get whether the members list is private. Only available in the standard view.
+	 * @return true if the members list is private.
+	 */
+	public Optional<Boolean> isPrivateMembersList() {
+		return isPrivateMemberList;
+	}
+	
 	/** Get whether this is a private view of the group, where only the group ID is visible.
 	 * The equivalent of {@link #isPrivate} && {@link #getRole()} equals
 	 * {@link Role#none}.
@@ -210,7 +221,8 @@ public class GroupView {
 		return owner;
 	}
 
-	/** Get the members of the group. Empty for minimal and non-member views.
+	/** Get the members of the group. Empty for minimal views and non-member views where the member
+	 * list is private.
 	 * @return the group members.
 	 */
 	public Set<UserName> getMembers() {
@@ -285,6 +297,7 @@ public class GroupView {
 	// there's a lot of fields that are essentially redundant, but taking them out makes
 	// EqualsVerifier complain and I can't be arsed to fix it. Besides, the performance hit
 	// is likely negligible.
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -295,6 +308,7 @@ public class GroupView {
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
 		result = prime * result + (isPrivate ? 1231 : 1237);
+		result = prime * result + ((isPrivateMemberList == null) ? 0 : isPrivateMemberList.hashCode());
 		result = prime * result + (isStandardView ? 1231 : 1237);
 		result = prime * result + ((memberCount == null) ? 0 : memberCount.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
@@ -355,6 +369,13 @@ public class GroupView {
 			return false;
 		}
 		if (isPrivate != other.isPrivate) {
+			return false;
+		}
+		if (isPrivateMemberList == null) {
+			if (other.isPrivateMemberList != null) {
+				return false;
+			}
+		} else if (!isPrivateMemberList.equals(other.isPrivateMemberList)) {
 			return false;
 		}
 		if (isStandardView != other.isStandardView) {

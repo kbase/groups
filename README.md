@@ -34,6 +34,7 @@ Represents a group of users and associated data.
 {
     "id": <the group ID>,
     "private": <true if the group is private, false otherwise>,
+    "privatemembers": <true if the members list is private, false otherwise>,
     "role": <'owner', 'admin', 'member', or 'none', as appropriate>,
     "name": <the group name>,
     "owner": <the User data or user name for the group owner>,
@@ -259,6 +260,8 @@ PUT /group/<group id>
 {
     "name": <an arbitrary group name>,
     "private": <true for a private group, false (the default) for public, optional>,
+    "privatemembers": <true (the default) for a private members list, false for public,
+        optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -275,6 +278,7 @@ and hyphens, and be no longer than 100 characters.
 The group name must be no longer than 256 Unicode code points.
 
 If `private` is null or missing altogether, the group is set as public.
+If `privatemembers` is null or missing altogether, the group member list is set as private.
 
 See `Custom fields` below for information on custom fields.
 
@@ -288,6 +292,8 @@ PUT /group/<group id>/update
 {
     "name": <an arbitrary group name, optional>,
     "private": <true for a private group, false for public, optional>,
+    "privatemembers": <true (the default) for a private members list, false for public,
+        optional>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -300,7 +306,8 @@ The user must be a group administrator.
 
 The constraints on the parameters are the same as for the creation parameters.
 
-If `name` or `private` are `null` or missing altogether, they are not altered.
+If `name`, `private` or `privatemembers` are `null` or missing altogether, they are not
+altered.
 
 If custom fields are missing, they are not altered.
 If they are `null`, they are removed. Otherwise they are set to the new value.
@@ -321,12 +328,13 @@ RETURNS: A Group.
 If the user is not a member of the group or no authorization is provided and the group is
 private, only the `groupid`, `private`, and `role` fields are included.
 
-If no authorization is provided, the members list is empty, only public custom fields are included,
-and only public resources associated with the group are returned.
+If no authorization is provided, the members list is populated or not based on the
+`privatemembers` field, only public custom fields are included, and only public resources
+associated with the group are returned.
 
 If authorization is provided and the user is not a member of the group, the members list is
-empty, only public custom fields are included, and only group-associated public resources and
-resources the user administrates are returned.
+populated or not based on the `privatemembers` field, only public custom fields are included,
+and only group-associated public resources and resources the user administrates are returned.
 
 If authorization is provided and the user is a member of the group, the members list is populated,
 all custom fields are included, and all group-associated resources are returned.

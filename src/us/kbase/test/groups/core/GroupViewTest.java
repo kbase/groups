@@ -38,6 +38,7 @@ public class GroupViewTest {
 	
 	private static final Group GROUP;
 	private static final Group PRIVGROUP;
+	private static final Group PUBMEMBERGROUP;
 	static {
 		try {
 			final ResourceType ws = new ResourceType("workspace");
@@ -68,6 +69,7 @@ public class GroupViewTest {
 					.withCustomField(new NumberedCustomField("field2"), "val2");
 			GROUP = b.build();
 			PRIVGROUP = b.withIsPrivate(true).build();
+			PUBMEMBERGROUP = b.withIsPrivate(false).withPrivateMemberList(false).build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -92,6 +94,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
@@ -125,6 +128,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
@@ -159,6 +163,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(true));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(mt()));
@@ -203,6 +208,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.of(true)));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(),
 				is(set(new UserName("a1"), new UserName("a2"))));
@@ -246,6 +252,50 @@ public class GroupViewTest {
 	}
 	
 	@Test
+	public void nonMemberViewPublicMembers() throws Exception {
+		final GroupView gv = GroupView.getBuilder(PUBMEMBERGROUP, null)
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
+		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.of(false)));
+		assertThat("incorrect privview", gv.isPrivateView(), is(false));
+		assertThat("incorrect admins", gv.getAdministrators(),
+				is(set(new UserName("a1"), new UserName("a2"))));
+		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
+		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
+		assertThat("incorrect members", gv.getMembers(),
+				is(set(new UserName("m1"), new UserName("m2"))));
+		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
+		assertThat("incorrect view type", gv.isStandardView(), is(true));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
+		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
+		assertThat("incorrect user", gv.getMember(new UserName("user")),
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a1")),
+				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a2")),
+				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
+		assertThat("incorrect user", gv.getMember(new UserName("m1")),
+				is(GroupUser.getBuilder(new UserName("m1"), inst(75000))
+						.build()));
+		assertThat("incorrect user", gv.getMember(new UserName("m2")),
+				is(GroupUser.getBuilder(new UserName("m2"), inst(84000))
+						.build()));
+		
+		assertImmutable(gv.getAdministrators(), new UserName("u"));
+		assertImmutable(gv.getMembers(), new UserName("u"));
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
+		assertImmutable(gv.getResourceCounts(), new ResourceType("t"), 7);
+	}
+	
+	@Test
 	public void privateNonMemberView() throws Exception {
 		final GroupView gv = GroupView.getBuilder(PRIVGROUP, null)
 				.withStandardView(true)
@@ -261,6 +311,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(true));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(mt()));
@@ -290,13 +341,16 @@ public class GroupViewTest {
 	
 	@Test
 	public void memberView() throws Exception {
-		memberView(GROUP, false, new UserName("a1"), GroupView.Role.admin);
-		memberView(PRIVGROUP, true, new UserName("user"), GroupView.Role.owner);
+		memberView(GROUP, false, Optional.of(true), new UserName("a1"), GroupView.Role.admin);
+		memberView(PRIVGROUP, true, Optional.of(true), new UserName("user"), GroupView.Role.owner);
+		memberView(PUBMEMBERGROUP, false, Optional.of(false), new UserName("m1"),
+				GroupView.Role.member);
 	}
 
 	private void memberView(
 			final Group group,
 			final boolean priv,
+			final Optional<Boolean> privmemb,
 			final UserName user,
 			final GroupView.Role role)
 			throws MissingParameterException, IllegalParameterException {
@@ -316,6 +370,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(priv));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(privmemb));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(),
 				is(set(new UserName("a1"), new UserName("a2"))));

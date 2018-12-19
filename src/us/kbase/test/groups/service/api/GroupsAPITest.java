@@ -73,6 +73,7 @@ public class GroupsAPITest {
 	private static final Group GROUP_MIN;
 	private static final Group GROUP_MAX;
 	private static final Group GROUP_PRIV;
+	private static final Group GROUP_PUB_MEMB;
 	static {
 		try {
 			GROUP_MIN = Group.getBuilder(
@@ -86,6 +87,7 @@ public class GroupsAPITest {
 			final Builder b = getGroupMaxBuilder();
 			GROUP_MAX = b.build();
 			GROUP_PRIV = b.withIsPrivate(true).build();
+			GROUP_PUB_MEMB = b.withIsPrivate(false).withPrivateMemberList(false).build();
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("Fix your tests newb", e);
 		}
@@ -116,6 +118,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("private", false)
+			.with("privatemembers", true)
 			.with("role", "owner")
 			.with("name", "name")
 			.with("memcount", 1)
@@ -150,6 +153,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
+			.with("privatemembers", true)
 			.with("role", "owner")
 			.with("name", "name2")
 			.with("memcount", 5)
@@ -188,6 +192,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
+			.with("privatemembers", true)
 			.with("role", "none")
 			.with("name", "name2")
 			.with("memcount", 5)
@@ -646,6 +651,60 @@ public class GroupsAPITest {
 	}
 	
 	@Test
+	public void getGroupNonMemberPublicMembers() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id")))
+				.thenReturn(GroupView.getBuilder(GROUP_PUB_MEMB, new UserName("nonmember"))
+						.withStandardView(true)
+						.withPublicFieldDeterminer(f -> f.getField().equals("otherfield"))
+						.withPublicUserFieldDeterminer(f -> f.getField().equals("yay-6"))
+						.build());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("privatemembers", false)
+				.with("role", "none")
+				.with("name", "name2")
+				.with("memcount", 5)
+				.with("rescount", Collections.emptyMap())
+				.with("owner", ImmutableMap.of(
+						"name", "u2",
+						"joined", 20000L,
+						"custom", Collections.emptyMap()))
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("members", Arrays.asList(
+						ImmutableMap.of(
+								"name", "bar",
+								"joined", 40000L,
+								"custom", Collections.emptyMap()),
+						ImmutableMap.of(
+								"name", "foo",
+								"joined", 650000L,
+								"custom", Collections.emptyMap())
+						))
+				.with("admins", Arrays.asList(
+						ImmutableMap.of(
+								"name", "whee",
+								"joined", 220000L,
+								"custom", Collections.emptyMap()),
+						ImmutableMap.of(
+								"name", "whoo",
+								"joined", 760000L,
+								"custom", ImmutableMap.of("yay-6", "boo"))
+						))
+				.with("resources", Collections.emptyMap())
+				.with("custom", ImmutableMap.of("otherfield", "fieldval"))
+				.build();
+		
+		assertThat("incorrect group", ret, is(expected));
+	}
+	
+	@Test
 	public void getGroupPrivate() throws Exception {
 		final Groups g = mock(Groups.class);
 		
@@ -673,6 +732,24 @@ public class GroupsAPITest {
 		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
 		expected.put("private", true);
 		expected.put("role", "member");
+		
+		assertThat("incorrect group", ret, is(expected));
+	}
+	
+	@Test
+	public void getGroupMemberPublicMembers() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id")))
+				.thenReturn(GroupView.getBuilder(GROUP_PUB_MEMB, new UserName("foo"))
+						.withStandardView(true)
+						.build());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		
+		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
+		expected.put("role", "member");
+		expected.put("privatemembers", false);
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
