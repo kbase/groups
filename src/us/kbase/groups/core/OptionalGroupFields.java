@@ -17,12 +17,15 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 public class OptionalGroupFields {
 	
 	private final Optional<Boolean> isPrivate;
+	private final Optional<Boolean> privateMemberList;
 	private final Map<NumberedCustomField, OptionalString> customFields;
 
 	private OptionalGroupFields(
 			final Optional<Boolean> isPrivate,
+			final Optional<Boolean> privateMemberList,
 			final Map<NumberedCustomField, OptionalString> customFields) {
 		this.isPrivate = isPrivate;
+		this.privateMemberList = privateMemberList;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
@@ -30,7 +33,7 @@ public class OptionalGroupFields {
 	 * @return if a field requires an update.
 	 */
 	public boolean hasUpdate() {
-		return isPrivate.isPresent() || !customFields.isEmpty();
+		return isPrivate.isPresent() || privateMemberList.isPresent() || !customFields.isEmpty();
 	}
 	
 	/** Get any update to the group privacy field. {@link Optional#empty()} indicates no update
@@ -39,6 +42,14 @@ public class OptionalGroupFields {
 	 */
 	public Optional<Boolean> isPrivate() {
 		return isPrivate;
+	}
+	
+	/** Get any update to the group member list privacy field. {@link Optional#empty()}
+	 * indicates no update is required.
+	 * @return the member list privacy update.
+	 */
+	public Optional<Boolean> isPrivateMemberList() {
+		return privateMemberList;
 	}
 	
 	/** Get any custom fields included in the fields.
@@ -65,6 +76,7 @@ public class OptionalGroupFields {
 		int result = 1;
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((isPrivate == null) ? 0 : isPrivate.hashCode());
+		result = prime * result + ((privateMemberList == null) ? 0 : privateMemberList.hashCode());
 		return result;
 	}
 
@@ -94,6 +106,13 @@ public class OptionalGroupFields {
 		} else if (!isPrivate.equals(other.isPrivate)) {
 			return false;
 		}
+		if (privateMemberList == null) {
+			if (other.privateMemberList != null) {
+				return false;
+			}
+		} else if (!privateMemberList.equals(other.privateMemberList)) {
+			return false;
+		}
 		return true;
 	}
 	
@@ -118,6 +137,7 @@ public class OptionalGroupFields {
 	public static class Builder {
 
 		private Optional<Boolean> isPrivate = Optional.empty();
+		private Optional<Boolean> privateMemberList = Optional.empty();
 		private final Map<NumberedCustomField, OptionalString> customFields = new HashMap<>();
 		
 		private Builder() {}
@@ -132,7 +152,17 @@ public class OptionalGroupFields {
 			this.isPrivate = Optional.ofNullable(isPrivate);
 			return this;
 		}
-		
+
+		/** Set the privacy state of the group member list. A null value indicates no change
+		 * should be made to the current (or default) value.
+		 * @param privateMemberList true to make the group member listprivate, false for public, null for
+		 * no change / default.
+		 * @return this builder.
+		 */
+		public Builder withNullablePrivateMemberList(final Boolean privateMemberList) {
+			this.privateMemberList = Optional.ofNullable(privateMemberList);
+			return this;
+		}
 		
 		/** Add a custom field to the set of fields.
 		 * @param field the field.
@@ -151,7 +181,7 @@ public class OptionalGroupFields {
 		 * @return the fields.
 		 */
 		public OptionalGroupFields build() {
-			return new OptionalGroupFields(isPrivate, customFields);
+			return new OptionalGroupFields(isPrivate, privateMemberList, customFields);
 		}
 	}
 	
