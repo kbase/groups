@@ -246,12 +246,16 @@ public class GroupsTest {
 		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
 		final GroupView ret = mocks.groups.createGroup(new Token("token"), GroupCreationParams
 				.getBuilder(new GroupID("bar"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
+						.withNullableIsPrivate(true)
+						.withNullablePrivateMemberList(false)
 						.withCustomField(new NumberedCustomField("foo-26"),
 								OptionalString.of("yay"))
 						.withCustomField(new NumberedCustomField("a"), OptionalString.empty())
@@ -264,6 +268,8 @@ public class GroupsTest {
 		verify(mocks.storage).createGroup(Group.getBuilder(
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withIsPrivate(true)
+				.withPrivateMemberList(false)
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
 				.build());
 		
@@ -271,11 +277,14 @@ public class GroupsTest {
 				new GroupID("bar"), new GroupName("name"), toGUser("foo"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withCustomField(new NumberedCustomField("foo-26"), "yay")
-				.build(), new UserName("foo"))
-				.withStandardView(true)
-				.withResourceType(new ResourceType("workspace"))
-				.withResourceType(new ResourceType("catalogmethod"))
-				.build()));
+				.withIsPrivate(true)
+				.withPrivateMemberList(false)
+				.build(),
+				new UserName("foo"))
+						.withStandardView(true)
+						.withResourceType(new ResourceType("workspace"))
+						.withResourceType(new ResourceType("catalogmethod"))
+						.build()));
 	}
 	
 	@Test

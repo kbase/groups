@@ -118,11 +118,12 @@ public class GroupCreationParamsTest {
 	}
 	
 	@Test
-	public void toGroupPublicNull() throws Exception {
+	public void toGroupNullBooleans() throws Exception {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(null)
+						.withNullablePrivateMemberList(null)
 						.build())
 				.build();
 		
@@ -139,11 +140,12 @@ public class GroupCreationParamsTest {
 	}
 	
 	@Test
-	public void toGroupPublic() throws Exception {
+	public void toGroupFalseBooleans() throws Exception {
 		final GroupCreationParams p = GroupCreationParams.getBuilder(
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(false)
+						.withNullablePrivateMemberList(false)
 						.build())
 				.build();
 		
@@ -154,6 +156,7 @@ public class GroupCreationParamsTest {
 				new GroupID("id"), new GroupName("name"),
 				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withPrivateMemberList(false)
 				.build();
 		
 		assertThat("incorrect group", g, is(expected));
@@ -165,6 +168,7 @@ public class GroupCreationParamsTest {
 				new GroupID("id"), new GroupName("name"))
 				.withOptionalFields(OptionalGroupFields.getBuilder()
 						.withNullableIsPrivate(true)
+						.withNullablePrivateMemberList(true)
 						.withCustomField(new NumberedCustomField("foo"), OptionalString.of("bar"))
 						.withCustomField(new NumberedCustomField("foo-1"), OptionalString.empty())
 						.build())
