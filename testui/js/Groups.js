@@ -404,6 +404,7 @@ export default class {
                           <tr><th>Members</th><td>${s(json.memcount)}</td></tr>
                           <tr><th>Role</th><td>${s(json.role)}</td></tr>
                           <tr><th>Private</th><td>${s(json.private)}</td></tr>
+                          <tr><th>Private Member List</th><td>${s(json.privatemembers)}</td></tr>
                         </tbody>
                       </table>
                       <div>
@@ -1030,7 +1031,9 @@ export default class {
       if (!group.custom) {
           group.custom = '';
       }
-      const checked = group['private'] ? 'checked' : '';
+      const privchecked = group['private'] ? 'checked' : '';
+      const pm = group['privatemembers'];
+      const privmemchecked = (typeof pm === "undefined") ? 'checked' : pm ? 'checked' : '';
       const input = 
           `
           <div>
@@ -1054,9 +1057,17 @@ export default class {
             <div class="form-group">
               <label for="grouppriv">Private</label>
               <input type="checkbox" class="form-control" id="grouppriv"
-                aria-describedby="privhelp" ${checked} />
+                aria-describedby="privhelp" ${privchecked} />
               <small id="privhelp" class="form-text text-muted">
                 Whether the group is private.
+              </small>
+            </div>
+            <div class="form-group">
+              <label for="groupprivmem">Private Member List</label>
+              <input type="checkbox" class="form-control" id="groupprivmem"
+                aria-describedby="privhelpmem" ${privmemchecked} />
+              <small id="privhelpmem" class="form-text text-muted">
+                Whether the group member list is private.
               </small>
             </div>
             <div class="form-group">
@@ -1088,11 +1099,13 @@ export default class {
           const desc = $('#groupdesc').val();
           const grav = $('#groupgravatar').val();
           const checkedinput = $('#grouppriv').prop('checked');
+          const checkedinputmem = $('#groupprivmem').prop('checked');
           fetch(this.serviceUrl + "group/" + id + urlsuffix,
                 {"method": "PUT",
                  "headers": this.getHeaders(),
                  "body": JSON.stringify({"name": name,
                                          "private": checkedinput,
+                                         "privatemembers": checkedinputmem,
                                          "custom": {"gravatarhash": grav,
                                                     "description": desc}})
                  }).then( (response) => {
