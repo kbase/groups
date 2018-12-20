@@ -9,6 +9,7 @@ import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupIDAndName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.Groups;
@@ -69,12 +70,28 @@ public interface GroupsStorage {
 	 */
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
+	/** Get the name of a group.
+	 * @param groupID the ID of the group.
+	 * @return the group name as well as the ID.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is not group with the given ID.
+	 */
+	GroupIDAndName getGroupName(GroupID groupID)
+			throws GroupsStorageException, NoSuchGroupException;
+	
 	/** Check whether a group exists.
 	 * @param groupID the ID of the group.
 	 * @return true if the group exists, false otherwise.
-	 * @throws GroupsStorageException
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
+
+	/** Get the groups the member belongs to, up to a maximum of 100000 groups, sorted by ID.
+	 * @param user the user for whom groups will be returned.
+	 * @return the user's groups.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	List<GroupIDAndName> getMemberGroups(final UserName user) throws GroupsStorageException;
 	
 	/** Get groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.

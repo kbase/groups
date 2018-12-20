@@ -43,6 +43,7 @@ import com.mongodb.client.result.UpdateResult;
 
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupIDAndName;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
@@ -546,19 +547,44 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public Group getGroup(final GroupID groupID)
 			throws GroupsStorageException, NoSuchGroupException {
-		checkNotNull(groupID, "groupID");
+		return toGroup(getGroupDoc(groupID, null));
+	}
+
+	private Document getGroupDoc(final GroupID groupID, final Document projection)
+			throws GroupsStorageException, NoSuchGroupException {
+		requireNonNull(groupID, "groupID");
 		final Document grp = findOne(
-				COL_GROUPS, new Document(Fields.GROUP_ID, groupID.getName()));
+				COL_GROUPS, new Document(Fields.GROUP_ID, groupID.getName()), projection);
 		if (grp == null) {
 			throw new NoSuchGroupException(groupID.getName());
-		} else {
-			return toGroup(grp);
+		}
+		return grp;
+	}
+	
+	@Override
+	public GroupIDAndName getGroupName(final GroupID groupID)
+			throws NoSuchGroupException, GroupsStorageException {
+		return toGroupIDAndName(getGroupDoc(
+				groupID,
+				new Document(Fields.GROUP_ID, 1)
+						.append(Fields.GROUP_NAME, 1)
+						.append(Fields.MONGO_ID, -1)));
+	}
+
+	private GroupIDAndName toGroupIDAndName(final Document grp) throws GroupsStorageException {
+		try {
+			return GroupIDAndName.of(
+					new GroupID(grp.getString(Fields.GROUP_ID)),
+					new GroupName(grp.getString(Fields.GROUP_NAME)));
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new GroupsStorageException(
+					"Unexpected value in database: " + e.getMessage(), e);
 		}
 	}
 	
 	@Override
 	public boolean getGroupExists(final GroupID groupID) throws GroupsStorageException {
-		checkNotNull(groupID, "groupID");
+		requireNonNull(groupID, "groupID");
 		try {
 			return db.getCollection(COL_GROUPS)
 					.countDocuments(new Document(Fields.GROUP_ID, groupID.getName())) == 1;
@@ -568,10 +594,52 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
+	public List<GroupIDAndName> getMemberGroups(final UserName user)
+			throws GroupsStorageException {
+		// add filters for admin/owner later
+		final Document query = new Document(Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
+				Fields.GROUP_MEMBER_NAME, requireNonNull(user, "user").getName());
+		final Document projection = new Document(Fields.GROUP_ID, 1)
+				.append(Fields.GROUP_NAME, 1)
+				.append(Fields.MONGO_ID, -1);
+		final Document sort = new Document(Fields.GROUP_ID, 1);
+		
+		return getList(COL_GROUPS, query, projection, sort, 100000, d -> toGroupIDAndName(d));
+	}
+
+	private static interface FnParamExcept<T, R> {
+		
+		R apply(T t) throws GroupsStorageException;
+	}
+
+	private <T> List<T> getList(
+			final String collection,
+			final Document query,
+			final Document projection,
+			final Document sort,
+			final int limit,
+			final FnParamExcept<Document, T> docToClass)
+			throws GroupsStorageException {
+		final List<T> ret = new LinkedList<>();
+		try {
+			final FindIterable<Document> gdocs = db.getCollection(collection)
+					.find(query)
+					.projection(projection)
+					.sort(sort)
+					.limit(limit); 
+			for (final Document gdoc: gdocs) {
+				ret.add(docToClass.apply(gdoc));
+			}
+		} catch (MongoException e) {
+			throw wrapMongoException(e);
+		}
+		return ret;
+	}
+	
+	@Override
 	public List<Group> getGroups(final GetGroupsParams params, final UserName user)
 			throws GroupsStorageException {
-		checkNotNull(params, "params");
-		final List<Group> ret = new LinkedList<>();
+		requireNonNull(params, "params");
 		final Document query = new Document();
 		if (params.getExcludeUpTo().isPresent()) {
 			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
@@ -584,19 +652,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new Document(Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
 							Fields.GROUP_MEMBER_NAME, user.getName())));
 		}
-		try {
-			final FindIterable<Document> gdocs = db.getCollection(COL_GROUPS).find(query)
-					// may want to allow alternate sorts later, will need indexes
-					.sort(new Document(Fields.GROUP_ID, params.isSortAscending() ? 1 : -1))
-					// could make limit a param (with a max), YAGNI for now
-					.limit(100); 
-			for (final Document gdoc: gdocs) {
-				ret.add(toGroup(gdoc));
-			}
-		} catch (MongoException e) {
-			throw wrapMongoException(e);
-		}
-		return ret;
+		// may want to allow alternate sorts later, will need indexes
+		final Document sort = new Document(Fields.GROUP_ID, params.isSortAscending() ? 1 : -1);
+		// could make limit a param (with a max), YAGNI for now
+		return getList(COL_GROUPS, query, new Document(), sort, 100, d -> toGroup(d));
 	}
 	
 	private Group toGroup(final Document grp) throws GroupsStorageException {
@@ -1142,20 +1201,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 			query.append(Fields.REQUEST_MODIFICATION,
 					new Document(inequality, Date.from(params.getExcludeUpTo().get())));
 		}
-		final List<GroupRequest> ret = new LinkedList<>();
-		try {
-			final FindIterable<Document> gdocs = db.getCollection(COL_REQUESTS).find(query)
-					.limit(100) // could make a param, YAGNI for now
-					// allow other sorts? can't think of any particularly useful ones
-					.sort(new Document(Fields.REQUEST_MODIFICATION,
-							params.isSortAscending() ? 1 : -1));
-			for (final Document rdoc: gdocs) {
-				ret.add(toRequest(rdoc));
-			}
-		} catch (MongoException e) {
-			throw wrapMongoException(e);
-		}
-		return ret;
+		// allow other sorts? can't think of any particularly useful ones
+		final Document sort = new Document(Fields.REQUEST_MODIFICATION,
+				params.isSortAscending() ? 1 : -1);
+		// could make limit a param, YAGNI for now
+		return getList(COL_REQUESTS, query, new Document(), sort, 100, d -> toRequest(d));
 	}
 	
 	private GroupRequest toRequest(final Document req) throws GroupsStorageException {
