@@ -54,12 +54,12 @@ public class GroupsBuilder {
 
 	//TODO TEST
 	
-	private static final ResourceType RTWS;
-	private static final ResourceType RTCAT;
+	public static final ResourceType RESOURCE_TYPE_WORKSPACE;
+	public static final ResourceType RESOURCE_TYPE_CATALOG_METHOD;
 	static {
 		try {
-			RTWS = new ResourceType("workspace");
-			RTCAT = new ResourceType("catalogmethod");
+			RESOURCE_TYPE_WORKSPACE = new ResourceType("workspace");
+			RESOURCE_TYPE_CATALOG_METHOD = new ResourceType("catalogmethod");
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new RuntimeException("impossible", e);
 		}
@@ -138,7 +138,9 @@ public class GroupsBuilder {
 		return new Groups(
 				storage,
 				uh,
-				ImmutableMap.of(RTWS, getWorkspaceHandler(c), RTCAT, getCatalogHandler(c)),
+				ImmutableMap.of(
+						RESOURCE_TYPE_WORKSPACE, getWorkspaceHandler(c),
+						RESOURCE_TYPE_CATALOG_METHOD, getCatalogHandler(c)),
 				getValidators(c),
 				getNotifier(c));
 	}
