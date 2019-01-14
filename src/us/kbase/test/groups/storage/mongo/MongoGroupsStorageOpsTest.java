@@ -350,6 +350,8 @@ public class MongoGroupsStorageOpsTest {
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
 		getGroupNameFail(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
+		getMemberGroupsFail(new UserName("uname"), new GroupsStorageException(
+				"Unexpected value in database: 30000 Missing input parameter: group name"));
 		
 		// illegal parameter
 		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
@@ -359,6 +361,9 @@ public class MongoGroupsStorageOpsTest {
 				"Unexpected value in database: 30001 Illegal input parameter: " +
 				"group name contains control characters"));
 		getGroupNameFail(new GroupID("gid"), new GroupsStorageException(
+				"Unexpected value in database: 30001 Illegal input parameter: " +
+				"group name contains control characters"));
+		getMemberGroupsFail(new UserName("uname"), new GroupsStorageException(
 				"Unexpected value in database: 30001 Illegal input parameter: " +
 				"group name contains control characters"));
 		
@@ -435,11 +440,16 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void getMemberGroupsFail() throws Exception {
+		getMemberGroupsFail(null, new NullPointerException("user"));
+	}
+	
+	private void getMemberGroupsFail(final UserName member, final Exception expected)
+			throws Exception {
 		try {
-			manager.storage.getMemberGroups(null);
+			manager.storage.getMemberGroups(member);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("user"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
