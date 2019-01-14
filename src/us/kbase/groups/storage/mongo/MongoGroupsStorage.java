@@ -44,6 +44,7 @@ import com.mongodb.client.result.UpdateResult;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupIDAndName;
+import us.kbase.groups.core.GroupIDNameMembership;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
@@ -562,13 +563,26 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public GroupIDAndName getGroupName(final GroupID groupID)
+	public GroupIDNameMembership getGroupName(final GroupID groupID, final UserName user)
 			throws NoSuchGroupException, GroupsStorageException {
-		return toGroupIDAndName(getGroupDoc(
-				groupID,
-				new Document(Fields.GROUP_ID, 1)
-						.append(Fields.GROUP_NAME, 1)
-						.append(Fields.MONGO_ID, -1)));
+		final Document projection = new Document(Fields.GROUP_ID, 1)
+				.append(Fields.GROUP_IS_PRIVATE, 1)
+				.append(Fields.GROUP_NAME, 1)
+				.append(Fields.MONGO_ID, 0);
+		if (user != null) {
+			projection.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
+					new Document(Fields.GROUP_MEMBER_NAME, user.getName())));
+		}
+		final Document gdoc = getGroupDoc(groupID, projection);
+		try {
+			return GroupIDNameMembership.getBuilder(new GroupID(gdoc.getString(Fields.GROUP_ID)))
+					.withGroupName(new GroupName(gdoc.getString(Fields.GROUP_NAME)))
+					.withIsMember(gdoc.containsKey(Fields.GROUP_MEMBERS))
+					.withIsPrivate(gdoc.getBoolean(Fields.GROUP_IS_PRIVATE))
+					.build();
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new GroupsStorageException("Unexpected value in database: " + e.getMessage(), e);
+		}
 	}
 
 	private GroupIDAndName toGroupIDAndName(final Document grp) throws GroupsStorageException {
@@ -577,8 +591,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new GroupID(grp.getString(Fields.GROUP_ID)),
 					new GroupName(grp.getString(Fields.GROUP_NAME)));
 		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new GroupsStorageException(
-					"Unexpected value in database: " + e.getMessage(), e);
+			throw new GroupsStorageException("Unexpected value in database: " + e.getMessage(), e);
 		}
 	}
 	
@@ -601,7 +614,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 				Fields.GROUP_MEMBER_NAME, requireNonNull(user, "user").getName());
 		final Document projection = new Document(Fields.GROUP_ID, 1)
 				.append(Fields.GROUP_NAME, 1)
-				.append(Fields.MONGO_ID, -1);
+				.append(Fields.MONGO_ID, 0);
 		final Document sort = new Document(Fields.GROUP_ID, 1);
 		
 		return getList(COL_GROUPS, query, projection, sort, 100000, d -> toGroupIDAndName(d));
