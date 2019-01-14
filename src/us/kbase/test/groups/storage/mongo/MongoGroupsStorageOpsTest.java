@@ -37,6 +37,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupIDAndName;
+import us.kbase.groups.core.GroupIDNameMembership;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
@@ -135,8 +136,29 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group exists", manager.storage.getGroupExists(new GroupID("gid1")),
 				is(false));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(new GroupID("gid")),
-				is(GroupIDAndName.of(new GroupID("gid"), new GroupName("name"))));
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), new UserName("uname")),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withGroupName(new GroupName("name"))
+						.withIsMember(true)
+						.withIsPrivate(false)
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), new UserName("uname1")),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withGroupName(new GroupName("name"))
+						.withIsMember(false)
+						.withIsPrivate(false)
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), null),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withGroupName(new GroupName("name"))
+						.withIsMember(false)
+						.withIsPrivate(false)
+						.build()));
 	}
 	
 	@Test
@@ -201,6 +223,28 @@ public class MongoGroupsStorageOpsTest {
 								new ResourceID("z")))
 						.withCustomField(new NumberedCustomField("foo-83"), "bar")
 						.withCustomField(new NumberedCustomField("whoo"), "whee")
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), new UserName("bar")),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withGroupName(new GroupName("name"))
+						.withIsMember(true)
+						.withIsPrivate(true)
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), new UserName("baz")),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withIsMember(false)
+						.withIsPrivate(true)
+						.build()));
+		
+		assertThat("incorrect group", manager.storage.getGroupName(
+				new GroupID("gid"), null),
+				is(GroupIDNameMembership.getBuilder(new GroupID("gid"))
+						.withIsMember(false)
+						.withIsPrivate(true)
 						.build()));
 	}
 	
@@ -272,7 +316,7 @@ public class MongoGroupsStorageOpsTest {
 
 	private void getGroupNameFail(final GroupID id, final Exception expected) {
 		try {
-			manager.storage.getGroupName(id);
+			manager.storage.getGroupName(id, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
