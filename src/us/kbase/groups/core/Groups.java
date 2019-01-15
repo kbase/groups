@@ -408,6 +408,37 @@ public class Groups {
 		return storage.getGroupExists(groupID);
 	}
 	
+	/** Get the name of a group given the group ID. The name will be absent if the group is private
+	 * and the user is not a member of the group or is anonymous.
+	 * @param userToken the user's token. If null and the group is private, no name is returned.
+	 * @param groupID the group ID.
+	 * @return the group's name and ID.
+	 * @throws NoSuchGroupException if there is no such group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 */
+	public GroupIDNameMembership getGroupName(final Token userToken, final GroupID groupID)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException {
+		requireNonNull(groupID, "groupID");
+		final UserName user = getOptionalUser(userToken);
+		return storage.getGroupName(groupID, user);
+	}
+
+	/** Get the list of groups for which the user is a member.
+	 * @param userToken the user's token.
+	 * @return the list of groups containing the user as a member.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 */
+	public List<GroupIDAndName> getMemberGroups(final Token userToken)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		return storage.getMemberGroups(user);
+	}
+	
 	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
 	 * @param userToken the user's token. If null, only public groups are returned.

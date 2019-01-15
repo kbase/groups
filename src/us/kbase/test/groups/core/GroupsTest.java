@@ -37,6 +37,8 @@ import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupIDAndName;
+import us.kbase.groups.core.GroupIDNameMembership;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
 import us.kbase.groups.core.GroupUser;
@@ -1194,6 +1196,72 @@ public class GroupsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+	
+	@Test
+	public void getGroupName() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tokey"))).thenReturn(new UserName("u2"));
+		
+		when(mocks.storage.getGroupName(new GroupID("g3"), null)).thenReturn(
+				GroupIDNameMembership.getBuilder(new GroupID("g3"))
+						.withGroupName(new GroupName("foo"))
+						.build());
+		
+		when(mocks.storage.getGroupName(new GroupID("g3"), new UserName("u2"))).thenReturn(
+				GroupIDNameMembership.getBuilder(new GroupID("g3"))
+						.withGroupName(new GroupName("foo4"))
+						.build());
+		
+		assertThat("incorrect name", mocks.groups.getGroupName(null, new GroupID("g3")),
+				is(GroupIDNameMembership.getBuilder(new GroupID("g3"))
+						.withGroupName(new GroupName("foo"))
+						.build()));
+		
+		assertThat("incorrect name",
+				mocks.groups.getGroupName(new Token("tokey"), new GroupID("g3")),
+						is(GroupIDNameMembership.getBuilder(new GroupID("g3"))
+								.withGroupName(new GroupName("foo4"))
+								.build()));
+	}
+	
+	@Test
+	public void failGetGroupName() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		try {
+			mocks.groups.getGroupName(null, null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+	
+	@Test
+	public void getMemberGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u"));
+		
+		when(mocks.storage.getMemberGroups(new UserName("u"))).thenReturn(Arrays.asList(
+				GroupIDAndName.of(new GroupID("gid1"), new GroupName("whee")),
+				GroupIDAndName.of(new GroupID("gid2"), new GroupName("whoo"))));
+		
+		assertThat("incorrect groups", mocks.groups.getMemberGroups(new Token("t")),
+				is(Arrays.asList(
+						GroupIDAndName.of(new GroupID("gid1"), new GroupName("whee")),
+						GroupIDAndName.of(new GroupID("gid2"), new GroupName("whoo")))));
+	}
+	
+	@Test
+	public void failGetMemberGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		try {
+			mocks.groups.getMemberGroups(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("userToken"));
 		}
 	}
 	
