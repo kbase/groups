@@ -413,12 +413,33 @@ PUT /group/<group id>/user/<user name>/update
 
 The user must be a group administrator or the user whose fields are to be updated.
 
-If a custom fields are missing, it is not altered.
+If custom fields are missing, they are not altered.
 If fields are `null`, they are removed. Otherwise they are set to the new value.
 
 See `Custom fields` below for information on custom fields.
 
 Whitespace only strings are treated as `null`.
+
+### Get a list of group IDs and names for which the user is a member
+
+```
+AUTHORIZATION REQUIRED
+GET /member/
+
+Returns:
+[{
+    "id": <group 1 id>,
+    "name": <group 1 name>
+ },
+ ...
+ {
+    "id": <group N id>,
+    "name": <group N name>
+ }]
+```
+
+*All* the groups for which the user is a member are returned in one response, which is why only
+the minimal amount of information per group is included.
 
 ### Add a resource to a group
 
@@ -668,10 +689,8 @@ Custom fields can also be applied to group members. To create a user field, subs
 field-user-myfield-validator=us.kbase.groups.fieldvalidators.SimpleFieldValidatorFactory
 ```
 
-All the previous field modifiers apply (using the `field-user-` prefix), but the group
-list setting only affects the owner's fields, since administrators and members are not
-visible in the group list, and the public modifier only affects the owner's and
-administrators' fields, since the members list is private.
+All the previous field modifiers apply (using the `field-user-` prefix) except for the group
+list setting, since user custom fields are not visible in the groups list.
 
 User fields have an additional setting that allows standard members, rather than only the owner
 and administrators, to set the field for their own record:
