@@ -71,15 +71,15 @@ public interface GroupsStorage {
 	 */
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
-	/** Get the name of a group.
-	 * @param groupID the ID of the group.
+	/** Get the name of one or more groups.
 	 * @param user an optional user to determine whether the user is a member of the group.
 	 * If no user is provided, group membership is considered to be false.
-	 * @return the group name as well as the ID.
+	 * @param groupIDs the IDs of the groups.
+	 * @return the group names as well as the IDs.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
-	 * @throws NoSuchGroupException if there is not group with the given ID.
+	 * @throws NoSuchGroupException if there is no group with one of the given IDs.
 	 */
-	GroupIDNameMembership getGroupName(GroupID groupID, UserName user)
+	List<GroupIDNameMembership> getGroupName(UserName user, List<GroupID> groupIDs)
 			throws GroupsStorageException, NoSuchGroupException;
 	
 	/** Check whether a group exists.
