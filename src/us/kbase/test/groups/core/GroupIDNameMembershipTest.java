@@ -29,8 +29,8 @@ public class GroupIDNameMembershipTest {
 				.withIsPrivate(true)
 				.build();
 		
-		assertThat("incorrect gid", gidnm.getGroupID(), is(new GroupID("i")));
-		assertThat("incorrect name", gidnm.getGroupName(),
+		assertThat("incorrect gid", gidnm.getID(), is(new GroupID("i")));
+		assertThat("incorrect name", gidnm.getName(),
 				is(Optional.ofNullable(new GroupName("gname"))));
 		assertThat("incorrect isMember", gidnm.isMember(), is(true));
 		assertThat("incorrect isPrivate", gidnm.isPrivate(), is(true));
@@ -44,8 +44,8 @@ public class GroupIDNameMembershipTest {
 				.withIsPrivate(false)
 				.build();
 		
-		assertThat("incorrect gid", gidnm.getGroupID(), is(new GroupID("i")));
-		assertThat("incorrect name", gidnm.getGroupName(),
+		assertThat("incorrect gid", gidnm.getID(), is(new GroupID("i")));
+		assertThat("incorrect name", gidnm.getName(),
 				is(Optional.ofNullable(new GroupName("gname"))));
 		assertThat("incorrect isMember", gidnm.isMember(), is(true));
 		assertThat("incorrect isPrivate", gidnm.isPrivate(), is(false));
@@ -59,8 +59,8 @@ public class GroupIDNameMembershipTest {
 				.withIsPrivate(false)
 				.build();
 		
-		assertThat("incorrect gid", gidnm.getGroupID(), is(new GroupID("i")));
-		assertThat("incorrect name", gidnm.getGroupName(),
+		assertThat("incorrect gid", gidnm.getID(), is(new GroupID("i")));
+		assertThat("incorrect name", gidnm.getName(),
 				is(Optional.ofNullable(new GroupName("gname"))));
 		assertThat("incorrect isMember", gidnm.isMember(), is(false));
 		assertThat("incorrect isPrivate", gidnm.isPrivate(), is(false));
@@ -74,8 +74,8 @@ public class GroupIDNameMembershipTest {
 				.withIsPrivate(true)
 				.build();
 		
-		assertThat("incorrect gid", gidnm.getGroupID(), is(new GroupID("i")));
-		assertThat("incorrect name", gidnm.getGroupName(), is(Optional.empty()));
+		assertThat("incorrect gid", gidnm.getID(), is(new GroupID("i")));
+		assertThat("incorrect name", gidnm.getName(), is(Optional.empty()));
 		assertThat("incorrect isMember", gidnm.isMember(), is(false));
 		assertThat("incorrect isPrivate", gidnm.isPrivate(), is(true));
 	}

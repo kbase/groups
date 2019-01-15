@@ -31,7 +31,7 @@ public class GroupIDNameMembership {
 	/** Get the group ID.
 	 * @return  the group ID.
 	 */
-	public GroupID getGroupID() {
+	public GroupID getID() {
 		return groupID;
 	}
 
@@ -39,7 +39,7 @@ public class GroupIDNameMembership {
 	 * object build, or if the user is not a member of the group and the group is private.
 	 * @return the group name.
 	 */
-	public Optional<GroupName> getGroupName() {
+	public Optional<GroupName> getName() {
 		return groupName;
 	}
 

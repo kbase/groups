@@ -563,7 +563,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public List<GroupIDNameMembership> getGroupName(
+	public List<GroupIDNameMembership> getGroupNames(
 			final UserName user,
 			final Set<GroupID> groupIDs)
 			throws NoSuchGroupException, GroupsStorageException {
@@ -583,7 +583,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final List<GroupIDNameMembership> ret = getList(
 				COL_GROUPS, query, projection, sort, 0, d -> toGroupIDNameMembership(d));
 		if (ret.size() != groupIDs.size()) {
-			final Set<GroupID> got = ret.stream().map(g -> g.getGroupID())
+			final Set<GroupID> got = ret.stream().map(g -> g.getID())
 					.collect(Collectors.toSet());
 			for (final GroupID g: groupIDs) { // can't cover this, guaranteed thrown exception
 				if (!got.contains(g)) {

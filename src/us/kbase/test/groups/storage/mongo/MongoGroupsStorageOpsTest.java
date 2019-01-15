@@ -136,7 +136,7 @@ public class MongoGroupsStorageOpsTest {
 		assertThat("incorrect group exists", manager.storage.getGroupExists(new GroupID("gid1")),
 				is(false));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				new UserName("uname"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
@@ -144,7 +144,7 @@ public class MongoGroupsStorageOpsTest {
 						.withIsPrivate(false)
 						.build())));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				new UserName("uname1"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
@@ -152,7 +152,7 @@ public class MongoGroupsStorageOpsTest {
 						.withIsPrivate(false)
 						.build())));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				null, set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
@@ -225,7 +225,7 @@ public class MongoGroupsStorageOpsTest {
 						.withCustomField(new NumberedCustomField("whoo"), "whee")
 						.build()));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				new UserName("bar"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
@@ -233,14 +233,14 @@ public class MongoGroupsStorageOpsTest {
 						.withIsPrivate(true)
 						.build())));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				new UserName("baz"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withIsMember(false)
 						.withIsPrivate(true)
 						.build())));
 		
-		assertThat("incorrect group", manager.storage.getGroupName(
+		assertThat("incorrect group", manager.storage.getGroupNames(
 				null, set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withIsMember(false)
@@ -314,7 +314,7 @@ public class MongoGroupsStorageOpsTest {
 				.withIsPrivate(true)
 				.build());
 		
-		assertThat("incorrect names", manager.storage.getGroupName(new UserName("memb"),
+		assertThat("incorrect names", manager.storage.getGroupNames(new UserName("memb"),
 				set(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
 						new GroupID("gidw"))),
 				is(Arrays.asList(
@@ -338,7 +338,7 @@ public class MongoGroupsStorageOpsTest {
 								.withIsPrivate(false)
 								.build())));
 		
-		assertThat("incorrect names", manager.storage.getGroupName(null,
+		assertThat("incorrect names", manager.storage.getGroupNames(null,
 				set(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
 						new GroupID("gidw"))),
 				is(Arrays.asList(
@@ -389,7 +389,7 @@ public class MongoGroupsStorageOpsTest {
 
 	private void getGroupNameFail(final Set<GroupID> ids, final Exception expected) {
 		try {
-			manager.storage.getGroupName(null, ids);
+			manager.storage.getGroupNames(null, ids);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

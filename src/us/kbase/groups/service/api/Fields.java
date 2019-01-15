@@ -120,4 +120,7 @@ public class Fields {
 	
 	/** Whether something exists or not. */
 	public static final String EXISTS = "exists";
+	
+	/** A list of group IDs. */
+	public static final String IDS = "ids";
 }

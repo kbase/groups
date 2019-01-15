@@ -422,7 +422,7 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws IllegalParameterException if more than 1000 group IDs are queried.
 	 */
-	public List<GroupIDNameMembership> getGroupName(
+	public List<GroupIDNameMembership> getGroupNames(
 			final Token userToken,
 			final Set<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
@@ -433,7 +433,7 @@ public class Groups {
 					"No more than %s group IDs are allowed", MAX_GROUP_NAMES_RETURNED));
 		}
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroupName(user, groupIDs);
+		return storage.getGroupNames(user, groupIDs);
 	}
 
 	/** Get the list of groups for which the user is a member.

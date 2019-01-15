@@ -74,4 +74,11 @@ public class ServicePaths {
 	
 	/** The member endpoint location. */
 	public static final String MEMBER = SEP + "member";
+	
+	/* Names endpoints */
+	
+	/** The names endpoint location. */
+	public static final String NAMES = SEP + "names";
+	/** The bulk names endpoint location. */
+	public static final String NAMES_BULK = SEP + "{" + Fields.IDS + "}";
 }
