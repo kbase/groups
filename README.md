@@ -252,6 +252,29 @@ all group listable fields are included.
 
 `rescount` is empty for users that are not a member of the group.
 
+### Get group names from IDs
+
+```
+AUTHORIZATION OPTIONAL
+GET /names/<comma separated list of group IDs>
+
+Returns:
+[{
+    "id": <group 1 id>,
+    "name": <group 1 name>
+ },
+ ...
+ {
+    "id": <group N id>,
+    "name": <group N name>
+ }]
+```
+
+Whitespace only entries in the ID list are ignored. At most 1000 ids may be submitted per request.
+
+If the user is anonymous or is not a member of a group and that group is private, the name of
+that group will be `null`.
+
 ### Create a group
 
 ```

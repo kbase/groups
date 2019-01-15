@@ -1207,7 +1207,7 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("tokey"))).thenReturn(new UserName("u2"));
 		
-		when(mocks.storage.getGroupName(null, set(new GroupID("g3"), new GroupID("g2"))))
+		when(mocks.storage.getGroupNames(null, set(new GroupID("g3"), new GroupID("g2"))))
 				.thenReturn(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("g2"))
 								.withGroupName(new GroupName("bar"))
@@ -1216,7 +1216,7 @@ public class GroupsTest {
 								.withGroupName(new GroupName("foo"))
 								.build()));
 		
-		when(mocks.storage.getGroupName(
+		when(mocks.storage.getGroupNames(
 				new UserName("u2"),
 				set(new GroupID("g3"), new GroupID("g2"))))
 				.thenReturn(Arrays.asList(
@@ -1228,7 +1228,7 @@ public class GroupsTest {
 								.build()));
 		
 		assertThat("incorrect name",
-				mocks.groups.getGroupName(null, set(new GroupID("g3"), new GroupID("g2"))),
+				mocks.groups.getGroupNames(null, set(new GroupID("g3"), new GroupID("g2"))),
 				is(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("g2"))
 								.withGroupName(new GroupName("bar"))
@@ -1238,7 +1238,7 @@ public class GroupsTest {
 								.build())));
 		
 		assertThat("incorrect name",
-				mocks.groups.getGroupName(new Token("tokey"),
+				mocks.groups.getGroupNames(new Token("tokey"),
 						set(new GroupID("g3"), new GroupID("g2"))),
 				is(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("g2"))
@@ -1262,7 +1262,7 @@ public class GroupsTest {
 				.collect(Collectors.toSet());
 		
 		// should pass
-		initTestMocks().groups.getGroupName(null, ids);
+		initTestMocks().groups.getGroupNames(null, ids);
 		ids.add(new GroupID("i10001"));
 		failGetGroupName(ids, new IllegalParameterException(
 				"No more than 1000 group IDs are allowed"));
@@ -1280,7 +1280,7 @@ public class GroupsTest {
 			throws Exception {
 		final TestMocks mocks = initTestMocks();
 		try {
-			mocks.groups.getGroupName(null, ids);
+			mocks.groups.getGroupNames(null, ids);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

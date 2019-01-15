@@ -79,7 +79,7 @@ public interface GroupsStorage {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no group with one of the given IDs.
 	 */
-	List<GroupIDNameMembership> getGroupName(UserName user, Set<GroupID> groupID)
+	List<GroupIDNameMembership> getGroupNames(UserName user, Set<GroupID> groupID)
 			throws GroupsStorageException, NoSuchGroupException;
 	
 	/** Check whether a group exists.

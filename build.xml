@@ -311,6 +311,7 @@
         <test name="us.kbase.test.groups.service.api.APICommonTest"/>
         <test name="us.kbase.test.groups.service.api.GroupsAPITest"/>
       	<test name="us.kbase.test.groups.service.api.MemberAPITest"/>
+      	<test name="us.kbase.test.groups.service.api.NamesAPITest"/>
         <test name="us.kbase.test.groups.service.api.RequestAPITest"/>
         <test name="us.kbase.test.groups.service.api.RootTest"/>
         <test name="us.kbase.test.groups.service.api.IncomingJSONTest"/>
