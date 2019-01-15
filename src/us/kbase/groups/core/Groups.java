@@ -3,6 +3,7 @@ package us.kbase.groups.core;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.core.request.GroupRequest.USER_TYPE;
+import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -66,6 +67,7 @@ public class Groups {
 	//TODO LOGGING for all actions
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
+	private static final int MAX_GROUP_NAMES_RETURNED = 1000;
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Map<ResourceType, ResourceHandler> resourceHandlers;
@@ -408,23 +410,30 @@ public class Groups {
 		return storage.getGroupExists(groupID);
 	}
 	
-	/** Get the name of a group given the group ID. The name will be absent if the group is private
-	 * and the user is not a member of the group or is anonymous.
+	/** Get the name of one or more groups given a list of group IDs. Group names will be absent
+	 * if the group is private and the user is not a member of the group or is anonymous.
+	 * No more than 1000 groups can be queried at once.
 	 * @param userToken the user's token. If null and the group is private, no name is returned.
-	 * @param groupID the group ID.
-	 * @return the group's name and ID.
-	 * @throws NoSuchGroupException if there is no such group.
+	 * @param groupIDs the group IDs.
+	 * @return the groups' names and IDs.
+	 * @throws NoSuchGroupException if one of the groups does not exist.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
+	 * @throws IllegalParameterException if more than 1000 group IDs are queried.
 	 */
-	public GroupIDNameMembership getGroupName(final Token userToken, final GroupID groupID)
+	public List<GroupIDNameMembership> getGroupName(
+			final Token userToken,
+			final Set<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				GroupsStorageException {
-		requireNonNull(groupID, "groupID");
+				GroupsStorageException, IllegalParameterException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		if (groupIDs.size() > MAX_GROUP_NAMES_RETURNED) {
+			throw new IllegalParameterException(String.format(
+					"No more than %s group IDs are allowed", MAX_GROUP_NAMES_RETURNED));
+		}
 		final UserName user = getOptionalUser(userToken);
-		// TODO NOW accept and return list
-		return storage.getGroupName(user, Arrays.asList(groupID)).get(0);
+		return storage.getGroupName(user, groupIDs);
 	}
 
 	/** Get the list of groups for which the user is a member.

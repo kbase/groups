@@ -137,7 +137,7 @@ public class MongoGroupsStorageOpsTest {
 				is(false));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				new UserName("uname"), Arrays.asList(new GroupID("gid"))),
+				new UserName("uname"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
 						.withIsMember(true)
@@ -145,7 +145,7 @@ public class MongoGroupsStorageOpsTest {
 						.build())));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				new UserName("uname1"), Arrays.asList(new GroupID("gid"))),
+				new UserName("uname1"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
 						.withIsMember(false)
@@ -153,7 +153,7 @@ public class MongoGroupsStorageOpsTest {
 						.build())));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				null, Arrays.asList(new GroupID("gid"))),
+				null, set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
 						.withIsMember(false)
@@ -226,7 +226,7 @@ public class MongoGroupsStorageOpsTest {
 						.build()));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				new UserName("bar"), Arrays.asList(new GroupID("gid"))),
+				new UserName("bar"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withGroupName(new GroupName("name"))
 						.withIsMember(true)
@@ -234,14 +234,14 @@ public class MongoGroupsStorageOpsTest {
 						.build())));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				new UserName("baz"), Arrays.asList(new GroupID("gid"))),
+				new UserName("baz"), set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withIsMember(false)
 						.withIsPrivate(true)
 						.build())));
 		
 		assertThat("incorrect group", manager.storage.getGroupName(
-				null, Arrays.asList(new GroupID("gid"))),
+				null, set(new GroupID("gid"))),
 				is(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("gid"))
 						.withIsMember(false)
 						.withIsPrivate(true)
@@ -315,7 +315,7 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		assertThat("incorrect names", manager.storage.getGroupName(new UserName("memb"),
-				Arrays.asList(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
+				set(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
 						new GroupID("gidw"))),
 				is(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("gida"))
@@ -339,7 +339,7 @@ public class MongoGroupsStorageOpsTest {
 								.build())));
 		
 		assertThat("incorrect names", manager.storage.getGroupName(null,
-				Arrays.asList(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
+				set(new GroupID("gidm"), new GroupID("gida"), new GroupID("gidx"),
 						new GroupID("gidw"))),
 				is(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("gida"))
@@ -366,7 +366,7 @@ public class MongoGroupsStorageOpsTest {
 	public void getGroupFail() throws Exception {
 		getGroupFail(null, new NullPointerException("groupID"));
 		getGroupNameFail(null, new NullPointerException("groupIDs"));
-		getGroupNameFail(Arrays.asList(new GroupID("i"), null),
+		getGroupNameFail(set(new GroupID("i"), null),
 				new NullPointerException("Null item in collection groupIDs"));
 		
 		manager.storage.createGroup(Group.getBuilder(
@@ -374,7 +374,7 @@ public class MongoGroupsStorageOpsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.build());
 		getGroupFail(new GroupID("gid1"), new NoSuchGroupException("gid1"));
-		getGroupNameFail(Arrays.asList(new GroupID("gid"), new GroupID("gid1")),
+		getGroupNameFail(set(new GroupID("gid"), new GroupID("gid1")),
 				new NoSuchGroupException("gid1"));
 	}
 	
@@ -387,7 +387,7 @@ public class MongoGroupsStorageOpsTest {
 		}
 	}
 
-	private void getGroupNameFail(final List<GroupID> ids, final Exception expected) {
+	private void getGroupNameFail(final Set<GroupID> ids, final Exception expected) {
 		try {
 			manager.storage.getGroupName(null, ids);
 			fail("expected exception");
@@ -421,7 +421,7 @@ public class MongoGroupsStorageOpsTest {
 		
 		getGroupFail(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
-		getGroupNameFail(Arrays.asList(new GroupID("gid")), new GroupsStorageException(
+		getGroupNameFail(set(new GroupID("gid")), new GroupsStorageException(
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
 		getMemberGroupsFail(new UserName("uname"), new GroupsStorageException(
 				"Unexpected value in database: 30000 Missing input parameter: group name"));
@@ -433,7 +433,7 @@ public class MongoGroupsStorageOpsTest {
 		getGroupFail(new GroupID("gid"), new GroupsStorageException(
 				"Unexpected value in database: 30001 Illegal input parameter: " +
 				"group name contains control characters"));
-		getGroupNameFail(Arrays.asList(new GroupID("gid")), new GroupsStorageException(
+		getGroupNameFail(set(new GroupID("gid")), new GroupsStorageException(
 				"Unexpected value in database: 30001 Illegal input parameter: " +
 				"group name contains control characters"));
 		getMemberGroupsFail(new UserName("uname"), new GroupsStorageException(
