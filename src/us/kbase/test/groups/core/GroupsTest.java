@@ -3356,7 +3356,7 @@ public class GroupsTest {
 				set(new UserName("u1"), new UserName("u2")));
 		acceptRequest(mocks, new UserName("admin"),
 				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
-						new UserName("a3")),
+						new UserName("a3"), new UserName("u3")),
 				b -> b.withResourceType(new ResourceType("workspace"))
 						.withResource(new ResourceDescriptor(new ResourceID("56"))));
 
@@ -3377,7 +3377,7 @@ public class GroupsTest {
 				set(new UserName("catadmin"), new UserName("u4")));
 		acceptRequest(mocks, new UserName("catadmin"),
 				set(new UserName("admin"), new UserName("u4"), new UserName("own"),
-						new UserName("a3")),
+						new UserName("a3"), new UserName("u1"), new UserName("u3")),
 				b -> b.withType(RequestType.INVITE)
 						.withResourceType(new ResourceType("catalogmethod"))
 						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
@@ -4233,7 +4233,8 @@ public class GroupsTest {
 		
 		verify(mocks.notifs).addResource(
 				new UserName("admin"),
-				set(new UserName("own"), new UserName("admin2"), new UserName("ws2")),
+				set(new UserName("own"), new UserName("admin2"), new UserName("ws2"),
+						new UserName("u1"), new UserName("u3")),
 				new GroupID("gid"),
 				new ResourceType("workspace"),
 				new ResourceID("34"));
