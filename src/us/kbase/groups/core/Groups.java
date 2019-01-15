@@ -801,7 +801,12 @@ public class Groups {
 		ensureIsRequestTarget(request, group.isAdministrator(user), user, "accept");
 		ensureIsOpen(request);
 		final Set<UserName> notifyTargets = processRequest(group.getGroupID(), request);
-		notifyTargets.addAll(group.getAdministratorsAndOwner());
+		if (request.getResourceType().equals(USER_TYPE)) {
+			// don't notify all users when a new user joins, just on resource addition
+			notifyTargets.addAll(group.getAdministratorsAndOwner());
+		} else {
+			notifyTargets.addAll(group.getAllMembers());
+		}
 		notifyTargets.remove(user);
 		storage.closeRequest(request.getID(), GroupRequestStatus.accepted(user), clock.instant());
 		final GroupRequest r = storage.getRequest(request.getID());
@@ -1066,7 +1071,7 @@ public class Groups {
 		if (g.isAdministrator(user) && admins.contains(user)) {
 			storage.addResource(groupID, type, d, clock.instant());
 			final Set<UserName> targets = new HashSet<>(admins);
-			targets.addAll(g.getAdministratorsAndOwner());
+			targets.addAll(g.getAllMembers());
 			targets.remove(user);
 			notifications.addResource(user, targets, groupID, type, resource);
 			return Optional.empty();
