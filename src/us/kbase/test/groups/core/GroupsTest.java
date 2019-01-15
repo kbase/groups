@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.Test;
 
@@ -1205,36 +1207,83 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("tokey"))).thenReturn(new UserName("u2"));
 		
-		when(mocks.storage.getGroupName(null, Arrays.asList(new GroupID("g3")))).thenReturn(
-				Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("g3"))
-						.withGroupName(new GroupName("foo"))
-						.build()));
+		when(mocks.storage.getGroupName(null, set(new GroupID("g3"), new GroupID("g2"))))
+				.thenReturn(Arrays.asList(
+						GroupIDNameMembership.getBuilder(new GroupID("g2"))
+								.withGroupName(new GroupName("bar"))
+								.build(),
+						GroupIDNameMembership.getBuilder(new GroupID("g3"))
+								.withGroupName(new GroupName("foo"))
+								.build()));
 		
-		when(mocks.storage.getGroupName(new UserName("u2"), Arrays.asList(new GroupID("g3"))))
-				.thenReturn(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("g3"))
-						.withGroupName(new GroupName("foo4"))
-						.build()));
-		
-		assertThat("incorrect name", mocks.groups.getGroupName(null, new GroupID("g3")),
-				is(GroupIDNameMembership.getBuilder(new GroupID("g3"))
-						.withGroupName(new GroupName("foo"))
-						.build()));
-		
-		assertThat("incorrect name",
-				mocks.groups.getGroupName(new Token("tokey"), new GroupID("g3")),
-						is(GroupIDNameMembership.getBuilder(new GroupID("g3"))
+		when(mocks.storage.getGroupName(
+				new UserName("u2"),
+				set(new GroupID("g3"), new GroupID("g2"))))
+				.thenReturn(Arrays.asList(
+						GroupIDNameMembership.getBuilder(new GroupID("g2"))
+								.withGroupName(new GroupName("bar4"))
+								.build(),
+						GroupIDNameMembership.getBuilder(new GroupID("g3"))
 								.withGroupName(new GroupName("foo4"))
 								.build()));
+		
+		assertThat("incorrect name",
+				mocks.groups.getGroupName(null, set(new GroupID("g3"), new GroupID("g2"))),
+				is(Arrays.asList(
+						GroupIDNameMembership.getBuilder(new GroupID("g2"))
+								.withGroupName(new GroupName("bar"))
+								.build(),
+						GroupIDNameMembership.getBuilder(new GroupID("g3"))
+								.withGroupName(new GroupName("foo"))
+								.build())));
+		
+		assertThat("incorrect name",
+				mocks.groups.getGroupName(new Token("tokey"),
+						set(new GroupID("g3"), new GroupID("g2"))),
+				is(Arrays.asList(
+						GroupIDNameMembership.getBuilder(new GroupID("g2"))
+								.withGroupName(new GroupName("bar4"))
+								.build(),
+						GroupIDNameMembership.getBuilder(new GroupID("g3"))
+								.withGroupName(new GroupName("foo4"))
+								.build())));
 	}
 	
 	@Test
-	public void failGetGroupName() throws Exception {
+	public void failGetGroupNameNulls() throws Exception {
+		failGetGroupName(null, new NullPointerException("groupIDs"));
+		failGetGroupName(set(new GroupID("i"), null), new NullPointerException(
+				"Null item in collection groupIDs"));
+	}
+	
+	@Test
+	public void failGetGroupNameTooManyIDs() throws Exception {
+		final Set<GroupID> ids = IntStream.rangeClosed(1, 1000).mapToObj(i -> toGID(i))
+				.collect(Collectors.toSet());
+		
+		// should pass
+		initTestMocks().groups.getGroupName(null, ids);
+		ids.add(new GroupID("i10001"));
+		failGetGroupName(ids, new IllegalParameterException(
+				"No more than 1000 group IDs are allowed"));
+	}
+
+	private GroupID toGID(int i) {
+		try {
+			return new GroupID("i" + i);
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new RuntimeException("Doofus", e);
+		}
+	}
+	
+	private void failGetGroupName(final Set<GroupID> ids, final Exception expected)
+			throws Exception {
 		final TestMocks mocks = initTestMocks();
 		try {
-			mocks.groups.getGroupName(null, null);
+			mocks.groups.getGroupName(null, ids);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
