@@ -29,6 +29,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.groups.build.GroupsBuilder;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -126,6 +127,18 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 	}
 	
 	private static class KafkaFeedsNotifier implements Notifications {
+		
+		private static final Map<ResourceType, String> RES_TYPE_TO_FEEDS_TYPE = new HashMap<>();
+		static {
+			// really not thrilled about hard coding this list, but not sure of a better way
+			// to do it at this point. Only this code should care about the mapping.
+			// maybe it has to be configured in the config file? ugh.
+			// Currently every time a new resource type is added, it needs to be added here
+			// as well... but maybe that makes sense.
+			RES_TYPE_TO_FEEDS_TYPE.put(GroupRequest.USER_TYPE, "user");
+			RES_TYPE_TO_FEEDS_TYPE.put(GroupsBuilder.RESOURCE_TYPE_CATALOG_METHOD, "app");
+			RES_TYPE_TO_FEEDS_TYPE.put(GroupsBuilder.RESOURCE_TYPE_WORKSPACE, "workspace");
+		}
 
 		private final String topic;
 		private final KafkaProducer<String, Map<String, Object>> client;
@@ -175,6 +188,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			postNotification(
 					targets,
 					request.getRequester().getName(),
+					"user",
 					request.getID(),
 					request.getGroupID(),
 					request.getResourceType(),
@@ -200,6 +214,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			postNotification(
 					targets,
 					GROUP_SOURCE,
+					"service",
 					null,
 					request.getGroupID(),
 					request.getResourceType(),
@@ -216,6 +231,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			postNotification(
 					targets,
 					GROUP_SOURCE,
+					"service",
 					null,
 					request.getGroupID(),
 					request.getResourceType(),
@@ -237,6 +253,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			postNotification(
 					targets,
 					GROUP_SOURCE,
+					"service",
 					null,
 					requireNonNull(groupID, "groupID"),
 					requireNonNull(type, "type"),
@@ -249,6 +266,7 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 		private void postNotification(
 				final Collection<UserName> targets,
 				final String actor,
+				final String actorType,
 				final RequestID requestID,
 				final GroupID groupID,
 				final ResourceType resourceType,
@@ -259,13 +277,21 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			if (targets.isEmpty()) {
 				return;
 			}
+			if (!RES_TYPE_TO_FEEDS_TYPE.containsKey(resourceType)) {
+				throw new IllegalArgumentException(
+						"Unhandled resource type: " + resourceType.getName());
+			}
 			final Map<String, Object> post = new HashMap<>();
 			post.put(OP, OP_NOTIFY);
-			post.put("users", targets.stream().map(t -> t.getName()).collect(Collectors.toSet()));
-			post.put("target", Arrays.asList(resourceID.getName()));
+			post.put("users", targets.stream()
+					.map(t -> ImmutableMap.of("id", t.getName(), "type", "user"))
+					.collect(Collectors.toSet()));
+			post.put("target", Arrays.asList(ImmutableMap.of(
+					"id", resourceID.getName(),
+					"type", RES_TYPE_TO_FEEDS_TYPE.get(resourceType))));
 			post.put("level", level);
-			post.put("actor", actor);
-			post.put("object", groupID.getName());
+			post.put("actor", ImmutableMap.of("id", actor, "type", actorType));
+			post.put("object", ImmutableMap.of("id", groupID.getName(), "type", "group"));
 			post.put("verb", verb);
 			if (requestID != null) {
 				post.put("external_key", requestID.getID());
@@ -273,7 +299,6 @@ public class KafkaFeedsNotifierFactory implements NotificationsFactory {
 			post.put("expires", expirationDate == null ? null : expirationDate.toEpochMilli());
 
 			//TODO FEEDS include denyReason?
-			post.put("context", ImmutableMap.of("resourcetype", resourceType.getName()));
 			
 			post.put(SOURCE, GROUP_SOURCE);
 			

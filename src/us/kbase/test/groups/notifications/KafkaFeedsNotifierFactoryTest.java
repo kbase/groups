@@ -119,14 +119,15 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "groupsservice")
-				.with("users", set("bar", "baz"))
-				.with("target", Arrays.asList("rid"))
+				.with("actor", ImmutableMap.of("id", "groupsservice", "type", "service"))
+				.with("users", set(
+						ImmutableMap.of("id", "bar", "type", "user"),
+						ImmutableMap.of("id", "baz", "type", "user")))
+				.with("target", Arrays.asList(ImmutableMap.of("id", "rid", "type", "app")))
 				.with("expires", null)
 				.with("level", "alert")
-				.with("object", "id")
+				.with("object", ImmutableMap.of("id", "id", "type", "group"))
 				.with("verb", "updated")
-				.with("context", ImmutableMap.of("resourcetype", "restype"))
 				.build())))
 				.thenReturn(fut);
 		
@@ -134,7 +135,7 @@ public class KafkaFeedsNotifierFactoryTest {
 				new UserName("foo"),
 				set(new UserName("bar"), new UserName("baz")),
 				new GroupID("id"),
-				new ResourceType("restype"),
+				new ResourceType("catalogmethod"),
 				new ResourceID("rid"));
 		
 		verify(mocks.client).partitionsFor("mytopic");
@@ -156,7 +157,17 @@ public class KafkaFeedsNotifierFactoryTest {
 		
 		addResourceFail(u, set(u, null), g, t, r, new NullPointerException(
 				"Null item in collection targets"));
+	}
+	
+	@Test
+	public void addResourceFailBadResourceType() throws Exception {
+		final UserName u = new UserName("foo");
+		final GroupID g = new GroupID("id");
+		final ResourceType t = new ResourceType("restype");
+		final ResourceID r = new ResourceID("rid");
 		
+		addResourceFail(u, set(u), g, t, r, new IllegalArgumentException(
+				"Unhandled resource type: restype"));
 	}
 	
 	private void addResourceFail(
@@ -244,15 +255,16 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "act")
-				.with("users", set("bar", "foo"))
-				.with("target", Arrays.asList("resid"))
+				.with("actor", ImmutableMap.of("id", "act", "type", "user"))
+				.with("users", set(
+						ImmutableMap.of("id", "bar", "type", "user"),
+						ImmutableMap.of("id", "foo", "type", "user")))
+				.with("target", Arrays.asList(ImmutableMap.of("id", "resid", "type", "user")))
 				.with("expires", 30000L)
 				.with("external_key", id.toString())
 				.with("level", "request")
-				.with("object", "gid")
+				.with("object", ImmutableMap.of("id", "gid", "type", "group"))
 				.with("verb", expectedRType)
-				.with("context", ImmutableMap.of("resourcetype", "rtype"))
 				.build())))
 				.thenReturn(fut);
 		
@@ -261,7 +273,7 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("gid"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
 				.withResource(new ResourceDescriptor(new ResourceID("resid")))
-				.withResourceType(new ResourceType("rtype"))
+				.withResourceType(new ResourceType("user"))
 				.withType(rtype)
 				.build());
 		
@@ -275,6 +287,19 @@ public class KafkaFeedsNotifierFactoryTest {
 		notifyFail(set(new UserName("n"), null), REQUEST, new NullPointerException(
 				"Null item in collection targets"));
 		notifyFail(set(), null, new NullPointerException("request"));
+	}
+	
+	@Test
+	public void notifyFailBadResourceType() throws Exception {
+		final GroupRequest r = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
+				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
+				.withResource(new ResourceDescriptor(new ResourceID("foo")))
+				.withResourceType(new ResourceType("badtype"))
+				.build();
+		
+		notifyFail(set(new UserName("n")), r, new IllegalArgumentException(
+				"Unhandled resource type: badtype"));
 	}
 	
 	private void notifyFail(
@@ -320,14 +345,15 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "groupsservice")
-				.with("users", set("bar", "baz"))
-				.with("target", Arrays.asList("resid2"))
+				.with("actor", ImmutableMap.of("id", "groupsservice", "type", "service"))
+				.with("users", set(
+						ImmutableMap.of("id", "bar", "type", "user"),
+						ImmutableMap.of("id", "baz", "type", "user")))
+				.with("target", Arrays.asList(ImmutableMap.of("id", "resid2", "type", "user")))
 				.with("expires", null)
 				.with("level", "alert")
-				.with("object", "id2")
+				.with("object", ImmutableMap.of("id", "id2", "type", "group"))
 				.with("verb", "accept")
-				.with("context", ImmutableMap.of("resourcetype", "rtype2"))
 				.build())))
 				.thenReturn(fut);
 		
@@ -336,7 +362,7 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("id2"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
 				.withResource(new ResourceDescriptor(new ResourceID("resid2")))
-				.withResourceType(new ResourceType("rtype2"))
+				.withResourceType(new ResourceType("user"))
 				.withType(RequestType.INVITE)
 				.build());
 		
@@ -351,6 +377,19 @@ public class KafkaFeedsNotifierFactoryTest {
 		acceptFail(set(new UserName("n"), null), REQUEST, new NullPointerException(
 				"Null item in collection targets"));
 		acceptFail(set(), null, new NullPointerException("request"));
+	}
+	
+	@Test
+	public void acceptFailBadResourceType() throws Exception {
+		final GroupRequest r = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
+				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
+				.withResource(new ResourceDescriptor(new ResourceID("foo")))
+				.withResourceType(new ResourceType("badtype"))
+				.build();
+		
+		acceptFail(set(new UserName("n")), r, new IllegalArgumentException(
+				"Unhandled resource type: badtype"));
 	}
 	
 	private void acceptFail(
@@ -396,14 +435,16 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "groupsservice")
-				.with("users", set("bat", "bang"))
-				.with("target", Arrays.asList("resid9"))
+				.with("actor", ImmutableMap.of("id", "groupsservice", "type", "service"))
+				.with("users", set(
+						ImmutableMap.of("id", "bat", "type", "user"),
+						ImmutableMap.of("id", "bang", "type", "user")))
+				.with("target", Arrays.asList(
+						ImmutableMap.of("id", "resid9", "type", "workspace")))
 				.with("expires", null)
 				.with("level", "alert")
-				.with("object", "id8")
+				.with("object", ImmutableMap.of("id", "id8", "type", "group"))
 				.with("verb", "reject")
-				.with("context", ImmutableMap.of("resourcetype", "rtype9"))
 				.build())))
 				.thenReturn(fut);
 		
@@ -412,7 +453,7 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("id8"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
 				.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-				.withResourceType(new ResourceType("rtype9"))
+				.withResourceType(new ResourceType("workspace"))
 				.withType(RequestType.REQUEST)
 				.build());
 		
@@ -426,6 +467,19 @@ public class KafkaFeedsNotifierFactoryTest {
 		denyFail(set(new UserName("n"), null), REQUEST, new NullPointerException(
 				"Null item in collection targets"));
 		denyFail(set(), null, new NullPointerException("request"));
+	}
+	
+	@Test
+	public void denyFailBadResourceType() throws Exception {
+		final GroupRequest r = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
+				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
+				.withResource(new ResourceDescriptor(new ResourceID("foo")))
+				.withResourceType(new ResourceType("badtype"))
+				.build();
+		
+		denyFail(set(new UserName("n")), r, new IllegalArgumentException(
+				"Unhandled resource type: badtype"));
 	}
 	
 	private void denyFail(
@@ -457,14 +511,16 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "groupsservice")
-				.with("users", set("bat", "bang"))
-				.with("target", Arrays.asList("resid9"))
+				.with("actor", ImmutableMap.of("id", "groupsservice", "type", "service"))
+				.with("users", set(
+						ImmutableMap.of("id", "bat", "type", "user"),
+						ImmutableMap.of("id", "bang", "type", "user")))
+				.with("target", Arrays.asList(
+						ImmutableMap.of("id", "resid9", "type", "workspace")))
 				.with("expires", null)
 				.with("level", "alert")
-				.with("object", "id8")
+				.with("object", ImmutableMap.of("id", "id8", "type", "group"))
 				.with("verb", "reject")
-				.with("context", ImmutableMap.of("resourcetype", "rtype9"))
 				.build())))
 				.thenReturn(fut);
 			
@@ -477,7 +533,7 @@ public class KafkaFeedsNotifierFactoryTest {
 							new UserName("act"),
 							CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
 					.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-					.withResourceType(new ResourceType("rtype9"))
+					.withResourceType(new ResourceType("workspace"))
 					.withType(RequestType.REQUEST)
 					.build());
 			fail("expected exception");
@@ -499,15 +555,17 @@ public class KafkaFeedsNotifierFactoryTest {
 				MapBuilder.<String, Object>newHashMap()
 				.with("operation", "notify")
 				.with("source", "groupsservice")
-				.with("actor", "act")
-				.with("users", set("bat", "bang"))
-				.with("target", Arrays.asList("resid9"))
+				.with("actor", ImmutableMap.of("id", "act", "type", "user"))
+				.with("users", set(
+						ImmutableMap.of("id", "bat", "type", "user"),
+						ImmutableMap.of("id", "bang", "type", "user")))
+				.with("target", Arrays.asList(
+						ImmutableMap.of("id", "resid9", "type", "app")))
 				.with("external_key", id.toString())
 				.with("expires", 30000L)
 				.with("level", "request")
-				.with("object", "id8")
+				.with("object", ImmutableMap.of("id", "id8", "type", "group"))
 				.with("verb", "invite")
-				.with("context", ImmutableMap.of("resourcetype", "rtype9"))
 				.build())))
 				.thenReturn(fut);
 			
@@ -520,7 +578,7 @@ public class KafkaFeedsNotifierFactoryTest {
 							new UserName("act"),
 							CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
 					.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-					.withResourceType(new ResourceType("rtype9"))
+					.withResourceType(new ResourceType("catalogmethod"))
 					.withType(RequestType.INVITE)
 					.build());
 			fail("expected exception");
