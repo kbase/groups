@@ -423,7 +423,8 @@ public class Groups {
 				GroupsStorageException {
 		requireNonNull(groupID, "groupID");
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroupName(groupID, user);
+		// TODO NOW accept and return list
+		return storage.getGroupName(user, Arrays.asList(groupID)).get(0);
 	}
 
 	/** Get the list of groups for which the user is a member.

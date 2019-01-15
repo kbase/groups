@@ -1205,15 +1205,15 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("tokey"))).thenReturn(new UserName("u2"));
 		
-		when(mocks.storage.getGroupName(new GroupID("g3"), null)).thenReturn(
-				GroupIDNameMembership.getBuilder(new GroupID("g3"))
+		when(mocks.storage.getGroupName(null, Arrays.asList(new GroupID("g3")))).thenReturn(
+				Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("g3"))
 						.withGroupName(new GroupName("foo"))
-						.build());
+						.build()));
 		
-		when(mocks.storage.getGroupName(new GroupID("g3"), new UserName("u2"))).thenReturn(
-				GroupIDNameMembership.getBuilder(new GroupID("g3"))
+		when(mocks.storage.getGroupName(new UserName("u2"), Arrays.asList(new GroupID("g3"))))
+				.thenReturn(Arrays.asList(GroupIDNameMembership.getBuilder(new GroupID("g3"))
 						.withGroupName(new GroupName("foo4"))
-						.build());
+						.build()));
 		
 		assertThat("incorrect name", mocks.groups.getGroupName(null, new GroupID("g3")),
 				is(GroupIDNameMembership.getBuilder(new GroupID("g3"))

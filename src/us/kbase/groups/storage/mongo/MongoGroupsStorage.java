@@ -563,8 +563,11 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public GroupIDNameMembership getGroupName(final GroupID groupID, final UserName user)
+	public List<GroupIDNameMembership> getGroupName(
+			final UserName user,
+			final List<GroupID> groupIDs)
 			throws NoSuchGroupException, GroupsStorageException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
 		final Document projection = new Document(Fields.GROUP_ID, 1)
 				.append(Fields.GROUP_IS_PRIVATE, 1)
 				.append(Fields.GROUP_NAME, 1)
@@ -573,7 +576,26 @@ public class MongoGroupsStorage implements GroupsStorage {
 			projection.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
 					new Document(Fields.GROUP_MEMBER_NAME, user.getName())));
 		}
-		final Document gdoc = getGroupDoc(groupID, projection);
+		final Document query = new Document(Fields.GROUP_ID, new Document("$in",
+				groupIDs.stream().map(i -> i.getName()).collect(Collectors.toList())));
+		final Document sort = new Document(Fields.GROUP_ID, 1);
+		
+		final List<GroupIDNameMembership> ret = getList(
+				COL_GROUPS, query, projection, sort, 0, d -> toGroupIDNameMembership(d));
+		if (ret.size() != groupIDs.size()) {
+			final Set<GroupID> got = ret.stream().map(g -> g.getGroupID())
+					.collect(Collectors.toSet());
+			for (final GroupID g: groupIDs) { // can't cover this, guaranteed thrown exception
+				if (!got.contains(g)) {
+					throw new NoSuchGroupException(g.getName());
+				}
+			}
+		}
+		return ret;
+	}
+
+	private GroupIDNameMembership toGroupIDNameMembership(final Document gdoc)
+			throws GroupsStorageException {
 		try {
 			return GroupIDNameMembership.getBuilder(new GroupID(gdoc.getString(Fields.GROUP_ID)))
 					.withGroupName(new GroupName(gdoc.getString(Fields.GROUP_NAME)))
