@@ -70,5 +70,8 @@ public class ServicePaths {
 	/** The location to list requests targeted at the user. */
 	public static final String REQUEST_TARGETED = SEP + "targeted";
 	
+	/* Member endpoints */
 	
+	/** The member endpoint location. */
+	public static final String MEMBER = SEP + "member";
 }
