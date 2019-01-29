@@ -1,6 +1,6 @@
 package us.kbase.groups.core.fieldvalidation;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkString;
 
 import java.util.Collections;
@@ -80,8 +80,7 @@ public class FieldValidators {
 			final String fieldName)
 			throws NoSuchCustomFieldException, IllegalParameterException,
 				MissingParameterException, FieldValidatorException {
-		checkNotNull(field, "field");
-		if (!validators.containsKey(field.getFieldRoot())) {
+		if (!validators.containsKey(requireNonNull(field, "field").getFieldRoot())) {
 			throw new NoSuchCustomFieldException(String.format(
 					"%s %s is not a configured field", fieldName, field.getField()));
 		}
@@ -161,8 +160,7 @@ public class FieldValidators {
 			final CustomField field,
 			final Map<CustomField, FieldValidator> validators,
 			final Map<CustomField, FieldConfiguration> fieldConfig) {
-		checkNotNull(field, "field");
-		return Optional.ofNullable(fieldConfig.get(field));
+		return Optional.ofNullable(fieldConfig.get(requireNonNull(field, "field")));
 	}
 	
 	private FieldConfiguration getConfigOrThrow(
@@ -232,9 +230,9 @@ public class FieldValidators {
 				final FieldValidator validator,
 				final Map<CustomField, FieldValidator> validators,
 				final Map<CustomField, FieldConfiguration> fieldConfig) {
-			checkNotNull(field, "field");
-			checkNotNull(config, "config");
-			checkNotNull(validator, "validator");
+			requireNonNull(field, "field");
+			requireNonNull(config, "config");
+			requireNonNull(validator, "validator");
 			validators.put(field, validator);
 			fieldConfig.put(field, config);
 			return this;
