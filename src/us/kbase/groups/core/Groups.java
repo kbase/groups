@@ -45,6 +45,7 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
@@ -611,6 +612,45 @@ public class Groups {
 		}
 	}
 	
+	/** Get information about a group linked to a request.
+	 * @param userToken the user's token. The user must be the target of the request or an
+	 * administrator of the request target resource.
+	 * @param requestID the ID of the request. The request must be an {@link RequestType#INVITE}
+	 * and must be {@link GroupRequestStatusType#OPEN}.
+	 * @return a minimal view of the group. All public fields are included, and no resource
+	 * information is included. The user is treated as a non-member.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user may not view the request.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws ClosedRequestException if the request is closed.
+	 */
+	public GroupView getGroupForRequest(final Token userToken, final RequestID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException, ResourceHandlerException,
+				ClosedRequestException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest request = storage.getRequest(requestID);
+		final Group g = getGroupFromKnownGoodRequest(request);
+		ensureIsRequestTarget(request, g.isAdministrator(user), user, "access");
+		if (!request.isInvite()) {
+			throw new UnauthorizedException(
+					"Only Invite requests may access group information by the request ID");
+		}
+		ensureIsOpen(request);
+		return GroupView.getBuilder(g, null)
+				// include all public fields
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false))
+				.build();
+	}
+	
 	/** Get requests that were created by the user.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
@@ -905,7 +945,7 @@ public class Groups {
 				if (user.equals(toUserName(request))) {
 					return;
 				}
-			} else if (isAdministrator(user, request)) {
+			} else if (isResourceAdministrator(user, request)) {
 				return;
 			}
 		}
@@ -914,8 +954,8 @@ public class Groups {
 	}
 	
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
-	// returns false if ws is missing / deleted
-	private boolean isAdministrator(
+	// returns false if resource is missing / deleted
+	private boolean isResourceAdministrator(
 			final UserName user,
 			final GroupRequest request)
 			throws ResourceHandlerException {
