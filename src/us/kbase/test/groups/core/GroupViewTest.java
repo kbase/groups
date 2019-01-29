@@ -94,6 +94,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -128,6 +129,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -159,10 +161,13 @@ public class GroupViewTest {
 	
 	@Test
 	public void privateMinimalView() throws Exception {
-		final GroupView gv = GroupView.getBuilder(PRIVGROUP, null).build();
+		final GroupView gv = GroupView.getBuilder(PRIVGROUP, null)
+				.withOverridePrivateView(false)
+				.build();
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(true));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -173,6 +178,43 @@ public class GroupViewTest {
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.empty()));
 		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
 		assertThat("incorrect own", gv.getOwner(), is(mt()));
+		assertThat("incorrect view type", gv.isStandardView(), is(false));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
+		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
+		
+		getMemberFail(gv, new UserName("user"));
+		getMemberFail(gv, new UserName("a1"));
+		getMemberFail(gv, new UserName("a2"));
+		getMemberFail(gv, new UserName("m1"));
+		getMemberFail(gv, new UserName("m2"));
+		
+		assertImmutable(gv.getAdministrators(), new UserName("u"));
+		assertImmutable(gv.getMembers(), new UserName("u"));
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
+		assertImmutable(gv.getResourceCounts(), new ResourceType("t"), 7);
+	}
+	
+	@Test
+	public void overridePrivateMinimalView() throws Exception {
+		final GroupView gv = GroupView.getBuilder(PRIVGROUP, null)
+				.withOverridePrivateView(true)
+				.build();
+		
+		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
+		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(true));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
+		assertThat("incorrect privview", gv.isPrivateView(), is(false));
+		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
+		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
+		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
+		assertThat("incorrect members", gv.getMembers(), is(set()));
+		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
@@ -208,6 +250,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.of(true)));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -259,6 +302,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(false));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.of(false)));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(),
@@ -311,6 +355,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.empty()));
 		assertThat("incorrect privview", gv.isPrivateView(), is(true));
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
@@ -329,6 +374,68 @@ public class GroupViewTest {
 		getMemberFail(gv, new UserName("user"));
 		getMemberFail(gv, new UserName("a1"));
 		getMemberFail(gv, new UserName("a2"));
+		getMemberFail(gv, new UserName("m1"));
+		getMemberFail(gv, new UserName("m2"));
+		
+		assertImmutable(gv.getAdministrators(), new UserName("u"));
+		assertImmutable(gv.getMembers(), new UserName("u"));
+		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
+		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
+		assertImmutable(gv.getResourceCounts(), new ResourceType("t"), 7);
+	}
+	
+	@Test
+	public void overridePrivateNonMemberView() throws Exception {
+		final GroupView gv = GroupView.getBuilder(PRIVGROUP, null)
+				.withStandardView(true)
+				.withOverridePrivateView(true)
+				.withResourceType(new ResourceType("bar"))
+				.withResource(new ResourceType("workspace"),
+						ResourceInformationSet.getBuilder(null)
+								.withResource(new ResourceID("45"))
+								.withResource(new ResourceID("7"))
+								.build())
+				.withResource(new ResourceType("catalogmethod"),
+						ResourceInformationSet.getBuilder(null)
+								.build())
+				.build();
+		
+		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
+		assertThat("incorrect priv", gv.isPrivate(), is(true));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(true));
+		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(Optional.of(true)));
+		assertThat("incorrect privview", gv.isPrivateView(), is(false));
+		assertThat("incorrect admins", gv.getAdministrators(),
+				is(set(new UserName("a1"), new UserName("a2"))));
+		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
+		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
+		assertThat("incorrect members", gv.getMembers(), is(set()));
+		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
+		assertThat("incorrect view type", gv.isStandardView(), is(true));
+		assertThat("incorrect role", gv.getRole(), is(GroupView.Role.none));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
+				new ResourceType("workspace"), new ResourceType("catalogmethod"))));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
+				is(ResourceInformationSet.getBuilder(null).build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("workspace")),
+				is(ResourceInformationSet.getBuilder(null)
+						.withResource(new ResourceID("45"))
+						.withResource(new ResourceID("7"))
+						.build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("catalogmethod")),
+				is(ResourceInformationSet.getBuilder(null)
+						.build()));
+		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
+		assertThat("incorrect user", gv.getMember(new UserName("user")),
+				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a1")),
+				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
+		assertThat("incorrect user", gv.getMember(new UserName("a2")),
+				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
+		
 		getMemberFail(gv, new UserName("m1"));
 		getMemberFail(gv, new UserName("m2"));
 		
@@ -370,6 +477,7 @@ public class GroupViewTest {
 		
 		assertThat("incorrect id", gv.getGroupID(), is(new GroupID("id")));
 		assertThat("incorrect priv", gv.isPrivate(), is(priv));
+		assertThat("incorrect override priv", gv.isOverridePrivateView(), is(false));
 		assertThat("incorrect priv memb", gv.isPrivateMembersList(), is(privmemb));
 		assertThat("incorrect privview", gv.isPrivateView(), is(false));
 		assertThat("incorrect admins", gv.getAdministrators(),
