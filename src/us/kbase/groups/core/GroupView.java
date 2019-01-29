@@ -65,18 +65,21 @@ public class GroupView {
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
 	private final boolean isPrivate;
+	private final boolean isOverridePrivateView;
 	private final Optional<Boolean> isPrivateMemberList;
 	
 	// this class is starting to get a little hairy. Getting close to rethink/refactor time
 	private GroupView(
 			final Group group,
 			final boolean standardView,
+			final boolean isOverridePrivateView,
 			final Role role,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
 			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		this.isStandardView = standardView;
+		this.isOverridePrivateView = isOverridePrivateView;
 		this.role = role;
 		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
@@ -184,13 +187,21 @@ public class GroupView {
 		return isPrivateMemberList;
 	}
 	
+	/** Get whether the group's privacy setting has been overridden in this view, allowing
+	 * for a public view. The user's role within the group is still taken into account.
+	 * @return whether the group's privacy setting has been overridden.
+	 */
+	public boolean isOverridePrivateView() {
+		return isOverridePrivateView;
+	}
+	
 	/** Get whether this is a private view of the group, where only the group ID is visible.
-	 * The equivalent of {@link #isPrivate} && {@link #getRole()} equals
-	 * {@link Role#none}.
+	 * The equivalent of {@link #isPrivate()} && !{@link #isOverridePrivateView()} &&
+	 * {@link #getRole()} equals {@link Role#none}.
 	 * @return true if this is a private view of the group.
 	 */
 	public boolean isPrivateView() {
-		return isPrivate && role.equals(Role.none);
+		return isPrivate && !isOverridePrivateView && role.equals(Role.none);
 	}
 	
 	/** Get the group ID.
@@ -307,6 +318,7 @@ public class GroupView {
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + (isOverridePrivateView ? 1231 : 1237);
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + ((isPrivateMemberList == null) ? 0 : isPrivateMemberList.hashCode());
 		result = prime * result + (isStandardView ? 1231 : 1237);
@@ -366,6 +378,9 @@ public class GroupView {
 				return false;
 			}
 		} else if (!groupName.equals(other.groupName)) {
+			return false;
+		}
+		if (isOverridePrivateView != other.isOverridePrivateView) {
 			return false;
 		}
 		if (isPrivate != other.isPrivate) {
@@ -457,6 +472,7 @@ public class GroupView {
 		private final Group group;
 		private final Optional<UserName> user;
 		private boolean isStandardView = false;
+		private boolean isOverridePrivateView = false;
 		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
 		private Function<NumberedCustomField, Boolean> isPublicField = f -> false;
 		private Function<NumberedCustomField, Boolean> isMinimalViewField = f -> false;
@@ -566,15 +582,26 @@ public class GroupView {
 			return this;
 		}
 		
+		/** Override the private property of a group and allow a public view of the group.
+		 * The user's role within the group is still taken into account when determining the view.
+		 * @param overridePrivateView true to override the group's private property.
+		 * @return this builder.
+		 */
+		public Builder withOverridePrivateView(final boolean overridePrivateView) {
+			this.isOverridePrivateView = overridePrivateView;
+			return this;
+		}
+		
 		/** Build a new {@link GroupView}.
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, isStandardView, getRole(group, user),
-					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
+			return new GroupView(group, isStandardView, isOverridePrivateView,
+					getRole(group, user), resourceInfo,
+					isPublicField, isMinimalViewField, isUserPublicField);
 		}
 		
-		public Role getRole(final Group group, final Optional<UserName> user) {
+		private Role getRole(final Group group, final Optional<UserName> user) {
 			Role r = Role.none;
 			if (user.isPresent()) {
 				final UserName u = user.get();
