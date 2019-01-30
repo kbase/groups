@@ -19,9 +19,16 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
+import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
@@ -33,6 +40,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.UnauthorizedException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.GroupRequestUserAction;
@@ -219,6 +227,72 @@ public class RequestAPITest {
 			final Exception expected) {
 		try {
 			new RequestAPI(g).getRequest(token, requestid);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getGroupForRequest() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(g.getGroupForRequest(new Token("t"), new RequestID(id)))
+				.thenReturn(GroupView.getBuilder(
+						Group.getBuilder(new GroupID("id"), new GroupName("n"),
+								GroupUser.getBuilder(new UserName("u"), inst(10000)).build(),
+								new CreateAndModTimes(inst(30000), inst(40000)))
+								.withMember(GroupUser.getBuilder(new UserName("u2"), inst(10000))
+										.build())
+								.withCustomField(new NumberedCustomField("f"), "x")
+								.build(),
+						null)
+						.withMinimalViewFieldDeterminer(f -> true)
+						.withPublicFieldDeterminer(f -> true)
+						.build());
+		
+		assertThat("incorrect group", new RequestAPI(g).getGroupForRequest("t", id.toString()),
+				is(MapBuilder.newHashMap()
+						.with("id", "id")
+						.with("private", false)
+						.with("role", "none")
+						.with("name", "n")
+						.with("owner", "u")
+						.with("memcount", 2)
+						.with("custom", ImmutableMap.of("f", "x"))
+						.with("createdate", 30000L)
+						.with("moddate", 40000L)
+						.with("rescount", Collections.emptyMap())
+						.build()));
+	}
+	
+	@Test
+	public void getGroupForRequestFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final String id = UUID.randomUUID().toString();
+		
+		failGetGroupForRequest(g, null, id,
+				new NoTokenProvidedException("No token provided"));
+		failGetGroupForRequest(g, "    \t    ", id,
+				new NoTokenProvidedException("No token provided"));
+		failGetGroupForRequest(g, "t", null,
+				new MissingParameterException("request id"));
+		failGetGroupForRequest(g, "t", "   \t   ",
+				new MissingParameterException("request id"));
+		failGetGroupForRequest(g, "t", "foo",
+				new IllegalParameterException("foo is not a valid request id"));
+	}
+	
+	public void failGetGroupForRequest(
+			final Groups g,
+			final String token,
+			final String requestID,
+			final Exception expected) {
+		try {
+			new RequestAPI(g).getGroupForRequest(token, requestID);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

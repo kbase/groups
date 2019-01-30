@@ -643,6 +643,7 @@ public class Groups {
 		}
 		ensureIsOpen(request);
 		return GroupView.getBuilder(g, null)
+				.withOverridePrivateView(true)
 				// include all public fields
 				.withMinimalViewFieldDeterminer(f -> true)
 				.withPublicFieldDeterminer(
