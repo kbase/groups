@@ -8,6 +8,7 @@ public class ServicePaths {
 	
 	private static final String UPDATE = "update";
 	private static final String GETPERM = "getperm";
+	private static final String GROUP_STR = "group";
 
 	/* general strings */
 
@@ -22,7 +23,7 @@ public class ServicePaths {
 	/* Groups endpoints */
 	
 	/** The group endpoint location. */
-	public static final String GROUP = SEP + "group";
+	public static final String GROUP = SEP + GROUP_STR;
 	/** The group ID */
 	public static final String GROUP_ID = "{" + Fields.GROUP_ID + "}";
 	/** The location to check if a group exists. */
@@ -56,6 +57,8 @@ public class ServicePaths {
 	public static final String REQUEST = SEP + "request";
 	/** The location to access a request by ID. */
 	public static final String REQUEST_ID = SEP + "id" + SEP + "{" + Fields.REQUEST_ID + "}";
+	/** The location to get information about a group associated with a request. */
+	public static final String REQUEST_ID_GROUP = REQUEST_ID + SEP + GROUP_STR;
 	/** The location to request permissions to view an outside resource associated with a
 	 * request. */
 	public static final String REQUEST_ID_PERMS = REQUEST_ID + SEP + GETPERM;

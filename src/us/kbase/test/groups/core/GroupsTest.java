@@ -2458,6 +2458,7 @@ public class GroupsTest {
 						.withCustomField(new NumberedCustomField("publist-2"), "publist1")
 						.build(),
 				null)
+				.withOverridePrivateView(true)
 				.withMinimalViewFieldDeterminer(f -> true)
 				.withPublicFieldDeterminer(f -> true)
 				.build()));

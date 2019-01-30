@@ -231,7 +231,7 @@ A list of Groups. Only the id, name, owner, role, memcount, rescount, custom,
 createdate, and moddate fields are included.
 ```
 
-The owner field consists only of the user name for this endpoint. For all other endpoints,
+The owner field consists only of the user name for this endpoint. For most other endpoints,
 the owner field is a full `User` data structure.
 
 A maximum of 100 groups are returned.
@@ -508,6 +508,32 @@ to the user.
 ```
 
 Possible actions are `Cancel`, `Accept`, and `Deny`.
+
+### Get group information associated with a request
+
+```
+AUTHORIZATION REQUIRED
+GET /request/id/<request id>/group
+
+A Group. Only the id, name, owner, role, memcount, rescount, custom,
+createdate, and moddate fields are included.
+```
+
+This endpoint allows a user who has been invited to a group, or who administrates a resource
+that has been invited to a group, to view basic information about the group - even for private
+groups. The request must be `Open`, the request type must be `Invite`, and the user must be
+the target of the request or an administrator of a resource that is the target of the request.
+
+If the group is not private this endpoint is not useful.
+
+This endpoint returns a data structure identical to that of the `/group` endpoint, as if
+the user is not a member of the group, for consistency's sake. As such, the `rescount` field
+is present but always empty.
+
+The owner field consists only of the user name for this endpoint. For most other endpoints,
+the owner field is a full `User` data structure.
+
+Only public custom fields are included.
 
 ### Get permission to read a resource associated with a request
 

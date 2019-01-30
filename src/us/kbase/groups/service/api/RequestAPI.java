@@ -2,6 +2,7 @@ package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
+import static us.kbase.groups.service.api.APICommon.toGroupJSON;
 import static us.kbase.groups.service.api.APICommon.toGroupRequestJSON;
 
 import java.util.List;
@@ -69,6 +70,20 @@ public class RequestAPI {
 		json.put(Fields.REQUEST_USER_ACTIONS, new TreeSet<>(actions.getActions())
 				.stream().map(a -> a.getRepresentation()).collect(Collectors.toList()));
 		return json;
+	}
+	
+	@GET
+	@Path(ServicePaths.REQUEST_ID_GROUP)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getGroupForRequest(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID)
+			throws InvalidTokenException, NoSuchRequestException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, ClosedRequestException,
+				IllegalParameterException, MissingParameterException, GroupsStorageException,
+				ResourceHandlerException {
+		return toGroupJSON(groups.getGroupForRequest(
+				getToken(token, true), new RequestID(requestID)));
 	}
 	
 	@POST
