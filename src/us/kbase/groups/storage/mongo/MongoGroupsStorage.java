@@ -1224,6 +1224,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name());
 		return findRequests(query, params);
 	}
+	
+	@Override
+	public boolean groupHasRequest(final GroupID groupID, final Instant laterThan)
+			throws GroupsStorageException {
+		requireNonNull(groupID, "groupID");
+		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
+				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
+		if (laterThan != null) {
+			// we used mod date vs create to avoid making another index, and since
+			// the mod date isn't changed while the request is open
+			query.append(Fields.REQUEST_MODIFICATION, new Document("$gt", laterThan));
+		}
+		final Document projection = new Document(Fields.MONGO_ID, 1);
+		// mongo 2.6 doesn't support count with a limit
+		return findOne(COL_REQUESTS, query, projection) != null;
+	}
 
 	private List<GroupRequest> findRequests(final Document query, final GetRequestsParams params)
 			throws GroupsStorageException {
