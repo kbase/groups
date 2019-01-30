@@ -1,13 +1,17 @@
 package us.kbase.groups.service.api;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,11 +20,18 @@ import java.util.stream.Collectors;
 
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.GroupUser;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
+import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
+import us.kbase.groups.core.resource.ResourceType;
 
 public class APICommon {
 	
@@ -54,6 +65,85 @@ public class APICommon {
 			final Collection<GroupRequest> requests) {
 		checkNotNull(requests, "requests");
 		return requests.stream().map(r -> toGroupRequestJSON(r)).collect(Collectors.toList());
+	}
+	
+	/** Convert a {@link GroupView} to a map based structure suitable for serializing to JSON.
+	 * @param group the group view.
+	 * @return JSONable data.
+	 */
+	public static Map<String, Object> toGroupJSON(final GroupView group) {
+		requireNonNull(group, "group");
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put(Fields.GROUP_ID, group.getGroupID().getName());
+		ret.put(Fields.GROUP_IS_PRIVATE, group.isPrivate());
+		ret.put(Fields.GROUP_ROLE, group.getRole().name());
+		if (!group.isPrivateView()) {
+			ret.put(Fields.GROUP_NAME, group.getGroupName().get().getName());
+			ret.put(Fields.GROUP_OWNER, group.getOwner().get().getName());
+			ret.put(Fields.GROUP_MEMBER_COUNT, group.getMemberCount().get());
+			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
+			ret.put(Fields.GROUP_CREATION, group.getCreationDate().get().toEpochMilli());
+			ret.put(Fields.GROUP_MODIFICATION, group.getModificationDate().get().toEpochMilli());
+			final Map<String, Object> resourceCounts = new HashMap<>();
+			ret.put(Fields.GROUP_RESOURCE_COUNT, resourceCounts);
+			for (final ResourceType t: group.getResourceCounts().keySet()) {
+				resourceCounts.put(t.getName(), group.getResourceCounts().get(t));
+			}
+			if (group.isStandardView()) {
+				ret.put(Fields.GROUP_MEMBERS_PRIVATE, group.isPrivateMembersList().get());
+				ret.put(Fields.GROUP_OWNER, toUserJson(group.getMember(group.getOwner().get())));
+				ret.put(Fields.GROUP_MEMBERS, toMemberList(group.getMembers(), group));
+				ret.put(Fields.GROUP_ADMINS, toMemberList(group.getAdministrators(), group));
+				final Map<String, Object> resources = new HashMap<>();
+				ret.put(Fields.GROUP_RESOURCES, resources);
+				for (final ResourceType t: group.getResourceTypes()) {
+					resources.put(t.getName(), getResourceList(group.getResourceInformation(t)));
+				}
+			}
+		}
+		return ret;
+	}
+	
+	private static Map<String, Object> toUserJson(final GroupUser user) {
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
+		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, user.getJoinDate().toEpochMilli());
+		ret.put(Fields.GROUP_MEMBER_CUSTOM_FIELDS, getCustomFields(user.getCustomFields()));
+		return ret;
+	}
+	
+	private static List<Map<String, Object>> toMemberList(
+			final Collection<UserName> members,
+			final GroupView group) {
+		return members.stream().sorted().map(m -> toUserJson(group.getMember(m)))
+				.collect(Collectors.toList());
+	}
+
+	private static List<Map<String, Object>> getResourceList(
+			final ResourceInformationSet resourceInfo) {
+		final List<Map<String, Object>> rlist = new LinkedList<>();
+		for (final ResourceID rd: sorted(resourceInfo)) {
+			final Map<String, Object> resource = new HashMap<>();
+			rlist.add(resource);
+			resource.putAll(resourceInfo.getFields(rd));
+			resource.put(Fields.GROUP_RESOURCE_ID, rd.getName());
+		}
+		return rlist;
+	}
+	
+	private static Map<String, String> getCustomFields(
+			final Map<NumberedCustomField, String> fields) {
+		return fields.keySet().stream().collect(Collectors.toMap(
+				k -> k.getField(), k -> fields.get(k)));
+	}
+
+	// may want to subclass the descriptors to allow for resource type specific sorts
+	// specifically for workspaces
+	// or associate a comparator with a resource type
+	private static List<ResourceID> sorted(final ResourceInformationSet resources) {
+		final List<ResourceID> ret = new ArrayList<>(resources.getResources());
+		Collections.sort(ret);
+		return ret;
 	}
 	
 	/** Get a {@link Token} from a string.

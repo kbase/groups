@@ -8,31 +8,67 @@ import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
+import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group.Builder;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.APICommon;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
 
 public class APICommonTest {
+	
+	private static Builder getGroupMaxBuilder()
+			throws MissingParameterException, IllegalParameterException {
+		return Group.getBuilder(
+				new GroupID("id2"), new GroupName("name2"),
+				GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
+						.withCustomField(new NumberedCustomField("whee"), "whoo")
+						.build())
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
+						.withCustomField(new NumberedCustomField("yay-6"), "boo")
+						.withCustomField(new NumberedCustomField("bar"), "baz")
+						.build())
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("a")))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("b")))
+				.withResource(new ResourceType("cat"), new ResourceDescriptor(new ResourceID("c")))
+				.withCustomField(new NumberedCustomField("field-1"), "my val")
+				.withCustomField(new NumberedCustomField("otherfield"), "fieldval");
+	}
 	
 	@Test
 	public void toGroupRequestJSON() throws Exception {
@@ -275,6 +311,116 @@ public class APICommonTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("requests"));
+		}
+	}
+	
+	@Test
+	public void toGroupJSONPrivateGroup() throws Exception {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().withIsPrivate(true).build(),
+				new UserName("nonmember"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(ImmutableMap.of(
+				"id", "id2", "private", true, "role", "none")));
+	}
+	
+	@Test
+	public void toGroupJSONMinimalView() throws Exception {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().build(),
+				new UserName("bar"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("role", "member")
+				.with("name", "name2")
+				.with("owner", "u2")
+				.with("memcount", 5)
+				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
+				.build()));
+	}
+	
+	@Test
+	public void toGroupJSONStandardView() throws Exception {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().build(),
+				new UserName("bar"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.withResourceType(new ResourceType("cat"))
+				.withResource(new ResourceType("ws"), ResourceInformationSet
+						.getBuilder(new UserName("bar"))
+						.withResourceField(new ResourceID("a"), "f1", "x")
+						.withResourceField(new ResourceID("a"), "rid", "wrong")
+						.withResource(new ResourceID("b"))
+						.build())
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("role", "member")
+				.with("name", "name2")
+				.with("owner", ImmutableMap.of(
+						"name", "u2",
+						"joined", 20000L,
+						"custom", Collections.emptyMap()))
+				.with("memcount", 5)
+				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
+				.with("privatemembers", true)
+				.with("members", Arrays.asList(
+						ImmutableMap.of(
+								"name", "bar",
+								"joined", 40000L,
+								"custom", Collections.emptyMap()),
+						ImmutableMap.of(
+							"name", "foo",
+							"joined", 650000L,
+							"custom", ImmutableMap.of("whee", "whoo"))
+						))
+				.with("admins", Arrays.asList(
+						ImmutableMap.of(
+								"name", "whee",
+								"joined", 220000L,
+								"custom", Collections.emptyMap()),
+						ImmutableMap.of(
+							"name", "whoo",
+							"joined", 760000L,
+							"custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+						))
+				.with("resources", ImmutableMap.of(
+						"ws", Arrays.asList(
+								ImmutableMap.of("rid", "a", "f1", "x"),
+								ImmutableMap.of("rid", "b")),
+						"cat", Collections.emptyList()))
+						
+				.build()));
+	}
+	
+	@Test
+	public void toGroupJSONFail() throws Exception {
+		try {
+			APICommon.toGroupJSON(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("group"));
 		}
 	}
 	
