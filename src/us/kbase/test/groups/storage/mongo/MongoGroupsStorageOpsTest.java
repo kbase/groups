@@ -3379,6 +3379,80 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
+	public void groupHasRequestsNoRequests() throws Exception {
+		// wrong group
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.build());
+		// not incoming request
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("bar"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(new ResourceDescriptor(new ResourceID("baz")))
+				.build());
+		// closed
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("bar"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+							.build())
+				.withStatus(GroupRequestStatus.expired())
+				.build());
+		
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), null), is(false));
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), inst(10000)), is(false));
+	}
+	
+	@Test
+	public void groupHasRequests() throws Exception {
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(70000), Instant.ofEpochMilli(80000))
+							.build())
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("bar"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(40000), Instant.ofEpochMilli(40000))
+							.build())
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("bar"), new UserName("bat"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(50000), Instant.ofEpochMilli(60000))
+							.build())
+				.build());
+		
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), null), is(true));
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), inst(40000)), is(true));
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), inst(49999)), is(true));
+		assertThat("incorrect has request",
+				manager.storage.groupHasRequest(new GroupID("bar"), inst(50000)), is(false));
+	}
+	
+	@Test
+	public void failGroupHasRequests() throws Exception {
+		try {
+			manager.storage.groupHasRequest(null, inst(1));
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+	
+	@Test
 	public void closeRequestCancel() throws Exception {
 		final UUID id = UUID.randomUUID();
 		manager.storage.storeRequest(GroupRequest.getBuilder(
