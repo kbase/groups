@@ -2463,6 +2463,8 @@ public class GroupsTest {
 				.build()));
 	}
 	
+	// a lot of the failure tests here are almost identical to the getRequest() tests.
+	// maybe combine with a function to allow specifying the failGet*Request() fn.
 	@Test
 	public void getGroupForRequestFailNulls() throws Exception {
 		final TestMocks mocks = initTestMocks();
