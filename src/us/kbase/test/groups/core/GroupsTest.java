@@ -38,6 +38,7 @@ import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupCreationParams;
+import us.kbase.groups.core.GroupHasRequests;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupIDAndName;
 import us.kbase.groups.core.GroupIDNameMembership;
@@ -1314,6 +1315,121 @@ public class GroupsTest {
 		}
 	}
 	
+	@Test
+	public void groupsHaveRequestsNoGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
+		
+		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
+				new Token("tok"), set(), null),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void groupsHaveRequests() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
+		when(mocks.storage.getGroup(new GroupID("id1"))).thenReturn(groupWithAdmin("id1", "u"));
+		when(mocks.storage.getGroup(new GroupID("id2"))).thenReturn(groupWithAdmin("id2", "u"));
+		when(mocks.storage.groupHasRequest(new GroupID("id1"), null)).thenReturn(false);
+		when(mocks.storage.groupHasRequest(new GroupID("id2"), null)).thenReturn(true);
+		
+		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
+				new Token("tok"), set(new GroupID("id1"), new GroupID("id2")), null),
+				is(ImmutableMap.of(
+						new GroupID("id1"), GroupHasRequests.NONE,
+						new GroupID("id2"), GroupHasRequests.NEW)));
+	}
+	
+	@Test
+	public void groupsHaveRequestsLaterThan() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
+		when(mocks.storage.getGroup(new GroupID("id1"))).thenReturn(groupWithAdmin("id1", "u"));
+		when(mocks.storage.getGroup(new GroupID("id2"))).thenReturn(groupWithAdmin("id2", "u"));
+		when(mocks.storage.getGroup(new GroupID("id3"))).thenReturn(groupWithAdmin("id3", "u"));
+		when(mocks.storage.groupHasRequest(new GroupID("id1"), inst(30000))).thenReturn(false);
+		when(mocks.storage.groupHasRequest(new GroupID("id1"), null)).thenReturn(true);
+		when(mocks.storage.groupHasRequest(new GroupID("id2"), inst(30000))).thenReturn(true);
+		when(mocks.storage.groupHasRequest(new GroupID("id3"), inst(30000))).thenReturn(false);
+		when(mocks.storage.groupHasRequest(new GroupID("id3"), null)).thenReturn(false);
+		
+		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
+				new Token("tok"), set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3")),
+				inst(30000)),
+				is(ImmutableMap.of(
+						new GroupID("id1"), GroupHasRequests.OLD,
+						new GroupID("id2"), GroupHasRequests.NEW,
+						new GroupID("id3"), GroupHasRequests.NONE)));
+	}
+	
+	private Group groupWithAdmin(final String id, final String adminName) throws Exception {
+		return Group.getBuilder(new GroupID(id), new GroupName("n"), toGUser("o"),
+				new CreateAndModTimes(inst(1000)))
+				.withAdministrator(toGUser(adminName))
+				.build();
+	}
+	
+	@Test
+	public void failGroupsHaveRequestsNull() throws Exception {
+		final Groups g = initTestMocks().groups;
+		final Token t = new Token("a");
+		final Set<GroupID> i = set();
+		failGroupsHaveRequests(g, null, i, new NullPointerException("userToken"));
+		failGroupsHaveRequests(g, t, null, new NullPointerException("groupIDs"));
+		failGroupsHaveRequests(g, t, set(new GroupID("i"), null), new NullPointerException(
+				"Null item in collection groupIDs"));
+	}
+	
+	@Test
+	public void failGroupsHaveRequestsTooManyGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final Set<GroupID> ids = IntStream.range(1, 101).mapToObj(i -> toGID(i))
+				.collect(Collectors.toSet());
+
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
+		for (final GroupID g: ids) {
+			when(mocks.storage.getGroup(g)).thenReturn(groupWithAdmin(g.getName(), "u"));
+		}
+		
+		mocks.groups.groupsHaveRequests(new Token("tok"), ids, null);
+		
+		ids.add(new GroupID("i101"));
+		failGroupsHaveRequests(mocks.groups, new Token("tok"), ids, new IllegalParameterException(
+				"No more than 100 group IDs are allowed"));
+	}
+	
+	@Test
+	public void failGroupsHaveRequestsNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
+		when(mocks.storage.getGroup(new GroupID("id1"))).thenReturn(groupWithAdmin("id1", "u"));
+		when(mocks.storage.getGroup(new GroupID("id2"))).thenReturn(groupWithAdmin("id2", "u2"));
+		when(mocks.storage.getGroup(new GroupID("id3"))).thenReturn(groupWithAdmin("id3", "u"));
+		
+		failGroupsHaveRequests(mocks.groups, new Token("tok"),
+				set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3")),
+				new UnauthorizedException("User u may not administrate group id2"));
+	}
+	
+	private void failGroupsHaveRequests(
+			final Groups g,
+			final Token t,
+			final Set<GroupID> ids,
+			final Exception expected) {
+		try {
+			g.groupsHaveRequests(t, ids, null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+
 	@Test
 	public void getGroupsEmpty() throws Exception {
 		final TestMocks mocks = initTestMocks();

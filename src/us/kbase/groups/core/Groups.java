@@ -69,6 +69,7 @@ public class Groups {
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private static final int MAX_GROUP_NAMES_RETURNED = 1000;
+	private static final int MAX_GROUP_HAS_REQUESTS_COUNT = 100;
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Map<ResourceType, ResourceHandler> resourceHandlers;
@@ -448,6 +449,58 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		return storage.getMemberGroups(user);
+	}
+	
+	/** Determine whether groups have open incoming (e.g. of type {@link RequestType#REQUEST})
+	 * requests.
+	 * @param userToken the user's token.
+	 * @param groupIDs the group IDs of the groups to query.
+	 * @param laterThan any requests less than or equal to this date are considered
+	 * {@link GroupHasRequests#OLD}. If null, any open requests are considered
+	 * {@link GroupHasRequests#NEW}.
+	 * @return A mapping from the group ID to whether the group has any open requests.
+	 * @throws NoSuchGroupException if one of the groups does not exist.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws IllegalParameterException if more than 100 group IDs are queried.
+	 * @throws UnauthorizedException if the user is not an administrator of at least one of the
+	 * groups.
+	 */
+	public Map<GroupID, GroupHasRequests> groupsHaveRequests(
+			final Token userToken,
+			final Set<GroupID> groupIDs,
+			final Instant laterThan)
+			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
+				NoSuchGroupException, GroupsStorageException, IllegalParameterException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		if (groupIDs.size() > MAX_GROUP_HAS_REQUESTS_COUNT) {
+			throw new IllegalParameterException(String.format(
+					"No more than %s group IDs are allowed", MAX_GROUP_HAS_REQUESTS_COUNT));
+		}
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		for (final GroupID gid: groupIDs) {
+			// could make a bulk method that returns less info per group if necessary
+			// or even an isAdmin(Username, Set<GroupID>) method. YAGNI for now
+			if (!storage.getGroup(gid).isAdministrator(user)) {
+				throw new UnauthorizedException(String.format(
+						"User %s may not administrate group %s", user.getName(), gid.getName()));
+			}
+		}
+		final Map<GroupID, GroupHasRequests> ret = new HashMap<>();
+		for (final GroupID gid: groupIDs) {
+			final GroupHasRequests reqstate;
+			if (storage.groupHasRequest(gid, laterThan)) {
+				reqstate = GroupHasRequests.NEW;
+			} else if (laterThan != null) {
+				reqstate = storage.groupHasRequest(gid, null) ?
+						GroupHasRequests.OLD : GroupHasRequests.NONE;
+			} else {
+				reqstate = GroupHasRequests.NONE;
+			}
+			ret.put(gid, reqstate);
+		}
+		return ret;
 	}
 	
 	/** Get minimal views of the groups in the system.

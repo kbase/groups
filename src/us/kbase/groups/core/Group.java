@@ -225,7 +225,7 @@ public class Group {
 		return customFields;
 	}
 	
-	/** Check if a user is a group administrator.
+	/** Check if a user is a group administrator, including the owner.
 	 * @param user the user to check.
 	 * @return true if the user is a group administrator, false otherwise.
 	 */
