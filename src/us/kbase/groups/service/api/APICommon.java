@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
@@ -201,17 +202,29 @@ public class APICommon {
 			throws IllegalParameterException {
 		final GetRequestsParams.Builder b = GetRequestsParams.getBuilder();
 		if (!isNullOrEmpty(excludeUpTo)) {
-			final long epochms;
-			try {
-				epochms = Long.parseLong(excludeUpTo.trim());
-			} catch (NumberFormatException e) {
-				throw new IllegalParameterException("Invalid epoch ms: " + excludeUpTo.trim());
-			}
-			b.withNullableExcludeUpTo(Instant.ofEpochMilli(epochms));
+			b.withNullableExcludeUpTo(epochMilliStringToInstant(excludeUpTo));
 		}
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		
 		return b.withNullableIncludeClosed(includeClosed != null).build();
+	}
+
+	/** Parse epoch milliseconds as a string into an {@link Instant}. Surrounding whitespace
+	 * is ignored.
+	 * @param epochMilli the string epoch milliseconds.
+	 * @return the parsed Instant.
+	 * @throws IllegalParameterException if the string is not epoch milliseconds.
+	 */
+	public static Instant epochMilliStringToInstant(final String epochMilli)
+			throws IllegalParameterException {
+		requireNonNull(epochMilli, "epochMilli");
+		final Instant epochms;
+		try {
+			epochms = Instant.ofEpochMilli(Long.parseLong(epochMilli.trim()));
+		} catch (NumberFormatException e) {
+			throw new IllegalParameterException("Invalid epoch ms: " + epochMilli.trim());
+		}
+		return epochms;
 	}
 	
 	/** Get parameters for listing groups from a set of strings as may be presented in
@@ -251,5 +264,28 @@ public class APICommon {
 			}
 			sortConsumer.accept(SORT_ASCENDING.equals(sortDirection.trim()));
 		}
+	}
+	
+	/** Split a comma separated string into a set of group IDs. Whitespace only entries are
+	 * ignored.
+	 * @param commaSeparatedGroupIDs the group IDs as a comma separated string.
+	 * @return the group IDs.
+	 * @throws IllegalParameterException if an ID is illegal.
+	 */
+	public static Set<GroupID> toGroupIDs(final String commaSeparatedGroupIDs)
+			throws IllegalParameterException {
+		final Set<GroupID> groupIDs = new HashSet<>();
+		for (final String id: requireNonNull(commaSeparatedGroupIDs, "commaSeparatedGroupIDs")
+				.split(",")) {
+			// can't use streams due to checked exceptions
+			if (!id.trim().isEmpty()) {
+				try {
+					groupIDs.add(new GroupID(id));
+				} catch (MissingParameterException e) {
+					throw new RuntimeException("This is impossible. It didn't happen.", e);
+				}
+			}
+		}
+		return groupIDs;
 	}
 }

@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.inst;
+import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
@@ -529,6 +531,30 @@ public class APICommonTest {
 	}
 	
 	@Test
+	public void epochMilliStringToInstant() throws Exception {
+		assertThat("incorrect instant", APICommon.epochMilliStringToInstant("   \t  5161634  \n "),
+				is(Instant.ofEpochMilli(5161634)));
+	}
+	
+	@Test
+	public void failEpochMilliStringToInstant() throws Exception {
+		failEpochMilliStringToInstant(null, new NullPointerException("epochMilli"));
+		failEpochMilliStringToInstant("   \t    ", new IllegalParameterException(
+				"Invalid epoch ms: "));
+		failEpochMilliStringToInstant("   foo   ", new IllegalParameterException(
+				"Invalid epoch ms: foo"));
+	}
+	
+	private void failEpochMilliStringToInstant(final String em, final Exception expected) {
+		try {
+			APICommon.epochMilliStringToInstant(em);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void getGroupParamsNulls() throws Exception {
 		final GetGroupsParams p = APICommon.getGroupsParams(null, null, true);
 		
@@ -575,6 +601,29 @@ public class APICommonTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
 					"Invalid sort direction: asd"));
+		}
+	}
+	
+	@Test
+	public void toGroupIDs() throws Exception {
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(set()));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   foo,  \t ,  bar   ,baz,    \t"),
+				is(set(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
+	}
+	
+	@Test
+	public void failToGroupIDs() throws Exception {
+		failToGroupIDs(null, new NullPointerException("commaSeparatedGroupIDs"));
+		failToGroupIDs("  \t , foo, bad*name, bar", new IllegalParameterException(
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id  bad*name: *"));
+	}
+	
+	private void failToGroupIDs(final String ids, final Exception expected) {
+		try {
+			APICommon.toGroupIDs(ids);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
