@@ -86,6 +86,10 @@ public class Fields {
 	public static final String REQUEST_USER_ACTIONS = "actions";
 	/** The reason a request was denied. */
 	public static final String REQUEST_DENIED_REASON = "reason";
+	/** The time after which requests should be considered "new" vs. "old". */
+	public static final String REQUEST_LATER_THAN = "laterthan";
+	/** Whether a group has new requests. */
+	public static final String REQUEST_NEW = "new";
 	
 	/* ***********************
 	 * groups listing fields

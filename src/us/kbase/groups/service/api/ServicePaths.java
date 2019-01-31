@@ -72,6 +72,9 @@ public class ServicePaths {
 	public static final String REQUEST_CREATED = SEP + "created";
 	/** The location to list requests targeted at the user. */
 	public static final String REQUEST_TARGETED = SEP + "targeted";
+	/** The location to determine whether groups have open requests. */
+	public static final String REQUEST_NEW = SEP + "groups" + SEP + "{" + Fields.IDS + "}" +
+			SEP + "new";
 	
 	/* Member endpoints */
 	

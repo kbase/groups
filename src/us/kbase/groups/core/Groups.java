@@ -454,7 +454,7 @@ public class Groups {
 	/** Determine whether groups have open incoming (e.g. of type {@link RequestType#REQUEST})
 	 * requests.
 	 * @param userToken the user's token.
-	 * @param groupIDs the group IDs of the groups to query.
+	 * @param groupIDs the group IDs of the groups to query. At most 100 IDs may be supplied.
 	 * @param laterThan any requests less than or equal to this date are considered
 	 * {@link GroupHasRequests#OLD}. If null, any open requests are considered
 	 * {@link GroupHasRequests#NEW}.

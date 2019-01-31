@@ -1,10 +1,14 @@
 package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
+import static us.kbase.groups.service.api.APICommon.epochMilliStringToInstant;
 import static us.kbase.groups.service.api.APICommon.getToken;
+import static us.kbase.groups.service.api.APICommon.toGroupIDs;
 import static us.kbase.groups.service.api.APICommon.toGroupJSON;
 import static us.kbase.groups.service.api.APICommon.toGroupRequestJSON;
+import static us.kbase.groups.util.Util.isNullOrEmpty;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -23,6 +27,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
@@ -31,6 +36,7 @@ import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
+import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
@@ -186,5 +192,24 @@ public class RequestAPI {
 		//TODO PRIVATE figure out when user that accepted / denied request should be visible. may need a requestView class
 		return toGroupRequestJSON(groups.denyRequest(
 				getToken(token, true), new RequestID(requestID), reason));
+	}
+	
+	@GET
+	@Path(ServicePaths.REQUEST_NEW)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> groupsHaveRequests(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.IDS) final String ids,
+			@QueryParam(Fields.REQUEST_LATER_THAN) final String laterThanStr)
+			throws IllegalParameterException, InvalidTokenException, NoSuchGroupException,
+				NoTokenProvidedException, AuthenticationException, UnauthorizedException,
+				GroupsStorageException {
+		final Instant laterThan = isNullOrEmpty(laterThanStr) ? null :
+			epochMilliStringToInstant(laterThanStr);
+		return groups.groupsHaveRequests(getToken(token, true), toGroupIDs(ids), laterThan)
+				.entrySet().stream().collect(Collectors.toMap(
+						e -> e.getKey().getName(),
+						e -> ImmutableMap.of(Fields.REQUEST_NEW,
+								e.getValue().getRepresentation())));
 	}
 }
