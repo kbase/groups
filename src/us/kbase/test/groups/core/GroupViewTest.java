@@ -52,10 +52,12 @@ public class GroupViewTest {
 							Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
 					.withAdministrator(GroupUser.getBuilder(new UserName("a1"), inst(60000))
 							.withCustomField(new NumberedCustomField("admin"), "yar")
+							.withNullableLastVisit(inst(35000))
 							.build())
 					.withAdministrator(GroupUser.getBuilder(new UserName("a2"), inst(30000))
 							.build())
 					.withMember(GroupUser.getBuilder(new UserName("m1"), inst(75000))
+							.withNullableLastVisit(inst(62000))
 							.build())
 					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(84000))
 							.withCustomField(new NumberedCustomField("user-6"), "yay")
@@ -448,10 +450,12 @@ public class GroupViewTest {
 	
 	@Test
 	public void memberView() throws Exception {
-		memberView(GROUP, false, Optional.of(true), new UserName("a1"), Group.Role.ADMIN);
-		memberView(PRIVGROUP, true, Optional.of(true), new UserName("user"), Group.Role.OWNER);
+		memberView(GROUP, false, Optional.of(true), new UserName("a1"), Group.Role.ADMIN,
+				inst(35000), inst(62000));
+		memberView(PRIVGROUP, true, Optional.of(true), new UserName("user"), Group.Role.OWNER,
+				inst(35000), inst(62000));
 		memberView(PUBMEMBERGROUP, false, Optional.of(false), new UserName("m1"),
-				Group.Role.MEMBER);
+				Group.Role.MEMBER, null, null);
 	}
 
 	private void memberView(
@@ -459,7 +463,9 @@ public class GroupViewTest {
 			final boolean priv,
 			final Optional<Boolean> privmemb,
 			final UserName user,
-			final Group.Role role)
+			final Group.Role role,
+			final Instant adminInstant,
+			final Instant memberInstant)
 			throws MissingParameterException, IllegalParameterException {
 		final GroupView gv = GroupView.getBuilder(group, user)
 				.withStandardView(true)
@@ -514,12 +520,14 @@ public class GroupViewTest {
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
 				is(GroupUser.getBuilder(new UserName("a1"), inst(60000))
 						.withCustomField(new NumberedCustomField("admin"), "yar")
+						.withNullableLastVisit(adminInstant)
 						.build()));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
 				is(GroupUser.getBuilder(new UserName("a2"), inst(30000))
 						.build()));
 		assertThat("incorrect user", gv.getMember(new UserName("m1")),
 				is(GroupUser.getBuilder(new UserName("m1"), inst(75000))
+						.withNullableLastVisit(memberInstant)
 						.build()));
 		assertThat("incorrect user", gv.getMember(new UserName("m2")),
 				is(GroupUser.getBuilder(new UserName("m2"), inst(84000))
