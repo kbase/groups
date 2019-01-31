@@ -128,6 +128,9 @@ public class GroupView {
 		final GroupUser.Builder b = GroupUser.getBuilder(member.getName(), member.getJoinDate());
 		getCustomFields(member.getCustomFields(), isUserPublicField, f -> false)
 				.entrySet().stream().forEach(e -> b.withCustomField(e.getKey(), e.getValue()));
+		if (Role.OWNER.equals(role) || Role.ADMIN.equals(role)) {
+			b.withNullableLastVisit(member.getLastVisit().orElse(null));
+		}
 		return b.build();
 	}
 
@@ -282,6 +285,8 @@ public class GroupView {
 	
 	/** Get a member's detailed information. Only available in a standard view. In a minimal
 	 * view, this method will throw an illegal argument exception.
+	 * {@link GroupUser#getLastVisit()} will return {@link Optional#empty()} if the user
+	 * passed into {@link #getBuilder(Group, UserName)} is not a group administrator.
 	 * @param user the member.
 	 * @return the member's info.
 	 */
