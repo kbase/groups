@@ -167,11 +167,13 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("gid"), new GroupName("name"),
 				GroupUser.getBuilder(new UserName("uname"), inst(21000))
 						.withCustomField(new NumberedCustomField("f"), "val")
+						.withNullableLastVisit(inst(42000))
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withIsPrivate(true)
 				.withPrivateMemberList(false)
 				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
+						.withNullableLastVisit(inst(76000))
 						.withCustomField(new NumberedCustomField("field"), "value")
 						.build())
 				.withMember(toGUser("bar"))
@@ -179,6 +181,7 @@ public class MongoGroupsStorageOpsTest {
 				.withAdministrator(GroupUser.getBuilder(new UserName("a3"), inst(50000))
 						.withCustomField(new NumberedCustomField("whee"), "whoo")
 						.withCustomField(new NumberedCustomField("droogies"), "hihihi")
+						.withNullableLastVisit(inst(78000))
 						.build())
 				.withResource(new ResourceType("t"), new ResourceDescriptor(new ResourceID("r")))
 				.withResource(new ResourceType("t"), new ResourceDescriptor(
@@ -197,6 +200,7 @@ public class MongoGroupsStorageOpsTest {
 						new GroupID("gid"), new GroupName("name"),
 						GroupUser.getBuilder(new UserName("uname"), inst(21000))
 								.withCustomField(new NumberedCustomField("f"), "val")
+								.withNullableLastVisit(inst(42000))
 								.build(),
 						new CreateAndModTimes(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
@@ -204,12 +208,14 @@ public class MongoGroupsStorageOpsTest {
 						.withPrivateMemberList(false)
 						.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
 								.withCustomField(new NumberedCustomField("field"), "value")
+								.withNullableLastVisit(inst(76000))
 								.build())
 						.withMember(toGUser("bar"))
 						.withAdministrator(toGUser("a1"))
 						.withAdministrator(GroupUser.getBuilder(new UserName("a3"), inst(50000))
 								.withCustomField(new NumberedCustomField("whee"), "whoo")
 								.withCustomField(new NumberedCustomField("droogies"), "hihihi")
+								.withNullableLastVisit(inst(78000))
 								.build())
 						.withResource(new ResourceType("t"), new ResourceDescriptor(
 								new ResourceID("r")))
@@ -977,11 +983,13 @@ public class MongoGroupsStorageOpsTest {
 				GroupUser.getBuilder(new UserName("uname1"), inst(12000))
 						.withCustomField(new NumberedCustomField("field-2"), "val2")
 						.withCustomField(new NumberedCustomField("field"), "val")
+						.withNullableLastVisit(inst(87000))
 						.build(),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(10000)))
 				.withMember(GroupUser.getBuilder(new UserName("foo1"), inst(60000))
 						.withCustomField(new NumberedCustomField("thing"), "er")
 						.withCustomField(new NumberedCustomField("otherthing"), "otherer")
+						.withNullableLastVisit(inst(92000))
 						.build())
 				.withMember(toGUser("bar1"))
 				.withAdministrator(toGUser("admin"))
@@ -1005,6 +1013,7 @@ public class MongoGroupsStorageOpsTest {
 										.withCustomField(
 												new NumberedCustomField("field-2"), "val2")
 										.withCustomField(new NumberedCustomField("field"), "val")
+										.withNullableLastVisit(inst(87000))
 										.build(),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000),
 										Instant.ofEpochMilli(10000)))
@@ -1012,6 +1021,7 @@ public class MongoGroupsStorageOpsTest {
 										.withCustomField(new NumberedCustomField("thing"), "er")
 										.withCustomField(new NumberedCustomField("otherthing"),
 												"otherer")
+										.withNullableLastVisit(inst(92000))
 										.build())
 								.withMember(toGUser("bar1"))
 								.withAdministrator(toGUser("admin"))
@@ -1258,6 +1268,7 @@ public class MongoGroupsStorageOpsTest {
 				GroupUser.getBuilder(new UserName("bar"), inst(80000))
 						.withCustomField(new NumberedCustomField("f-2"), "val1")
 						.withCustomField(new NumberedCustomField("f5-6"), "val5")
+						.withNullableLastVisit(inst(67000))
 						.build(),
 				inst(80000));
 		
@@ -1270,6 +1281,7 @@ public class MongoGroupsStorageOpsTest {
 						.withMember(GroupUser.getBuilder(new UserName("bar"), inst(80000))
 								.withCustomField(new NumberedCustomField("f-2"), "val1")
 								.withCustomField(new NumberedCustomField("f5-6"), "val5")
+								.withNullableLastVisit(inst(67000))
 								.build())
 						.build()));
 	}
