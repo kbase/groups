@@ -119,7 +119,7 @@ public class GroupsAPITest {
 			.with("id", "id")
 			.with("private", false)
 			.with("privatemembers", true)
-			.with("role", "owner")
+			.with("role", "Owner")
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
@@ -139,7 +139,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id")
 			.with("private", false)
-			.with("role", "none")
+			.with("role", "None")
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
@@ -154,7 +154,7 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", false)
 			.with("privatemembers", true)
-			.with("role", "owner")
+			.with("role", "Owner")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -193,7 +193,7 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", false)
 			.with("privatemembers", true)
-			.with("role", "none")
+			.with("role", "None")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -224,7 +224,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", false)
-			.with("role", "owner")
+			.with("role", "Owner")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -238,7 +238,7 @@ public class GroupsAPITest {
 			.<String, Object>newHashMap()
 			.with("id", "id2")
 			.with("private", true)
-			.with("role", "none")
+			.with("role", "None")
 			.build();
 
 	@Test
@@ -629,7 +629,7 @@ public class GroupsAPITest {
 		
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup(token, "id");
 		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
-		expected.put("role", "member");
+		expected.put("role", "Member");
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
@@ -667,7 +667,7 @@ public class GroupsAPITest {
 				.with("id", "id2")
 				.with("private", false)
 				.with("privatemembers", false)
-				.with("role", "none")
+				.with("role", "None")
 				.with("name", "name2")
 				.with("memcount", 5)
 				.with("rescount", Collections.emptyMap())
@@ -731,7 +731,7 @@ public class GroupsAPITest {
 		
 		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
 		expected.put("private", true);
-		expected.put("role", "member");
+		expected.put("role", "Member");
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
@@ -748,7 +748,7 @@ public class GroupsAPITest {
 		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
 		final Map<String, Object> expected = new HashMap<>(GROUP_MAX_JSON_STD);
-		expected.put("role", "member");
+		expected.put("role", "Member");
 		expected.put("privatemembers", false);
 		
 		assertThat("incorrect group", ret, is(expected));
@@ -812,7 +812,7 @@ public class GroupsAPITest {
 								.with("perm", "Admin")
 								.build()
 						)));
-		expected.put("role", "admin");
+		expected.put("role", "Admin");
 		expected.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
 		
 		assertThat("incorrect group", ret, is(expected));
@@ -823,7 +823,7 @@ public class GroupsAPITest {
 		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null).get(0);
 		final Map<String, Object> expectedmin = new HashMap<>();
 		expectedmin.putAll(GROUP_MAX_JSON_MIN);
-		expectedmin.put("role", "admin");
+		expectedmin.put("role", "Admin");
 		expectedmin.put("rescount", ImmutableMap.of("workspace", 2, "catalogmethod", 1));
 		expectedmin.put("custom", Collections.emptyMap());
 

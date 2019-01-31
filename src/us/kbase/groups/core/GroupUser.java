@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 
@@ -18,14 +19,17 @@ public class GroupUser {
 
 	private final UserName name;
 	private final Instant joinDate;
+	private final Optional<Instant> lastVisit;
 	private final Map<NumberedCustomField, String> customFields;
 	
 	private GroupUser(
 			final UserName name,
 			final Instant joinDate,
+			final Optional<Instant> lastVisit,
 			final Map<NumberedCustomField, String> customFields) {
 		this.name = name;
 		this.joinDate = joinDate;
+		this.lastVisit = lastVisit;
 		this.customFields = Collections.unmodifiableMap(customFields);
 	}
 
@@ -42,6 +46,14 @@ public class GroupUser {
 	public Instant getJoinDate() {
 		return joinDate;
 	}
+	
+	/** Get the date the user last visited the group, or {@link Optional#empty()} if the user
+	 * has never visited the group.
+	 * @return the date the user last visited the group.
+	 */
+	public Optional<Instant> getLastVisit() {
+		return lastVisit;
+	}
 
 	/** Get any custom fields associated with the user.
 	 * @return the custom fields.
@@ -56,6 +68,7 @@ public class GroupUser {
 		int result = 1;
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((joinDate == null) ? 0 : joinDate.hashCode());
+		result = prime * result + ((lastVisit == null) ? 0 : lastVisit.hashCode());
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		return result;
 	}
@@ -86,6 +99,13 @@ public class GroupUser {
 		} else if (!joinDate.equals(other.joinDate)) {
 			return false;
 		}
+		if (lastVisit == null) {
+			if (other.lastVisit != null) {
+				return false;
+			}
+		} else if (!lastVisit.equals(other.lastVisit)) {
+			return false;
+		}
 		if (name == null) {
 			if (other.name != null) {
 				return false;
@@ -98,7 +118,7 @@ public class GroupUser {
 
 	/** Get a builder for a {@link GroupUser}.
 	 * @param name the user's name.
-	 * @param joinDate the user's join date.
+	 * @param joinDate the user's join date for the group.
 	 * @return the builder.
 	 */
 	public static Builder getBuilder(final UserName name, final Instant joinDate) {
@@ -113,6 +133,7 @@ public class GroupUser {
 		
 		private final UserName name;
 		private final Instant joinDate;
+		private Optional<Instant> lastVisit = Optional.empty();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
 		private Builder(final UserName name, final Instant joinDate) {
@@ -133,11 +154,21 @@ public class GroupUser {
 			return this;
 		}
 		
+		/** Set the user's last visit to the group.
+		 * @param lastVisit the date of the user's last visit, or null to denote the user has
+		 * never visited the group.
+		 * @return this builder.
+		 */
+		public Builder withNullableLastVisit(final Instant lastVisit) {
+			this.lastVisit = Optional.ofNullable(lastVisit);
+			return this;
+		}
+		
 		/** Build the user.
 		 * @return the user.
 		 */
 		public GroupUser build() {
-			return new GroupUser(name, joinDate, customFields);
+			return new GroupUser(name, joinDate, lastVisit, customFields);
 		}
 	}
 	

@@ -7,7 +7,9 @@ import static us.kbase.test.groups.TestCommon.set;
 import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Test;
@@ -18,6 +20,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUser;
@@ -329,6 +332,66 @@ public class GroupTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 		
+	}
+	
+	@Test
+	public void getRole() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin1"), inst(20000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("admin3"), inst(20000))
+						.build())
+				.build();
+		
+		assertThat("incorrect role", g.getRole(new UserName("nonmember")), is(Role.NONE));
+		assertThat("incorrect role", g.getRole(new UserName("member")), is(Role.MEMBER));
+		assertThat("incorrect role", g.getRole(new UserName("admin1")), is(Role.ADMIN));
+		assertThat("incorrect role", g.getRole(new UserName("foo")), is(Role.OWNER));
+	}
+	
+	@Test
+	public void roleRepresentation() throws Exception {
+		for (final String enumRep: Arrays.asList(
+				"NONE/None",
+				"MEMBER/Member",
+				"ADMIN/Admin",
+				"OWNER/Owner"
+				)) {
+			final String[] split = enumRep.split("/");
+			assertThat("incorrect rep",
+					Role.valueOf(split[0]).getRepresentation(), is(split[1]));
+		}
+	}
+	
+	@Test
+	public void roleValues() {
+		assertThat("incorrect values",
+				new HashSet<>(Arrays.asList(Role.values())),
+				is(set(
+						Role.NONE,
+						Role.MEMBER,
+						Role.ADMIN,
+						Role.OWNER)));
+	}
+	
+	@Test
+	public void failGetRole() throws Exception {
+		final Group g = Group.getBuilder(
+				new GroupID("id"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(20000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.build();
+
+		try {
+			g.getRole(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("userName"));
+		}
 	}
 	
 	@Test

@@ -35,7 +35,7 @@ Represents a group of users and associated data.
     "id": <the group ID>,
     "private": <true if the group is private, false otherwise>,
     "privatemembers": <true if the members list is private, false otherwise>,
-    "role": <'owner', 'admin', 'member', or 'none', as appropriate>,
+    "role": <'Owner', 'Admin', 'Member', or 'None', as appropriate>,
     "name": <the group name>,
     "owner": <the User data or user name for the group owner>,
     "admins": <an array of User data of admins of the group>,

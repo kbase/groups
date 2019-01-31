@@ -109,6 +109,55 @@ public class Group {
 				.collect(Collectors.toSet()));
 	}
 	
+	/** The role of a user within a group.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public enum Role {
+		/** Not a member of the group. */
+		NONE	("None"),
+		
+		/** A member of the group. */
+		MEMBER	("Member"),
+		
+		/** An administrator of the group. */
+		ADMIN	("Admin"),
+		
+		/** The owner of the group. */
+		OWNER	("Owner");
+		
+		private final String representation;
+		
+		private Role(final String representation) {
+			this.representation = representation;
+		}
+		
+		/** Get a representation of the enum that should be used for presentation purposes.
+		 * @return the representation.
+		 */
+		public String getRepresentation() {
+			return representation;
+		}
+	}
+	
+	/** Get the role of a user within a group.
+	 * @param userName the user.
+	 * @return the users role.
+	 */
+	public Role getRole(final UserName userName) {
+		if (!allMembers.containsKey(requireNonNull(userName, "userName"))) {
+			return Role.NONE;
+		}
+		Role r = Role.MEMBER;
+		if (admins.contains(userName)) {
+			r = Role.ADMIN;
+		}
+		if (owner.equals(userName)) {
+			r = Role.OWNER;
+		}
+		return r;
+	}
+	
 	/** Get the administrators of the group. The owner is not included in this list, although
 	 * the owner is included as an administrator in {@link #isAdministrator(UserName)}.
 	 * @return the administrators.

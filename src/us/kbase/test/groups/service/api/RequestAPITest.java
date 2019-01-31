@@ -258,7 +258,7 @@ public class RequestAPITest {
 				is(MapBuilder.newHashMap()
 						.with("id", "id")
 						.with("private", false)
-						.with("role", "none")
+						.with("role", "None")
 						.with("name", "n")
 						.with("owner", "u")
 						.with("memcount", 2)
