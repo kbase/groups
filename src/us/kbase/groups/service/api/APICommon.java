@@ -77,7 +77,7 @@ public class APICommon {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_ID, group.getGroupID().getName());
 		ret.put(Fields.GROUP_IS_PRIVATE, group.isPrivate());
-		ret.put(Fields.GROUP_ROLE, group.getRole().name());
+		ret.put(Fields.GROUP_ROLE, group.getRole().getRepresentation());
 		if (!group.isPrivateView()) {
 			ret.put(Fields.GROUP_NAME, group.getGroupName().get().getName());
 			ret.put(Fields.GROUP_OWNER, group.getOwner().get().getName());

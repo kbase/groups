@@ -7,6 +7,7 @@ import static us.kbase.test.groups.TestCommon.inst;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Optional;
 
 import org.junit.Test;
 
@@ -31,6 +32,7 @@ public class GroupUserTest {
 		
 		assertThat("incorrect name", g.getName(), is(new UserName("n")));
 		assertThat("incorrect date", g.getJoinDate(), is(inst(5000)));
+		assertThat("incorrect vist", g.getLastVisit(), is(Optional.empty()));
 		assertThat("incorrect fields", g.getCustomFields(), is(Collections.emptyMap()));
 	}
 	
@@ -39,12 +41,27 @@ public class GroupUserTest {
 		final GroupUser g = GroupUser.getBuilder(new UserName("n2"), inst(15000))
 				.withCustomField(new NumberedCustomField("f-22"), "yay")
 				.withCustomField(new NumberedCustomField("f-35"), "boo")
+				.withNullableLastVisit(inst(16000))
 				.build();
 		
 		assertThat("incorrect name", g.getName(), is(new UserName("n2")));
 		assertThat("incorrect date", g.getJoinDate(), is(inst(15000)));
+		assertThat("incorrect vist", g.getLastVisit(), is(Optional.of(inst(16000))));
 		assertThat("incorrect fields", g.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("f-22"), "yay", new NumberedCustomField("f-35"), "boo")));
+	}
+	
+	@Test
+	public void buildResetVisit() throws Exception {
+		final GroupUser g = GroupUser.getBuilder(new UserName("n2"), inst(15000))
+				.withNullableLastVisit(inst(16000))
+				.withNullableLastVisit(null)
+				.build();
+		
+		assertThat("incorrect name", g.getName(), is(new UserName("n2")));
+		assertThat("incorrect date", g.getJoinDate(), is(inst(15000)));
+		assertThat("incorrect vist", g.getLastVisit(), is(Optional.empty()));
+		assertThat("incorrect fields", g.getCustomFields(), is(Collections.emptyMap()));
 	}
 	
 	@Test

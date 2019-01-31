@@ -327,7 +327,7 @@ public class APICommonTest {
 				.build();
 		
 		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(ImmutableMap.of(
-				"id", "id2", "private", true, "role", "none")));
+				"id", "id2", "private", true, "role", "None")));
 	}
 	
 	@Test
@@ -343,7 +343,7 @@ public class APICommonTest {
 		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
 				.with("id", "id2")
 				.with("private", false)
-				.with("role", "member")
+				.with("role", "Member")
 				.with("name", "name2")
 				.with("owner", "u2")
 				.with("memcount", 5)
@@ -375,7 +375,7 @@ public class APICommonTest {
 		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
 				.with("id", "id2")
 				.with("private", false)
-				.with("role", "member")
+				.with("role", "Member")
 				.with("name", "name2")
 				.with("owner", ImmutableMap.of(
 						"name", "u2",

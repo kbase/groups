@@ -411,7 +411,7 @@ public class ServiceIntegrationTest {
 		final Map<String, Object> g = res.readEntity(Map.class);
 		
 		assertThat("group is not private", g, is(ImmutableMap.of(
-				"id", groupID, "private", true, "role", "none")));
+				"id", groupID, "private", true, "role", "None")));
 	}
 	
 	private void assertGroupExists(final String gid, boolean exists) {
@@ -567,7 +567,7 @@ public class ServiceIntegrationTest {
 				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
 				.with("private", isPrivate)
 				.with("privatemembers", true)
-				.with("role", "owner")
+				.with("role", "Owner")
 				.with("memcount", 1)
 				.with("rescount", Collections.emptyMap())
 				.with("members", Collections.emptyList())
