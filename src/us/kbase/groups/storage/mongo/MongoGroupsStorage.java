@@ -955,6 +955,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 						Fields.FIELD_SEP,
 				memberQueryOr,
 				set);
+		// if it matches, it gets modified
+		updateUser(groupID, member, query, update);
+	}
+
+	// only checks for a match, not modification, and will generally throw an error if no match
+	// assumes match is on gid and username and throws errors for those conditions
+	private void updateUser(
+			final GroupID groupID,
+			final UserName member,
+			final Document query,
+			final Document update)
+			throws GroupsStorageException, NoSuchGroupException, NoSuchUserException {
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
 			if (res.getMatchedCount() != 1) {
@@ -968,9 +980,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 							"User %s is not a member of group %s",
 							member.getName(), groupID.getName()));
 				}
-				// otherwise we don't care - the update made no changes.
 			}
-			// if it matches, it gets modified, so we don't check
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
@@ -990,6 +1000,24 @@ public class MongoGroupsStorage implements GroupsStorage {
 			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
 					e.getKey().getField()));
 		}
+	}
+	
+	@Override
+	public void updateUser(
+			final GroupID groupID,
+			final UserName member,
+			final Instant lastVisited)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		requireNonNull(groupID, "groupID");
+		requireNonNull(member, "member");
+		requireNonNull(lastVisited, "lastVisited");
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
+						new Document(Fields.GROUP_MEMBER_NAME, member.getName())));
+		
+		final Document update = new Document("$set", new Document(
+				Fields.GROUP_MEMBERS + ".$." + Fields.GROUP_MEMBER_VISIT_DATE, lastVisited));
+		updateUser(groupID, member, query, update);
 	}
 
 	@Override

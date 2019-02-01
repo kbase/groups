@@ -2010,6 +2010,106 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
+	public void updateUserLastVisited() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.withAdministrator(toGUser("admin"))
+				.withMember(toGUser("member"))
+				.withMember(toGUser("noupdate"))
+				.build());
+		
+		manager.storage.updateUser(new GroupID("gid"), new UserName("own"), inst(50000));
+		manager.storage.updateUser(new GroupID("gid"), new UserName("own"), inst(100000));
+		manager.storage.updateUser(new GroupID("gid"), new UserName("admin"), inst(70000));
+		manager.storage.updateUser(new GroupID("gid"), new UserName("member"), inst(90000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(new GroupID("gid"), new GroupName("name3"),
+						GroupUser.getBuilder(new UserName("own"), inst(20000))
+								.withNullableLastVisit(inst(100000))
+								.build(),
+						new CreateAndModTimes(inst(40000), inst(50000)))
+						.withAdministrator(GroupUser.getBuilder(new UserName("admin"), inst(20000))
+								.withNullableLastVisit(inst(70000))
+								.build())
+						.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000))
+								.withNullableLastVisit(inst(90000))
+								.build())
+						.withMember(toGUser("noupdate"))
+						.build()));
+	}
+	
+	@Test
+	public void updateUserLastVisitedNoop() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000))
+						.withNullableLastVisit(inst(90000))
+						.build())
+				.build());
+		
+		manager.storage.updateUser(new GroupID("gid"), new UserName("member"), inst(90000));
+		
+		assertThat("incorrect group", manager.storage.getGroup(new GroupID("gid")),
+				is(Group.getBuilder(new GroupID("gid"), new GroupName("name3"), toGUser("own"),
+						new CreateAndModTimes(inst(40000), inst(50000)))
+						.withMember(GroupUser.getBuilder(new UserName("member"), inst(20000))
+								.withNullableLastVisit(inst(90000))
+								.build())
+						.build()));
+	}
+	
+	@Test
+	public void failUpdateUserLastVisitedNulls() throws Exception {
+		final GroupID i = new GroupID("foo");
+		final UserName u = new UserName("u");
+		final Instant lv = Instant.now();
+		failUpdateUser(null, u, lv, new NullPointerException("groupID"));
+		failUpdateUser(i, null, lv, new NullPointerException("member"));
+		failUpdateUser(i, u, null, new NullPointerException("lastVisited"));
+	}
+	
+	@Test
+	public void failUpdateUserLastVisitedNoSuchGroup() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.build());
+		
+		failUpdateUser(new GroupID("gid1"), new UserName("own"), inst(1),
+				new NoSuchGroupException("gid1"));
+	}
+	
+	@Test
+	public void failUpdateUserLastVisitedNoSuchUser() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"),toGUser("own"),
+				new CreateAndModTimes(inst(40000), inst(50000)))
+				.withAdministrator(toGUser("admin"))
+				.withMember(toGUser("member"))
+				.build());
+		
+		failUpdateUser(new GroupID("gid"), new UserName("notmember"), inst(1),
+				new NoSuchUserException("User notmember is not a member of group gid"));
+	}
+	
+	private void failUpdateUser(
+			final GroupID id,
+			final UserName u,
+			final Instant lv,
+			final Exception expected) {
+		try {
+			manager.storage.updateUser(id, u, lv);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
+	}
+	
+	@Test
 	public void addResource() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name3"), toGUser("uname3"),
