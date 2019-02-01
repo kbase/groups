@@ -78,7 +78,7 @@ public class GroupViewTest {
 	}
 	
 	private <T> Optional<T> op(T item) {
-		return Optional.of(item);
+		return Optional.ofNullable(item);
 	}
 	
 	private <T> Optional<T> mt() {
@@ -102,6 +102,7 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
@@ -137,6 +138,7 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(op(inst(62000))));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
@@ -175,6 +177,7 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(mt()));
 		assertThat("incorrect mod", gv.getModificationDate(), is(mt()));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(mt()));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.empty()));
@@ -212,6 +215,7 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
@@ -259,6 +263,7 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
@@ -311,6 +316,7 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(),
 				is(set(new UserName("m1"), new UserName("m2"))));
@@ -363,6 +369,7 @@ public class GroupViewTest {
 		assertThat("incorrect admins", gv.getAdministrators(), is(set()));
 		assertThat("incorrect create", gv.getCreationDate(), is(mt()));
 		assertThat("incorrect mod", gv.getModificationDate(), is(mt()));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(mt()));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.empty()));
@@ -411,6 +418,7 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(mt()));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
@@ -451,11 +459,11 @@ public class GroupViewTest {
 	@Test
 	public void memberView() throws Exception {
 		memberView(GROUP, false, Optional.of(true), new UserName("a1"), Group.Role.ADMIN,
-				inst(35000), inst(62000));
+				inst(35000), inst(62000), inst(35000));
 		memberView(PRIVGROUP, true, Optional.of(true), new UserName("user"), Group.Role.OWNER,
-				inst(35000), inst(62000));
+				inst(35000), inst(62000), null);
 		memberView(PUBMEMBERGROUP, false, Optional.of(false), new UserName("m1"),
-				Group.Role.MEMBER, null, null);
+				Group.Role.MEMBER, null, null, inst(62000));
 	}
 
 	private void memberView(
@@ -465,7 +473,8 @@ public class GroupViewTest {
 			final UserName user,
 			final Group.Role role,
 			final Instant adminInstant,
-			final Instant memberInstant)
+			final Instant memberInstant,
+			final Instant userInstant)
 			throws MissingParameterException, IllegalParameterException {
 		final GroupView gv = GroupView.getBuilder(group, user)
 				.withStandardView(true)
@@ -490,6 +499,7 @@ public class GroupViewTest {
 				is(set(new UserName("a1"), new UserName("a2"))));
 		assertThat("incorrect create", gv.getCreationDate(), is(op(inst(10000))));
 		assertThat("incorrect mod", gv.getModificationDate(), is(op(inst(20000))));
+		assertThat("incorrect visit", gv.getLastVisit(), is(op(userInstant)));
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(),
 				is(set(new UserName("m1"), new UserName("m2"))));
