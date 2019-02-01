@@ -28,6 +28,8 @@ public class ServicePaths {
 	public static final String GROUP_ID = "{" + Fields.GROUP_ID + "}";
 	/** The location to check if a group exists. */
 	public static final String GROUP_EXISTS = GROUP_ID + SEP + "exists";
+	/** The location to update the current user's last visited date. */
+	public static final String GROUP_VISIT = GROUP_ID + SEP + "visit";
 	/** The location to update a group. */
 	public static final String GROUP_UPDATE = GROUP_ID + SEP + UPDATE;
 	/** The location to request membership in a group. */

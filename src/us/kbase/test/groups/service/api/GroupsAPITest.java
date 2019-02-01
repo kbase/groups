@@ -931,6 +931,38 @@ public class GroupsAPITest {
 	}
 	
 	@Test
+	public void visitGroup() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		new GroupsAPI(g).visitGroup("tokeytoke", "gid1");
+		
+		verify(g).userVisited(new Token("tokeytoke"), new GroupID("gid1"));
+	}
+	
+	@Test
+	public void visitGroupFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		visitGroupFail(g, null, "g", new NoTokenProvidedException("No token provided"));
+		visitGroupFail(g, "   \t  ", "g", new NoTokenProvidedException("No token provided"));
+		visitGroupFail(g, "t", "b*d", new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+				"Illegal character in group id b*d: *"));
+	}
+	
+	private void visitGroupFail(
+			final Groups g,
+			final String t,
+			final String gid,
+			final Exception expected) {
+		try {
+			new GroupsAPI(g).visitGroup(t, gid);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void requestGroupMembership() throws Exception {
 		final Groups g = mock(Groups.class);
 		

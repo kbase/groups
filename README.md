@@ -380,6 +380,12 @@ RETURNS:
 {"exists": <true if the group exists, false otherwise>}
 ```
 
+### Set the last visited date for a group for the current user
+
+```
+PUT /group/<group id>/visit
+```
+
 ### Request membership to a group
 
 ```
