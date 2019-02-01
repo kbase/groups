@@ -120,13 +120,16 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("privatemembers", true)
 			.with("role", "Owner")
+			.with("lastvisit", null)
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
-			.with("owner", ImmutableMap.of(
-					"name", "u",
-					"joined", 10000L,
-					"custom", ImmutableMap.of("f-1", "val", "something", "nothing")))
+			.with("owner", MapBuilder.newHashMap()
+					.with("name", "u")
+					.with("joined", 10000L)
+					.with("lastvisit", null)
+					.with("custom", ImmutableMap.of("f-1", "val", "something", "nothing"))
+					.build())
 			.with("createdate", 10000L)
 			.with("moddate", 10000L)
 			.with("resources", Collections.emptyMap())
@@ -140,6 +143,7 @@ public class GroupsAPITest {
 			.with("id", "id")
 			.with("private", false)
 			.with("role", "None")
+			.with("lastvisit", null)
 			.with("name", "name")
 			.with("memcount", 1)
 			.with("rescount", Collections.emptyMap())
@@ -154,35 +158,46 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", false)
 			.with("privatemembers", true)
+			.with("lastvisit", null)
 			.with("role", "Owner")
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
-			.with("owner", ImmutableMap.of(
-					"name", "u2",
-					"joined", 20000L,
-					"custom", Collections.emptyMap()))
+			.with("owner", MapBuilder.newHashMap()
+					.with("name", "u2")
+					.with("joined", 20000L)
+					.with("lastvisit", null)
+					.with("custom", Collections.emptyMap())
+					.build())
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("members", Arrays.asList(
-					ImmutableMap.of(
-							"name", "bar",
-							"joined", 40000L,
-							"custom", Collections.emptyMap()),
-					ImmutableMap.of(
-							"name", "foo",
-							"joined", 650000L,
-							"custom", ImmutableMap.of("whee", "whoo"))
+					MapBuilder.newHashMap()
+							.with("name", "bar")
+							.with("joined", 40000L)
+							.with("lastvisit", null)
+							.with("custom", Collections.emptyMap())
+							.build(),
+					MapBuilder.newHashMap()
+							.with("name", "foo")
+							.with("joined", 650000L)
+							.with("lastvisit", null)
+							.with("custom", ImmutableMap.of("whee", "whoo"))
+							.build()
 					))
 			.with("admins", Arrays.asList(
-					ImmutableMap.of(
-							"name", "whee",
-							"joined", 220000L,
-							"custom", Collections.emptyMap()),
-					ImmutableMap.of(
-							"name", "whoo",
-							"joined", 760000L,
-							"custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+					MapBuilder.newHashMap()
+							.with("name", "whee")
+							.with("joined", 220000L)
+							.with("lastvisit", null)
+							.with("custom", Collections.emptyMap())
+							.build(),
+					MapBuilder.newHashMap()
+							.with("name", "whoo")
+							.with("joined", 760000L)
+							.with("lastvisit", null)
+							.with("custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+							.build()
 					))
 			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
@@ -194,27 +209,34 @@ public class GroupsAPITest {
 			.with("private", false)
 			.with("privatemembers", true)
 			.with("role", "None")
+			.with("lastvisit", null)
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
-			.with("owner", ImmutableMap.of(
-					"name", "u2",
-					"joined", 20000L,
-					"custom", Collections.emptyMap()))
+			.with("owner", MapBuilder.newHashMap()
+					.with("name", "u2")
+					.with("joined", 20000L)
+					.with("lastvisit", null)
+					.with("custom", Collections.emptyMap())
+					.build())
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("createdate", 20000L)
 			.with("moddate", 30000L)
 			.with("members", Collections.emptyList())
 			.with("admins", Arrays.asList(
-					ImmutableMap.of(
-							"name", "whee",
-							"joined", 220000L,
-							"custom", Collections.emptyMap()),
-					ImmutableMap.of(
-							"name", "whoo",
-							"joined", 760000L,
-							"custom", ImmutableMap.of("yay-6", "boo"))
+					MapBuilder.newHashMap()
+							.with("name", "whee")
+							.with("joined", 220000L)
+							.with("lastvisit", null)
+							.with("custom", Collections.emptyMap())
+							.build(),
+					MapBuilder.newHashMap()
+							.with("name", "whoo")
+							.with("joined", 760000L)
+							.with("lastvisit", null)
+							.with("custom", ImmutableMap.of("yay-6", "boo"))
+							.build()
 					))
 			.with("resources", Collections.emptyMap())
 			.with("custom", ImmutableMap.of("otherfield", "fieldval"))
@@ -225,6 +247,7 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", false)
 			.with("role", "Owner")
+			.with("lastvisit", null)
 			.with("name", "name2")
 			.with("memcount", 5)
 			.with("rescount", Collections.emptyMap())
@@ -668,34 +691,45 @@ public class GroupsAPITest {
 				.with("private", false)
 				.with("privatemembers", false)
 				.with("role", "None")
+				.with("lastvisit", null)
 				.with("name", "name2")
 				.with("memcount", 5)
 				.with("rescount", Collections.emptyMap())
-				.with("owner", ImmutableMap.of(
-						"name", "u2",
-						"joined", 20000L,
-						"custom", Collections.emptyMap()))
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", 20000L)
+						.with("lastvisit", null)
+						.with("custom", Collections.emptyMap())
+						.build())
 				.with("createdate", 20000L)
 				.with("moddate", 30000L)
 				.with("members", Arrays.asList(
-						ImmutableMap.of(
-								"name", "bar",
-								"joined", 40000L,
-								"custom", Collections.emptyMap()),
-						ImmutableMap.of(
-								"name", "foo",
-								"joined", 650000L,
-								"custom", Collections.emptyMap())
+						MapBuilder.newHashMap()
+								.with("name", "bar")
+								.with("joined", 40000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "foo")
+								.with("joined", 650000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build()
 						))
 				.with("admins", Arrays.asList(
-						ImmutableMap.of(
-								"name", "whee",
-								"joined", 220000L,
-								"custom", Collections.emptyMap()),
-						ImmutableMap.of(
-								"name", "whoo",
-								"joined", 760000L,
-								"custom", ImmutableMap.of("yay-6", "boo"))
+						MapBuilder.newHashMap()
+								.with("name", "whee")
+								.with("joined", 220000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", 760000L)
+								.with("lastvisit", null)
+								.with("custom", ImmutableMap.of("yay-6", "boo"))
+								.build()
 						))
 				.with("resources", Collections.emptyMap())
 				.with("custom", ImmutableMap.of("otherfield", "fieldval"))

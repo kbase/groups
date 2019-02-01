@@ -564,10 +564,15 @@ public class ServiceIntegrationTest {
 		TestCommon.assertCloseToNow(join);
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
-				.with("owner", ImmutableMap.of("name", "user1", "custom", Collections.emptyMap()))
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "user1")
+						.with("lastvisit", null)
+						.with("custom", Collections.emptyMap())
+						.build())
 				.with("private", isPrivate)
 				.with("privatemembers", true)
 				.with("role", "Owner")
+				.with("lastvisit", null)
 				.with("memcount", 1)
 				.with("rescount", Collections.emptyMap())
 				.with("members", Collections.emptyList())
@@ -705,8 +710,11 @@ public class ServiceIntegrationTest {
 		user.remove("joined");
 		TestCommon.assertCloseToNow(joined);
 		
-		assertThat("incorrect user", user, is(ImmutableMap.of(
-				"name", name, "custom", custom)));
+		assertThat("incorrect user", user, is(MapBuilder.newHashMap()
+				.with("name", name)
+				.with("lastvisit", null)
+				.with("custom", custom)
+				.build()));
 	}
 }
 	
