@@ -241,6 +241,17 @@ public class GroupsAPI {
 		return ImmutableMap.of(Fields.EXISTS, (groups.getGroupExists(new GroupID(groupID))));
 	}
 	
+	@PUT
+	@Path(ServicePaths.GROUP_VISIT)
+	public void visitGroup(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				NoTokenProvidedException, AuthenticationException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException {
+		groups.userVisited(getToken(token, true), new GroupID(groupID));
+	}
+	
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(ServicePaths.GROUP_REQUEST_MEMBERSHIP)
