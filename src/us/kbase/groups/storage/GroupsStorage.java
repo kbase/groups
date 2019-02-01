@@ -171,6 +171,18 @@ public interface GroupsStorage {
 			Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	
+	/** Update a group member's last visited date for the group. This does not update the
+	 * group's modification date.
+	 * @param groupID the ID of the group the member visited.
+	 * @param member the member's user name.
+	 * @param lastVisited the date the user visited.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void updateUser(GroupID groupID, UserName member, Instant lastVisited)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
+	
 	/** Add a resource to a group.
 	 * @param groupID the group ID.
 	 * @param type the resource type.
