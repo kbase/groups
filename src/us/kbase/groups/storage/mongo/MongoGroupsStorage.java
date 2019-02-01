@@ -427,6 +427,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private Document toDoc(final GroupUser gu) {
 		return new Document(Fields.GROUP_MEMBER_NAME, gu.getName().getName())
 				.append(Fields.GROUP_MEMBER_JOIN_DATE, Date.from(gu.getJoinDate()))
+				.append(Fields.GROUP_MEMBER_VISIT_DATE, gu.getLastVisit()
+						.map(i -> Date.from(i)).orElse(null))
 				.append(Fields.GROUP_MEMBER_CUSTOM_FIELDS,
 						getCustomFields(gu.getCustomFields()));
 	}
@@ -761,7 +763,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 		for (final Document m: members) {
 			final UserName u = new UserName(m.getString(Fields.GROUP_MEMBER_NAME));
 			final GroupUser.Builder b = GroupUser.getBuilder(
-					u, m.getDate(Fields.GROUP_MEMBER_JOIN_DATE).toInstant());
+					u, m.getDate(Fields.GROUP_MEMBER_JOIN_DATE).toInstant())
+					.withNullableLastVisit(Optional.ofNullable(
+							m.getDate(Fields.GROUP_MEMBER_VISIT_DATE))
+							.map(d -> d.toInstant()).orElse(null));
 			addCustomFields(
 					(f, v) -> b.withCustomField(f, v), Fields.GROUP_MEMBER_CUSTOM_FIELDS, m);
 			ret.put(u, b.build());
