@@ -383,6 +383,7 @@ RETURNS:
 ### Set the last visited date for a group for the current user
 
 ```
+AUTHORIZATION REQUIRED
 PUT /group/<group id>/visit
 ```
 

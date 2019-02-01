@@ -2,7 +2,7 @@
 
 ## 0.1.1
 
-* BACWARDS INCOMPATIBILIY: The user role enum values are now capitalized like all the other
+* BACKWARDS INCOMPATIBILIY: The user role enum values are now capitalized like all the other
   enums in the API, e.g. None, Member, Admin, and Owner.
 
 * Added a /request/id/<id>/group endpoint that returns minimal group information for Invite-type
