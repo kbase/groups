@@ -314,6 +314,22 @@ public class Groups {
 		}
 	}
 	
+	/** Update the last visited date for a user and a group.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to update.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no group with the provided ID.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 */
+	public void userVisited(final Token userToken, final GroupID groupID)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				NoSuchUserException, GroupsStorageException {
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		storage.updateUser(requireNonNull(groupID, "groupID"), user, clock.instant());
+	}
+	
 	/** Get a view of a group.
 	 * A null token or a non-member gets a non-member view.
 	 * A null token will result in only public group workspaces being included in the view.

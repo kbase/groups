@@ -778,6 +778,39 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void userVisited() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("tk"))).thenReturn(new UserName("u1"));
+		when(mocks.clock.instant()).thenReturn(inst(15000));
+		
+		mocks.groups.userVisited(new Token("tk"), new GroupID("foo"));
+		
+		verify(mocks.storage).updateUser(new GroupID("foo"), new UserName("u1"), inst(15000));
+	}
+	
+	@Test
+	public void userVisitedFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		
+		userVisitedFail(g, null, new GroupID("i"), new NullPointerException("userToken"));
+		userVisitedFail(g, new Token("t"), null, new NullPointerException("groupID"));
+	}
+	
+	private void userVisitedFail(
+			final Groups g,
+			final Token t,
+			final GroupID i,
+			final Exception expected) {
+		try {
+			g.userVisited(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void getGroupNoTokenNoResources() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
