@@ -35,6 +35,8 @@ public class Fields {
 	public static final String GROUP_CREATION = "createdate";
 	/** The group modification date. */
 	public static final String GROUP_MODIFICATION = "moddate";
+	/** A user's last visit date to the group. */
+	public static final String GROUP_VISIT_DATE = "lastvisit";
 	/** Custom fields associated with the group. */
 	public static final String GROUP_CUSTOM_FIELDS = "custom";
 	
@@ -45,6 +47,8 @@ public class Fields {
 	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "custom";
 	/** A member's join date. */
 	public static final String GROUP_MEMBER_JOIN_DATE = "joined";
+	/** A member's last visit date. */
+	public static final String GROUP_MEMBER_VISIT_DATE = "lastvisit";
 	
 	// resource fields
 	/** The resource type. */
@@ -86,6 +90,10 @@ public class Fields {
 	public static final String REQUEST_USER_ACTIONS = "actions";
 	/** The reason a request was denied. */
 	public static final String REQUEST_DENIED_REASON = "reason";
+	/** The time after which requests should be considered "new" vs. "old". */
+	public static final String REQUEST_LATER_THAN = "laterthan";
+	/** Whether a group has new requests. */
+	public static final String REQUEST_NEW = "new";
 	
 	/* ***********************
 	 * groups listing fields

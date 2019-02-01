@@ -16,6 +16,7 @@ Represents a member of a group.
 {
     "name": <the user's user name>,
     "joined": <the date the user joined the group in epoch ms>,
+    "lastvisit": <the last time the user visited the group in epoch ms>,
     "custom": {
         <custom field 1>: <custom value 1>,
         ...
@@ -23,6 +24,9 @@ Represents a member of a group.
     }
 }
 ```
+
+`lastvisit` is only present for group administrators; it is otherwise `null`. It is also `null`
+if the last visit date has never been set via the API.
 
 See `Custom fields`, in particular `User fields`, below.
 
@@ -35,7 +39,8 @@ Represents a group of users and associated data.
     "id": <the group ID>,
     "private": <true if the group is private, false otherwise>,
     "privatemembers": <true if the members list is private, false otherwise>,
-    "role": <'owner', 'admin', 'member', or 'none', as appropriate>,
+    "role": <'Owner', 'Admin', 'Member', or 'None', as appropriate>,
+    "lastvisit": <the last time the user visted the group in epoch ms>,
     "name": <the group name>,
     "owner": <the User data or user name for the group owner>,
     "admins": <an array of User data of admins of the group>,
@@ -63,6 +68,8 @@ Represents a group of users and associated data.
 
 In a full view of the group, the owner field contains a `User` structure. In a group list view,
 the owner field contains only the user name of the owner.
+
+`lastvisit` is `null` if the last visit date has never been set via the API for the current user.
 
 `rescount` does not contain resource types for which the group has no resources (e.g. the
 count is zero). `resources` *does* contain empty lists for resources that are supported by
@@ -227,11 +234,11 @@ AUTHORIZATION OPTIONAL
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, role, memcount, rescount, custom,
+A list of Groups. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
 createdate, and moddate fields are included.
 ```
 
-The owner field consists only of the user name for this endpoint. For all other endpoints,
+The owner field consists only of the user name for this endpoint. For most other endpoints,
 the owner field is a full `User` data structure.
 
 A maximum of 100 groups are returned.
@@ -373,6 +380,13 @@ RETURNS:
 {"exists": <true if the group exists, false otherwise>}
 ```
 
+### Set the last visited date for a group for the current user
+
+```
+AUTHORIZATION REQUIRED
+PUT /group/<group id>/visit
+```
+
 ### Request membership to a group
 
 ```
@@ -508,6 +522,60 @@ to the user.
 ```
 
 Possible actions are `Cancel`, `Accept`, and `Deny`.
+
+### Get group information associated with a request
+
+```
+AUTHORIZATION REQUIRED
+GET /request/id/<request id>/group
+
+A Group. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
+createdate, and moddate fields are included.
+```
+
+This endpoint allows a user who has been invited to a group, or who administrates a resource
+that has been invited to a group, to view basic information about the group - even for private
+groups. The request must be `Open`, the request type must be `Invite`, and the user must be
+the target of the request or an administrator of a resource that is the target of the request.
+
+If the group is not private this endpoint is not useful.
+
+This endpoint returns a data structure identical to that of the `/group` endpoint, as if
+the user is not a member of the group, for consistency's sake. As such, the `rescount` field
+is present but always empty.
+
+The owner field consists only of the user name for this endpoint. For most other endpoints,
+the owner field is a full `User` data structure.
+
+Only public custom fields are included.
+
+### Get whether groups have open requests
+
+```
+AUTHORIZATION REQUIRED
+GET /request/groups/<comma separated group ids>/new[?laterthan=<epoch ms>]
+
+RETURNS:
+{
+    "id1": {"new": <"None", "Old", or "New">},
+    ....
+    "idN": {"new": <"None", "Old", or "New">}
+}
+```
+
+The user must be an administrator of all the groups in the comma separated list.
+
+Requests targeted towards groups are of type `Request`, not `Invite`.
+
+Whitespace only entries in the ID list are ignored. At most 100 ids may be submitted per request.
+
+The `laterthan` parameter determines which requests are treated as `Old` or `New`. If all
+open requests for a group are older than or equal to `laterthan` `Old` is returned for that
+group. If `laterthan` is not supplied a value of approximately 14Gy BCE is assumed and thus
+in most cases groups that have `Open` requests will be marked as `New`.
+
+Each group is mapped to a further mapping to allow for backwards-compatible expansion of the
+API in the future.
 
 ### Get permission to read a resource associated with a request
 

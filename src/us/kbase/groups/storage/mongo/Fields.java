@@ -45,6 +45,8 @@ public class Fields {
 	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "cust";
 	/** A member's join date. */
 	public static final String GROUP_MEMBER_JOIN_DATE = "join";
+	/** A member's last visit date. */
+	public static final String GROUP_MEMBER_VISIT_DATE = "visit";
 	
 	// resources fields
 	/** Resources associated with the group. */

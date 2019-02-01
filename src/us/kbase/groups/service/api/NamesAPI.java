@@ -1,13 +1,12 @@
 package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APICommon.getToken;
+import static us.kbase.groups.service.api.APICommon.toGroupIDs;
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -18,13 +17,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupIDNameMembership;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.InvalidTokenException;
-import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
@@ -49,17 +46,9 @@ public class NamesAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@PathParam(Fields.IDS) final String ids)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
-				InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				MissingParameterException { // missing param can't actually be thrown
+				InvalidTokenException, AuthenticationException, NoSuchGroupException {
 		// ids cannot be null or empty, otherwise the endpoint hit would be /names/
-		final Set<GroupID> groupIDs = new HashSet<>();
-		for (final String id: ids.split(",")) {
-			// can't use streams due to checked exceptions
-			if (!id.trim().isEmpty()) {
-				groupIDs.add(new GroupID(id));
-			}
-		}
-		return groups.getGroupNames(getToken(token, false), groupIDs).stream()
+		return groups.getGroupNames(getToken(token, false), toGroupIDs(ids)).stream()
 				.map(g -> toMap(g))
 				.collect(Collectors.toList());
 	}

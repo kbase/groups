@@ -171,6 +171,18 @@ public interface GroupsStorage {
 			Instant modDate)
 			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
 	
+	/** Update a group member's last visited date for the group. This does not update the
+	 * group's modification date.
+	 * @param groupID the ID of the group the member visited.
+	 * @param member the member's user name.
+	 * @param lastVisited the date the user visited.
+	 * @throws NoSuchGroupException if there is no group with the given ID.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	void updateUser(GroupID groupID, UserName member, Instant lastVisited)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException;
+	
 	/** Add a resource to a group.
 	 * @param groupID the group ID.
 	 * @param type the resource type.
@@ -258,6 +270,16 @@ public interface GroupsStorage {
 	 */
 	List<GroupRequest> getRequestsByGroup(GroupID groupID, GetRequestsParams params)
 			throws GroupsStorageException;
+	
+	/** Check if a group has at least one open incoming
+	 * (e.g. are {@link RequestType#REQUEST}s) request later than a specified date.
+	 * @param groupID the ID of the group to check.
+	 * @param laterThan if all open requests were created on a date earlier or equal to  this,
+	 * false is returned. If null, returns true if any open requests exist.
+	 * @return true if at least one open request exists, false otherwise.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	boolean groupHasRequest(GroupID groupID, Instant laterThan) throws GroupsStorageException;
 	
 	/** Close a request. WARNING: this function will allow setting the modification time to
 	 * an earlier date than the creation time of the request, which will cause indeterminate

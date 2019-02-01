@@ -45,6 +45,7 @@ import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.notifications.Notifications;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
+import us.kbase.groups.core.request.GroupRequestStatusType;
 import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
@@ -68,6 +69,7 @@ public class Groups {
 	
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private static final int MAX_GROUP_NAMES_RETURNED = 1000;
+	private static final int MAX_GROUP_HAS_REQUESTS_COUNT = 100;
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Map<ResourceType, ResourceHandler> resourceHandlers;
@@ -312,6 +314,22 @@ public class Groups {
 		}
 	}
 	
+	/** Update the last visited date for a user and a group.
+	 * @param userToken the user's token.
+	 * @param groupID the ID of the group to update.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchGroupException if there is no group with the provided ID.
+	 * @throws NoSuchUserException if the user is not a member of the group.
+	 */
+	public void userVisited(final Token userToken, final GroupID groupID)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				NoSuchUserException, GroupsStorageException {
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		storage.updateUser(requireNonNull(groupID, "groupID"), user, clock.instant());
+	}
+	
 	/** Get a view of a group.
 	 * A null token or a non-member gets a non-member view.
 	 * A null token will result in only public group workspaces being included in the view.
@@ -447,6 +465,58 @@ public class Groups {
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
 		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		return storage.getMemberGroups(user);
+	}
+	
+	/** Determine whether groups have open incoming (e.g. of type {@link RequestType#REQUEST})
+	 * requests.
+	 * @param userToken the user's token.
+	 * @param groupIDs the group IDs of the groups to query. At most 100 IDs may be supplied.
+	 * @param laterThan any requests less than or equal to this date are considered
+	 * {@link GroupHasRequests#OLD}. If null, any open requests are considered
+	 * {@link GroupHasRequests#NEW}.
+	 * @return A mapping from the group ID to whether the group has any open requests.
+	 * @throws NoSuchGroupException if one of the groups does not exist.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws IllegalParameterException if more than 100 group IDs are queried.
+	 * @throws UnauthorizedException if the user is not an administrator of at least one of the
+	 * groups.
+	 */
+	public Map<GroupID, GroupHasRequests> groupsHaveRequests(
+			final Token userToken,
+			final Set<GroupID> groupIDs,
+			final Instant laterThan)
+			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
+				NoSuchGroupException, GroupsStorageException, IllegalParameterException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		if (groupIDs.size() > MAX_GROUP_HAS_REQUESTS_COUNT) {
+			throw new IllegalParameterException(String.format(
+					"No more than %s group IDs are allowed", MAX_GROUP_HAS_REQUESTS_COUNT));
+		}
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		for (final GroupID gid: groupIDs) {
+			// could make a bulk method that returns less info per group if necessary
+			// or even an isAdmin(Username, Set<GroupID>) method. YAGNI for now
+			if (!storage.getGroup(gid).isAdministrator(user)) {
+				throw new UnauthorizedException(String.format(
+						"User %s may not administrate group %s", user.getName(), gid.getName()));
+			}
+		}
+		final Map<GroupID, GroupHasRequests> ret = new HashMap<>();
+		for (final GroupID gid: groupIDs) {
+			final GroupHasRequests reqstate;
+			if (storage.groupHasRequest(gid, laterThan)) {
+				reqstate = GroupHasRequests.NEW;
+			} else if (laterThan != null) {
+				reqstate = storage.groupHasRequest(gid, null) ?
+						GroupHasRequests.OLD : GroupHasRequests.NONE;
+			} else {
+				reqstate = GroupHasRequests.NONE;
+			}
+			ret.put(gid, reqstate);
+		}
+		return ret;
 	}
 	
 	/** Get minimal views of the groups in the system.
@@ -609,6 +679,46 @@ public class Groups {
 			return new GroupRequestWithActions(request,
 					request.isOpen() ? TARGET_ACTIONS : NO_ACTIONS);
 		}
+	}
+	
+	/** Get information about a group linked to a request.
+	 * @param userToken the user's token. The user must be the target of the request or an
+	 * administrator of the request target resource.
+	 * @param requestID the ID of the request. The request must be an {@link RequestType#INVITE}
+	 * and must be {@link GroupRequestStatusType#OPEN}.
+	 * @return a minimal view of the group. All public fields are included, and no resource
+	 * information is included. The user is treated as a non-member.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchRequestException if there is no such request.
+	 * @throws UnauthorizedException if the user may not view the request.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws ClosedRequestException if the request is closed.
+	 */
+	public GroupView getGroupForRequest(final Token userToken, final RequestID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				GroupsStorageException, UnauthorizedException, ResourceHandlerException,
+				ClosedRequestException {
+		checkNotNull(userToken, "userToken");
+		checkNotNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(userToken);
+		final GroupRequest request = storage.getRequest(requestID);
+		final Group g = getGroupFromKnownGoodRequest(request);
+		ensureIsRequestTarget(request, g.isAdministrator(user), user, "access");
+		if (!request.isInvite()) {
+			throw new UnauthorizedException(
+					"Only Invite requests may access group information by the request ID");
+		}
+		ensureIsOpen(request);
+		return GroupView.getBuilder(g, null)
+				.withOverridePrivateView(true)
+				// include all public fields
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false))
+				.build();
 	}
 	
 	/** Get requests that were created by the user.
@@ -905,7 +1015,7 @@ public class Groups {
 				if (user.equals(toUserName(request))) {
 					return;
 				}
-			} else if (isAdministrator(user, request)) {
+			} else if (isResourceAdministrator(user, request)) {
 				return;
 			}
 		}
@@ -914,8 +1024,8 @@ public class Groups {
 	}
 	
 	// TODO CODE if the NoSuch exception is thrown, maybe request should be closed
-	// returns false if ws is missing / deleted
-	private boolean isAdministrator(
+	// returns false if resource is missing / deleted
+	private boolean isResourceAdministrator(
 			final UserName user,
 			final GroupRequest request)
 			throws ResourceHandlerException {

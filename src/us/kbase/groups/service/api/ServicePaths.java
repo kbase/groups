@@ -8,6 +8,7 @@ public class ServicePaths {
 	
 	private static final String UPDATE = "update";
 	private static final String GETPERM = "getperm";
+	private static final String GROUP_STR = "group";
 
 	/* general strings */
 
@@ -22,11 +23,13 @@ public class ServicePaths {
 	/* Groups endpoints */
 	
 	/** The group endpoint location. */
-	public static final String GROUP = SEP + "group";
+	public static final String GROUP = SEP + GROUP_STR;
 	/** The group ID */
 	public static final String GROUP_ID = "{" + Fields.GROUP_ID + "}";
 	/** The location to check if a group exists. */
 	public static final String GROUP_EXISTS = GROUP_ID + SEP + "exists";
+	/** The location to update the current user's last visited date. */
+	public static final String GROUP_VISIT = GROUP_ID + SEP + "visit";
 	/** The location to update a group. */
 	public static final String GROUP_UPDATE = GROUP_ID + SEP + UPDATE;
 	/** The location to request membership in a group. */
@@ -56,6 +59,8 @@ public class ServicePaths {
 	public static final String REQUEST = SEP + "request";
 	/** The location to access a request by ID. */
 	public static final String REQUEST_ID = SEP + "id" + SEP + "{" + Fields.REQUEST_ID + "}";
+	/** The location to get information about a group associated with a request. */
+	public static final String REQUEST_ID_GROUP = REQUEST_ID + SEP + GROUP_STR;
 	/** The location to request permissions to view an outside resource associated with a
 	 * request. */
 	public static final String REQUEST_ID_PERMS = REQUEST_ID + SEP + GETPERM;
@@ -69,6 +74,9 @@ public class ServicePaths {
 	public static final String REQUEST_CREATED = SEP + "created";
 	/** The location to list requests targeted at the user. */
 	public static final String REQUEST_TARGETED = SEP + "targeted";
+	/** The location to determine whether groups have open requests. */
+	public static final String REQUEST_NEW = SEP + "groups" + SEP + "{" + Fields.IDS + "}" +
+			SEP + "new";
 	
 	/* Member endpoints */
 	

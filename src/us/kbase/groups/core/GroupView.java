@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
@@ -23,20 +24,6 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class GroupView {
 	
-	public enum Role {
-		/** Not a member of the group. */
-		none,
-		
-		/** A member of the group. */
-		member,
-		
-		/** An administrator of the group. */
-		admin,
-		
-		/** The owner of the group. */
-		owner;
-	}
-	
 	//TODO CODE there could be a lot of optimizations to avoid fetching data that we just discard in the view.
 	
 	// group fields
@@ -48,6 +35,7 @@ public class GroupView {
 	private final Map<NumberedCustomField, String> customFields;
 	private final Optional<Instant> creationDate; // all views except private
 	private final Optional<Instant> modificationDate; // all views except private
+	private final Optional<Instant> lastVisit; // all views except private
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard except private
 	private final Optional<Integer> memberCount; // all views except private
@@ -65,19 +53,22 @@ public class GroupView {
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
 	private final boolean isPrivate;
+	private final boolean isOverridePrivateView;
 	private final Optional<Boolean> isPrivateMemberList;
 	
 	// this class is starting to get a little hairy. Getting close to rethink/refactor time
 	private GroupView(
 			final Group group,
 			final boolean standardView,
-			final Role role,
+			final boolean isOverridePrivateView,
+			final Optional<UserName> user,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
 			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		this.isStandardView = standardView;
-		this.role = role;
+		this.isOverridePrivateView = isOverridePrivateView;
+		this.role = user.map(u -> group.getRole(u)).orElse(Role.NONE);
 		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
 		if (isPrivateView()) {
@@ -92,15 +83,18 @@ public class GroupView {
 			this.memberCount = Optional.empty();
 			this.resourceCount = Collections.emptyMap();
 			this.isPrivateMemberList = Optional.empty();
+			this.lastVisit = Optional.empty();
 		} else {
 			this.memberCount = Optional.of(group.getAllMembers().size());
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
-			if (role.equals(Role.none)) {
+			if (role.equals(Role.NONE)) {
 				this.resourceCount = Collections.emptyMap();
+				this.lastVisit = Optional.empty();
 			} else {
 				// since the user is a member, we know the view isn't private
 				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
 						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
+				this.lastVisit = group.getMember(user.get()).getLastVisit();
 			}
 			
 			// group properties
@@ -118,26 +112,34 @@ public class GroupView {
 			} else {
 				isPrivateMemberList = Optional.of(group.isPrivateMemberList());
 				admins = group.getAdministrators();
-				if (role.equals(Role.none) && group.isPrivateMemberList()) {
+				if (role.equals(Role.NONE) && group.isPrivateMemberList()) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub)));
+							u, filterUserFields(group.getMember(u), upub, false)));
 					members = Collections.emptySet();
 				} else {
 					members = group.getMembers();
 					group.getAllMembers().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub)));
+							u, filterUserFields(group.getMember(u), upub, isAdmin(group, user))));
 				}
 			}
 		}
 	}
 	
+	private boolean isAdmin(final Group group, final Optional<UserName> user) {
+		return user.map(u -> group.isAdministrator(u)).orElse(false);
+	}
+
 	// user fields are only visible in standard views.
 	private GroupUser filterUserFields(
 			final GroupUser member,
-			final Function<NumberedCustomField, Boolean> isUserPublicField) {
+			final Function<NumberedCustomField, Boolean> isUserPublicField,
+			final boolean isAdmin) {
 		final GroupUser.Builder b = GroupUser.getBuilder(member.getName(), member.getJoinDate());
 		getCustomFields(member.getCustomFields(), isUserPublicField, f -> false)
 				.entrySet().stream().forEach(e -> b.withCustomField(e.getKey(), e.getValue()));
+		if (isAdmin) {
+			b.withNullableLastVisit(member.getLastVisit().orElse(null));
+		}
 		return b.build();
 	}
 
@@ -149,7 +151,7 @@ public class GroupView {
 		for (final NumberedCustomField f: customFields.keySet()) {
 			final boolean isPublic = isPublicField.apply(f);
 			final boolean isMinimal = isMinimalViewField.apply(f);
-			if ((isPublic || !role.equals(Role.none)) && (isMinimal || isStandardView)) {
+			if ((isPublic || !role.equals(Role.NONE)) && (isMinimal || isStandardView)) {
 				ret.put(f, customFields.get(f));
 			}
 		}
@@ -184,13 +186,21 @@ public class GroupView {
 		return isPrivateMemberList;
 	}
 	
+	/** Get whether the group's privacy setting has been overridden in this view, allowing
+	 * for a public view. The user's role within the group is still taken into account.
+	 * @return whether the group's privacy setting has been overridden.
+	 */
+	public boolean isOverridePrivateView() {
+		return isOverridePrivateView;
+	}
+	
 	/** Get whether this is a private view of the group, where only the group ID is visible.
-	 * The equivalent of {@link #isPrivate} && {@link #getRole()} equals
-	 * {@link Role#none}.
+	 * The equivalent of {@link #isPrivate()} && !{@link #isOverridePrivateView()} &&
+	 * {@link #getRole()} equals {@link Role#NONE}.
 	 * @return true if this is a private view of the group.
 	 */
 	public boolean isPrivateView() {
-		return isPrivate && role.equals(Role.none);
+		return isPrivate && !isOverridePrivateView && role.equals(Role.NONE);
 	}
 	
 	/** Get the group ID.
@@ -256,6 +266,14 @@ public class GroupView {
 	public Optional<Instant> getModificationDate() {
 		return modificationDate;
 	}
+	
+	/** Get the date of the last visit to the group of the user that was passed in to
+	 * {@link #getBuilder(Group, UserName)}.
+	 * @return the last visit date.
+	 */
+	public Optional<Instant> getLastVisit() {
+		return lastVisit;
+	}
 
 	/** Get the types of the resources included in this view.
 	 * @return the resource types.
@@ -284,6 +302,8 @@ public class GroupView {
 	
 	/** Get a member's detailed information. Only available in a standard view. In a minimal
 	 * view, this method will throw an illegal argument exception.
+	 * {@link GroupUser#getLastVisit()} will return {@link Optional#empty()} if the user
+	 * passed into {@link #getBuilder(Group, UserName)} is not a group administrator.
 	 * @param user the member.
 	 * @return the member's info.
 	 */
@@ -307,9 +327,11 @@ public class GroupView {
 		result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
 		result = prime * result + ((groupID == null) ? 0 : groupID.hashCode());
 		result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
+		result = prime * result + (isOverridePrivateView ? 1231 : 1237);
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + ((isPrivateMemberList == null) ? 0 : isPrivateMemberList.hashCode());
 		result = prime * result + (isStandardView ? 1231 : 1237);
+		result = prime * result + ((lastVisit == null) ? 0 : lastVisit.hashCode());
 		result = prime * result + ((memberCount == null) ? 0 : memberCount.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
@@ -368,6 +390,9 @@ public class GroupView {
 		} else if (!groupName.equals(other.groupName)) {
 			return false;
 		}
+		if (isOverridePrivateView != other.isOverridePrivateView) {
+			return false;
+		}
 		if (isPrivate != other.isPrivate) {
 			return false;
 		}
@@ -379,6 +404,13 @@ public class GroupView {
 			return false;
 		}
 		if (isStandardView != other.isStandardView) {
+			return false;
+		}
+		if (lastVisit == null) {
+			if (other.lastVisit != null) {
+				return false;
+			}
+		} else if (!lastVisit.equals(other.lastVisit)) {
 			return false;
 		}
 		if (memberCount == null) {
@@ -457,6 +489,7 @@ public class GroupView {
 		private final Group group;
 		private final Optional<UserName> user;
 		private boolean isStandardView = false;
+		private boolean isOverridePrivateView = false;
 		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
 		private Function<NumberedCustomField, Boolean> isPublicField = f -> false;
 		private Function<NumberedCustomField, Boolean> isMinimalViewField = f -> false;
@@ -566,30 +599,22 @@ public class GroupView {
 			return this;
 		}
 		
+		/** Override the private property of a group and allow a public view of the group.
+		 * The user's role within the group is still taken into account when determining the view.
+		 * @param overridePrivateView true to override the group's private property.
+		 * @return this builder.
+		 */
+		public Builder withOverridePrivateView(final boolean overridePrivateView) {
+			this.isOverridePrivateView = overridePrivateView;
+			return this;
+		}
+		
 		/** Build a new {@link GroupView}.
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, isStandardView, getRole(group, user),
+			return new GroupView(group, isStandardView, isOverridePrivateView, user,
 					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
 		}
-		
-		public Role getRole(final Group group, final Optional<UserName> user) {
-			Role r = Role.none;
-			if (user.isPresent()) {
-				final UserName u = user.get();
-				if (group.isMember(u)) {
-					r = Role.member;
-				}
-				if (group.isAdministrator(u)) {
-					r = Role.admin;
-				}
-				if (group.getOwner().equals(u)) {
-					r = Role.owner;
-				}
-			}
-			return r;
-		}
-		
 	}
 }

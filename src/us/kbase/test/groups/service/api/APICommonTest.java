@@ -5,34 +5,76 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.inst;
+import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
+import us.kbase.groups.core.CreateAndModTimes;
 import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.Group;
 import us.kbase.groups.core.GroupID;
+import us.kbase.groups.core.GroupName;
+import us.kbase.groups.core.GroupUser;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
+import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
+import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.request.GroupRequestStatus;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.APICommon;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
 
 public class APICommonTest {
+	
+	private static Builder getGroupMaxBuilder()
+			throws MissingParameterException, IllegalParameterException {
+		return Group.getBuilder(
+				new GroupID("id2"), new GroupName("name2"),
+				GroupUser.getBuilder(new UserName("u2"), inst(20000))
+						.withNullableLastVisit(inst(34000))
+						.build(),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
+						.withCustomField(new NumberedCustomField("whee"), "whoo")
+						.withNullableLastVisit(inst(25000))
+						.build())
+				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
+						.build())
+				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
+						.withCustomField(new NumberedCustomField("yay-6"), "boo")
+						.withCustomField(new NumberedCustomField("bar"), "baz")
+						.withNullableLastVisit(inst(62000))
+						.build())
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("a")))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("b")))
+				.withResource(new ResourceType("cat"), new ResourceDescriptor(new ResourceID("c")))
+				.withCustomField(new NumberedCustomField("field-1"), "my val")
+				.withCustomField(new NumberedCustomField("otherfield"), "fieldval");
+	}
 	
 	@Test
 	public void toGroupRequestJSON() throws Exception {
@@ -279,6 +321,145 @@ public class APICommonTest {
 	}
 	
 	@Test
+	public void toGroupJSONPrivateGroup() throws Exception {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().withIsPrivate(true).build(),
+				new UserName("nonmember"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(ImmutableMap.of(
+				"id", "id2", "private", true, "role", "None")));
+	}
+	
+	@Test
+	public void toGroupJSONMinimalView() throws Exception {
+		toGroupJSONMinimalView("foo", 25000L, "Member");
+		toGroupJSONMinimalView("whee", null, "Admin");
+	}
+
+	private void toGroupJSONMinimalView(final String user, final Long lastVisit, final String role)
+			throws MissingParameterException, IllegalParameterException {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().build(),
+				new UserName(user))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("role", role)
+				.with("name", "name2")
+				.with("owner", "u2")
+				.with("lastvisit", lastVisit)
+				.with("memcount", 5)
+				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
+				.build()));
+	}
+	
+	@Test
+	public void toGroupJSONStandardView() throws Exception {
+		toGroupJSONStandardView(new UserName("foo"), null, null, null, 25000L, "Member");
+		toGroupJSONStandardView(new UserName("whoo"), 34000L, 62000L, 25000L, 62000L, "Admin");
+	}
+
+	private void toGroupJSONStandardView(
+			final UserName userName,
+			final Long ownerVisit,
+			final Long adminVisit,
+			final Long memberVisit,
+			final Long lastVisit,
+			final String role)
+			throws Exception {
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().build(),
+				userName)
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.withResourceType(new ResourceType("cat"))
+				.withResource(new ResourceType("ws"), ResourceInformationSet
+						.getBuilder(userName)
+						.withResourceField(new ResourceID("a"), "f1", "x")
+						.withResourceField(new ResourceID("a"), "rid", "wrong")
+						.withResource(new ResourceID("b"))
+						.build())
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("role", role)
+				.with("lastvisit", lastVisit)
+				.with("name", "name2")
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", 20000L)
+						.with("lastvisit", ownerVisit)
+						.with("custom", Collections.emptyMap())
+						.build())
+				.with("memcount", 5)
+				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
+				.with("privatemembers", true)
+				.with("members", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("name", "bar")
+								.with("joined", 40000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "foo")
+								.with("joined", 650000L)
+								.with("lastvisit", memberVisit)
+								.with("custom", ImmutableMap.of("whee", "whoo"))
+								.build()
+						))
+				.with("admins", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("name", "whee")
+								.with("joined", 220000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", 760000L)
+								.with("lastvisit", adminVisit)
+								.with("custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+								.build()
+						))
+				.with("resources", ImmutableMap.of(
+						"ws", Arrays.asList(
+								ImmutableMap.of("rid", "a", "f1", "x"),
+								ImmutableMap.of("rid", "b")),
+						"cat", Collections.emptyList()))
+				.build()));
+	}
+	
+	@Test
+	public void toGroupJSONFail() throws Exception {
+		try {
+			APICommon.toGroupJSON(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("group"));
+		}
+	}
+	
+	@Test
 	public void getToken() throws Exception {
 		assertThat("incorrect token", APICommon.getToken(null, false), is(nullValue()));
 		assertThat("incorrect token", APICommon.getToken("    \t   ", false), is(nullValue()));
@@ -383,6 +564,30 @@ public class APICommonTest {
 	}
 	
 	@Test
+	public void epochMilliStringToInstant() throws Exception {
+		assertThat("incorrect instant", APICommon.epochMilliStringToInstant("   \t  5161634  \n "),
+				is(Instant.ofEpochMilli(5161634)));
+	}
+	
+	@Test
+	public void failEpochMilliStringToInstant() throws Exception {
+		failEpochMilliStringToInstant(null, new NullPointerException("epochMilli"));
+		failEpochMilliStringToInstant("   \t    ", new IllegalParameterException(
+				"Invalid epoch ms: "));
+		failEpochMilliStringToInstant("   foo   ", new IllegalParameterException(
+				"Invalid epoch ms: foo"));
+	}
+	
+	private void failEpochMilliStringToInstant(final String em, final Exception expected) {
+		try {
+			APICommon.epochMilliStringToInstant(em);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void getGroupParamsNulls() throws Exception {
 		final GetGroupsParams p = APICommon.getGroupsParams(null, null, true);
 		
@@ -429,6 +634,29 @@ public class APICommonTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
 					"Invalid sort direction: asd"));
+		}
+	}
+	
+	@Test
+	public void toGroupIDs() throws Exception {
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(set()));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   foo,  \t ,  bar   ,baz,    \t"),
+				is(set(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
+	}
+	
+	@Test
+	public void failToGroupIDs() throws Exception {
+		failToGroupIDs(null, new NullPointerException("commaSeparatedGroupIDs"));
+		failToGroupIDs("  \t , foo, bad*name, bar", new IllegalParameterException(
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id  bad*name: *"));
+	}
+	
+	private void failToGroupIDs(final String ids, final Exception expected) {
+		try {
+			APICommon.toGroupIDs(ids);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	

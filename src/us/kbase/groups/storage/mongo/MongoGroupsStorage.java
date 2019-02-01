@@ -427,6 +427,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private Document toDoc(final GroupUser gu) {
 		return new Document(Fields.GROUP_MEMBER_NAME, gu.getName().getName())
 				.append(Fields.GROUP_MEMBER_JOIN_DATE, Date.from(gu.getJoinDate()))
+				.append(Fields.GROUP_MEMBER_VISIT_DATE, gu.getLastVisit()
+						.map(i -> Date.from(i)).orElse(null))
 				.append(Fields.GROUP_MEMBER_CUSTOM_FIELDS,
 						getCustomFields(gu.getCustomFields()));
 	}
@@ -761,7 +763,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 		for (final Document m: members) {
 			final UserName u = new UserName(m.getString(Fields.GROUP_MEMBER_NAME));
 			final GroupUser.Builder b = GroupUser.getBuilder(
-					u, m.getDate(Fields.GROUP_MEMBER_JOIN_DATE).toInstant());
+					u, m.getDate(Fields.GROUP_MEMBER_JOIN_DATE).toInstant())
+					.withNullableLastVisit(Optional.ofNullable(
+							m.getDate(Fields.GROUP_MEMBER_VISIT_DATE))
+							.map(d -> d.toInstant()).orElse(null));
 			addCustomFields(
 					(f, v) -> b.withCustomField(f, v), Fields.GROUP_MEMBER_CUSTOM_FIELDS, m);
 			ret.put(u, b.build());
@@ -950,6 +955,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 						Fields.FIELD_SEP,
 				memberQueryOr,
 				set);
+		// if it matches, it gets modified
+		updateUser(groupID, member, query, update);
+	}
+
+	// only checks for a match, not modification, and will generally throw an error if no match
+	// assumes match is on gid and username and throws errors for those conditions
+	private void updateUser(
+			final GroupID groupID,
+			final UserName member,
+			final Document query,
+			final Document update)
+			throws GroupsStorageException, NoSuchGroupException, NoSuchUserException {
 		try {
 			final UpdateResult res = db.getCollection(COL_GROUPS).updateOne(query, update);
 			if (res.getMatchedCount() != 1) {
@@ -963,9 +980,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 							"User %s is not a member of group %s",
 							member.getName(), groupID.getName()));
 				}
-				// otherwise we don't care - the update made no changes.
 			}
-			// if it matches, it gets modified, so we don't check
 		} catch (MongoException e) {
 			throw wrapMongoException(e);
 		}
@@ -985,6 +1000,24 @@ public class MongoGroupsStorage implements GroupsStorage {
 			requireNonNull(e.getValue(), String.format("Null value for key %s in fields",
 					e.getKey().getField()));
 		}
+	}
+	
+	@Override
+	public void updateUser(
+			final GroupID groupID,
+			final UserName member,
+			final Instant lastVisited)
+			throws NoSuchGroupException, GroupsStorageException, NoSuchUserException {
+		requireNonNull(groupID, "groupID");
+		requireNonNull(member, "member");
+		requireNonNull(lastVisited, "lastVisited");
+		final Document query = new Document(Fields.GROUP_ID, groupID.getName())
+				.append(Fields.GROUP_MEMBERS, new Document("$elemMatch",
+						new Document(Fields.GROUP_MEMBER_NAME, member.getName())));
+		
+		final Document update = new Document("$set", new Document(
+				Fields.GROUP_MEMBERS + ".$." + Fields.GROUP_MEMBER_VISIT_DATE, lastVisited));
+		updateUser(groupID, member, query, update);
 	}
 
 	@Override
@@ -1223,6 +1256,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
 				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name());
 		return findRequests(query, params);
+	}
+	
+	@Override
+	public boolean groupHasRequest(final GroupID groupID, final Instant laterThan)
+			throws GroupsStorageException {
+		requireNonNull(groupID, "groupID");
+		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
+				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name())
+				.append(Fields.REQUEST_STATUS, GroupRequestStatusType.OPEN.name());
+		if (laterThan != null) {
+			// we used mod date vs create to avoid making another index, and since
+			// the mod date isn't changed while the request is open
+			query.append(Fields.REQUEST_MODIFICATION, new Document("$gt", laterThan));
+		}
+		final Document projection = new Document(Fields.MONGO_ID, 1);
+		// mongo 2.6 doesn't support count with a limit
+		return findOne(COL_REQUESTS, query, projection) != null;
 	}
 
 	private List<GroupRequest> findRequests(final Document query, final GetRequestsParams params)

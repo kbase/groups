@@ -2,13 +2,13 @@ package us.kbase.groups.service.api;
 
 import static us.kbase.groups.service.api.APIConstants.HEADER_TOKEN;
 import static us.kbase.groups.service.api.APICommon.getToken;
+import static us.kbase.groups.service.api.APICommon.getGroupsParams;
+import static us.kbase.groups.service.api.APICommon.getRequestsParams;
+import static us.kbase.groups.service.api.APICommon.toGroupJSON;
 import static us.kbase.groups.util.Util.isNullOrEmpty;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,8 +33,6 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
-import us.kbase.groups.core.GroupUser;
-import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
@@ -61,7 +59,6 @@ import us.kbase.groups.core.fieldvalidation.FieldValidatorException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.request.GroupRequest;
 import us.kbase.groups.core.resource.ResourceID;
-import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
@@ -88,7 +85,7 @@ public class GroupsAPI {
 				InvalidTokenException, AuthenticationException {
 		return groups.getGroups(
 				getToken(token, false),
-				APICommon.getGroupsParams(excludeUpTo, order, true))
+				getGroupsParams(excludeUpTo, order, true))
 				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
@@ -244,6 +241,17 @@ public class GroupsAPI {
 		return ImmutableMap.of(Fields.EXISTS, (groups.getGroupExists(new GroupID(groupID))));
 	}
 	
+	@PUT
+	@Path(ServicePaths.GROUP_VISIT)
+	public void visitGroup(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.GROUP_ID) final String groupID)
+			throws InvalidTokenException, NoSuchGroupException, NoSuchUserException,
+				NoTokenProvidedException, AuthenticationException, MissingParameterException,
+				IllegalParameterException, GroupsStorageException {
+		groups.userVisited(getToken(token, true), new GroupID(groupID));
+	}
+	
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(ServicePaths.GROUP_REQUEST_MEMBERSHIP)
@@ -286,7 +294,7 @@ public class GroupsAPI {
 				GroupsStorageException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
 	
 	@DELETE
@@ -299,78 +307,6 @@ public class GroupsAPI {
 				AuthenticationException, UnauthorizedException, MissingParameterException,
 				IllegalParameterException, GroupsStorageException {
 		groups.removeMember(getToken(token, true), new GroupID(groupID), new UserName(member));
-	}
-
-	private Map<String, Object> toGroupJSON(final GroupView g) {
-		final Map<String, Object> ret = new HashMap<>();
-		ret.put(Fields.GROUP_ID, g.getGroupID().getName());
-		ret.put(Fields.GROUP_IS_PRIVATE, g.isPrivate());
-		ret.put(Fields.GROUP_ROLE, g.getRole().name());
-		if (!g.isPrivateView()) {
-			ret.put(Fields.GROUP_NAME, g.getGroupName().get().getName());
-			ret.put(Fields.GROUP_OWNER, g.getOwner().get().getName());
-			ret.put(Fields.GROUP_MEMBER_COUNT, g.getMemberCount().get());
-			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(g.getCustomFields()));
-			ret.put(Fields.GROUP_CREATION, g.getCreationDate().get().toEpochMilli());
-			ret.put(Fields.GROUP_MODIFICATION, g.getModificationDate().get().toEpochMilli());
-			final Map<String, Object> resourceCounts = new HashMap<>();
-			ret.put(Fields.GROUP_RESOURCE_COUNT, resourceCounts);
-			for (final ResourceType t: g.getResourceCounts().keySet()) {
-				resourceCounts.put(t.getName(), g.getResourceCounts().get(t));
-			}
-			if (g.isStandardView()) {
-				ret.put(Fields.GROUP_MEMBERS_PRIVATE, g.isPrivateMembersList().get());
-				ret.put(Fields.GROUP_OWNER, toUserJson(g.getMember(g.getOwner().get())));
-				ret.put(Fields.GROUP_MEMBERS, toMemberList(g.getMembers(), g));
-				ret.put(Fields.GROUP_ADMINS, toMemberList(g.getAdministrators(), g));
-				final Map<String, Object> resources = new HashMap<>();
-				ret.put(Fields.GROUP_RESOURCES, resources);
-				for (final ResourceType t: g.getResourceTypes()) {
-					resources.put(t.getName(), getResourceList(g.getResourceInformation(t)));
-				}
-			}
-		}
-		return ret;
-	}
-	
-	private Map<String, Object> toUserJson(final GroupUser user) {
-		final Map<String, Object> ret = new HashMap<>();
-		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
-		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, user.getJoinDate().toEpochMilli());
-		ret.put(Fields.GROUP_MEMBER_CUSTOM_FIELDS, getCustomFields(user.getCustomFields()));
-		return ret;
-	}
-	
-	private List<Map<String, Object>> toMemberList(
-			final Collection<UserName> members,
-			final GroupView group) {
-		return members.stream().sorted().map(m -> toUserJson(group.getMember(m)))
-				.collect(Collectors.toList());
-	}
-
-	private List<Map<String, Object>> getResourceList(final ResourceInformationSet resourceInfo) {
-		final List<Map<String, Object>> rlist = new LinkedList<>();
-		for (final ResourceID rd: sorted(resourceInfo)) {
-			final Map<String, Object> resource = new HashMap<>();
-			rlist.add(resource);
-			resource.putAll(resourceInfo.getFields(rd));
-			resource.put(Fields.GROUP_RESOURCE_ID, rd.getName());
-		}
-		return rlist;
-	}
-	
-	private Map<String, String> getCustomFields(final Map<NumberedCustomField, String> fields) {
-		return fields.keySet().stream().collect(Collectors.toMap(
-				k -> k.getField(), k -> fields.get(k)));
-	}
-
-	// may want to subclass the descriptors to allow for resource type specific sorts
-	// specifically for workspaces
-	// or associate a comparator with a resource type
-	private List<ResourceID> sorted(final ResourceInformationSet resources) {
-		final List<ResourceID> ret = new ArrayList<>(resources.getResources());
-		Collections.sort(ret);
-		return ret;
 	}
 
 	public static class UpdateUserJSON extends IncomingJSON {
