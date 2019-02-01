@@ -35,6 +35,7 @@ public class GroupView {
 	private final Map<NumberedCustomField, String> customFields;
 	private final Optional<Instant> creationDate; // all views except private
 	private final Optional<Instant> modificationDate; // all views except private
+	private final Optional<Instant> lastVisit; // all views except private
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard except private
 	private final Optional<Integer> memberCount; // all views except private
@@ -60,14 +61,14 @@ public class GroupView {
 			final Group group,
 			final boolean standardView,
 			final boolean isOverridePrivateView,
-			final Role role,
+			final Optional<UserName> user,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
 			final Function<NumberedCustomField, Boolean> isUserPublicField) {
 		this.isStandardView = standardView;
 		this.isOverridePrivateView = isOverridePrivateView;
-		this.role = role;
+		this.role = user.map(u -> group.getRole(u)).orElse(Role.NONE);
 		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
 		if (isPrivateView()) {
@@ -82,15 +83,18 @@ public class GroupView {
 			this.memberCount = Optional.empty();
 			this.resourceCount = Collections.emptyMap();
 			this.isPrivateMemberList = Optional.empty();
+			this.lastVisit = Optional.empty();
 		} else {
 			this.memberCount = Optional.of(group.getAllMembers().size());
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 			if (role.equals(Role.NONE)) {
 				this.resourceCount = Collections.emptyMap();
+				this.lastVisit = Optional.empty();
 			} else {
 				// since the user is a member, we know the view isn't private
 				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
 						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
+				this.lastVisit = group.getMember(user.get()).getLastVisit();
 			}
 			
 			// group properties
@@ -110,25 +114,30 @@ public class GroupView {
 				admins = group.getAdministrators();
 				if (role.equals(Role.NONE) && group.isPrivateMemberList()) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub)));
+							u, filterUserFields(group.getMember(u), upub, false)));
 					members = Collections.emptySet();
 				} else {
 					members = group.getMembers();
 					group.getAllMembers().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub)));
+							u, filterUserFields(group.getMember(u), upub, isAdmin(group, user))));
 				}
 			}
 		}
 	}
 	
+	private boolean isAdmin(final Group group, final Optional<UserName> user) {
+		return user.map(u -> group.isAdministrator(u)).orElse(false);
+	}
+
 	// user fields are only visible in standard views.
 	private GroupUser filterUserFields(
 			final GroupUser member,
-			final Function<NumberedCustomField, Boolean> isUserPublicField) {
+			final Function<NumberedCustomField, Boolean> isUserPublicField,
+			final boolean isAdmin) {
 		final GroupUser.Builder b = GroupUser.getBuilder(member.getName(), member.getJoinDate());
 		getCustomFields(member.getCustomFields(), isUserPublicField, f -> false)
 				.entrySet().stream().forEach(e -> b.withCustomField(e.getKey(), e.getValue()));
-		if (Role.OWNER.equals(role) || Role.ADMIN.equals(role)) {
+		if (isAdmin) {
 			b.withNullableLastVisit(member.getLastVisit().orElse(null));
 		}
 		return b.build();
@@ -257,6 +266,14 @@ public class GroupView {
 	public Optional<Instant> getModificationDate() {
 		return modificationDate;
 	}
+	
+	/** Get the date of the last visit to the group of the user that was passed in to
+	 * {@link #getBuilder(Group, UserName)}.
+	 * @return the last visit date.
+	 */
+	public Optional<Instant> getLastVisit() {
+		return lastVisit;
+	}
 
 	/** Get the types of the resources included in this view.
 	 * @return the resource types.
@@ -314,6 +331,7 @@ public class GroupView {
 		result = prime * result + (isPrivate ? 1231 : 1237);
 		result = prime * result + ((isPrivateMemberList == null) ? 0 : isPrivateMemberList.hashCode());
 		result = prime * result + (isStandardView ? 1231 : 1237);
+		result = prime * result + ((lastVisit == null) ? 0 : lastVisit.hashCode());
 		result = prime * result + ((memberCount == null) ? 0 : memberCount.hashCode());
 		result = prime * result + ((members == null) ? 0 : members.hashCode());
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
@@ -386,6 +404,13 @@ public class GroupView {
 			return false;
 		}
 		if (isStandardView != other.isStandardView) {
+			return false;
+		}
+		if (lastVisit == null) {
+			if (other.lastVisit != null) {
+				return false;
+			}
+		} else if (!lastVisit.equals(other.lastVisit)) {
 			return false;
 		}
 		if (memberCount == null) {
@@ -588,8 +613,7 @@ public class GroupView {
 		 * @return the view.
 		 */
 		public GroupView build() {
-			return new GroupView(group, isStandardView, isOverridePrivateView,
-					user.map(u -> group.getRole(u)).orElse(Group.Role.NONE),
+			return new GroupView(group, isStandardView, isOverridePrivateView, user,
 					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
 		}
 	}
