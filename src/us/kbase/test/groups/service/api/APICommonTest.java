@@ -52,11 +52,14 @@ public class APICommonTest {
 			throws MissingParameterException, IllegalParameterException {
 		return Group.getBuilder(
 				new GroupID("id2"), new GroupName("name2"),
-				GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
+				GroupUser.getBuilder(new UserName("u2"), inst(20000))
+						.withNullableLastVisit(inst(34000))
+						.build(),
 				new CreateAndModTimes(
 						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
 				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(650000))
 						.withCustomField(new NumberedCustomField("whee"), "whoo")
+						.withNullableLastVisit(inst(25000))
 						.build())
 				.withMember(GroupUser.getBuilder(new UserName("bar"), inst(40000)).build())
 				.withAdministrator(GroupUser.getBuilder(new UserName("whee"), inst(220000))
@@ -64,6 +67,7 @@ public class APICommonTest {
 				.withAdministrator(GroupUser.getBuilder(new UserName("whoo"), inst(760000))
 						.withCustomField(new NumberedCustomField("yay-6"), "boo")
 						.withCustomField(new NumberedCustomField("bar"), "baz")
+						.withNullableLastVisit(inst(62000))
 						.build())
 				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("a")))
 				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("b")))
@@ -332,9 +336,15 @@ public class APICommonTest {
 	
 	@Test
 	public void toGroupJSONMinimalView() throws Exception {
+		toGroupJSONMinimalView("foo", 25000L, "Member");
+		toGroupJSONMinimalView("whee", null, "Admin");
+	}
+
+	private void toGroupJSONMinimalView(final String user, final Long lastVisit, final String role)
+			throws MissingParameterException, IllegalParameterException {
 		final GroupView gv = GroupView.getBuilder(
 				getGroupMaxBuilder().build(),
-				new UserName("bar"))
+				new UserName(user))
 				.withMinimalViewFieldDeterminer(f -> true)
 				.withPublicFieldDeterminer(f -> true)
 				.withPublicUserFieldDeterminer(f -> true)
@@ -343,9 +353,10 @@ public class APICommonTest {
 		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
 				.with("id", "id2")
 				.with("private", false)
-				.with("role", "Member")
+				.with("role", role)
 				.with("name", "name2")
 				.with("owner", "u2")
+				.with("lastvisit", lastVisit)
 				.with("memcount", 5)
 				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 				.with("createdate", 20000L)
@@ -356,15 +367,27 @@ public class APICommonTest {
 	
 	@Test
 	public void toGroupJSONStandardView() throws Exception {
+		toGroupJSONStandardView(new UserName("foo"), null, null, null, 25000L, "Member");
+		toGroupJSONStandardView(new UserName("whoo"), 34000L, 62000L, 25000L, 62000L, "Admin");
+	}
+
+	private void toGroupJSONStandardView(
+			final UserName userName,
+			final Long ownerVisit,
+			final Long adminVisit,
+			final Long memberVisit,
+			final Long lastVisit,
+			final String role)
+			throws Exception {
 		final GroupView gv = GroupView.getBuilder(
 				getGroupMaxBuilder().build(),
-				new UserName("bar"))
+				userName)
 				.withMinimalViewFieldDeterminer(f -> true)
 				.withPublicFieldDeterminer(f -> true)
 				.withPublicUserFieldDeterminer(f -> true)
 				.withResourceType(new ResourceType("cat"))
 				.withResource(new ResourceType("ws"), ResourceInformationSet
-						.getBuilder(new UserName("bar"))
+						.getBuilder(userName)
 						.withResourceField(new ResourceID("a"), "f1", "x")
 						.withResourceField(new ResourceID("a"), "rid", "wrong")
 						.withResource(new ResourceID("b"))
@@ -375,12 +398,15 @@ public class APICommonTest {
 		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
 				.with("id", "id2")
 				.with("private", false)
-				.with("role", "Member")
+				.with("role", role)
+				.with("lastvisit", lastVisit)
 				.with("name", "name2")
-				.with("owner", ImmutableMap.of(
-						"name", "u2",
-						"joined", 20000L,
-						"custom", Collections.emptyMap()))
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", 20000L)
+						.with("lastvisit", ownerVisit)
+						.with("custom", Collections.emptyMap())
+						.build())
 				.with("memcount", 5)
 				.with("custom", ImmutableMap.of("field-1", "my val", "otherfield", "fieldval"))
 				.with("createdate", 20000L)
@@ -388,31 +414,38 @@ public class APICommonTest {
 				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
 				.with("privatemembers", true)
 				.with("members", Arrays.asList(
-						ImmutableMap.of(
-								"name", "bar",
-								"joined", 40000L,
-								"custom", Collections.emptyMap()),
-						ImmutableMap.of(
-							"name", "foo",
-							"joined", 650000L,
-							"custom", ImmutableMap.of("whee", "whoo"))
+						MapBuilder.newHashMap()
+								.with("name", "bar")
+								.with("joined", 40000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "foo")
+								.with("joined", 650000L)
+								.with("lastvisit", memberVisit)
+								.with("custom", ImmutableMap.of("whee", "whoo"))
+								.build()
 						))
 				.with("admins", Arrays.asList(
-						ImmutableMap.of(
-								"name", "whee",
-								"joined", 220000L,
-								"custom", Collections.emptyMap()),
-						ImmutableMap.of(
-							"name", "whoo",
-							"joined", 760000L,
-							"custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+						MapBuilder.newHashMap()
+								.with("name", "whee")
+								.with("joined", 220000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", 760000L)
+								.with("lastvisit", adminVisit)
+								.with("custom", ImmutableMap.of("yay-6", "boo", "bar", "baz"))
+								.build()
 						))
 				.with("resources", ImmutableMap.of(
 						"ws", Arrays.asList(
 								ImmutableMap.of("rid", "a", "f1", "x"),
 								ImmutableMap.of("rid", "b")),
 						"cat", Collections.emptyList()))
-						
 				.build()));
 	}
 	

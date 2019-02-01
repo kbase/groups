@@ -265,6 +265,7 @@ public class RequestAPITest {
 						.with("custom", ImmutableMap.of("f", "x"))
 						.with("createdate", 30000L)
 						.with("moddate", 40000L)
+						.with("lastvisit", null)
 						.with("rescount", Collections.emptyMap())
 						.build()));
 	}

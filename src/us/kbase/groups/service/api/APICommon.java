@@ -85,6 +85,8 @@ public class APICommon {
 			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
 			ret.put(Fields.GROUP_CREATION, group.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, group.getModificationDate().get().toEpochMilli());
+			ret.put(Fields.GROUP_VISIT_DATE, group.getLastVisit()
+					.map(i -> i.toEpochMilli()).orElse(null));
 			final Map<String, Object> resourceCounts = new HashMap<>();
 			ret.put(Fields.GROUP_RESOURCE_COUNT, resourceCounts);
 			for (final ResourceType t: group.getResourceCounts().keySet()) {
@@ -109,6 +111,8 @@ public class APICommon {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
 		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, user.getJoinDate().toEpochMilli());
+		ret.put(Fields.GROUP_MEMBER_VISIT_DATE, user.getLastVisit()
+					.map(i -> i.toEpochMilli()).orElse(null));
 		ret.put(Fields.GROUP_MEMBER_CUSTOM_FIELDS, getCustomFields(user.getCustomFields()));
 		return ret;
 	}

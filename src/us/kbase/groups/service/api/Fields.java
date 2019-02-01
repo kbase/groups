@@ -35,6 +35,8 @@ public class Fields {
 	public static final String GROUP_CREATION = "createdate";
 	/** The group modification date. */
 	public static final String GROUP_MODIFICATION = "moddate";
+	/** A user's last visit date to the group. */
+	public static final String GROUP_VISIT_DATE = "lastvisit";
 	/** Custom fields associated with the group. */
 	public static final String GROUP_CUSTOM_FIELDS = "custom";
 	
@@ -45,6 +47,8 @@ public class Fields {
 	public static final String GROUP_MEMBER_CUSTOM_FIELDS = "custom";
 	/** A member's join date. */
 	public static final String GROUP_MEMBER_JOIN_DATE = "joined";
+	/** A member's last visit date. */
+	public static final String GROUP_MEMBER_VISIT_DATE = "lastvisit";
 	
 	// resource fields
 	/** The resource type. */
