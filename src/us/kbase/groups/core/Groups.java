@@ -468,12 +468,10 @@ public class Groups {
 	}
 	
 	/** Determine whether groups have open incoming (e.g. of type {@link RequestType#REQUEST})
-	 * requests.
+	 * requests. Requests are considered {@link GroupHasRequests#NEW} if they are after the
+	 * user's last visited date for the group. The user must be an admin of all the groups.
 	 * @param userToken the user's token.
 	 * @param groupIDs the group IDs of the groups to query. At most 100 IDs may be supplied.
-	 * @param laterThan any requests less than or equal to this date are considered
-	 * {@link GroupHasRequests#OLD}. If null, any open requests are considered
-	 * {@link GroupHasRequests#NEW}.
 	 * @return A mapping from the group ID to whether the group has any open requests.
 	 * @throws NoSuchGroupException if one of the groups does not exist.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
@@ -485,8 +483,7 @@ public class Groups {
 	 */
 	public Map<GroupID, GroupHasRequests> groupsHaveRequests(
 			final Token userToken,
-			final Set<GroupID> groupIDs,
-			final Instant laterThan)
+			final Set<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
 				NoSuchGroupException, GroupsStorageException, IllegalParameterException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
@@ -495,16 +492,20 @@ public class Groups {
 					"No more than %s group IDs are allowed", MAX_GROUP_HAS_REQUESTS_COUNT));
 		}
 		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final Map<GroupID, Optional<Instant>> gToLastVisit = new HashMap<>();
 		for (final GroupID gid: groupIDs) {
 			// could make a bulk method that returns less info per group if necessary
 			// or even an isAdmin(Username, Set<GroupID>) method. YAGNI for now
-			if (!storage.getGroup(gid).isAdministrator(user)) {
+			final Group g = storage.getGroup(gid);
+			if (!g.isAdministrator(user)) {
 				throw new UnauthorizedException(String.format(
 						"User %s may not administrate group %s", user.getName(), gid.getName()));
 			}
+			gToLastVisit.put(gid, g.getMember(user).getLastVisit());
 		}
 		final Map<GroupID, GroupHasRequests> ret = new HashMap<>();
 		for (final GroupID gid: groupIDs) {
+			final Instant laterThan = gToLastVisit.get(gid).orElse(null);
 			final GroupHasRequests reqstate;
 			if (storage.groupHasRequest(gid, laterThan)) {
 				reqstate = GroupHasRequests.NEW;

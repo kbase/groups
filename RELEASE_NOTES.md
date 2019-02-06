@@ -1,8 +1,14 @@
 # KBase Groups Service release notes
 
+## 0.1.2
+
+* BACKWARDS INCOMPATIBILITY: The /request/groups/<ids>/new endpoint no longer accepts a
+  `laterthan` date and bases the old vs. new request determination on the last visited date
+  for the group.
+
 ## 0.1.1
 
-* BACKWARDS INCOMPATIBILIY: The user role enum values are now capitalized like all the other
+* BACKWARDS INCOMPATIBILITY: The user role enum values are now capitalized like all the other
   enums in the API, e.g. None, Member, Admin, and Owner.
 
 * Added a /request/id/<id>/group endpoint that returns minimal group information for Invite-type

@@ -1355,12 +1355,12 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
 		
 		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
-				new Token("tok"), set(), null),
+				new Token("tok"), set()),
 				is(Collections.emptyMap()));
 	}
 	
 	@Test
-	public void groupsHaveRequests() throws Exception {
+	public void groupsHaveRequestsNoVisit() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
@@ -1370,29 +1370,31 @@ public class GroupsTest {
 		when(mocks.storage.groupHasRequest(new GroupID("id2"), null)).thenReturn(true);
 		
 		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
-				new Token("tok"), set(new GroupID("id1"), new GroupID("id2")), null),
+				new Token("tok"), set(new GroupID("id1"), new GroupID("id2"))),
 				is(ImmutableMap.of(
 						new GroupID("id1"), GroupHasRequests.NONE,
 						new GroupID("id2"), GroupHasRequests.NEW)));
 	}
 	
 	@Test
-	public void groupsHaveRequestsLaterThan() throws Exception {
+	public void groupsHaveRequestsVisted() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("tok"))).thenReturn(new UserName("u"));
-		when(mocks.storage.getGroup(new GroupID("id1"))).thenReturn(groupWithAdmin("id1", "u"));
-		when(mocks.storage.getGroup(new GroupID("id2"))).thenReturn(groupWithAdmin("id2", "u"));
-		when(mocks.storage.getGroup(new GroupID("id3"))).thenReturn(groupWithAdmin("id3", "u"));
-		when(mocks.storage.groupHasRequest(new GroupID("id1"), inst(30000))).thenReturn(false);
+		when(mocks.storage.getGroup(new GroupID("id1"))).thenReturn(
+				groupWithAdmin("id1", "u", inst(25000)));
+		when(mocks.storage.getGroup(new GroupID("id2"))).thenReturn(
+				groupWithAdmin("id2", "u", inst(56000)));
+		when(mocks.storage.getGroup(new GroupID("id3"))).thenReturn(
+				groupWithAdmin("id3", "u", inst(35000)));
+		when(mocks.storage.groupHasRequest(new GroupID("id1"), inst(25000))).thenReturn(false);
 		when(mocks.storage.groupHasRequest(new GroupID("id1"), null)).thenReturn(true);
-		when(mocks.storage.groupHasRequest(new GroupID("id2"), inst(30000))).thenReturn(true);
-		when(mocks.storage.groupHasRequest(new GroupID("id3"), inst(30000))).thenReturn(false);
+		when(mocks.storage.groupHasRequest(new GroupID("id2"), inst(56000))).thenReturn(true);
+		when(mocks.storage.groupHasRequest(new GroupID("id3"), inst(35000))).thenReturn(false);
 		when(mocks.storage.groupHasRequest(new GroupID("id3"), null)).thenReturn(false);
 		
 		assertThat("incorrect request state", mocks.groups.groupsHaveRequests(
-				new Token("tok"), set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3")),
-				inst(30000)),
+				new Token("tok"), set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3"))),
 				is(ImmutableMap.of(
 						new GroupID("id1"), GroupHasRequests.OLD,
 						new GroupID("id2"), GroupHasRequests.NEW,
@@ -1400,9 +1402,18 @@ public class GroupsTest {
 	}
 	
 	private Group groupWithAdmin(final String id, final String adminName) throws Exception {
+		return groupWithAdmin(id, adminName, null);
+	}
+	
+	private Group groupWithAdmin(
+			final String id,
+			final String adminName,
+			final Instant lastVisit) throws Exception {
 		return Group.getBuilder(new GroupID(id), new GroupName("n"), toGUser("o"),
 				new CreateAndModTimes(inst(1000)))
-				.withAdministrator(toGUser(adminName))
+				.withAdministrator(GroupUser.getBuilder(new UserName(adminName), inst(10000))
+						.withNullableLastVisit(lastVisit)
+						.build())
 				.build();
 	}
 	
@@ -1429,7 +1440,7 @@ public class GroupsTest {
 			when(mocks.storage.getGroup(g)).thenReturn(groupWithAdmin(g.getName(), "u"));
 		}
 		
-		mocks.groups.groupsHaveRequests(new Token("tok"), ids, null);
+		mocks.groups.groupsHaveRequests(new Token("tok"), ids);
 		
 		ids.add(new GroupID("i101"));
 		failGroupsHaveRequests(mocks.groups, new Token("tok"), ids, new IllegalParameterException(
@@ -1456,7 +1467,7 @@ public class GroupsTest {
 			final Set<GroupID> ids,
 			final Exception expected) {
 		try {
-			g.groupsHaveRequests(t, ids, null);
+			g.groupsHaveRequests(t, ids);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
