@@ -553,7 +553,7 @@ Only public custom fields are included.
 
 ```
 AUTHORIZATION REQUIRED
-GET /request/groups/<comma separated group ids>/new[?laterthan=<epoch ms>]
+GET /request/groups/<comma separated group ids>/new
 
 RETURNS:
 {
@@ -569,10 +569,11 @@ Requests targeted towards groups are of type `Request`, not `Invite`.
 
 Whitespace only entries in the ID list are ignored. At most 100 ids may be submitted per request.
 
-The `laterthan` parameter determines which requests are treated as `Old` or `New`. If all
-open requests for a group are older than or equal to `laterthan` `Old` is returned for that
-group. If `laterthan` is not supplied a value of approximately 14Gy BCE is assumed and thus
-in most cases groups that have `Open` requests will be marked as `New`.
+The administrator's last visit date for each group determines which requests are treated as
+`Old` or `New`. If all open requests for a group are older than or equal to the administrator's
+last visit date, `Old` is returned for that group. If the administrator has never visited the
+group a value of approximately 14Gy BCE is assumed and thus in most cases groups that have
+`Open` requests will be marked as `New`.
 
 Each group is mapped to a further mapping to allow for backwards-compatible expansion of the
 API in the future.

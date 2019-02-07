@@ -830,26 +830,18 @@ public class RequestAPITest {
 	
 	@Test
 	public void groupsHaveRequests() throws Exception {
-		groupsHaveRequests(null, null);
-		groupsHaveRequests("  \t    ", null);
-		groupsHaveRequests("123467", inst(123467));
-	}
-
-	private void groupsHaveRequests(final String epochStr, final Instant expected)
-			throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		when(g.groupsHaveRequests(
 				new Token("tokyn"),
-				set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3")),
-				expected))
+				set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3"))))
 				.thenReturn(ImmutableMap.of(
 						new GroupID("id1"), GroupHasRequests.NONE,
 						new GroupID("id2"), GroupHasRequests.OLD,
 						new GroupID("id3"), GroupHasRequests.NEW));
 		
 		assertThat("incorrect has requests", new RequestAPI(g).groupsHaveRequests(
-				"tokyn", "  id1  , , id2, id3  \t", epochStr),
+				"tokyn", "  id1  , , id2, id3  \t"),
 				is(ImmutableMap.of(
 						"id1", ImmutableMap.of("new", "None"),
 						"id2", ImmutableMap.of("new", "Old"),
@@ -859,22 +851,19 @@ public class RequestAPITest {
 	
 	@Test
 	public void failGroupsHaveRequestBadArds() throws Exception {
-		failGroupHaveRequests(null, "i", "", new NoTokenProvidedException("No token provided"));
-		failGroupHaveRequests("   \t   ", "i", "", new NoTokenProvidedException(
+		failGroupHaveRequests(null, "i", new NoTokenProvidedException("No token provided"));
+		failGroupHaveRequests("   \t   ", "i", new NoTokenProvidedException(
 				"No token provided"));
-		failGroupHaveRequests("t", "b*d", "", new IllegalParameterException(
+		failGroupHaveRequests("t", "b*d", new IllegalParameterException(
 				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id b*d: *"));
-		failGroupHaveRequests("t", "i", "foo", new IllegalParameterException(
-				"Invalid epoch ms: foo"));
 	}
 	
 	private void failGroupHaveRequests(
 			final String t,
 			final String i,
-			final String e,
 			final Exception expected) {
 		try {
-			new RequestAPI(mock(Groups.class)).groupsHaveRequests(t, i, e);
+			new RequestAPI(mock(Groups.class)).groupsHaveRequests(t, i);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
