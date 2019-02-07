@@ -717,10 +717,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 			for (final String restype: resources.keySet()) {
 				final ResourceType t = new ResourceType(restype);
 				for (final Document rd: resources.get(restype)) {
-					b.withResource(t, new ResourceDescriptor(
-							new ResourceAdministrativeID(
-									rd.getString(Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID)),
-							new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))));
+					b.withResource(
+							t,
+							new ResourceDescriptor(
+									new ResourceAdministrativeID(
+											rd.getString(Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID)),
+									new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))),
+							null); //TODO NOW add time to group
 				}
 			}
 			addCustomFields((f, v) -> b.withCustomField(f, v), Fields.GROUP_CUSTOM_FIELDS, grp);

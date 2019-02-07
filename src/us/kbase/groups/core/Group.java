@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -18,7 +19,7 @@ import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceType;
 
-/** Represents a group consisting primarily of a set of users and set of workspaces associated
+/** Represents a group consisting primarily of a set of users and set of resources associated
  * with those users.
  * 
  * @author gaprice@lbl.gov
@@ -33,7 +34,9 @@ public class Group {
 	private final boolean privateMemberList;
 	private final Map<UserName, GroupUser> allMembers;
 	private final Set<UserName> admins;
+	// maybe combine these into a single map with a class?
 	private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources;
+	private final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate;
 	private final Instant creationDate;
 	private final Instant modificationDate;
 	private final Map<NumberedCustomField, String> customFields;
@@ -47,6 +50,7 @@ public class Group {
 			final Map<UserName, GroupUser> allMembers,
 			final Set<UserName> admins,
 			final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources,
+			final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate,
 			final Instant creationDate,
 			final Instant modificationDate,
 			final Map<NumberedCustomField, String> customFields) {
@@ -58,6 +62,7 @@ public class Group {
 		this.allMembers = Collections.unmodifiableMap(allMembers);
 		this.admins = Collections.unmodifiableSet(admins);
 		this.resources = Collections.unmodifiableMap(resources);
+		this.resourceJoinDate = Collections.unmodifiableMap(resourceJoinDate);
 		this.creationDate = creationDate;
 		this.modificationDate = modificationDate;
 		this.customFields = Collections.unmodifiableMap(customFields);
@@ -215,13 +220,30 @@ public class Group {
 	 * @return the resource.
 	 */
 	public ResourceDescriptor getResource(final ResourceType type, final ResourceID resourceID) {
+		getResourceCheckArgs(type, resourceID);
+		return new ResourceDescriptor(resources.get(type).get(resourceID), resourceID);
+	}
+	
+	/** Get the date a resource was added to the group. May be {@link Optional#empty()} for
+	 * resources added before version 0.1.3 of the software.
+	 * @param type the type of the resource.
+	 * @param resourceID the ID of the resource.
+	 * @return the date the resource was added to the group.
+	 */
+	public Optional<Instant> getResourceAddDate(
+			final ResourceType type,
+			final ResourceID resourceID) {
+		getResourceCheckArgs(type, resourceID);
+		return resourceJoinDate.get(type).get(resourceID);
+	}
+
+	private void getResourceCheckArgs(final ResourceType type, final ResourceID resourceID) {
 		requireNonNull(type, "type");
 		requireNonNull(resourceID, "resourceID");
 		if (!containsResource(type, resourceID)) {
 			throw new IllegalArgumentException(String.format("No such resource %s %s",
 					type.getName(), resourceID.getName()));
 		}
-		return new ResourceDescriptor(resources.get(type).get(resourceID), resourceID);
 	}
 	
 	/** Get a copy of the group without the specified resources.
@@ -239,18 +261,24 @@ public class Group {
 		final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> res = this.resources
 				.entrySet().stream().collect(Collectors.toMap(
 						e -> e.getKey(), e -> new HashMap<>(e.getValue())));
+		final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resJoin = this.resourceJoinDate
+				.entrySet().stream().collect(Collectors.toMap(
+						e -> e.getKey(), e -> new HashMap<>(e.getValue())));
 		for (final ResourceID r: resources) {
 			if (res.get(type).remove(r) == null) {
 				throw new IllegalArgumentException(String.format("No such resource %s %s",
 						type.getName(), r.getName()));
 			}
+			resJoin.get(type).remove(r);
 		}
 		if (res.get(type).isEmpty()) {
 			res.remove(type);
 		}
+		if (resJoin.get(type).isEmpty()) {
+			resJoin.remove(type);
+		}
 		return new Group(groupID, groupName, owner, isPrivate, privateMemberList, allMembers,
-				admins, res, creationDate, modificationDate, customFields);
-		
+				admins, res, resJoin, creationDate, modificationDate, customFields);
 	}
 
 	/** Get the date the group was created.
@@ -333,6 +361,7 @@ public class Group {
 		result = prime * result + ((modificationDate == null) ? 0 : modificationDate.hashCode());
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + (privateMemberList ? 1231 : 1237);
+		result = prime * result + ((resourceJoinDate == null) ? 0 : resourceJoinDate.hashCode());
 		result = prime * result + ((resources == null) ? 0 : resources.hashCode());
 		return result;
 	}
@@ -411,6 +440,13 @@ public class Group {
 		if (privateMemberList != other.privateMemberList) {
 			return false;
 		}
+		if (resourceJoinDate == null) {
+			if (other.resourceJoinDate != null) {
+				return false;
+			}
+		} else if (!resourceJoinDate.equals(other.resourceJoinDate)) {
+			return false;
+		}
 		if (resources == null) {
 			if (other.resources != null) {
 				return false;
@@ -451,6 +487,8 @@ public class Group {
 		private final Map<UserName, GroupUser> allMembers = new HashMap<>();
 		private final Set<UserName> admins = new HashSet<>();
 		private final Map<ResourceType, Map<ResourceID, ResourceAdministrativeID>> resources =
+				new HashMap<>();
+		private final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate =
 				new HashMap<>();
 		private final Map<NumberedCustomField, String> customFields = new HashMap<>();
 		
@@ -500,20 +538,44 @@ public class Group {
 			return this;
 		}
 		
-		/** Add a resource to the group.
+		/** Add a resource to the group. The equivalent of
+		 * {@link #withResource(ResourceType, ResourceDescriptor, Instant)} with a null date
+		 * argument.
 		 * Adding a duplicate resource ID with a different administrative ID will overwrite the
 		 * previous resource.
 		 * @param type the type of the resource.
 		 * @param descriptor the resource descriptor.
 		 * @return this builder.
 		 */
-		public Builder withResource(final ResourceType type, final ResourceDescriptor descriptor) {
+		public Builder withResource(
+				final ResourceType type,
+				final ResourceDescriptor descriptor) {
+			return withResource(type, descriptor, null);
+		}
+		
+		/** Add a resource to the group.
+		 * Adding a duplicate resource ID with a different administrative ID will overwrite the
+		 * previous resource.
+		 * @param type the type of the resource.
+		 * @param descriptor the resource descriptor.
+		 * @param added the date the resource was added to the group. Null is allowable if
+		 * the date is not known.
+		 * @return this builder.
+		 */
+		public Builder withResource(
+				final ResourceType type,
+				final ResourceDescriptor descriptor,
+				final Instant added) {
 			requireNonNull(type, "type");
 			requireNonNull(descriptor, "descriptor");
 			if (!resources.containsKey(type)) {
 				resources.put(type, new HashMap<>());
 			}
+			if (!resourceJoinDate.containsKey(type)) {
+				resourceJoinDate.put(type, new HashMap<>());
+			}
 			resources.get(type).put(descriptor.getResourceID(), descriptor.getAdministrativeID());
+			resourceJoinDate.get(type).put(descriptor.getResourceID(), Optional.ofNullable(added));
 			return this;
 		}
 		
@@ -554,7 +616,8 @@ public class Group {
 		 */
 		public Group build() {
 			return new Group(groupID, groupName, owner, isPrivate, privateMemberList, allMembers,
-					admins, resources, times.getCreationTime(), times.getModificationTime(),
+					admins, resources, resourceJoinDate,
+					times.getCreationTime(), times.getModificationTime(),
 					customFields);
 		}
 	}
