@@ -55,6 +55,8 @@ public class Fields {
 	public static final String GROUP_RESOURCE_ID = "rid";
 	/** A resource administrative ID. */
 	public static final String GROUP_RESOURCE_ADMINISTRATIVE_ID = "aid";
+	/** The date the resource was added to the group. */
+	public static final String GROUP_RESOURCE_ADDED = "add";
 	
 	/* ***********************
 	 * request fields
