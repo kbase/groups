@@ -48,7 +48,11 @@ public class GroupView {
 	private final Map<UserName, GroupUser> userInfo = new HashMap<>();
 
 	// additional fields. standard - contents should change based on user
+	// also, it might make sense to make another class that combines these two info sources
+	// Since it's hidden behind the JSON api, don't worry about it for now. Refactor later
+	// This class is going to need a pretty serious refactor anyway
 	private final Map<ResourceType, ResourceInformationSet> resourceInfo;
+	private final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate;
 	
 	// not part of the view, just describes the view
 	private final boolean isStandardView;
@@ -63,6 +67,7 @@ public class GroupView {
 			final boolean isOverridePrivateView,
 			final Optional<UserName> user,
 			final Map<ResourceType, ResourceInformationSet> resourceInfo,
+			final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate,
 			final Function<NumberedCustomField, Boolean> isPublicField,
 			final Function<NumberedCustomField, Boolean> isMinimalViewField,
 			final Function<NumberedCustomField, Boolean> isUserPublicField) {
@@ -73,6 +78,7 @@ public class GroupView {
 		this.groupID = group.getGroupID();
 		if (isPrivateView()) {
 			this.resourceInfo = Collections.emptyMap();
+			this.resourceJoinDate = Collections.emptyMap();
 			this.groupName = Optional.empty();
 			this.owner = Optional.empty();
 			this.creationDate = Optional.empty();
@@ -89,9 +95,11 @@ public class GroupView {
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 			if (role.equals(Role.NONE)) {
 				this.resourceCount = Collections.emptyMap();
+				this.resourceJoinDate = Collections.emptyMap();
 				this.lastVisit = Optional.empty();
 			} else {
 				// since the user is a member, we know the view isn't private
+				this.resourceJoinDate = Collections.unmodifiableMap(resourceJoinDate);
 				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
 						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
 				this.lastVisit = group.getMember(user.get()).getLastVisit();
@@ -293,6 +301,27 @@ public class GroupView {
 		return resourceInfo.get(type);
 	}
 	
+	/** Get the date a resource was added to the group. May be {@link Optional#empty()} for
+	 * resources added before version 0.1.3 of the software. Calling this method for views of
+	 * a group where the user is not a member will throw an error.
+	 * @param type the type of the resource.
+	 * @param resourceID the ID of the resource.
+	 * @return the date the resource was added to the group.
+	 */
+	public Optional<Instant> getResourceAddDate(
+			final ResourceType type,
+			final ResourceID resourceID) {
+		requireNonNull(type, "type");
+		requireNonNull(resourceID, "resourceID");
+		// could check group membership here and throw a nicer error but yagni for now.
+		if (!resourceJoinDate.containsKey(type) ||
+				!resourceJoinDate.get(type).containsKey(resourceID)) {
+			throw new IllegalArgumentException(String.format("No such resource %s %s",
+					type.getName(), resourceID.getName()));
+		}
+		return resourceJoinDate.get(type).get(resourceID);
+	}
+
 	/** Get the count of each resource type contained in the group. Empty for non-members.
 	 * @return the resource counts per type.
 	 */
@@ -338,6 +367,7 @@ public class GroupView {
 		result = prime * result + ((owner == null) ? 0 : owner.hashCode());
 		result = prime * result + ((resourceCount == null) ? 0 : resourceCount.hashCode());
 		result = prime * result + ((resourceInfo == null) ? 0 : resourceInfo.hashCode());
+		result = prime * result + ((resourceJoinDate == null) ? 0 : resourceJoinDate.hashCode());
 		result = prime * result + ((role == null) ? 0 : role.hashCode());
 		result = prime * result + ((userInfo == null) ? 0 : userInfo.hashCode());
 		return result;
@@ -455,6 +485,13 @@ public class GroupView {
 		} else if (!resourceInfo.equals(other.resourceInfo)) {
 			return false;
 		}
+		if (resourceJoinDate == null) {
+			if (other.resourceJoinDate != null) {
+				return false;
+			}
+		} else if (!resourceJoinDate.equals(other.resourceJoinDate)) {
+			return false;
+		}
 		if (role != other.role) {
 			return false;
 		}
@@ -491,6 +528,8 @@ public class GroupView {
 		private boolean isStandardView = false;
 		private boolean isOverridePrivateView = false;
 		private final Map<ResourceType, ResourceInformationSet> resourceInfo = new HashMap<>();
+		private final Map<ResourceType, Map<ResourceID, Optional<Instant>>> resourceJoinDate =
+				new HashMap<>();
 		private Function<NumberedCustomField, Boolean> isPublicField = f -> false;
 		private Function<NumberedCustomField, Boolean> isMinimalViewField = f -> false;
 		private Function<NumberedCustomField, Boolean> isUserPublicField = f -> false;
@@ -541,6 +580,9 @@ public class GroupView {
 			}
 			
 			resourceInfo.put(type, info);
+			resourceJoinDate.put(type, new HashMap<>());
+			info.getResources().stream().forEach(
+					r -> resourceJoinDate.get(type).put(r, group.getResourceAddDate(type, r)));
 			return this;
 		}
 		
@@ -554,6 +596,7 @@ public class GroupView {
 		public Builder withResourceType(final ResourceType type) {
 			requireNonNull(type, "type");
 			resourceInfo.put(type, ResourceInformationSet.getBuilder(user.orElse(null)).build());
+			resourceJoinDate.put(type, new HashMap<>());
 			return this;
 		}
 		
@@ -614,7 +657,8 @@ public class GroupView {
 		 */
 		public GroupView build() {
 			return new GroupView(group, isStandardView, isOverridePrivateView, user,
-					resourceInfo, isPublicField, isMinimalViewField, isUserPublicField);
+					resourceInfo, resourceJoinDate,
+					isPublicField, isMinimalViewField, isUserPublicField);
 		}
 	}
 }

@@ -62,11 +62,11 @@ public class GroupViewTest {
 					.withMember(GroupUser.getBuilder(new UserName("m2"), inst(84000))
 							.withCustomField(new NumberedCustomField("user-6"), "yay")
 							.build())
-					.withResource(ws, new ResourceDescriptor(new ResourceID("45")))
+					.withResource(ws, new ResourceDescriptor(new ResourceID("45")), inst(23000))
 					.withResource(ws, new ResourceDescriptor(new ResourceID("2")))
-					.withResource(ws, new ResourceDescriptor(new ResourceID("7")))
+					.withResource(ws, new ResourceDescriptor(new ResourceID("7")), inst(62000))
 					.withResource(cat, new ResourceDescriptor(new ResourceID("m.n")))
-					.withResource(cat, new ResourceDescriptor(new ResourceID("x.y")))
+					.withResource(cat, new ResourceDescriptor(new ResourceID("x.y")), inst(65000))
 					.withCustomField(new NumberedCustomField("field"), "val")
 					.withCustomField(new NumberedCustomField("field2"), "val2");
 			GROUP = b.build();
@@ -516,10 +516,16 @@ public class GroupViewTest {
 						.withResource(new ResourceID("7"))
 						.withResource(new ResourceID("2"))
 						.build()));
+		assertThat("incorrect add date", gv.getResourceAddDate(
+				new ResourceType("workspace"), new ResourceID("7")), is(Optional.of(inst(62000))));
+		assertThat("incorrect add date", gv.getResourceAddDate(
+				new ResourceType("workspace"), new ResourceID("2")), is(Optional.empty()));
 		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("catalogmethod")),
 				is(ResourceInformationSet.getBuilder(user)
 						.withResource(new ResourceID("m.n"))
 						.build()));
+		assertThat("incorrect add date", gv.getResourceAddDate(
+				new ResourceType("catalogmethod"), new ResourceID("m.n")), is(Optional.empty()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(ImmutableMap.of(
 				new NumberedCustomField("field"), "val",
 				new NumberedCustomField("field2"), "val2")));
@@ -816,6 +822,89 @@ public class GroupViewTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
 					"No such resource type cat"));
+		}
+	}
+
+	@Test
+	public void getResourceAddDateFailNulls() throws Exception {
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.withStandardView(true)
+				.build();
+		
+		getResourceAddDateFail(gv, null, new ResourceID("i"), new NullPointerException("type"));
+		getResourceAddDateFail(gv, new ResourceType("t"), null,
+				new NullPointerException("resourceID"));
+	}
+	
+	@Test
+	public void getResourceAddDateFailNoType() throws Exception {
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.withStandardView(true)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet.getBuilder(
+						new UserName("user"))
+						.withResource(new ResourceID("2"))
+						.build())
+				.build();
+		
+		getResourceAddDateFail(gv, new ResourceType("wrkspce"), new ResourceID("2"),
+				new IllegalArgumentException("No such resource wrkspce 2"));
+	}
+	
+	@Test
+	public void getResourceAddDateFailNoResource() throws Exception {
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("user"))
+				.withStandardView(true)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet.getBuilder(
+						new UserName("user"))
+						.withResource(new ResourceID("2"))
+						.build())
+				.build();
+		
+		getResourceAddDateFail(gv, new ResourceType("workspace"), new ResourceID("3"),
+				new IllegalArgumentException("No such resource workspace 3"));
+	}
+	
+	@Test
+	public void getResourceAddDateFailNotMember() throws Exception {
+		final GroupView gv = GroupView.getBuilder(GROUP, new UserName("notmember"))
+				.withStandardView(true)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet.getBuilder(
+						new UserName("notmember"))
+						.withResource(new ResourceID("2"))
+						.build())
+				.build();
+		
+		getResourceAddDateFail(gv, new ResourceType("workspace"), new ResourceID("2"),
+				// could make this more helpful... yagni
+				new IllegalArgumentException("No such resource workspace 2"));
+	}
+	
+	@Test
+	public void getResourceAddDateFailPrivate() throws Exception {
+		final GroupView gv = GroupView.getBuilder(PRIVGROUP, new UserName("notmember"))
+				.withStandardView(true)
+				.withResource(new ResourceType("workspace"), ResourceInformationSet.getBuilder(
+						new UserName("notmember"))
+						.withResource(new ResourceID("2"))
+						.build())
+				.build();
+		
+		getResourceAddDateFail(gv, new ResourceType("workspace"), new ResourceID("2"),
+				// could make this more helpful... yagni
+				new IllegalArgumentException("No such resource workspace 2"));
+	}
+	
+	
+	private void getResourceAddDateFail(
+			final GroupView gv,
+			final ResourceType type,
+			final ResourceID id,
+			final Exception expected) {
+		try {
+			gv.getResourceAddDate(type, id);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
