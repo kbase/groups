@@ -580,6 +580,7 @@ public class GroupViewTest {
 				is(getGUV("m2", inst(84000), null,
 						ImmutableMap.of(new NumberedCustomField("user-6"), "yay"))));
 
+		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
 		assertImmutable(gv.getResourceTypes(), new ResourceType("t"));
