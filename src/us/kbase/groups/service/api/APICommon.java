@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
@@ -100,7 +101,7 @@ public class APICommon {
 				final Map<String, Object> resources = new HashMap<>();
 				ret.put(Fields.GROUP_RESOURCES, resources);
 				for (final ResourceType t: group.getResourceTypes()) {
-					resources.put(t.getName(), getResourceList(group.getResourceInformation(t)));
+					resources.put(t.getName(), getResourceList(group, t));
 				}
 			}
 		}
@@ -125,13 +126,18 @@ public class APICommon {
 	}
 
 	private static List<Map<String, Object>> getResourceList(
-			final ResourceInformationSet resourceInfo) {
+			final GroupView g,
+			final ResourceType t) {
+		final ResourceInformationSet resourceInfo = g.getResourceInformation(t);
 		final List<Map<String, Object>> rlist = new LinkedList<>();
 		for (final ResourceID rd: sorted(resourceInfo)) {
 			final Map<String, Object> resource = new HashMap<>();
 			rlist.add(resource);
 			resource.putAll(resourceInfo.getFields(rd));
 			resource.put(Fields.GROUP_RESOURCE_ID, rd.getName());
+			final Long added = Role.NONE.equals(g.getRole()) ?
+					null : g.getResourceAddDate(t, rd).map(i -> i.toEpochMilli()).orElse(null);
+			resource.put(Fields.GROUP_RESOURCE_ADDED, added);
 		}
 		return rlist;
 	}
