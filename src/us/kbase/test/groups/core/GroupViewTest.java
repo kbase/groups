@@ -6,9 +6,11 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.inst;
 import static us.kbase.test.groups.TestCommon.set;
 
+import java.lang.reflect.Constructor;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,9 +26,8 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
+import us.kbase.groups.core.GroupView.GroupUserView;
 import us.kbase.groups.core.UserName;
-import us.kbase.groups.core.exceptions.IllegalParameterException;
-import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.fieldvalidation.NumberedCustomField;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
@@ -77,6 +78,18 @@ public class GroupViewTest {
 		}
 	}
 	
+	public GroupUserView getGUV(
+			final String username,
+			final Instant joinDate,
+			final Instant visitDate,
+			final Map<NumberedCustomField, String> fields)
+			throws Exception {
+		final Constructor<GroupUserView> c = GroupView.GroupUserView.class.getDeclaredConstructor(
+				UserName.class, Instant.class, Instant.class, Map.class);
+		c.setAccessible(true);
+		return c.newInstance(new UserName(username), joinDate, visitDate, fields);
+	}
+	
 	private <T> Optional<T> op(T item) {
 		return Optional.ofNullable(item);
 	}
@@ -88,6 +101,32 @@ public class GroupViewTest {
 	@Test
 	public void equals() throws Exception {
 		EqualsVerifier.forClass(GroupView.class).usingGetClass().verify();
+		EqualsVerifier.forClass(GroupView.GroupUserView.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void userViewMinimal() throws Exception {
+		final GroupUserView guv = getGUV("foo", null, null, Collections.emptyMap());
+		
+		assertThat("incorrect name", guv.getName(), is(new UserName("foo")));
+		assertThat("incorrect join", guv.getJoinDate(), is(mt()));
+		assertThat("incorrect visit", guv.getLastVisit(), is(mt()));
+		assertThat("incorrect fields", guv.getCustomFields(), is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void userViewMaximal() throws Exception {
+		final Map<NumberedCustomField, String> fields = new HashMap<>();
+		fields.put(new NumberedCustomField("f-1"), "val");
+		final GroupUserView guv = getGUV("foo", inst(40000), inst(60000), fields);
+		
+		assertThat("incorrect name", guv.getName(), is(new UserName("foo")));
+		assertThat("incorrect join", guv.getJoinDate(), is(op(inst(40000))));
+		assertThat("incorrect visit", guv.getLastVisit(), is(op(inst(60000))));
+		assertThat("incorrect fields", guv.getCustomFields(),
+				is(ImmutableMap.of(new NumberedCustomField("f-1"), "val")));
+		
+		assertImmutable(guv.getCustomFields(), new NumberedCustomField("g"), "val2");
 	}
 	
 	@Test
@@ -285,11 +324,11 @@ public class GroupViewTest {
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
+				is(getGUV("user", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
-				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
+				is(getGUV("a1", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
-				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
+				is(getGUV("a2", null, null, Collections.emptyMap())));
 		
 		getMemberFail(gv, new UserName("m1"));
 		getMemberFail(gv, new UserName("m2"));
@@ -303,7 +342,7 @@ public class GroupViewTest {
 	
 	@Test
 	public void nonMemberViewPublicMembers() throws Exception {
-		final GroupView gv = GroupView.getBuilder(PUBMEMBERGROUP, null)
+		final GroupView gv = GroupView.getBuilder(PUBMEMBERGROUP, new UserName("nonmember"))
 				.withStandardView(true)
 				.build();
 		
@@ -328,17 +367,15 @@ public class GroupViewTest {
 		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
+				is(getGUV("user", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
-				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
+				is(getGUV("a1", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
-				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
+				is(getGUV("a2", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("m1")),
-				is(GroupUser.getBuilder(new UserName("m1"), inst(75000))
-						.build()));
+				is(getGUV("m1", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("m2")),
-				is(GroupUser.getBuilder(new UserName("m2"), inst(84000))
-						.build()));
+				is(getGUV("m2", null, null, Collections.emptyMap())));
 		
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
@@ -440,11 +477,11 @@ public class GroupViewTest {
 						.build()));
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000)).build()));
+				is(getGUV("user", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
-				is(GroupUser.getBuilder(new UserName("a1"), inst(60000)).build()));
+				is(getGUV("a1", null, null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
-				is(GroupUser.getBuilder(new UserName("a2"), inst(30000)).build()));
+				is(getGUV("a2", null, null, Collections.emptyMap())));
 		
 		getMemberFail(gv, new UserName("m1"));
 		getMemberFail(gv, new UserName("m2"));
@@ -475,7 +512,7 @@ public class GroupViewTest {
 			final Instant adminInstant,
 			final Instant memberInstant,
 			final Instant userInstant)
-			throws MissingParameterException, IllegalParameterException {
+			throws Exception {
 		final GroupView gv = GroupView.getBuilder(group, user)
 				.withStandardView(true)
 				.withResourceType(new ResourceType("bar"))
@@ -530,26 +567,19 @@ public class GroupViewTest {
 				new NumberedCustomField("field"), "val",
 				new NumberedCustomField("field2"), "val2")));
 		assertThat("incorrect user", gv.getMember(new UserName("user")),
-				is(GroupUser.getBuilder(new UserName("user"), inst(10000))
-							.withCustomField(new NumberedCustomField("f-1"), "val")
-							.build()));
+				is(getGUV("user", inst(10000), null,
+						ImmutableMap.of(new NumberedCustomField("f-1"), "val"))));
 		assertThat("incorrect user", gv.getMember(new UserName("a1")),
-				is(GroupUser.getBuilder(new UserName("a1"), inst(60000))
-						.withCustomField(new NumberedCustomField("admin"), "yar")
-						.withNullableLastVisit(adminInstant)
-						.build()));
+				is(getGUV("a1", inst(60000), adminInstant,
+						ImmutableMap.of(new NumberedCustomField("admin"), "yar"))));
 		assertThat("incorrect user", gv.getMember(new UserName("a2")),
-				is(GroupUser.getBuilder(new UserName("a2"), inst(30000))
-						.build()));
+				is(getGUV("a2", inst(30000), null, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("m1")),
-				is(GroupUser.getBuilder(new UserName("m1"), inst(75000))
-						.withNullableLastVisit(memberInstant)
-						.build()));
+				is(getGUV("m1", inst(75000), memberInstant, Collections.emptyMap())));
 		assertThat("incorrect user", gv.getMember(new UserName("m2")),
-				is(GroupUser.getBuilder(new UserName("m2"), inst(84000))
-						.withCustomField(new NumberedCustomField("user-6"), "yay")
-						.build()));
-		
+				is(getGUV("m2", inst(84000), null,
+						ImmutableMap.of(new NumberedCustomField("user-6"), "yay"))));
+
 		assertImmutable(gv.getAdministrators(), new UserName("u"));
 		assertImmutable(gv.getMembers(), new UserName("u"));
 		assertImmutable(gv.getCustomFields(), new NumberedCustomField("foo"), "bar");
@@ -665,23 +695,19 @@ public class GroupViewTest {
 				.withPublicUserFieldDeterminer(f -> f.getField().equals("field2"))
 				.build();
 		assertThat("incorrect user fields", gv.getMember(owner),
-				is(GroupUser.getBuilder(owner, inst(1))
-						.withCustomField(new NumberedCustomField("field2"), "val2")
-						.build()));
+				is(getGUV(owner.getName(), null, null,
+						ImmutableMap.of(new NumberedCustomField("field2"), "val2"))));
 		assertThat("incorrect user fields", gv.getMember(admin),
-				is(GroupUser.getBuilder(admin, inst(1))
-						.withCustomField(new NumberedCustomField("field2"), "val2")
-						.build()));
+				is(getGUV(admin.getName(), null, null,
+						ImmutableMap.of(new NumberedCustomField("field2"), "val2"))));
 		getMemberFail(gv, member);
 
-		gv = GroupView.getBuilder(g, new UserName("m"))
-				.build();
+		gv = GroupView.getBuilder(g, new UserName("m")).build();
 		getMemberFail(gv, owner);
 		getMemberFail(gv, admin);
 		getMemberFail(gv, member);
 
-		gv = GroupView.getBuilder(g, new UserName("o"))
-				.build();
+		gv = GroupView.getBuilder(g, new UserName("o")).build();
 		getMemberFail(gv, owner);
 		getMemberFail(gv, admin);
 		getMemberFail(gv, member);
@@ -690,20 +716,20 @@ public class GroupViewTest {
 				.withStandardView(true)
 				.build();
 		assertThat("incorrect user fields", gv.getMember(owner),
-				is(GroupUser.getBuilder(owner, inst(1))
-						.withCustomField(new NumberedCustomField("field"), "val")
-						.withCustomField(new NumberedCustomField("field2"), "val2")
-						.build()));
+				is(getGUV(owner.getName(), inst(1), null,
+						ImmutableMap.of(
+								new NumberedCustomField("field"), "val",
+								new NumberedCustomField("field2"), "val2"))));
 		assertThat("incorrect user fields", gv.getMember(admin),
-				is(GroupUser.getBuilder(admin, inst(1))
-						.withCustomField(new NumberedCustomField("field"), "val")
-						.withCustomField(new NumberedCustomField("field2"), "val2")
-						.build()));
+				is(getGUV(admin.getName(), inst(1), null,
+						ImmutableMap.of(
+								new NumberedCustomField("field"), "val",
+								new NumberedCustomField("field2"), "val2"))));
 		assertThat("incorrect user fields", gv.getMember(member),
-				is(GroupUser.getBuilder(member, inst(1))
-						.withCustomField(new NumberedCustomField("field"), "val")
-						.withCustomField(new NumberedCustomField("field2"), "val2")
-						.build()));
+				is(getGUV(member.getName(), inst(1), null,
+						ImmutableMap.of(
+								new NumberedCustomField("field"), "val",
+								new NumberedCustomField("field2"), "val2"))));
 	}
 
 	@Test

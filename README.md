@@ -25,6 +25,8 @@ Represents a member of a group.
 }
 ```
 
+`joined` is only present for group members; it is otherwise `null`.
+
 `lastvisit` is only present for group administrators; it is otherwise `null`. It is also `null`
 if the last visit date has never been set via the API.
 
