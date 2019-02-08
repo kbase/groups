@@ -186,8 +186,10 @@ public class MongoGroupsStorageOpsTest {
 				.withResource(new ResourceType("t"), new ResourceDescriptor(new ResourceID("r")))
 				.withResource(new ResourceType("t"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
-						new ResourceID("b")))
-				.withResource(new ResourceType("x"), new ResourceDescriptor(new ResourceID("y")))
+						new ResourceID("b")),
+						inst(76000))
+				.withResource(new ResourceType("x"), new ResourceDescriptor(new ResourceID("y")),
+						inst(34000))
 				.withResource(new ResourceType("x"), new ResourceDescriptor(
 						new ResourceAdministrativeID("b"),
 						new ResourceID("z")))
@@ -221,9 +223,10 @@ public class MongoGroupsStorageOpsTest {
 								new ResourceID("r")))
 						.withResource(new ResourceType("t"), new ResourceDescriptor(
 								new ResourceAdministrativeID("a"),
-								new ResourceID("b")))
+								new ResourceID("b")),
+								inst(76000))
 						.withResource(new ResourceType("x"), new ResourceDescriptor(
-								new ResourceID("y")))
+								new ResourceID("y")), inst(34000))
 						.withResource(new ResourceType("x"), new ResourceDescriptor(
 								new ResourceAdministrativeID("b"),
 								new ResourceID("z")))
@@ -2137,9 +2140,11 @@ public class MongoGroupsStorageOpsTest {
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
 								new ResourceAdministrativeID("a"), new ResourceID("b")))
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
-								new ResourceAdministrativeID("a"), new ResourceID("c")))
+								new ResourceAdministrativeID("a"), new ResourceID("c")),
+								inst(55000))
 						.withResource(new ResourceType("ws"), new ResourceDescriptor(
-								new ResourceAdministrativeID("b"), new ResourceID("d")))
+								new ResourceAdministrativeID("b"), new ResourceID("d")),
+								inst(65000))
 						.build()));
 	}
 	
@@ -2222,7 +2227,7 @@ public class MongoGroupsStorageOpsTest {
 				.withResource(new ResourceType("ws"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"), new ResourceID("b")))
 				.withResource(new ResourceType("ws"), new ResourceDescriptor(
-						new ResourceAdministrativeID("a"), new ResourceID("c")))
+						new ResourceAdministrativeID("a"), new ResourceID("c")), inst(35000))
 				.build());
 		
 		manager.storage.removeResource(
