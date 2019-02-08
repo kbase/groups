@@ -69,7 +69,8 @@ public class APICommonTest {
 						.withCustomField(new NumberedCustomField("bar"), "baz")
 						.withNullableLastVisit(inst(62000))
 						.build())
-				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("a")))
+				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("a")),
+						inst(45000))
 				.withResource(new ResourceType("ws"), new ResourceDescriptor(new ResourceID("b")))
 				.withResource(new ResourceType("cat"), new ResourceDescriptor(new ResourceID("c")))
 				.withCustomField(new NumberedCustomField("field-1"), "my val")
@@ -443,9 +444,72 @@ public class APICommonTest {
 						))
 				.with("resources", ImmutableMap.of(
 						"ws", Arrays.asList(
-								ImmutableMap.of("rid", "a", "f1", "x"),
-								ImmutableMap.of("rid", "b")),
+								MapBuilder.newHashMap()
+										.with("rid", "a")
+										.with("added", 45000L)
+										.with("f1", "x")
+										.build(),
+								MapBuilder.newHashMap()
+										.with("rid", "b")
+										.with("added", null)
+										.build()),
 						"cat", Collections.emptyList()))
+				.build()));
+	}
+	
+	@Test
+	public void toGroupJSONStandardViewResourcesNonMember() throws Exception {
+		final UserName userName = new UserName("non");
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder().build(),
+				userName)
+				.withResource(new ResourceType("ws"), ResourceInformationSet
+						.getBuilder(userName)
+						.withResourceField(new ResourceID("a"), "f1", "x")
+						.build())
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("role", "None")
+				.with("lastvisit", null)
+				.with("name", "name2")
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", 20000L)
+						.with("lastvisit", null)
+						.with("custom", Collections.emptyMap())
+						.build())
+				.with("memcount", 5)
+				.with("custom", Collections.emptyMap())
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("rescount", Collections.emptyMap())
+				.with("privatemembers", true)
+				.with("members", Collections.emptyList())
+				.with("admins", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("name", "whee")
+								.with("joined", 220000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", 760000L)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build()
+						))
+				.with("resources", ImmutableMap.of(
+						"ws", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("rid", "a")
+										.with("added", null)
+										.with("f1", "x")
+										.build())))
 				.build()));
 	}
 	

@@ -797,10 +797,12 @@ public class GroupsAPITest {
 		
 		final ResourceID c1 = new ResourceID("mod.meth");
 		final Group group = getGroupMaxBuilder()
-				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1))
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1),
+						inst(45000))
 				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d2))
 				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1))
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1),
+						inst(670000))
 				.build();
 		
 		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("whoo"))
@@ -829,10 +831,15 @@ public class GroupsAPITest {
 		expected.putAll(GROUP_MAX_JSON_STD);
 		expected.put("resources", ImmutableMap.of(
 				"foo", Collections.emptyList(),
-				"catalogmethod", Arrays.asList(ImmutableMap.of("rid", "mod.meth")),
+				"catalogmethod", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("rid", "mod.meth")
+								.with("added", 670000L)
+								.build()),
 				"workspace", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("rid", "45")
+								.with("added", null)
 								.with("name", "name45")
 								.with("narrname", null)
 								.with("public", false)
@@ -840,6 +847,7 @@ public class GroupsAPITest {
 								.build(),
 						MapBuilder.newHashMap()
 								.with("rid", "82")
+								.with("added", 45000L)
 								.with("name", "name82")
 								.with("narrname", "narrname")
 								.with("public", true)
@@ -862,7 +870,59 @@ public class GroupsAPITest {
 		expectedmin.put("custom", Collections.emptyMap());
 
 		assertThat("incorrect group", retmin, is(expectedmin));
-
+	}
+	
+	@Test
+	public void getGroupWithResourcesNonMember() throws Exception {
+		// the user must be an administrator of the included resources
+		final Groups g = mock(Groups.class);
+		
+		final ResourceID d1 = new ResourceID("82");
+		
+		final Group group = getGroupMaxBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1),
+						inst(45000))
+				.build();
+		
+		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("nonmember"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("foo"))
+				.withResource(new ResourceType("workspace"),
+						ResourceInformationSet.getBuilder(new UserName("nonmember"))
+								.withResourceField(d1, "name", "name82")
+								.withResourceField(d1, "public", true)
+								.withResourceField(d1, "narrname", "narrname")
+								.withResourceField(d1, "perm", "Admin")
+								.build());
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id"))).thenReturn(gv.build());
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		final Map<String, Object> expected = new HashMap<>();
+		expected.putAll(GROUP_MAX_JSON_STD);
+		expected.put("resources", ImmutableMap.of(
+				"foo", Collections.emptyList(),
+				"workspace", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("rid", "82")
+								.with("added", null)
+								.with("name", "name82")
+								.with("narrname", "narrname")
+								.with("public", true)
+								.with("perm", "Admin")
+								.build()
+						)));
+		expected.put("role", "None");
+		expected.put("custom", Collections.emptyMap());
+		expected.put("members", Collections.emptyList());
+		@SuppressWarnings("unchecked")
+		final List<Map<String, Object>> admins =
+				(List<Map<String, Object>>) expected.get("admins");
+		final Map<String, Object> admin = new HashMap<>(admins.get(1));
+		admin.put("custom", Collections.emptyMap());
+		expected.put("admins", Arrays.asList(admins.get(0), admin));
+		
+		assertThat("incorrect group", ret, is(expected));
 	}
 	
 	@Test
