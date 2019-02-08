@@ -24,6 +24,114 @@ import us.kbase.groups.core.resource.ResourceType;
  */
 public class GroupView {
 	
+	// seems stupid to have this so similar to GroupUser...
+	/** A view of a member of a group.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public static class GroupUserView {
+		
+		private final UserName name;
+		private final Optional<Instant> joinDate;
+		private final Optional<Instant> lastVisit;
+		private final Map<NumberedCustomField, String> customFields;
+		
+		private GroupUserView(
+				final UserName name,
+				final Instant joinDate,
+				final Instant lastVisit,
+				final Map<NumberedCustomField, String> customFields) {
+			this.name = name;
+			this.joinDate = Optional.ofNullable(joinDate);
+			this.lastVisit = Optional.ofNullable(lastVisit);
+			this.customFields = Collections.unmodifiableMap(customFields);
+		}
+
+		/** The user's name.
+		 * @return the user's name.
+		 */
+		public UserName getName() {
+			return name;
+		}
+
+		/** The date the user joined the group, if visible to the querying user.
+		 * Only members can see other members' join dates.
+		 * @return the join date.
+		 */
+		public Optional<Instant> getJoinDate() {
+			return joinDate;
+		}
+		
+		/** Get the date the user last visited the group, or {@link Optional#empty()} if the user
+		 * has never visited the group or the querying user may not see the date.
+		 * @return the date the user last visited the group.
+		 */
+		public Optional<Instant> getLastVisit() {
+			return lastVisit;
+		}
+
+		/** Get any visible custom fields associated with the user.
+		 * @return the custom fields.
+		 */
+		public Map<NumberedCustomField, String> getCustomFields() {
+			return customFields;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((customFields == null) ? 0 : customFields.hashCode());
+			result = prime * result + ((joinDate == null) ? 0 : joinDate.hashCode());
+			result = prime * result + ((lastVisit == null) ? 0 : lastVisit.hashCode());
+			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			GroupUserView other = (GroupUserView) obj;
+			if (customFields == null) {
+				if (other.customFields != null) {
+					return false;
+				}
+			} else if (!customFields.equals(other.customFields)) {
+				return false;
+			}
+			if (joinDate == null) {
+				if (other.joinDate != null) {
+					return false;
+				}
+			} else if (!joinDate.equals(other.joinDate)) {
+				return false;
+			}
+			if (lastVisit == null) {
+				if (other.lastVisit != null) {
+					return false;
+				}
+			} else if (!lastVisit.equals(other.lastVisit)) {
+				return false;
+			}
+			if (name == null) {
+				if (other.name != null) {
+					return false;
+				}
+			} else if (!name.equals(other.name)) {
+				return false;
+			}
+			return true;
+		}
+	}
+	
 	//TODO CODE there could be a lot of optimizations to avoid fetching data that we just discard in the view.
 	
 	// group fields
@@ -45,7 +153,7 @@ public class GroupView {
 	// minimal - nothing
 	// not member - owner & admins
 	// standard - all
-	private final Map<UserName, GroupUser> userInfo = new HashMap<>();
+	private final Map<UserName, GroupUserView> userInfo = new HashMap<>();
 
 	// additional fields. standard - contents should change based on user
 	// also, it might make sense to make another class that combines these two info sources
@@ -112,43 +220,43 @@ public class GroupView {
 					group.getCustomFields(), isPublicField, isMinimalViewField);
 			this.creationDate = Optional.of(group.getCreationDate());
 			this.modificationDate = Optional.of(group.getModificationDate());
-			final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
 			if (!standardView) {
 				isPrivateMemberList = Optional.empty();
 				members = Collections.emptySet();
 				admins = Collections.emptySet();
 			} else {
+				final Function<NumberedCustomField, Boolean> upub = isUserPublicField;
 				isPrivateMemberList = Optional.of(group.isPrivateMemberList());
 				admins = group.getAdministrators();
 				if (role.equals(Role.NONE) && group.isPrivateMemberList()) {
 					group.getAdministratorsAndOwner().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub, false)));
+							u, filterUserFields(group.getMember(u), upub, group, user)));
 					members = Collections.emptySet();
 				} else {
 					members = group.getMembers();
 					group.getAllMembers().stream().forEach(u -> userInfo.put(
-							u, filterUserFields(group.getMember(u), upub, isAdmin(group, user))));
+							u, filterUserFields(group.getMember(u), upub, group, user)));
 				}
 			}
 		}
 	}
 	
-	private boolean isAdmin(final Group group, final Optional<UserName> user) {
-		return user.map(u -> group.isAdministrator(u)).orElse(false);
-	}
-
 	// user fields are only visible in standard views.
-	private GroupUser filterUserFields(
+	private GroupUserView filterUserFields(
 			final GroupUser member,
 			final Function<NumberedCustomField, Boolean> isUserPublicField,
-			final boolean isAdmin) {
-		final GroupUser.Builder b = GroupUser.getBuilder(member.getName(), member.getJoinDate());
-		getCustomFields(member.getCustomFields(), isUserPublicField, f -> false)
-				.entrySet().stream().forEach(e -> b.withCustomField(e.getKey(), e.getValue()));
-		if (isAdmin) {
-			b.withNullableLastVisit(member.getLastVisit().orElse(null));
+			final Group g,
+			final Optional<UserName> user) {
+		final Map<NumberedCustomField, String> fields =
+				getCustomFields(member.getCustomFields(), isUserPublicField, f -> false);
+		if (role.equals(Role.NONE)) {
+			return new GroupUserView(member.getName(), null, null, fields);
+		} else if (g.isAdministrator(user.get())) {
+			return new GroupUserView(member.getName(), member.getJoinDate(),
+					member.getLastVisit().orElse(null), fields);
+		} else {
+			return new GroupUserView(member.getName(), member.getJoinDate(), null, fields);
 		}
-		return b.build();
 	}
 
 	private Map<NumberedCustomField, String> getCustomFields(
@@ -336,7 +444,7 @@ public class GroupView {
 	 * @param user the member.
 	 * @return the member's info.
 	 */
-	public GroupUser getMember(final UserName user) {
+	public GroupUserView getMember(final UserName user) {
 		if (!userInfo.containsKey(user)) {
 			throw new IllegalArgumentException("No such member");
 		}

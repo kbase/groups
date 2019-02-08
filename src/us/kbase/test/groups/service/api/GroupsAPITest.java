@@ -215,7 +215,7 @@ public class GroupsAPITest {
 			.with("rescount", Collections.emptyMap())
 			.with("owner", MapBuilder.newHashMap()
 					.with("name", "u2")
-					.with("joined", 20000L)
+					.with("joined", null)
 					.with("lastvisit", null)
 					.with("custom", Collections.emptyMap())
 					.build())
@@ -227,13 +227,13 @@ public class GroupsAPITest {
 			.with("admins", Arrays.asList(
 					MapBuilder.newHashMap()
 							.with("name", "whee")
-							.with("joined", 220000L)
+							.with("joined", null)
 							.with("lastvisit", null)
 							.with("custom", Collections.emptyMap())
 							.build(),
 					MapBuilder.newHashMap()
 							.with("name", "whoo")
-							.with("joined", 760000L)
+							.with("joined", null)
 							.with("lastvisit", null)
 							.with("custom", ImmutableMap.of("yay-6", "boo"))
 							.build()
@@ -697,7 +697,7 @@ public class GroupsAPITest {
 				.with("rescount", Collections.emptyMap())
 				.with("owner", MapBuilder.newHashMap()
 						.with("name", "u2")
-						.with("joined", 20000L)
+						.with("joined", null)
 						.with("lastvisit", null)
 						.with("custom", Collections.emptyMap())
 						.build())
@@ -706,13 +706,13 @@ public class GroupsAPITest {
 				.with("members", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("name", "bar")
-								.with("joined", 40000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build(),
 						MapBuilder.newHashMap()
 								.with("name", "foo")
-								.with("joined", 650000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build()
@@ -720,13 +720,13 @@ public class GroupsAPITest {
 				.with("admins", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("name", "whee")
-								.with("joined", 220000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build(),
 						MapBuilder.newHashMap()
 								.with("name", "whoo")
-								.with("joined", 760000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", ImmutableMap.of("yay-6", "boo"))
 								.build()
@@ -897,30 +897,55 @@ public class GroupsAPITest {
 		
 		when(g.getGroup(new Token("toke"), new GroupID("id"))).thenReturn(gv.build());
 		
-		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
-		final Map<String, Object> expected = new HashMap<>();
-		expected.putAll(GROUP_MAX_JSON_STD);
-		expected.put("resources", ImmutableMap.of(
-				"foo", Collections.emptyList(),
-				"workspace", Arrays.asList(
+		final Map<String, Object> expected = MapBuilder
+				.<String, Object>newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("privatemembers", true)
+				.with("lastvisit", null)
+				.with("role", "None")
+				.with("name", "name2")
+				.with("memcount", 5)
+				.with("rescount", Collections.emptyMap())
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", null)
+						.with("lastvisit", null)
+						.with("custom", Collections.emptyMap())
+						.build())
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("members", Collections.emptyList())
+				.with("admins", Arrays.asList(
 						MapBuilder.newHashMap()
-								.with("rid", "82")
-								.with("added", null)
-								.with("name", "name82")
-								.with("narrname", "narrname")
-								.with("public", true)
-								.with("perm", "Admin")
+								.with("name", "whee")
+								.with("joined", null)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", null)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
 								.build()
-						)));
-		expected.put("role", "None");
-		expected.put("custom", Collections.emptyMap());
-		expected.put("members", Collections.emptyList());
-		@SuppressWarnings("unchecked")
-		final List<Map<String, Object>> admins =
-				(List<Map<String, Object>>) expected.get("admins");
-		final Map<String, Object> admin = new HashMap<>(admins.get(1));
-		admin.put("custom", Collections.emptyMap());
-		expected.put("admins", Arrays.asList(admins.get(0), admin));
+						))
+				.with("resources", ImmutableMap.of(
+						"foo", Collections.emptyList(),
+						"workspace", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("rid", "82")
+										.with("added", null)
+										.with("name", "name82")
+										.with("narrname", "narrname")
+										.with("public", true)
+										.with("perm", "Admin")
+										.build()
+								)))
+				.with("custom", Collections.emptyMap())
+				.build();
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
 		
 		assertThat("incorrect group", ret, is(expected));
 	}
