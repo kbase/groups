@@ -215,7 +215,7 @@ public class GroupsAPITest {
 			.with("rescount", Collections.emptyMap())
 			.with("owner", MapBuilder.newHashMap()
 					.with("name", "u2")
-					.with("joined", 20000L)
+					.with("joined", null)
 					.with("lastvisit", null)
 					.with("custom", Collections.emptyMap())
 					.build())
@@ -227,13 +227,13 @@ public class GroupsAPITest {
 			.with("admins", Arrays.asList(
 					MapBuilder.newHashMap()
 							.with("name", "whee")
-							.with("joined", 220000L)
+							.with("joined", null)
 							.with("lastvisit", null)
 							.with("custom", Collections.emptyMap())
 							.build(),
 					MapBuilder.newHashMap()
 							.with("name", "whoo")
-							.with("joined", 760000L)
+							.with("joined", null)
 							.with("lastvisit", null)
 							.with("custom", ImmutableMap.of("yay-6", "boo"))
 							.build()
@@ -697,7 +697,7 @@ public class GroupsAPITest {
 				.with("rescount", Collections.emptyMap())
 				.with("owner", MapBuilder.newHashMap()
 						.with("name", "u2")
-						.with("joined", 20000L)
+						.with("joined", null)
 						.with("lastvisit", null)
 						.with("custom", Collections.emptyMap())
 						.build())
@@ -706,13 +706,13 @@ public class GroupsAPITest {
 				.with("members", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("name", "bar")
-								.with("joined", 40000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build(),
 						MapBuilder.newHashMap()
 								.with("name", "foo")
-								.with("joined", 650000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build()
@@ -720,13 +720,13 @@ public class GroupsAPITest {
 				.with("admins", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("name", "whee")
-								.with("joined", 220000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", Collections.emptyMap())
 								.build(),
 						MapBuilder.newHashMap()
 								.with("name", "whoo")
-								.with("joined", 760000L)
+								.with("joined", null)
 								.with("lastvisit", null)
 								.with("custom", ImmutableMap.of("yay-6", "boo"))
 								.build()
@@ -797,10 +797,12 @@ public class GroupsAPITest {
 		
 		final ResourceID c1 = new ResourceID("mod.meth");
 		final Group group = getGroupMaxBuilder()
-				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1))
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1),
+						inst(45000))
 				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d2))
 				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1))
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"), c1),
+						inst(670000))
 				.build();
 		
 		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("whoo"))
@@ -829,10 +831,15 @@ public class GroupsAPITest {
 		expected.putAll(GROUP_MAX_JSON_STD);
 		expected.put("resources", ImmutableMap.of(
 				"foo", Collections.emptyList(),
-				"catalogmethod", Arrays.asList(ImmutableMap.of("rid", "mod.meth")),
+				"catalogmethod", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("rid", "mod.meth")
+								.with("added", 670000L)
+								.build()),
 				"workspace", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("rid", "45")
+								.with("added", null)
 								.with("name", "name45")
 								.with("narrname", null)
 								.with("public", false)
@@ -840,6 +847,7 @@ public class GroupsAPITest {
 								.build(),
 						MapBuilder.newHashMap()
 								.with("rid", "82")
+								.with("added", 45000L)
 								.with("name", "name82")
 								.with("narrname", "narrname")
 								.with("public", true)
@@ -862,7 +870,84 @@ public class GroupsAPITest {
 		expectedmin.put("custom", Collections.emptyMap());
 
 		assertThat("incorrect group", retmin, is(expectedmin));
-
+	}
+	
+	@Test
+	public void getGroupWithResourcesNonMember() throws Exception {
+		// the user must be an administrator of the included resources
+		final Groups g = mock(Groups.class);
+		
+		final ResourceID d1 = new ResourceID("82");
+		
+		final Group group = getGroupMaxBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceDescriptor(d1),
+						inst(45000))
+				.build();
+		
+		final GroupView.Builder gv = GroupView.getBuilder(group, new UserName("nonmember"))
+				.withStandardView(true)
+				.withResourceType(new ResourceType("foo"))
+				.withResource(new ResourceType("workspace"),
+						ResourceInformationSet.getBuilder(new UserName("nonmember"))
+								.withResourceField(d1, "name", "name82")
+								.withResourceField(d1, "public", true)
+								.withResourceField(d1, "narrname", "narrname")
+								.withResourceField(d1, "perm", "Admin")
+								.build());
+		
+		when(g.getGroup(new Token("toke"), new GroupID("id"))).thenReturn(gv.build());
+		
+		final Map<String, Object> expected = MapBuilder
+				.<String, Object>newHashMap()
+				.with("id", "id2")
+				.with("private", false)
+				.with("privatemembers", true)
+				.with("lastvisit", null)
+				.with("role", "None")
+				.with("name", "name2")
+				.with("memcount", 5)
+				.with("rescount", Collections.emptyMap())
+				.with("owner", MapBuilder.newHashMap()
+						.with("name", "u2")
+						.with("joined", null)
+						.with("lastvisit", null)
+						.with("custom", Collections.emptyMap())
+						.build())
+				.with("createdate", 20000L)
+				.with("moddate", 30000L)
+				.with("members", Collections.emptyList())
+				.with("admins", Arrays.asList(
+						MapBuilder.newHashMap()
+								.with("name", "whee")
+								.with("joined", null)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build(),
+						MapBuilder.newHashMap()
+								.with("name", "whoo")
+								.with("joined", null)
+								.with("lastvisit", null)
+								.with("custom", Collections.emptyMap())
+								.build()
+						))
+				.with("resources", ImmutableMap.of(
+						"foo", Collections.emptyList(),
+						"workspace", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("rid", "82")
+										.with("added", null)
+										.with("name", "name82")
+										.with("narrname", "narrname")
+										.with("public", true)
+										.with("perm", "Admin")
+										.build()
+								)))
+				.with("custom", Collections.emptyMap())
+				.build();
+		
+		final Map<String, Object> ret = new GroupsAPI(g).getGroup("toke", "id");
+		
+		assertThat("incorrect group", ret, is(expected));
 	}
 	
 	@Test

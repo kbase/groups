@@ -25,6 +25,8 @@ Represents a member of a group.
 }
 ```
 
+`joined` is only present for group members; it is otherwise `null`.
+
 `lastvisit` is only present for group administrators; it is otherwise `null`. It is also `null`
 if the last visit date has never been set via the API.
 
@@ -83,9 +85,15 @@ See `Resources` and `Custom fields` below.
 ### Resources
 
 Resources are items external to the groups service that may be associated with groups. All
-resource entries have a `rid` field for the resource ID. The contents of this ID field depend
-on the resource, but are always a string of at most 256 Unicode code points. The other fields in
-the resource entry depend on the resource type.
+resource entries have two fields:
+
+* A `rid` field for the resource ID. The contents of this ID field depend
+  on the resource, but are always a string of at most 256 Unicode code points.
+* An `added` field for the date the resource was added to the group in epoch ms. This field is
+  null for resources visible to non-members of the group and resources added to a group prior to
+  v0.1.3 of the Groups service.
+
+The other fields in the resource entry depend on the resource type.
 
 The currently supported resource types are:
 
@@ -94,7 +102,10 @@ The currently supported resource types are:
 Represents a KBase catalog service method.
 
 ```
-{"rid": <the catalog method ID, e.g. Module.method>}
+{
+    "rid": <the catalog method ID, e.g. Module.method>,
+    "added": <the date the method was added to the group in epoch ms>
+}
 ```
 
 #### workspace
@@ -104,6 +115,7 @@ Represents information about a workspace.
 ```
 {
     "rid": <the workspace ID>,
+    "added": <the date the workspace was added to the group in epoch ms>,
     "name": <the workspace name>,
     "narrname": <the name of the narrative contained in the workspace or null>
     "narrcreate": <the creation date, in epoch ms, of the narrative or null>

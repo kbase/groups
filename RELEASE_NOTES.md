@@ -1,5 +1,12 @@
 # KBase Groups Service release notes
 
+## 0.1.3
+
+* BACKWARDS INCOMPATIBILITY: No longer exposes the group owner's and administrators' join date
+  to non-members.
+* Resource information now includes an `added` field that denotes when the resource was added to
+  the group.
+
 ## 0.1.2
 
 * BACKWARDS INCOMPATIBILITY: The /request/groups/<ids>/new endpoint no longer accepts a

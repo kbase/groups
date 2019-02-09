@@ -55,6 +55,7 @@ public class Fields {
 	public static final String GROUP_RESOURCE_TYPE = "resourcetype";
 	/** The resource ID. */
 	public static final String GROUP_RESOURCE_ID = "rid";
+	public static final String GROUP_RESOURCE_ADDED = "added";
 	
 	/** Whether an action is complete or not, and therefore whether a request object is
 	 * included in the response.

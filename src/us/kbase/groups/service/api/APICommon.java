@@ -14,15 +14,17 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.GroupID;
-import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.GroupView;
+import us.kbase.groups.core.GroupView.GroupUserView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
@@ -85,8 +87,7 @@ public class APICommon {
 			ret.put(Fields.GROUP_CUSTOM_FIELDS, getCustomFields(group.getCustomFields()));
 			ret.put(Fields.GROUP_CREATION, group.getCreationDate().get().toEpochMilli());
 			ret.put(Fields.GROUP_MODIFICATION, group.getModificationDate().get().toEpochMilli());
-			ret.put(Fields.GROUP_VISIT_DATE, group.getLastVisit()
-					.map(i -> i.toEpochMilli()).orElse(null));
+			ret.put(Fields.GROUP_VISIT_DATE, toEpochMilli(group.getLastVisit()));
 			final Map<String, Object> resourceCounts = new HashMap<>();
 			ret.put(Fields.GROUP_RESOURCE_COUNT, resourceCounts);
 			for (final ResourceType t: group.getResourceCounts().keySet()) {
@@ -100,19 +101,22 @@ public class APICommon {
 				final Map<String, Object> resources = new HashMap<>();
 				ret.put(Fields.GROUP_RESOURCES, resources);
 				for (final ResourceType t: group.getResourceTypes()) {
-					resources.put(t.getName(), getResourceList(group.getResourceInformation(t)));
+					resources.put(t.getName(), getResourceList(group, t));
 				}
 			}
 		}
 		return ret;
 	}
 	
-	private static Map<String, Object> toUserJson(final GroupUser user) {
+	private static Long toEpochMilli(final Optional<Instant> instant) {
+		return instant.map(i -> i.toEpochMilli()).orElse(null);
+	}
+	
+	private static Map<String, Object> toUserJson(final GroupUserView user) {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.GROUP_MEMBER_NAME, user.getName().getName());
-		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, user.getJoinDate().toEpochMilli());
-		ret.put(Fields.GROUP_MEMBER_VISIT_DATE, user.getLastVisit()
-					.map(i -> i.toEpochMilli()).orElse(null));
+		ret.put(Fields.GROUP_MEMBER_JOIN_DATE, toEpochMilli(user.getJoinDate()));
+		ret.put(Fields.GROUP_MEMBER_VISIT_DATE, toEpochMilli(user.getLastVisit()));
 		ret.put(Fields.GROUP_MEMBER_CUSTOM_FIELDS, getCustomFields(user.getCustomFields()));
 		return ret;
 	}
@@ -125,13 +129,18 @@ public class APICommon {
 	}
 
 	private static List<Map<String, Object>> getResourceList(
-			final ResourceInformationSet resourceInfo) {
+			final GroupView g,
+			final ResourceType t) {
+		final ResourceInformationSet resourceInfo = g.getResourceInformation(t);
 		final List<Map<String, Object>> rlist = new LinkedList<>();
 		for (final ResourceID rd: sorted(resourceInfo)) {
 			final Map<String, Object> resource = new HashMap<>();
 			rlist.add(resource);
 			resource.putAll(resourceInfo.getFields(rd));
 			resource.put(Fields.GROUP_RESOURCE_ID, rd.getName());
+			final Long added = Role.NONE.equals(g.getRole()) ?
+					null : toEpochMilli(g.getResourceAddDate(t, rd));
+			resource.put(Fields.GROUP_RESOURCE_ADDED, added);
 		}
 		return rlist;
 	}

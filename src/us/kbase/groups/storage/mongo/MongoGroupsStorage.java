@@ -401,7 +401,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 					.map(rd -> new Document(
 							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, rd.getAdministrativeID()
 									.getName())
-							.append(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName()))
+							.append(Fields.GROUP_RESOURCE_ID, rd.getResourceID().getName())
+							.append(Fields.GROUP_RESOURCE_ADDED,
+									group.getResourceAddDate(t, rd.getResourceID()).orElse(null)))
 					.collect(Collectors.toList()));
 		}
 		try {
@@ -717,10 +719,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 			for (final String restype: resources.keySet()) {
 				final ResourceType t = new ResourceType(restype);
 				for (final Document rd: resources.get(restype)) {
-					b.withResource(t, new ResourceDescriptor(
-							new ResourceAdministrativeID(
-									rd.getString(Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID)),
-							new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))));
+					final Date added = rd.getDate(Fields.GROUP_RESOURCE_ADDED);
+					b.withResource(
+							t,
+							new ResourceDescriptor(
+									new ResourceAdministrativeID(
+											rd.getString(Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID)),
+									new ResourceID(rd.getString(Fields.GROUP_RESOURCE_ID))),
+							added == null ? null : added.toInstant());
 				}
 			}
 			addCustomFields((f, v) -> b.withCustomField(f, v), Fields.GROUP_CUSTOM_FIELDS, grp);
@@ -1077,7 +1083,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 			update.append("$addToSet", new Document(
 					resourceField, new Document(
 							Fields.GROUP_RESOURCE_ADMINISTRATIVE_ID, resourceAdminID.getName())
-							.append(Fields.GROUP_RESOURCE_ID, resIDStr)));
+							.append(Fields.GROUP_RESOURCE_ID, resIDStr)
+							.append(Fields.GROUP_RESOURCE_ADDED, modDate)));
 		} else {
 			update.append("$pull", new Document(resourceField,
 					new Document(Fields.GROUP_RESOURCE_ID, resIDStr)));

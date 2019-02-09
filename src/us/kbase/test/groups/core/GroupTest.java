@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Test;
@@ -88,9 +89,10 @@ public class GroupTest {
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("1")))
 				.withResource(new ResourceType("workspace"),
-						new ResourceDescriptor(new ResourceID("3")))
+						new ResourceDescriptor(new ResourceID("3")),
+						inst(25000))
 				.withResource(new ResourceType("catalogmethod"),
-						new ResourceDescriptor(new ResourceID("foo.bar")))
+						new ResourceDescriptor(new ResourceID("foo.bar")), null)
 				.withResource(new ResourceType("catalogmethod"),
 						new ResourceDescriptor(new ResourceAdministrativeID("bar"),
 								new ResourceID("baz.bat")))
@@ -118,10 +120,20 @@ public class GroupTest {
 		assertThat("incorrect res", g.getResources(new ResourceType("workspace")),
 				is(set(new ResourceDescriptor(new ResourceID("1")),
 						new ResourceDescriptor(new ResourceID("3")))));
+		assertThat("incorrect res", g.getResourceAddDate(
+				new ResourceType("workspace"), new ResourceID("1")), is(Optional.empty()));
+		assertThat("incorrect res", g.getResourceAddDate(
+				new ResourceType("workspace"), new ResourceID("3")), is(Optional.of(inst(25000))));
 		assertThat("incorrect res", g.getResources(new ResourceType("catalogmethod")),
 				is(set(new ResourceDescriptor(new ResourceID("foo.bar")),
 						new ResourceDescriptor(new ResourceAdministrativeID("baz"),
 								new ResourceID("baz.bat")))));
+		assertThat("incorrect res", g.getResourceAddDate(
+				new ResourceType("catalogmethod"), new ResourceID("foo.bar")),
+				is(Optional.empty()));
+		assertThat("incorrect res", g.getResourceAddDate(
+				new ResourceType("catalogmethod"), new ResourceID("baz.bat")),
+				is(Optional.empty()));
 		assertThat("incorrect mod", g.getModificationDate(), is(Instant.ofEpochMilli(20000)));
 		assertThat("incorrect owner", g.getOwner(), is(new UserName("foo")));
 		assertThat("incorrect custom", g.getCustomFields(), is(ImmutableMap.of(
@@ -303,6 +315,12 @@ public class GroupTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)));
 		try {
 			b.withResource(type, desc);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		try {
+			b.withResource(type, desc, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -511,6 +529,11 @@ public class GroupTest {
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
 						new ResourceID("b")))
+				.withResource(new ResourceType("othertype"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")),
+						inst(32000))
+				
 				.build();
 		return g;
 	}
@@ -565,19 +588,31 @@ public class GroupTest {
 	}
 	
 	@Test
-	public void getResourceFail() throws Exception {
+	public void getResourceAddDate() throws Exception {
+		final Group g = getBuilderWithResource();
+		
+		assertThat("incorrect get res",
+				g.getResourceAddDate(new ResourceType("foo"), new ResourceID("b")),
+				is(Optional.empty()));
+		assertThat("incorrect get res",
+				g.getResourceAddDate(new ResourceType("othertype"), new ResourceID("b")),
+				is(Optional.of(inst(32000))));
+	}
+	
+	@Test
+	public void getResourceAlsoAddDateFail() throws Exception {
 		final ResourceType t = new ResourceType("t");
 		
-		getResourceFail(null, new ResourceID("i"), new NullPointerException("type"));
-		getResourceFail(t, (ResourceID) null, new NullPointerException("resourceID"));
+		getResourceAlsoAddDateFail(null, new ResourceID("i"), new NullPointerException("type"));
+		getResourceAlsoAddDateFail(t, (ResourceID) null, new NullPointerException("resourceID"));
 		
-		getResourceFail(new ResourceType("foo"), new ResourceID("a"),
+		getResourceAlsoAddDateFail(new ResourceType("foo"), new ResourceID("a"),
 				new IllegalArgumentException("No such resource foo a"));
-		getResourceFail(new ResourceType("foob"), new ResourceID("b"),
+		getResourceAlsoAddDateFail(new ResourceType("foob"), new ResourceID("b"),
 				new IllegalArgumentException("No such resource foob b"));
 	}
 	
-	private void getResourceFail(
+	private void getResourceAlsoAddDateFail(
 			final ResourceType t,
 			final ResourceID d,
 			final Exception expected)
@@ -585,6 +620,12 @@ public class GroupTest {
 		final Group g = getBuilderWithResource();
 		try {
 			g.getResource(t, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		try {
+			g.getResourceAddDate(t, d);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -610,16 +651,19 @@ public class GroupTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
-						new ResourceID("b")))
+						new ResourceID("b")),
+						inst(36000))
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("c"),
-						new ResourceID("d")))
+						new ResourceID("d")),
+						inst(27000))
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("e"),
 						new ResourceID("f")))
 				.withResource(new ResourceType("bar"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
-						new ResourceID("b")))
+						new ResourceID("b")),
+						null)
 				.build();
 	}
 	
@@ -636,7 +680,8 @@ public class GroupTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withResource(new ResourceType("foo"), new ResourceDescriptor(
 						new ResourceAdministrativeID("c"),
-						new ResourceID("d")))
+						new ResourceID("d")),
+						inst(27000))
 				.withResource(new ResourceType("bar"), new ResourceDescriptor(
 						new ResourceAdministrativeID("a"),
 						new ResourceID("b")))
