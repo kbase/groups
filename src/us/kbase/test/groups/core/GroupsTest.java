@@ -904,6 +904,8 @@ public class GroupsTest {
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("fake, just here for the count")))
 				.withAdministrator(GroupUser.getBuilder(new UserName("bat"), inst(30000))
 						.withCustomField(new NumberedCustomField("public-26"), "upub3")
 						.build())
@@ -998,6 +1000,8 @@ public class GroupsTest {
 						new ResourceDescriptor(new ResourceID("92")))
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("fake, just here for the count")))
 				.withCustomField(new NumberedCustomField("public-23"), "pub")
 				.build(), new UserName("whee"))
 				.withStandardView(true)

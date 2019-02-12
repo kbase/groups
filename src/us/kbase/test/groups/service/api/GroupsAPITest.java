@@ -906,7 +906,7 @@ public class GroupsAPITest {
 				.with("role", "None")
 				.with("name", "name2")
 				.with("memcount", 5)
-				.with("rescount", Collections.emptyMap())
+				.with("rescount", ImmutableMap.of("workspace", 1))
 				.with("owner", MapBuilder.newHashMap()
 						.with("name", "u2")
 						.with("joined", null)

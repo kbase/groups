@@ -147,7 +147,7 @@ public class GroupView {
 	private final Set<UserName> members; // member
 	private final Set<UserName> admins; // standard except private
 	private final Optional<Integer> memberCount; // all views except private
-	private final Map<ResourceType, Integer> resourceCount; // empty for non-members
+	private final Map<ResourceType, Integer> resourceCount; // all views except private
 	
 	// standard, but contents depend on view.
 	// minimal - nothing
@@ -200,16 +200,15 @@ public class GroupView {
 			this.lastVisit = Optional.empty();
 		} else {
 			this.memberCount = Optional.of(group.getAllMembers().size());
+			this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
+					.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
 			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 			if (role.equals(Role.NONE)) {
-				this.resourceCount = Collections.emptyMap();
 				this.resourceJoinDate = Collections.emptyMap();
 				this.lastVisit = Optional.empty();
 			} else {
 				// since the user is a member, we know the view isn't private
 				this.resourceJoinDate = Collections.unmodifiableMap(resourceJoinDate);
-				this.resourceCount = Collections.unmodifiableMap(group.getResourceTypes().stream()
-						.collect(Collectors.toMap(t -> t, t -> group.getResources(t).size())));
 				this.lastVisit = group.getMember(user.get()).getLastVisit();
 			}
 			
