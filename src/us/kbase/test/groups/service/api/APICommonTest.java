@@ -486,7 +486,7 @@ public class APICommonTest {
 				.with("custom", Collections.emptyMap())
 				.with("createdate", 20000L)
 				.with("moddate", 30000L)
-				.with("rescount", Collections.emptyMap())
+				.with("rescount", ImmutableMap.of("ws", 2, "cat", 1))
 				.with("privatemembers", true)
 				.with("members", Collections.emptyList())
 				.with("admins", Arrays.asList(

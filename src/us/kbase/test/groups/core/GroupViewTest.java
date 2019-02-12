@@ -145,7 +145,8 @@ public class GroupViewTest {
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
-		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(ImmutableMap.of(
+				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));
@@ -258,7 +259,8 @@ public class GroupViewTest {
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
-		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(ImmutableMap.of(
+				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(false));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));
@@ -306,7 +308,8 @@ public class GroupViewTest {
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
-		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(ImmutableMap.of(
+				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));
@@ -360,7 +363,8 @@ public class GroupViewTest {
 		assertThat("incorrect members", gv.getMembers(),
 				is(set(new UserName("m1"), new UserName("m2"))));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
-		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(ImmutableMap.of(
+				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));
@@ -459,7 +463,8 @@ public class GroupViewTest {
 		assertThat("incorrect name", gv.getGroupName(), is(op(new GroupName("name"))));
 		assertThat("incorrect members", gv.getMembers(), is(set()));
 		assertThat("incorrect member count", gv.getMemberCount(), is(Optional.of(5)));
-		assertThat("incorrect rescount", gv.getResourceCounts(), is(Collections.emptyMap()));
+		assertThat("incorrect rescount", gv.getResourceCounts(), is(ImmutableMap.of(
+				new ResourceType("workspace"), 3, new ResourceType("catalogmethod"), 2)));
 		assertThat("incorrect own", gv.getOwner(), is(op(new UserName("user"))));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));

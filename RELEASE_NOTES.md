@@ -1,5 +1,9 @@
 # KBase Groups Service release notes
 
+## 0.1.4
+
+* The group `rescount` field is now public.
+
 ## 0.1.3
 
 * BACKWARDS INCOMPATIBILITY: No longer exposes the group owner's and administrators' join date
