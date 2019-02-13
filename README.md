@@ -269,8 +269,6 @@ If the user is anonymous or not a member of the group, only custom fields that a
 group listable (see custom fields below) are included. If the user is a member of the group,
 all group listable fields are included.
 
-`rescount` is empty for users that are not a member of the group.
-
 ### Get group names from IDs
 
 ```
@@ -380,8 +378,6 @@ and only group-associated public resources and resources the user administrates 
 
 If authorization is provided and the user is a member of the group, the members list is populated,
 all custom fields are included, and all group-associated resources are returned.
-
-`rescount` is empty for users that are not a member of the group.
 
 ### Check if a group ID exists
 
@@ -553,8 +549,7 @@ the target of the request or an administrator of a resource that is the target o
 If the group is not private this endpoint is not useful.
 
 This endpoint returns a data structure identical to that of the `/group` endpoint, as if
-the user is not a member of the group, for consistency's sake. As such, the `rescount` field
-is present but always empty.
+the user is not a member of the group, for consistency's sake.
 
 The owner field consists only of the user name for this endpoint. For most other endpoints,
 the owner field is a full `User` data structure.
