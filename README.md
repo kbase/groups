@@ -431,7 +431,7 @@ AUTHORIZATION REQUIRED
 PUT /group/<group id>/user/<user name>/admin
 ```
 
-The user must be the group owner.
+The user must be a group administrator.
 
 ### Demote an administrator to a member
 
@@ -440,7 +440,7 @@ AUTHORIZATION REQUIRED
 DELETE /group/<group id>/user/<user name>/admin
 ```
 
-The user must be the group owner.
+The user must be a group administrator.
 
 ### Update a user's fields
 
