@@ -1,5 +1,9 @@
 # KBase Groups Service release notes
 
+## 0.1.5
+
+* Group administrators may now promote and demote other administrators.
+
 ## 0.1.4
 
 * The group `rescount` field is now public.
