@@ -11,8 +11,8 @@ FROM kbase/kb_jre:latest
 COPY --from=build /src/deployment/ /kb/deployment/
 COPY --from=build /src/jettybase/ /kb/deployment/jettybase/
 
-# The BUILD_DATE value seem to bust the docker cache when the timestamp changes, move to
-# the end
+# Variables should be populated by Dockerhub during the automated
+# build.
 LABEL \
       org.label-schema.vcs-url="https://github.com/kbase/groups.git" \
       org.label-schema.vcs-ref=$SOURCE_COMMIT \
