@@ -4588,13 +4588,23 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void promoteMember() throws Exception {
+	public void promoteMemberOwn() throws Exception {
+		promoteMember("own");
+	}
+	
+	@Test
+	public void promoteMemberAdmin() throws Exception {
+		promoteMember("a");
+	}
+
+	private void promoteMember(final String user) throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName(user));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withAdministrator(toGUser("a"))
 				.withMember(toGUser("u1"))
 				.withMember(toGUser("u3"))
 				.build());
@@ -4619,10 +4629,10 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void promoteMemberFailNotOwner() throws Exception {
+	public void promoteMemberFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -4632,7 +4642,7 @@ public class GroupsTest {
 				.build());
 		
 		failPromoteMember(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
-				new UnauthorizedException("Only the group owner can promote administrators"));
+				new UnauthorizedException("Only group administrators can promote administrators"));
 	}
 	
 	@Test
@@ -4688,8 +4698,13 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void demoteAdmin() throws Exception {
+	public void demoteAdminOwner() throws Exception {
 		demoteAdmin("own");
+	}
+	
+	@Test
+	public void demoteAdminAdmin() throws Exception {
+		demoteAdmin("a1");
 	}
 	
 	@Test
@@ -4706,6 +4721,7 @@ public class GroupsTest {
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
 				.withMember(toGUser("u1"))
 				.withAdministrator(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
 				.build());
 		when(mocks.clock.instant()).thenReturn(inst(45000));
 		
@@ -4731,7 +4747,7 @@ public class GroupsTest {
 	public void demoteAdminFailUnauthed() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
 				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -4741,7 +4757,7 @@ public class GroupsTest {
 				.build());
 		
 		failDemoteAdmin(mocks.groups, new Token("t"), new GroupID("gid"), new UserName("u3"),
-				new UnauthorizedException("Only the group owner can demote administrators"));
+				new UnauthorizedException("Only group administrators can demote administrators"));
 	}
 	
 	@Test
