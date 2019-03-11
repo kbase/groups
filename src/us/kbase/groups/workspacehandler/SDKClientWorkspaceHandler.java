@@ -1,6 +1,7 @@
 package us.kbase.groups.workspacehandler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
@@ -191,12 +193,10 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	public ResourceInformationSet getResourceInformation(
 			final UserName user,
 			final Set<ResourceID> resources,
-			boolean administratedResourcesOnly)
+			final ResourceAccess access)
 			throws ResourceHandlerException, IllegalResourceIDException {
 		checkNoNullsInCollection(resources, "resources");
-		if (user == null) {
-			administratedResourcesOnly = true; // only return public workspaces
-		}
+		requireNonNull(access, "access");
 		//TODO WS make a bulk ws method for getwsinfo that returns error code (DELETED, MISSING, INACCESSIBLE, etc.) for inaccessible workspaces
 		//TODO WS for get perms mass make ignore error option that returns error state (DELETED, MISSING, INACCESSIBLE etc.) and use here instead of going one at a time
 		final ResourceInformationSet.Builder b = ResourceInformationSet.getBuilder(user);
@@ -212,7 +212,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 				b.withNonexistentResource(rid);
 			} else {
 				final Perm perm = new Perm(user, perms.perms.get(0));
-				if (!administratedResourcesOnly || perm.perm.isAdmin() || perm.isPublic) {
+				if (hasAccess(perm, access)) {
 					final WSInfoOwner wi = getWSInfo(wsid);
 					if (wi == null) {
 						// should almost never happen since we checked for inaccessible ws above
@@ -230,6 +230,20 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			}
 		}
 		return b.build();
+	}
+
+	// hm. This seems nasty, but the ResourceAccess class makes sense to me...
+	// For now I'll keep the nasty implementation and more readable, IMO, API.
+	private boolean hasAccess(final Perm perm, final ResourceAccess access) {
+		if (ResourceAccess.ALL.equals(access)) {
+			return true;
+		} else if (ResourceAccess.ADMINISTRATED_AND_PUBLIC.equals(access) &&
+				(perm.perm.isAdmin() || perm.isPublic)) {
+			return true;
+		} else if (ResourceAccess.ADMINISTRATED.equals(access) && perm.perm.isAdmin()) {
+			return true;
+		}
+		return false;
 	}
 
 	private static final TypeReference<Tuple9<Long, String, String, String, Long, String,
@@ -261,7 +275,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			final UObject d = client.administer(new UObject(ImmutableMap.of(
 					"command", "getWorkspaceDescription", "params", wsi)));
 			desc = d == null ? null : d.asScalar();
-			narrInfo = getNarrativeName(wsinfo.getE1(), wsinfo.getE9());
+			narrInfo = getNarrativeInfo(wsinfo.getE1(), wsinfo.getE9());
 		} catch (ServerException e) {
 			if (getWorkspaceID(e) != null) { // deleted or missing
 				return null;
@@ -295,7 +309,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		}
 	}
 	
-	private NarrInfo getNarrativeName(final long wsid, final Map<String, String> meta)
+	private NarrInfo getNarrativeInfo(final long wsid, final Map<String, String> meta)
 			throws IOException, JsonClientException {
 		if ("false".equals(meta.get("is_temporary")) && meta.containsKey("narrative")) {
 			final String name = meta.get("narrative_nice_name");

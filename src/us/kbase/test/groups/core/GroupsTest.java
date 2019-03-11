@@ -83,6 +83,7 @@ import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
@@ -886,8 +887,8 @@ public class GroupsTest {
 		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("noconfig")))
 				.thenReturn(Optional.empty());
 		
-		when(mocks.wsHandler.getResourceInformation(
-				null, set(new ResourceID("92"), new ResourceID("86")), true))
+		when(mocks.wsHandler.getResourceInformation(null, set(new ResourceID("92"),
+				new ResourceID("86")), ResourceAccess.ADMINISTRATED_AND_PUBLIC))
 				.thenReturn(ResourceInformationSet.getBuilder(null)
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("92"), "public", true)
@@ -924,7 +925,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getGroupNonMemberToken() throws Exception {
+	public void getGroupNonMember() throws Exception {
 		// can get public and admin'd resources
 		// tests that there's still a resource entry in the group view if missing from the group
 		final TestMocks mocks = initTestMocks();
@@ -961,7 +962,7 @@ public class GroupsTest {
 
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
-						new ResourceID("86")), true))
+						new ResourceID("86")), ResourceAccess.ADMINISTRATED_AND_PUBLIC))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("57"), "name", "my ws2")
@@ -1017,6 +1018,54 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getGroupNonMemberPrivate() throws Exception {
+		// can get admin'd resources
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withIsPrivate(true)
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000)).build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
+
+		when(mocks.wsHandler.getResourceInformation(
+				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
+						new ResourceID("86")), ResourceAccess.ADMINISTRATED))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.build());
+		
+		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.build(), new UserName("whee"))
+				.withStandardView(true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceType("workspace"), ResourceInformationSet
+						.getBuilder(new UserName("whee"))
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.build())
+				.build()));
+	}
+	
+	@Test
 	public void getGroupMemberTokenWithNonexistentResources() throws Exception {
 		// tests non existent resource code
 		// can get all resources
@@ -1064,7 +1113,8 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
-						new ResourceID("57"), new ResourceID("86"), new ResourceID("34")), false))
+						new ResourceID("57"), new ResourceID("86"), new ResourceID("34")),
+				ResourceAccess.ALL))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("6"), "name", "my other ws")
@@ -1075,7 +1125,7 @@ public class GroupsTest {
 						.build());
 		when(mocks.catHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("mod1.meth1"),
-						new ResourceID("mod2.meth2")), false))
+						new ResourceID("mod2.meth2")), ResourceAccess.ALL))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
 						.withResource(new ResourceID("mod2.meth2"))
 						.build());
@@ -1196,7 +1246,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
-				new UserName("baz"), set(new ResourceID("not a ws id")), false))
+				new UserName("baz"), set(new ResourceID("not a ws id")), ResourceAccess.ALL))
 				.thenThrow(new IllegalResourceIDException("oh heck"));
 		
 		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"), new RuntimeException(

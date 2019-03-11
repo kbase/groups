@@ -514,6 +514,35 @@ public class APICommonTest {
 	}
 	
 	@Test
+	public void toGroupJSONStandardViewResourcesNonMemberPrivate() throws Exception {
+		final UserName userName = new UserName("non");
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder()
+				.withIsPrivate(true)
+				.build(),
+				userName)
+				.withResource(new ResourceType("ws"), ResourceInformationSet
+						.getBuilder(userName)
+						.withResourceField(new ResourceID("a"), "f1", "x")
+						.build())
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", true)
+				.with("role", "None")
+				.with("resources", ImmutableMap.of(
+						"ws", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("rid", "a")
+										.with("added", null)
+										.with("f1", "x")
+										.build())))
+				.build()));
+	}
+	
+	@Test
 	public void toGroupJSONFail() throws Exception {
 		try {
 			APICommon.toGroupJSON(null);

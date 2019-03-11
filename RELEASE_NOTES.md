@@ -1,5 +1,10 @@
 # KBase Groups Service release notes
 
+## 0.1.6
+
+* Fixed a bug where resource administrators could not see their resources in private groups
+  for which they were not a member in the `/group/<group id> endpoint`.
+
 ## 0.1.5
 
 * Group administrators may now promote and demote other administrators.

@@ -262,6 +262,7 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", true)
 			.with("role", "None")
+			.with("resources", Collections.emptyMap())
 			.build();
 
 	@Test

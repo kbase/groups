@@ -418,7 +418,18 @@ public class GroupViewTest {
 		assertThat("incorrect own", gv.getOwner(), is(mt()));
 		assertThat("incorrect view type", gv.isStandardView(), is(true));
 		assertThat("incorrect role", gv.getRole(), is(Group.Role.NONE));
-		assertThat("incorrect types", gv.getResourceTypes(), is(set()));
+		assertThat("incorrect types", gv.getResourceTypes(), is(set(new ResourceType("bar"),
+				new ResourceType("workspace"), new ResourceType("catalogmethod"))));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("bar")),
+				is(ResourceInformationSet.getBuilder(null).build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("workspace")),
+				is(ResourceInformationSet.getBuilder(null)
+						.withResource(new ResourceID("7"))
+						.build()));
+		assertThat("incorrect info", gv.getResourceInformation(new ResourceType("catalogmethod")),
+				is(ResourceInformationSet.getBuilder(null)
+						.build()));
+		
 		assertThat("incorrect custom", gv.getCustomFields(), is(Collections.emptyMap()));
 		
 		getMemberFail(gv, new UserName("user"));

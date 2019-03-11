@@ -33,6 +33,7 @@ import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
@@ -284,7 +285,7 @@ public class SDKClientWorkspaceHandlerTest {
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
 		
 		final ResourceInformationSet wi = h.getResourceInformation(
-				new UserName("u"), set(), false);
+				new UserName("u"), set(), ResourceAccess.ALL);
 		
 		assertThat("incorrect wsi", wi, is(ResourceInformationSet.getBuilder(new UserName("u"))
 				.build()));
@@ -294,7 +295,7 @@ public class SDKClientWorkspaceHandlerTest {
 	public void getResourceInformationFull() throws Exception {
 		getResourceInformation(
 				new UserName("user1"),
-				false,
+				ResourceAccess.ALL,
 				ResourceInformationSet.getBuilder(new UserName("user1"))
 						.withNonexistentResource(RD8)
 						.withNonexistentResource(RD9)
@@ -343,10 +344,62 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getResourceInformationAdministratedOnly() throws Exception {
+	public void getResourceInformationFullAnonUser() throws Exception {
+		getResourceInformation(
+				null,
+				ResourceAccess.ALL,
+				ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(RD8)
+						.withNonexistentResource(RD9)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.withNonexistentResource(RD30)
+						.withNonexistentResource(RD31)
+						.withNonexistentResource(RD40)
+						.withNonexistentResource(RD41)
+						.withResourceField(RD3, "name", "name3")
+						.withResourceField(RD3, "public", false)
+						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "narrcreate", null)
+						.withResourceField(RD3, "perm", "None")
+						.withResourceField(RD3, "description", "my desc")
+						.withResourceField(RD3, "moddate", 1540606613000L)
+						.withResourceField(RD5, "name", "name5")
+						.withResourceField(RD5, "public", false)
+						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "narrcreate", 1500000000000L)
+						.withResourceField(RD5, "perm", "None")
+						.withResourceField(RD5, "description", null)
+						.withResourceField(RD5, "moddate", 0L)
+						.withResourceField(RD7, "name", "name7")
+						.withResourceField(RD7, "public", false)
+						.withResourceField(RD7, "narrname", null)
+						.withResourceField(RD7, "narrcreate", null)
+						.withResourceField(RD7, "perm", "None")
+						.withResourceField(RD7, "description", "my desc7")
+						.withResourceField(RD7, "moddate", 31535999000L)
+						.withResourceField(RD10, "name", "name10")
+						.withResourceField(RD10, "public", true)
+						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "narrcreate", null)
+						.withResourceField(RD10, "perm", "None")
+						.withResourceField(RD10, "description", "my desc10")
+						.withResourceField(RD10, "moddate", 1500000000000L)
+						.withResourceField(RD11, "name", "name11")
+						.withResourceField(RD11, "public", true)
+						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "narrcreate", null)
+						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "description", "my desc11")
+						.withResourceField(RD11, "moddate", 549864182000L)
+						.build());
+	}
+	
+	@Test
+	public void getResourceInformationAdminPublic() throws Exception {
 		getResourceInformation(
 				new UserName("user1"),
-				true,
+				ResourceAccess.ADMINISTRATED_AND_PUBLIC,
 				ResourceInformationSet.getBuilder(new UserName("user1"))
 						.withNonexistentResource(RD9)
 						.withNonexistentResource(RD20)
@@ -387,48 +440,74 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getResourceInformationAnonUser() throws Exception {
-		getResourceInformationAnonUser(false);
+	public void getResourceInformationAdminPublicAnonUser() throws Exception {
+		getResourceInformation(
+		null,
+		ResourceAccess.ADMINISTRATED_AND_PUBLIC,
+		ResourceInformationSet.getBuilder(null)
+				.withNonexistentResource(RD9)
+				.withNonexistentResource(RD20)
+				.withNonexistentResource(RD21)
+				.withNonexistentResource(RD30)
+				.withNonexistentResource(RD31)
+				.withNonexistentResource(RD40)
+				.withNonexistentResource(RD41)
+				.withResourceField(RD10, "name", "name10")
+				.withResourceField(RD10, "public", true)
+				.withResourceField(RD10, "narrname", null)
+				.withResourceField(RD10, "narrcreate", null)
+				.withResourceField(RD10, "perm", "None")
+				.withResourceField(RD10, "description", "my desc10")
+				.withResourceField(RD10, "moddate", 1500000000000L)
+				.withResourceField(RD11, "name", "name11")
+				.withResourceField(RD11, "public", true)
+				.withResourceField(RD11, "narrname", null)
+				.withResourceField(RD11, "narrcreate", null)
+				.withResourceField(RD11, "perm", "None")
+				.withResourceField(RD11, "description", "my desc11")
+				.withResourceField(RD11, "moddate", 549864182000L)
+				.build());
 	}
 	
 	@Test
-	public void getResourceInformationAnonUserAdministratedWSOnly() throws Exception {
-		getResourceInformationAnonUser(true);
-	}
-
-	private void getResourceInformationAnonUser(final boolean administratedWorkspacesOnly)
-			throws Exception {
+	public void getResourceInformationAdmin() throws Exception {
 		getResourceInformation(
-				null,
-				administratedWorkspacesOnly,
-				ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(RD9)
+				new UserName("user1"),
+				ResourceAccess.ADMINISTRATED,
+				ResourceInformationSet.getBuilder(new UserName("user1"))
 						.withNonexistentResource(RD20)
 						.withNonexistentResource(RD21)
-						.withNonexistentResource(RD30)
-						.withNonexistentResource(RD31)
-						.withNonexistentResource(RD40)
-						.withNonexistentResource(RD41)
-						.withResourceField(RD10, "name", "name10")
-						.withResourceField(RD10, "public", true)
-						.withResourceField(RD10, "narrname", null)
-						.withResourceField(RD10, "narrcreate", null)
-						.withResourceField(RD10, "perm", "None")
-						.withResourceField(RD10, "description", "my desc10")
-						.withResourceField(RD10, "moddate", 1500000000000L)
-						.withResourceField(RD11, "name", "name11")
-						.withResourceField(RD11, "public", true)
-						.withResourceField(RD11, "narrname", null)
-						.withResourceField(RD11, "narrcreate", null)
-						.withResourceField(RD11, "perm", "None")
-						.withResourceField(RD11, "description", "my desc11")
-						.withResourceField(RD11, "moddate", 549864182000L)
+						.withResourceField(RD3, "name", "name3")
+						.withResourceField(RD3, "public", false)
+						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "narrcreate", null)
+						.withResourceField(RD3, "perm", "Own")
+						.withResourceField(RD3, "description", "my desc")
+						.withResourceField(RD3, "moddate", 1540606613000L)
+						.withResourceField(RD5, "name", "name5")
+						.withResourceField(RD5, "public", false)
+						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "narrcreate", 1500000000000L)
+						.withResourceField(RD5, "perm", "Admin")
+						.withResourceField(RD5, "description", null)
+						.withResourceField(RD5, "moddate", 0L)
 						.build());
 	}
-
+	
+	@Test
+	public void getResourceInformationAdminAnonUser() throws Exception {
+		getResourceInformation(
+				null,
+				ResourceAccess.ADMINISTRATED,
+				ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.build());
+	}
+	
 	private void getResourceInformation(
 			final UserName user,
-			final boolean administratedResourcesOnly,
+			final ResourceAccess access,
 			final ResourceInformationSet expected)
 			throws Exception {
 		final WorkspaceClient c = mock(WorkspaceClient.class);
@@ -566,7 +645,7 @@ public class SDKClientWorkspaceHandlerTest {
 						new ResourceID("11"), new ResourceID("20"), new ResourceID("21"),
 						new ResourceID("30"), new ResourceID("31"),
 						new ResourceID("40"), new ResourceID("41")),
-				administratedResourcesOnly);
+				access);
 		
 		assertThat("incorrect resources", ri, is(expected));
 	}
@@ -630,11 +709,13 @@ public class SDKClientWorkspaceHandlerTest {
 		when(c.ver()).thenReturn(MIN_WS_VER);
 		
 		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		final ResourceAccess a = ResourceAccess.ALL;
 		
-		failGetResourceInfo(h, null, new NullPointerException("resources"));
-		failGetResourceInfo(h, set(new ResourceID("1"), null),
+		failGetResourceInfo(h, null, a, new NullPointerException("resources"));
+		failGetResourceInfo(h, set(new ResourceID("1"), null), a,
 				new NullPointerException("Null item in collection resources"));
-		failGetResourceInfo(h, set(new ResourceID("bar")),
+		failGetResourceInfo(h, set(), null, new NullPointerException("access"));
+		failGetResourceInfo(h, set(new ResourceID("bar")), a,
 				new IllegalResourceIDException("bar"));
 	}
 	
@@ -679,7 +760,7 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		when(c.administer(argThat(getPermissionsCommandMatcher(24)))).thenThrow(thrown);
 		
-		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), ResourceAccess.ALL, expected);
 	}
 	
 	@Test
@@ -727,7 +808,7 @@ public class SDKClientWorkspaceHandlerTest {
 
 		doThrow(thrown).when(c).administer(argThat(getWSInfoCommandMatcher(24)));
 		
-		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), ResourceAccess.ALL, expected);
 	}
 	
 	@Test
@@ -779,7 +860,7 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		doThrow(thrown).when(c).administer(argThat(getWSDescCommandMatcher(24)));
 		
-		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), ResourceAccess.ALL, expected);
 	}
 	
 	@Test
@@ -852,16 +933,17 @@ public class SDKClientWorkspaceHandlerTest {
 		
 		doThrow(thrown).when(c).administer(argThat(getObjectInfoCommandMatcher(24, 4, 1)));
 		
-		failGetResourceInfo(h, set(new ResourceID("24")), expected);
+		failGetResourceInfo(h, set(new ResourceID("24")), ResourceAccess.ALL, expected);
 	}
 	
 	private void failGetResourceInfo(
 			final SDKClientWorkspaceHandler h,
 			final Set<ResourceID> ids,
+			final ResourceAccess access,
 			final Exception expected) {
 		try {
 			// no way to cause a fail via user or adminOnly param
-			h.getResourceInformation(null, ids, false);
+			h.getResourceInformation(null, ids, access);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
