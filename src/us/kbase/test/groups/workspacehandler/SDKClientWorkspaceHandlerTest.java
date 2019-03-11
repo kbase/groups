@@ -344,6 +344,58 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
+	public void getResourceInformationFullAnonUser() throws Exception {
+		getResourceInformation(
+				null,
+				ResourceAccess.ALL,
+				ResourceInformationSet.getBuilder(null)
+						.withNonexistentResource(RD8)
+						.withNonexistentResource(RD9)
+						.withNonexistentResource(RD20)
+						.withNonexistentResource(RD21)
+						.withNonexistentResource(RD30)
+						.withNonexistentResource(RD31)
+						.withNonexistentResource(RD40)
+						.withNonexistentResource(RD41)
+						.withResourceField(RD3, "name", "name3")
+						.withResourceField(RD3, "public", false)
+						.withResourceField(RD3, "narrname", null)
+						.withResourceField(RD3, "narrcreate", null)
+						.withResourceField(RD3, "perm", "None")
+						.withResourceField(RD3, "description", "my desc")
+						.withResourceField(RD3, "moddate", 1540606613000L)
+						.withResourceField(RD5, "name", "name5")
+						.withResourceField(RD5, "public", false)
+						.withResourceField(RD5, "narrname", "narr_name")
+						.withResourceField(RD5, "narrcreate", 1500000000000L)
+						.withResourceField(RD5, "perm", "None")
+						.withResourceField(RD5, "description", null)
+						.withResourceField(RD5, "moddate", 0L)
+						.withResourceField(RD7, "name", "name7")
+						.withResourceField(RD7, "public", false)
+						.withResourceField(RD7, "narrname", null)
+						.withResourceField(RD7, "narrcreate", null)
+						.withResourceField(RD7, "perm", "None")
+						.withResourceField(RD7, "description", "my desc7")
+						.withResourceField(RD7, "moddate", 31535999000L)
+						.withResourceField(RD10, "name", "name10")
+						.withResourceField(RD10, "public", true)
+						.withResourceField(RD10, "narrname", null)
+						.withResourceField(RD10, "narrcreate", null)
+						.withResourceField(RD10, "perm", "None")
+						.withResourceField(RD10, "description", "my desc10")
+						.withResourceField(RD10, "moddate", 1500000000000L)
+						.withResourceField(RD11, "name", "name11")
+						.withResourceField(RD11, "public", true)
+						.withResourceField(RD11, "narrname", null)
+						.withResourceField(RD11, "narrcreate", null)
+						.withResourceField(RD11, "perm", "None")
+						.withResourceField(RD11, "description", "my desc11")
+						.withResourceField(RD11, "moddate", 549864182000L)
+						.build());
+	}
+	
+	@Test
 	public void getResourceInformationAdminPublic() throws Exception {
 		getResourceInformation(
 				new UserName("user1"),
@@ -388,6 +440,36 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
+	public void getResourceInformationAdminPublicAnonUser() throws Exception {
+		getResourceInformation(
+		null,
+		ResourceAccess.ADMINISTRATED_AND_PUBLIC,
+		ResourceInformationSet.getBuilder(null)
+				.withNonexistentResource(RD9)
+				.withNonexistentResource(RD20)
+				.withNonexistentResource(RD21)
+				.withNonexistentResource(RD30)
+				.withNonexistentResource(RD31)
+				.withNonexistentResource(RD40)
+				.withNonexistentResource(RD41)
+				.withResourceField(RD10, "name", "name10")
+				.withResourceField(RD10, "public", true)
+				.withResourceField(RD10, "narrname", null)
+				.withResourceField(RD10, "narrcreate", null)
+				.withResourceField(RD10, "perm", "None")
+				.withResourceField(RD10, "description", "my desc10")
+				.withResourceField(RD10, "moddate", 1500000000000L)
+				.withResourceField(RD11, "name", "name11")
+				.withResourceField(RD11, "public", true)
+				.withResourceField(RD11, "narrname", null)
+				.withResourceField(RD11, "narrcreate", null)
+				.withResourceField(RD11, "perm", "None")
+				.withResourceField(RD11, "description", "my desc11")
+				.withResourceField(RD11, "moddate", 549864182000L)
+				.build());
+	}
+	
+	@Test
 	public void getResourceInformationAdmin() throws Exception {
 		getResourceInformation(
 				new UserName("user1"),
@@ -413,40 +495,16 @@ public class SDKClientWorkspaceHandlerTest {
 	}
 	
 	@Test
-	public void getResourceInformationAnonUser() throws Exception {
-		getResourceInformationAnonUser(ResourceAccess.ADMINISTRATED_AND_PUBLIC);
-	}
-	
-	private void getResourceInformationAnonUser(final ResourceAccess access)
-			throws Exception {
+	public void getResourceInformationAdminAnonUser() throws Exception {
 		getResourceInformation(
 				null,
-				access,
+				ResourceAccess.ADMINISTRATED,
 				ResourceInformationSet.getBuilder(null)
-						.withNonexistentResource(RD9)
 						.withNonexistentResource(RD20)
 						.withNonexistentResource(RD21)
-						.withNonexistentResource(RD30)
-						.withNonexistentResource(RD31)
-						.withNonexistentResource(RD40)
-						.withNonexistentResource(RD41)
-						.withResourceField(RD10, "name", "name10")
-						.withResourceField(RD10, "public", true)
-						.withResourceField(RD10, "narrname", null)
-						.withResourceField(RD10, "narrcreate", null)
-						.withResourceField(RD10, "perm", "None")
-						.withResourceField(RD10, "description", "my desc10")
-						.withResourceField(RD10, "moddate", 1500000000000L)
-						.withResourceField(RD11, "name", "name11")
-						.withResourceField(RD11, "public", true)
-						.withResourceField(RD11, "narrname", null)
-						.withResourceField(RD11, "narrcreate", null)
-						.withResourceField(RD11, "perm", "None")
-						.withResourceField(RD11, "description", "my desc11")
-						.withResourceField(RD11, "moddate", 549864182000L)
 						.build());
 	}
-
+	
 	private void getResourceInformation(
 			final UserName user,
 			final ResourceAccess access,
