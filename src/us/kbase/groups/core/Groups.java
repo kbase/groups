@@ -50,6 +50,7 @@ import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
@@ -402,7 +403,7 @@ public class Groups {
 					user,
 					g.getResources(type).stream().map(r -> r.getResourceID())
 							.collect(Collectors.toSet()),
-					!g.isMember(user));
+					getAccessLevel(g, user));
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format(
 					"Illegal data associated with group %s: %s",
@@ -416,6 +417,16 @@ public class Groups {
 			}
 		}
 		return info;
+	}
+
+	private ResourceAccess getAccessLevel(final Group g, final UserName user) {
+		if (g.isMember(user)) {
+			return ResourceAccess.ALL;
+		} else if (!g.isPrivate()) {
+			return ResourceAccess.ADMINISTRATED_AND_PUBLIC;
+		} else {
+			return ResourceAccess.ADMINISTRATED;
+		}
 	}
 
 	/** Check if a group exists based on the group ID.
