@@ -96,6 +96,13 @@ public interface GroupsStorage {
 	 */
 	List<GroupIDAndName> getMemberGroups(UserName user) throws GroupsStorageException;
 	
+	/** Get the IDs of the set of groups the user administrates, including the owner.
+	 * @param user the administrator.
+	 * @return the group IDs.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	Set<GroupID> getAdministratedGroups(UserName user) throws GroupsStorageException;
+	
 	/** Get groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.
 	 * @param params the parameters for getting the groups.

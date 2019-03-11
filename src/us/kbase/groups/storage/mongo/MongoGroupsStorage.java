@@ -123,6 +123,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
 		// find by owner
 		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
+		// find by admin
+		groups.put(Arrays.asList(Fields.GROUP_ADMINS), null);
 		// find public groups and sort by ID (not needed?)
 		groups.put(Arrays.asList(Fields.GROUP_IS_PRIVATE, Fields.GROUP_ID), null);
 		// find groups by member and sort by ID
@@ -621,6 +623,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 	
+	private GroupID toGroupID(final Document grp) throws GroupsStorageException {
+		try {
+			return new GroupID(grp.getString(Fields.GROUP_ID));
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new GroupsStorageException("Unexpected value in database: " + e.getMessage(), e);
+		}
+	}
+	
 	@Override
 	public boolean getGroupExists(final GroupID groupID) throws GroupsStorageException {
 		requireNonNull(groupID, "groupID");
@@ -643,9 +653,24 @@ public class MongoGroupsStorage implements GroupsStorage {
 				.append(Fields.MONGO_ID, 0);
 		final Document sort = new Document(Fields.GROUP_ID, 1);
 		
-		return getList(COL_GROUPS, query, projection, sort, 100000, d -> toGroupIDAndName(d));
+		return getList(COL_GROUPS, query, projection, sort, 0, d -> toGroupIDAndName(d));
 	}
 
+	@Override
+	public Set<GroupID> getAdministratedGroups(final UserName user)
+			throws GroupsStorageException {
+		requireNonNull(user, "user");
+		return new HashSet<>(getList( // could make a get set method but meh
+				COL_GROUPS,
+				new Document("$or", Arrays.asList(
+						new Document(Fields.GROUP_OWNER, user.getName()),
+						new Document(Fields.GROUP_ADMINS, user.getName()))),
+				new Document(Fields.GROUP_ID, 1).append(Fields.MONGO_ID, 1),
+				null,
+				0,
+				d -> toGroupID(d)));
+	}
+	
 	private static interface FnParamExcept<T, R> {
 		
 		R apply(T t) throws GroupsStorageException;
