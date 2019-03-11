@@ -366,7 +366,8 @@ RETURNS: A Group.
 ```
 
 If the user is not a member of the group or no authorization is provided and the group is
-private, only the `groupid`, `private`, and `role` fields are included.
+private, only the `groupid`, `private`, `role`, and `resources` fields are included. Only
+resources the user user administrates will be available in `resources`.
 
 If no authorization is provided, the members list is populated or not based on the
 `privatemembers` field, only public custom fields are included, and only public resources

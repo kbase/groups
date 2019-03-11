@@ -185,7 +185,8 @@ public class GroupView {
 		this.isPrivate = group.isPrivate();
 		this.groupID = group.getGroupID();
 		if (isPrivateView()) {
-			this.resourceInfo = Collections.emptyMap();
+			// resInfo is expected to only contain admin'd resources for non-members
+			this.resourceInfo = Collections.unmodifiableMap(resourceInfo);
 			this.resourceJoinDate = Collections.emptyMap();
 			this.groupName = Optional.empty();
 			this.owner = Optional.empty();
@@ -659,6 +660,7 @@ public class GroupView {
 		/** Add resource information to the view. The resource type and the resource IDs for
 		 * that type must exist in the group, and the information set may not include
 		 * nonexistent resources.
+		 * The resource information will be visible to any user able to access this object.
 		 * Calling this method will overwrite any previous information for the type.
 		 * @param type the type of the resource.
 		 * @param info the information for the resource.
