@@ -799,10 +799,9 @@ public class Groups {
 			final GetRequestsParams params)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
 				NoSuchGroupException, GroupsStorageException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(groupID, "groupID");
-		checkNotNull(params, "params");
-		final UserName user = userHandler.getUser(userToken);
+		requireNonNull(groupID, "groupID");
+		requireNonNull(params, "params");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
 			throw new UnauthorizedException(String.format(
@@ -810,6 +809,25 @@ public class Groups {
 					user.getName(), groupID.getName()));
 		}
 		return storage.getRequestsByGroup(groupID, params);
+	}
+	
+	/** Get requests where the user administrates groups that are the target of the request.
+	 * At most 100 requests are returned.
+	 * @param userToken the user's token.
+	 * @param params the parameters for getting the requests.
+	 * @return the requests.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	public List<GroupRequest> getRequestsForGroups(
+			final Token userToken,
+			final GetRequestsParams params)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+		requireNonNull(params, "params");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final Set<GroupID> gids = storage.getAdministratedGroups(user);
+		return storage.getRequestsByGroups(gids, params);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)

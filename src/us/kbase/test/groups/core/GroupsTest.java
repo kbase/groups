@@ -3343,7 +3343,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailInvalidToken() throws Exception {
+	public void getRequestsForGroupFailInvalidToken() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
@@ -3354,7 +3354,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailNoSuchGroup() throws Exception {
+	public void getRequestsForGroupFailNoSuchGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
@@ -3367,7 +3367,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailNotAdmin() throws Exception {
+	public void getRequestsForGroupFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("u1"));
@@ -3392,6 +3392,117 @@ public class GroupsTest {
 			final Exception expected) {
 		try {
 			g.getRequestsForGroup(t, i, params);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getRequestsForGroupsEmpty() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getAdministratedGroups(new UserName("own")))
+				.thenReturn(set());
+		when(mocks.storage.getRequestsByGroups(set(), GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.build()))
+				.thenReturn(Collections.emptyList());
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForGroups(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getRequestsForGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getAdministratedGroups(new UserName("own")))
+				.thenReturn(set(new GroupID("foo"), new GroupID("bar")));
+		when(mocks.storage.getRequestsByGroups(
+				set(new GroupID("foo"), new GroupID("bar")),
+				GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(15000))
+						.build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("foo"), new UserName("usera"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+										.build())
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("bar"), new UserName("userb"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+								.build()
+				));
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForGroups(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(15000))
+						.build()),
+				is(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("foo"), new UserName("usera"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+										.build())
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("bar"), new UserName("userb"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+								.build()
+				)));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
+		
+		failGetRequestsForGroups(g, null, p, new NullPointerException("userToken"));
+		failGetRequestsForGroups(g, new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailInvalidToken() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
+		
+		failGetRequestsForGroups(mocks.groups, new Token("token"),
+				GetRequestsParams.getBuilder().build(),
+				new InvalidTokenException());
+	}
+	
+	private void failGetRequestsForGroups(
+			final Groups g,
+			final Token t,
+			final GetRequestsParams params,
+			final Exception expected) {
+		try {
+			g.getRequestsForGroups(t, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
