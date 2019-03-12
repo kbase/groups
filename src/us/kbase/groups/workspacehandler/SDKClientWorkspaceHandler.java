@@ -81,7 +81,8 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			ver = client.ver();
 			// ensure the client has admin creds
 			// don't think there's a way to safely ensure write creds
-			client.administer(new UObject(ImmutableMap.of("command", "listAdmins")));
+			//TODO WS add a method to check what admin creds you have to WS and use here
+			client.administer(new UObject(ImmutableMap.of("command", "listModRequests")));
 		} catch (IOException | JsonClientException e) {
 			throw getGeneralWSException(e);
 		}

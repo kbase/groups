@@ -560,6 +560,115 @@ public class RequestAPITest {
 		}
 	}
 	
+	// not really sure how to name these other than copy the params.
+	@Test
+	public void getRequestsForAdministratedGroups1() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableExcludeUpTo(inst(10000))
+				.withNullableIncludeClosed(true)
+				.build();
+		getRequestsForAdministratedGroups("   10000   ", "", "asc", params);
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroups2() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getRequestsForAdministratedGroups(null, null, "asc", params);
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroups3() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableSortAscending(false)
+				.build();
+		getRequestsForAdministratedGroups(null, null, "desc", params);
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroups4() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder().build();
+		getRequestsForAdministratedGroups(null, null, null, params);
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroups5() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getRequestsForAdministratedGroups(null, "", null, params);
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroups6() throws Exception {
+		final GetRequestsParams params = GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withNullableSortAscending(false).build();
+		getRequestsForAdministratedGroups(null, "", "desc", params);
+	}
+
+	private void getRequestsForAdministratedGroups(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final GetRequestsParams params)
+			throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getRequestsForGroups(new Token("t"), params))
+				.thenReturn(Arrays.asList(REQ_MIN, REQ_DENIED, REQ_TARG));
+		
+		final List<Map<String, Object>> ret = new RequestAPI(g).getRequestsForAdministratedGroups(
+				"t", excludeUpTo, closed, order);
+		
+		assertThat("incorrect reqs", ret, is(Arrays.asList(
+				REQ_MIN_JSON, REQ_DENIED_JSON, REQ_TARG_JSON)));
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroupsMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetRequestsForAdministratedGroups(g, null, null, null,
+				new NoTokenProvidedException("No token provided"));
+		failGetRequestsForAdministratedGroups(g, "    \t    ", null, null,
+				new NoTokenProvidedException("No token provided"));
+	}
+
+	@Test
+	public void getRequestsForAdministratedGroupsIllegalInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetRequestsForAdministratedGroups(g, "t", " whoo" , null,
+				new IllegalParameterException("Invalid epoch ms: whoo"));
+		failGetRequestsForAdministratedGroups(g, "t", null, "but mommy   ",
+				new IllegalParameterException("Invalid sort direction: but mommy"));
+	}
+	
+	@Test
+	public void getRequestsForAdministratedGroupsFailAuth() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		when(g.getRequestsForGroups(new Token("t"), GetRequestsParams.getBuilder().build()))
+				.thenThrow(new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
+		
+		failGetRequestsForAdministratedGroups(g, "t", null, null, new AuthenticationException(
+				ErrorType.AUTHENTICATION_FAILED, "yikes"));
+	}
+	
+	private void failGetRequestsForAdministratedGroups(
+			final Groups g,
+			final String token,
+			final String excludeUpTo,
+			final String order,
+			final Exception expected) {
+		try {
+			new RequestAPI(g).getRequestsForAdministratedGroups(token, excludeUpTo, null, order);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 	@Test
 	public void cancelRequest() throws Exception {
 		final Groups g = mock(Groups.class);

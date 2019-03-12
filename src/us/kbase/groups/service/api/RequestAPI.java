@@ -129,6 +129,20 @@ public class RequestAPI {
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
 	
+	@GET
+	@Path(ServicePaths.REQUEST_GROUPS)
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Map<String, Object>> getRequestsForAdministratedGroups(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			throws InvalidTokenException, NoTokenProvidedException, AuthenticationException,
+					IllegalParameterException, GroupsStorageException {
+		return toGroupRequestJSON(groups.getRequestsForGroups(getToken(token, true),
+				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+	}
+	
 	@PUT
 	@Path(ServicePaths.REQUEST_CANCEL)
 	@Produces(MediaType.APPLICATION_JSON)

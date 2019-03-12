@@ -131,6 +131,7 @@ public class GroupsBuilder {
 			uh = new KBaseUserHandler(
 					c.getAuthURL(), c.getWorkspaceAdminToken(), c.isAllowInsecureURLs());
 		} catch (IOException | URISyntaxException | AuthenticationException e) {
+			//TODO CODE check for a bad login and note the workspace token failed or throw a better error from the handler
 			throw new GroupsConfigurationException(
 					"Failed to create KBase user handler for auth service: " + e.getMessage(), e);
 		}
