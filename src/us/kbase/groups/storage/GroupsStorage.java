@@ -278,6 +278,18 @@ public interface GroupsStorage {
 	List<GroupRequest> getRequestsByGroup(GroupID groupID, GetRequestsParams params)
 			throws GroupsStorageException;
 	
+	/** Get the open requests that target a set of groups, sorted by the modification time of the
+	 * request.
+	 * At most 100 requests are returned.
+	 * Requests that target a group are of type {@link RequestType#REQUEST}.
+	 * @param groupIDs the targeted groups.
+	 * @param params the parameters for getting the requests.
+	 * @return the requests.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	List<GroupRequest> getRequestsByGroups(Set<GroupID> groupIDs, GetRequestsParams params)
+			throws GroupsStorageException;
+	
 	/** Check if a group has at least one open incoming
 	 * (e.g. are {@link RequestType#REQUEST}s) request later than a specified date.
 	 * @param groupID the ID of the group to check.

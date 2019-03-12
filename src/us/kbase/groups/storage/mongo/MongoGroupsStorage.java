@@ -1285,7 +1285,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final GetRequestsParams params)
 			throws GroupsStorageException {
 		checkNotNull(groupID, "groupID");
-		final Document query = new Document(Fields.REQUEST_GROUP_ID, groupID.getName())
+		return getRequestsByGroups(new HashSet<>(Arrays.asList(groupID)), params);
+	}
+	
+	@Override
+	public List<GroupRequest> getRequestsByGroups(
+			final Set<GroupID> groupIDs,
+			final GetRequestsParams params)
+			throws GroupsStorageException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		final Document query = new Document(Fields.REQUEST_GROUP_ID,
+				new Document("$in", groupIDs.stream().map(i -> i.getName())
+						.collect(Collectors.toList())))
 				.append(Fields.REQUEST_TYPE, RequestType.REQUEST.name());
 		return findRequests(query, params);
 	}
