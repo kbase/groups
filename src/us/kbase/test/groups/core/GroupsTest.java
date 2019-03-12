@@ -3002,6 +3002,14 @@ public class GroupsTest {
 		}
 	}
 	
+	/* There's 4 pretty similar methods for getting requests, and they use the same
+	 * params class. In the Groups class there's a check that the params resource type, if
+	 * present, is registered. Instead of 12 tests (4 methods * test without rtype, test
+	 * with good rtype, and test with bad rtype) we write a successful test for each method.
+	 * Two of the methods contain good rtypes and two don't. We also write a failure test
+	 * for each method with a bad rtype.
+	 */
+	
 	@Test
 	public void getRequestsForRequesterEmpty() throws Exception {
 		final TestMocks mocks = initTestMocks();
@@ -3031,6 +3039,7 @@ public class GroupsTest {
 				new UserName("user"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("workspace"), new ResourceID("someid"))
 						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3039,14 +3048,17 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("invite")))
+								.withResourceType(new ResourceType("workspace"))
+								.withResource(new ResourceDescriptor(new ResourceID("someid")))
 								.build(),
 						GroupRequest.getBuilder(
-								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResourceType(new ResourceType("workspace"))
+								.withResource(new ResourceDescriptor(new ResourceID("someid")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 						));
@@ -3055,6 +3067,7 @@ public class GroupsTest {
 				new Token("token"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("workspace"), new ResourceID("someid"))
 						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3063,24 +3076,34 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("invite")))
+								.withResourceType(new ResourceType("workspace"))
+								.withResource(new ResourceDescriptor(new ResourceID("someid")))
 								.build(),
 						GroupRequest.getBuilder(
-								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+						.withResourceType(new ResourceType("workspace"))
+						.withResource(new ResourceDescriptor(new ResourceID("someid")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 						)));
 	}
 	
 	@Test
-	public void getRequestsForRequesterFail() throws Exception {
+	public void getRequestsForRequesterFailNulls() throws Exception {
 		failGetRequestsForRequester(null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("userToken"));
 		failGetRequestsForRequester(new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForRequesterFailBadType() throws Exception {
+		failGetRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
 	}
 	
 	private void failGetRequestsForRequester(
@@ -3112,6 +3135,7 @@ public class GroupsTest {
 				GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("meth"))
 						.build()))
 				.thenReturn(Collections.emptyList());
 		
@@ -3119,6 +3143,7 @@ public class GroupsTest {
 				new Token("token"), GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("meth"))
 						.build()),
 				is(Collections.emptyList()));
 	}
@@ -3225,10 +3250,17 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestsForTargetFail() throws Exception {
+	public void getRequestsForTargetFailNulls() throws Exception {
 		failGetRequestsForTarget(null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("userToken"));
 		failGetRequestsForTarget(new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForTargetFailBadType() throws Exception {
+		failGetRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
 	}
 	
 	private void failGetRequestsForTarget(
@@ -3288,6 +3320,7 @@ public class GroupsTest {
 				new GroupID("gid"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("mod.m"))
 						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3295,6 +3328,10 @@ public class GroupsTest {
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
+								.withResourceType(new ResourceType("catalogmethod"))
+								.withResource(new ResourceDescriptor(
+										new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.m")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3302,6 +3339,10 @@ public class GroupsTest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResourceType(new ResourceType("catalogmethod"))
+								.withResource(new ResourceDescriptor(
+										new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.m")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 						));
@@ -3310,6 +3351,7 @@ public class GroupsTest {
 				new Token("token"), new GroupID("gid"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("mod.m"))
 						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3317,6 +3359,10 @@ public class GroupsTest {
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
+								.withResourceType(new ResourceType("catalogmethod"))
+								.withResource(new ResourceDescriptor(
+										new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.m")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3324,6 +3370,10 @@ public class GroupsTest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResourceType(new ResourceType("catalogmethod"))
+								.withResource(new ResourceDescriptor(
+										new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.m")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 				)));
@@ -3340,6 +3390,14 @@ public class GroupsTest {
 		failGetRequestsForGroup(g, new Token("t"), null, p, new NullPointerException("groupID"));
 		failGetRequestsForGroup(g, new Token("t"), new GroupID("i"), null,
 				new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForGroupFailBadType() throws Exception {
+		failGetRequestsForGroup(initTestMocks().groups, new Token("t"), new GroupID("i"),
+				GetRequestsParams.getBuilder()
+						.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
 	}
 	
 	@Test
@@ -3407,12 +3465,14 @@ public class GroupsTest {
 				.thenReturn(set());
 		when(mocks.storage.getRequestsByGroups(set(), GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
+				.withResource(new ResourceType("workspace"), new ResourceID("2"))
 				.build()))
 				.thenReturn(Collections.emptyList());
 		
 		assertThat("incorrect requests", mocks.groups.getRequestsForGroups(
 				new Token("token"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("2"))
 						.build()),
 				is(Collections.emptyList()));
 	}
@@ -3483,6 +3543,14 @@ public class GroupsTest {
 		
 		failGetRequestsForGroups(g, null, p, new NullPointerException("userToken"));
 		failGetRequestsForGroups(g, new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailBadType() throws Exception {
+		failGetRequestsForGroups(initTestMocks().groups, new Token("t"),
+				GetRequestsParams.getBuilder()
+						.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
 	}
 	
 	@Test

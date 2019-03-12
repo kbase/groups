@@ -291,7 +291,7 @@ public class GroupsAPI {
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException {
+				GroupsStorageException, NoSuchResourceTypeException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID),
 				getRequestsParams(excludeUpTo, closed, order, closed == null)));
