@@ -465,10 +465,6 @@ public class MongoGroupsStorageOpsTest {
 				"Unexpected value in database: creation time must be before modification time"));
 	}
 	
-	/* The limit of 100000 groups is just too many to test. The fn that does the limit is tested
-	 * elsewhere, so we'll just trust it.
-	 */
-	
 	@Test
 	public void getMemberGroupsNoGroups() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
@@ -529,6 +525,99 @@ public class MongoGroupsStorageOpsTest {
 			throws Exception {
 		try {
 			manager.storage.getMemberGroups(member);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getAdministratedGroupsNoGroups() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid1"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("uname1"), inst(1)).build())
+				.build());
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid2"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("uname2"), inst(1)).build())
+				.build());
+		
+		assertThat("incorrect groups",
+				manager.storage.getAdministratedGroups(new UserName("uname1")),
+				is(set()));
+	}
+	
+	@Test
+	public void getAdministratedGroups() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gidz"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("unamez"), inst(1)).build())
+				.build());
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gida"), new GroupName("name"), toGUser("unamex"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withMember(GroupUser.getBuilder(new UserName("uname"), inst(1)).build())
+				.build());
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gidm"), new GroupName("name"), toGUser("unamex"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("uname"), inst(1)).build())
+				.build());
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gidd"), new GroupName("name"), toGUser("unamex"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withAdministrator(GroupUser.getBuilder(new UserName("unamey"), inst(1)).build())
+				.build());
+		
+		assertThat("incorrect groups",
+				manager.storage.getAdministratedGroups(new UserName("uname")),
+				is(set(new GroupID("gidm"), new GroupID("gidz"))));
+	}
+	
+	@Test
+	public void getAdministratedGroupsFailNull() throws Exception {
+		getAdministratedGroupsFail(null, new NullPointerException("user"));
+	}
+	
+	@Test
+	public void getAdministratedGroupsFailNullGroupID() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
+				new Document("$set", new Document("id", "")));
+		
+		getAdministratedGroupsFail(new UserName("uname"), new GroupsStorageException(
+				"Unexpected value in database: 30000 Missing input parameter: group id"));
+	}
+	
+	@Test
+	public void getAdministratedGroupsFailBadGroupID() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		manager.db.getCollection("groups").updateOne(new Document("id", "gid"),
+				new Document("$set", new Document("id", "gId")));
+		
+		getAdministratedGroupsFail(new UserName("uname"), new GroupsStorageException(
+				"Unexpected value in database: 30020 Illegal group ID: " +
+				"Illegal character in group id gId: I"));
+	}
+	
+	private void getAdministratedGroupsFail(final UserName admin, final Exception expected) {
+		try {
+			manager.storage.getAdministratedGroups(admin);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
