@@ -599,9 +599,9 @@ has no explicit permission to the resource and the resource is not publicly read
 
 ### Listing requests
 
-There are three endpoints for listing requests detailed below - one for listing requests you
-created, one for listing requests targeted at you, and one for listing requests targeted at
-a specific group.
+There are four endpoints for listing requests detailed below - one for listing requests you
+created, one for listing requests targeted at you, one for listing requests targeted at
+a specific group, and one for listing requests targeted at the groups you administrate.
 
 All endpoints return a maximum of 100 requests at once.
 
@@ -662,6 +662,17 @@ RETURNS: A list of Requests.
 
 The user must be a group administrator. The requests only include those where a group administrator
 must take action on the request.
+
+#### Get the list of requests that target administrated groups.
+
+```
+AUTHORIZATION REQUIRED
+GET /request/groups[?parameters]
+
+RETURNS: A list of Requests.
+```
+
+The requests only include those where a group administrator must take action on the request.
 
 ### Cancel a request
 
@@ -1023,8 +1034,6 @@ see /design/*.md
     * Cache results
   * Cache results of catalog service queries
 * Usability
-  * Endpoint for getting all requests targeted at groups I administrate
-    * Currently I have to go group by group
   * Text search - need product team feedback
     * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
@@ -1038,7 +1047,7 @@ see /design/*.md
     * Remember - skip is evil
     * Find groups where I'm (owner / admin / member)
     * Find groups where user X is an owner or admin
-    * Find groups where users X is a member and I'm a member
+    * Find groups where user X is a member and I'm a member
     * Find groups that contain workspaces I administrate
     * Find groups that contain workspace X and where I'm a group member
     * Find groups that contain catalog methods I own

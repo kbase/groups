@@ -2,8 +2,9 @@
 
 ## 0.1.6
 
-* Fixed a bug where resource administrators could not see their resources in private groups
-  for which they were not a member in the `/group/<group id> endpoint`.
+* Added the `/request/groups` endpoint.
+* Resource administrators can now see their resources in private groups
+  for which they are not a member in the `/group/<group id> endpoint`.
 
 ## 0.1.5
 
