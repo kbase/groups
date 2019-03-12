@@ -134,7 +134,7 @@ public class SDKClientWorkspaceHandlerTest {
 		when(c.getURL()).thenReturn(new URL("http://bar.com"));
 		
 		when(c.administer(argThat(new UObjectArgumentMatcher(
-				ImmutableMap.of("command", "listAdmins")))))
+				ImmutableMap.of("command", "listModRequests")))))
 				.thenThrow(exception);
 		
 		failConstruct(c, new ResourceHandlerException(
