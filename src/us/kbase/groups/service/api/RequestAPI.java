@@ -36,6 +36,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.NoSuchResourceTypeException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
@@ -110,7 +111,7 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-			IllegalParameterException {
+			IllegalParameterException, NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
@@ -124,7 +125,7 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				IllegalParameterException, ResourceHandlerException {
+				IllegalParameterException, ResourceHandlerException, NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
@@ -138,7 +139,8 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, NoTokenProvidedException, AuthenticationException,
-					IllegalParameterException, GroupsStorageException {
+					IllegalParameterException, GroupsStorageException,
+					NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForGroups(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}

@@ -741,13 +741,15 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForRequester(
 			final Token userToken,
 			final GetRequestsParams params)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+					NoSuchResourceTypeException {
 		checkNotNull(userToken, "userToken");
-		checkNotNull(params, "params");
+		checkResourceRegisted(checkNotNull(params, "params"));
 		final UserName user = userHandler.getUser(userToken);
 		return storage.getRequestsByRequester(user, params);
 	}
@@ -761,16 +763,18 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				ResourceHandlerException {
+				ResourceHandlerException, NoSuchResourceTypeException {
 		checkNotNull(userToken, "userToken");
-		checkNotNull(params, "params");
+		checkResourceRegisted(checkNotNull(params, "params"));
 		final UserName user = userHandler.getUser(userToken);
 		final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
+		// TODO CODE optimize by only fetching resources for the resource type and resource ID in params. Adds complexity to this code so YAGNI for now.
 		for (final ResourceType t: resourceHandlers.keySet()) {
 			final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
 					.getAdministratedResources(user);
@@ -792,15 +796,16 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws UnauthorizedException if the user is not a group admin.
 	 * @throws NoSuchGroupException if the group does not exist.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForGroup(
 			final Token userToken,
 			final GroupID groupID,
 			final GetRequestsParams params)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
-				NoSuchGroupException, GroupsStorageException {
+				NoSuchGroupException, GroupsStorageException, NoSuchResourceTypeException {
 		requireNonNull(groupID, "groupID");
-		requireNonNull(params, "params");
+		checkResourceRegisted(requireNonNull(params, "params"));
 		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
@@ -811,6 +816,13 @@ public class Groups {
 		return storage.getRequestsByGroup(groupID, params);
 	}
 	
+	private void checkResourceRegisted(final GetRequestsParams params)
+			throws NoSuchResourceTypeException {
+		if (params.getResourceType().isPresent()) {
+			getHandler(params.getResourceType().get());
+		}
+	}
+
 	/** Get requests where the user administrates groups that are the target of the request.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
@@ -819,12 +831,14 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForGroups(
 			final Token userToken,
 			final GetRequestsParams params)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
-		requireNonNull(params, "params");
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+			NoSuchResourceTypeException {
+		checkResourceRegisted(requireNonNull(params, "params"));
 		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		final Set<GroupID> gids = storage.getAdministratedGroups(user);
 		return storage.getRequestsByGroups(gids, params);

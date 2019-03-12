@@ -340,6 +340,7 @@ public class GroupRequest {
 			return this;
 		}
 		
+		//TODO CODE withResourcetype and withResource should be one method
 		/** Set the type of the resource that is the target of this request.
 		 * @param resourceType the resource type.
 		 * @return this builder.
