@@ -3312,6 +3312,260 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
+	public void getRequestsByTargetSingleResource() throws Exception {
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		final GroupRequest first = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo1"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(50000), forever)
+							.withModificationTime(Instant.ofEpochMilli(120000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.build();
+		final GroupRequest second = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo2"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(40000), forever)
+							.withModificationTime(Instant.ofEpochMilli(130000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.build();
+		final GroupRequest third = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(30000), forever)
+							.withModificationTime(Instant.ofEpochMilli(140000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.build();
+		final GroupRequest fourth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo4"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(150000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.build();
+		final GroupRequest fifth = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo5"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(160000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.build();
+		final GroupRequest user = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("use"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.build();
+		final GroupRequest ws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("otherws"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(125000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("2")))
+				.build();
+		final GroupRequest requestws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("reqws"), new UserName("bar"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+					.build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("1")))
+				.build();
+		final GroupRequest othertarget = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("other"), new UserName("baz"),
+					CreateModAndExpireTimes.getBuilder(
+							Instant.ofEpochMilli(20000), forever)
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bat")))
+				.build();
+		final GroupRequest closed = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("closed"), new UserName("whee"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(inst(170000))
+							.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("bar")))
+				.withStatus(GroupRequestStatus.canceled())
+				.build();
+		
+		manager.storage.storeRequest(fourth);
+		manager.storage.storeRequest(user);
+		manager.storage.storeRequest(othertarget);
+		manager.storage.storeRequest(first);
+		manager.storage.storeRequest(fifth);
+		manager.storage.storeRequest(requestws);
+		manager.storage.storeRequest(closed);
+		manager.storage.storeRequest(third);
+		manager.storage.storeRequest(ws);
+		manager.storage.storeRequest(second);
+
+		final GetRequestsParams p = GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("user"), new ResourceID("bar"))
+				.build();
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(p),
+				is(Arrays.asList(first, second, third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableExcludeUpTo(inst(130000))
+								.build()),
+				is(Arrays.asList(third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableExcludeUpTo(inst(130000))
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(third, fourth, fifth, closed)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableExcludeUpTo(inst(120000))
+								.build()),
+				is(Arrays.asList(second, third, fourth, fifth)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableExcludeUpTo(inst(129999))
+								.build()),
+				is(Arrays.asList(second, third, fourth, fifth)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableSortAscending(false)
+								.build()),
+				is(Arrays.asList(fifth, fourth, third, second, first)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableSortAscending(false)
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(closed, fifth, fourth, third, second, first)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableSortAscending(false)
+								.withNullableExcludeUpTo(inst(140000))
+								.build()),
+				is(Arrays.asList(second, first)));
+
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bat"))
+								.build()),
+				is(Arrays.asList(othertarget)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("2"))
+								.build()),
+				is(Arrays.asList(ws)));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("baz"))
+								.build()),
+				is(Collections.emptyList()));
+		
+		assertThat("incorrect get by target",
+				manager.storage.getRequestsByTarget(
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("usr"), new ResourceID("bar"))
+								.build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getRequestsByTargetSingleResourceHitLimit() throws Exception {
+		final Instant forever = Instant.ofEpochMilli(1000000000000000L);
+		
+		for (int i = 1; i < 202; i++) {
+			final GroupRequest req = makeRequestForLimitTests(
+					forever, i, new GroupID("n" + i), new UserName("name"),
+					RequestType.INVITE,
+					new ResourceType("workspace"),
+					new ResourceDescriptor(new ResourceID("3")));
+			manager.storage.storeRequest(req);
+		}
+		
+		// these should not show up
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1030000))
+						.build())
+				.withType(RequestType.INVITE)
+				.withResource(GroupRequest.USER_TYPE,
+						new ResourceDescriptor(new ResourceID("3")))
+				.build());
+		manager.storage.storeRequest(GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("gid1"), new UserName("name1"),
+				CreateModAndExpireTimes.getBuilder(inst(999999), forever)
+						.withModificationTime(inst(1130000))
+						.build())
+				.withType(RequestType.INVITE)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("4")))
+				.build());
+		
+		assertRequestListCorrect(
+				r -> r.getGroupID().getName(),
+				(s, p) -> s.getRequestsByTarget(p),
+				new ResourceType("workspace"),
+				new ResourceID("3"));
+	}
+	
+	@Test
+	public void getRequestsByTargetSingleResourceFailBadArgs() throws Exception {
+		failGetRequestsByTargetSingleResource(null, new NullPointerException("params"));
+		
+		failGetRequestsByTargetSingleResource(
+				GetRequestsParams.getBuilder().build(),
+				new IllegalArgumentException(
+						"A resource must be specified in the method parameters"));
+	}
+	
+	private void failGetRequestsByTargetSingleResource(
+			final GetRequestsParams params,
+			final Exception expected) {
+		try {
+			manager.storage.getRequestsByTarget(params);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void getRequestsByGroup() throws Exception {
 		// tests including open/closed groups, sort direction, and skipping by date.
 		// does not test limit.
@@ -3509,21 +3763,30 @@ public class MongoGroupsStorageOpsTest {
 			final Function<GroupRequest, String> getCheckString,
 			final BiFnExcept<GroupsStorage, GetRequestsParams, List<GroupRequest>> getRequests)
 			throws Exception {
-		assertRequestListCorrect(null, 1, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(1000000), 1, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(1009999), 1, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(1010000), 2, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(1990001), 100, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(1999999), 100, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(2000000), 101, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(2019999), 102, 100, getCheckString, getRequests);
-		assertRequestListCorrect(inst(2020000), 103, 99, getCheckString, getRequests);
-		assertRequestListCorrect(inst(2499999), 150, 52, getCheckString, getRequests);
-		assertRequestListCorrect(inst(2999999), 200, 2, getCheckString, getRequests);
-		assertRequestListCorrect(inst(3000000), 201, 1, getCheckString, getRequests);
-		assertRequestListCorrect(inst(3000001), 201, 1, getCheckString, getRequests);
-		assertRequestListCorrect(inst(3010000), 201, 0, getCheckString, getRequests);
-		assertRequestListCorrect(inst(4000000), 201, 0, getCheckString, getRequests);
+		assertRequestListCorrect(getCheckString, getRequests, null, null);
+	}
+	
+	private void assertRequestListCorrect(
+			final Function<GroupRequest, String> getCheckString,
+			final BiFnExcept<GroupsStorage, GetRequestsParams, List<GroupRequest>> getRequests,
+			final ResourceType t,
+			final ResourceID i)
+			throws Exception {
+		assertRequestListCorrect(null, 1, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(1000000), 1, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(1009999), 1, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(1010000), 2, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(1990001), 100, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(1999999), 100, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(2000000), 101, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(2019999), 102, 100, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(2020000), 103, 99, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(2499999), 150, 52, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(2999999), 200, 2, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(3000000), 201, 1, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(3000001), 201, 1, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(3010000), 201, 0, getCheckString, getRequests, t, i);
+		assertRequestListCorrect(inst(4000000), 201, 0, getCheckString, getRequests, t, i);
 	}
 	
 	private interface BiFnExcept<T, U, R> {
@@ -3536,13 +3799,17 @@ public class MongoGroupsStorageOpsTest {
 			final int start,
 			final int size,
 			final Function<GroupRequest, String> getCheckString,
-			final BiFnExcept<GroupsStorage, GetRequestsParams, List<GroupRequest>> getRequests)
+			final BiFnExcept<GroupsStorage, GetRequestsParams, List<GroupRequest>> getRequests,
+			final ResourceType type,
+			final ResourceID id)
 			throws Exception {
-		final List<GroupRequest> res = getRequests.apply(
-				manager.storage, GetRequestsParams.getBuilder()
+		final GetRequestsParams.Builder b = GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
-						.withNullableExcludeUpTo(excludeUpTo)
-						.build());
+						.withNullableExcludeUpTo(excludeUpTo);
+		if (type != null) {
+			b.withResource(type, id);
+		}
+		final List<GroupRequest> res = getRequests.apply(manager.storage, b.build());
 		assertThat("incorrect size", res.size(), is(size));
 		int i = start;
 		for (final GroupRequest r: res) {
