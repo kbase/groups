@@ -225,8 +225,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(UUID.randomUUID()), new GroupID("gid"),
 						new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid")))
-				.withResourceType(new ResourceType("rtype"))
+				.withResource(new ResourceType("rtype"),
+						new ResourceDescriptor(new ResourceID("resid")))
 				.withType(RequestType.REQUEST)
 				.build());
 		
@@ -272,8 +272,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				set(new UserName("foo"), new UserName("bar")),
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("gid"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid")))
-				.withResourceType(new ResourceType("user"))
+				.withResource(new ResourceType("user"),
+						new ResourceDescriptor(new ResourceID("resid")))
 				.withType(rtype)
 				.build());
 		
@@ -294,8 +294,8 @@ public class KafkaFeedsNotifierFactoryTest {
 		final GroupRequest r = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
 				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("foo")))
-				.withResourceType(new ResourceType("badtype"))
+				.withResource(new ResourceType("badtype"),
+						new ResourceDescriptor(new ResourceID("foo")))
 				.build();
 		
 		notifyFail(set(new UserName("n")), r, new IllegalArgumentException(
@@ -322,8 +322,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(UUID.randomUUID()), new GroupID("gid"),
 						new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid")))
-				.withResourceType(new ResourceType("rtype"))
+				.withResource(new ResourceType("rtype"),
+						new ResourceDescriptor(new ResourceID("resid")))
 				.withType(RequestType.REQUEST)
 				.build());
 		
@@ -361,8 +361,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				set(new UserName("bar"), new UserName("baz")),
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("id2"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid2")))
-				.withResourceType(new ResourceType("user"))
+				.withResource(new ResourceType("user"),
+						new ResourceDescriptor(new ResourceID("resid2")))
 				.withType(RequestType.INVITE)
 				.build());
 		
@@ -384,8 +384,8 @@ public class KafkaFeedsNotifierFactoryTest {
 		final GroupRequest r = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
 				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("foo")))
-				.withResourceType(new ResourceType("badtype"))
+				.withResource(new ResourceType("badtype"),
+						new ResourceDescriptor(new ResourceID("foo")))
 				.build();
 		
 		acceptFail(set(new UserName("n")), r, new IllegalArgumentException(
@@ -412,8 +412,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				GroupRequest.getBuilder(new RequestID(UUID.randomUUID()), new GroupID("gid"),
 						new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid")))
-				.withResourceType(new ResourceType("rtype"))
+				.withResource(new ResourceType("rtype"),
+						new ResourceDescriptor(new ResourceID("resid")))
 				.withType(RequestType.REQUEST)
 				.build());
 		
@@ -452,8 +452,8 @@ public class KafkaFeedsNotifierFactoryTest {
 				set(new UserName("bat"), new UserName("bang")),
 				GroupRequest.getBuilder(new RequestID(id), new GroupID("id8"), new UserName("act"),
 						CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-				.withResourceType(new ResourceType("workspace"))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("resid9")))
 				.withType(RequestType.REQUEST)
 				.build());
 		
@@ -474,8 +474,8 @@ public class KafkaFeedsNotifierFactoryTest {
 		final GroupRequest r = GroupRequest.getBuilder(
 				new RequestID(UUID.randomUUID()), new GroupID("i"), new UserName("n"),
 				CreateModAndExpireTimes.getBuilder(inst(1), inst(2)).build())
-				.withResource(new ResourceDescriptor(new ResourceID("foo")))
-				.withResourceType(new ResourceType("badtype"))
+				.withResource(new ResourceType("badtype"),
+						new ResourceDescriptor(new ResourceID("foo")))
 				.build();
 		
 		denyFail(set(new UserName("n")), r, new IllegalArgumentException(
@@ -532,8 +532,8 @@ public class KafkaFeedsNotifierFactoryTest {
 					GroupRequest.getBuilder(new RequestID(id), new GroupID("id8"),
 							new UserName("act"),
 							CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-					.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-					.withResourceType(new ResourceType("workspace"))
+					.withResource(new ResourceType("workspace"),
+							new ResourceDescriptor(new ResourceID("resid9")))
 					.withType(RequestType.REQUEST)
 					.build());
 			fail("expected exception");
@@ -577,8 +577,8 @@ public class KafkaFeedsNotifierFactoryTest {
 					GroupRequest.getBuilder(new RequestID(id), new GroupID("id8"),
 							new UserName("act"),
 							CreateModAndExpireTimes.getBuilder(inst(10000), inst(30000)).build())
-					.withResource(new ResourceDescriptor(new ResourceID("resid9")))
-					.withResourceType(new ResourceType("catalogmethod"))
+					.withResource(new ResourceType("catalogmethod"),
+							new ResourceDescriptor(new ResourceID("resid9")))
 					.withType(RequestType.INVITE)
 					.build());
 			fail("expected exception");

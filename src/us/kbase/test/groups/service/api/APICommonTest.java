@@ -86,8 +86,7 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("n")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("n")))
 				.build();
 		
 		assertThat("incorrect request", APICommon.toGroupRequestJSON(r), is(MapBuilder.newHashMap()
@@ -114,8 +113,7 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("inv")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -143,8 +141,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("42")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -172,8 +170,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -201,8 +199,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -239,8 +237,8 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("n1")))
+				.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("n1")))
 				.build();
 		
 		final UUID id2 = UUID.randomUUID();
@@ -251,8 +249,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(26000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("inv")))
+				.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -264,8 +262,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(27000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("42")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		

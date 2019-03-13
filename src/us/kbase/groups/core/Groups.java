@@ -640,8 +640,7 @@ public class Groups {
 				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withType(type)
-				.withResourceType(resourceType)
-				.withResource(resource)
+				.withResource(resourceType, resource)
 				.build();
 		storage.storeRequest(request);
 		notifications.notify(notifyTargets, request);

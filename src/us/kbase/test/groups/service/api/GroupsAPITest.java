@@ -1061,8 +1061,8 @@ public class GroupsAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
 						.withType(RequestType.REQUEST)
-						.withResourceType(new ResourceType("user"))
-						.withResource(ResourceDescriptor.from(new UserName("foo")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("foo")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).requestGroupMembership("t", "gid");
@@ -1131,8 +1131,8 @@ public class GroupsAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("user"))
-						.withResource(ResourceDescriptor.from(new UserName("bar")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("bar")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).inviteMember("t", "gid", "bar");
@@ -1268,8 +1268,8 @@ public class GroupsAPITest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("user"))
-								.withResource(ResourceDescriptor.from(new UserName("baz")))
+								.withResource(GroupRequest.USER_TYPE,
+										ResourceDescriptor.from(new UserName("baz")))
 								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						));
@@ -1678,8 +1678,8 @@ public class GroupsAPITest {
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
 						.withType(RequestType.REQUEST)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("42")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("42")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1714,9 +1714,9 @@ public class GroupsAPITest {
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
