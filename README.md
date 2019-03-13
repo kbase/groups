@@ -618,6 +618,11 @@ return. They all have the following optional query parameters:
   depending on the sort order. `asc` and `desc` sorts will include requests with
   modification dates, respectively, after and before the `excludeupto` date, non-inclusive.
   This can be used to page through the requests if needed.
+* `resourcetype` - the type of a resource, for example `workspace`. If this parameter is
+  present `resource` must also be present. See that parameter for an explanation of the effects.
+* `resource` - a resource ID, for example `56` for the `workspace` resource type. If this
+  parameter is present, the `resourcetype` parameter must also be present and only requests
+  involving that resource will be returned.
 
 Examples:
 

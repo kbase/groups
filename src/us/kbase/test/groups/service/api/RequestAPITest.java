@@ -49,6 +49,8 @@ import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceDescriptor;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.RequestAPI;
 import us.kbase.groups.service.api.RequestAPI.DenyRequestJSON;
 import us.kbase.test.groups.MapBuilder;
@@ -384,8 +386,10 @@ public class RequestAPITest {
 	public void getCreatedRequests6() throws Exception {
 		final GetRequestsParams params = GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
-				.withNullableSortAscending(false).build();
-		getCreatedRequests(null, "", "desc", params);
+				.withNullableSortAscending(false)
+				.withResource(new ResourceType("t"), new ResourceID("r"))
+				.build();
+		getCreatedRequests(null, "", "desc", "t", "r", params);
 	}
 	
 	private void getCreatedRequests(
@@ -394,13 +398,24 @@ public class RequestAPITest {
 			final String order,
 			final GetRequestsParams params)
 			throws Exception {
+		getCreatedRequests(excludeUpTo, closed, order, null, null, params);
+	}
+	
+	private void getCreatedRequests(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final String resType,
+			final String res,
+			final GetRequestsParams params)
+			throws Exception {	
 		final Groups g = mock(Groups.class);
 		
 		when(g.getRequestsForRequester(new Token("t"), params))
 				.thenReturn(Arrays.asList(REQ_DENIED, REQ_MIN, REQ_TARG));
 		
 		final List<Map<String, Object>> ret = new RequestAPI(g).getCreatedRequests(
-				"t", excludeUpTo, closed, order);
+				"t", excludeUpTo, closed, order, resType, res);
 		
 		assertThat("incorrect reqs", ret, is(Arrays.asList(
 				REQ_DENIED_JSON, REQ_MIN_JSON, REQ_TARG_JSON)));
@@ -410,9 +425,9 @@ public class RequestAPITest {
 	public void getCreatedRequestsMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetCreatedRequests(g, null, null, null,
+		failGetCreatedRequests(g, null, null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetCreatedRequests(g, "    \t    ", null, null,
+		failGetCreatedRequests(g, "    \t    ", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
 	}
 	
@@ -420,10 +435,16 @@ public class RequestAPITest {
 	public void getCreatedRequestsIllegalInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetCreatedRequests(g, "t", " yay ", null,
+		failGetCreatedRequests(g, "t", " yay ", null, null, null,
 				new IllegalParameterException("Invalid epoch ms: yay"));
-		failGetCreatedRequests(g, "t", null, "boo",
+		failGetCreatedRequests(g, "t", null, "boo", null, null,
 				new IllegalParameterException("Invalid sort direction: boo"));
+		failGetCreatedRequests(g, "t", null, null, "t", null,
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
+		failGetCreatedRequests(g, "t", null, null, null, "r",
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
 	}
 
 	@Test
@@ -433,7 +454,7 @@ public class RequestAPITest {
 		when(g.getRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new InvalidTokenException());
 		
-		failGetCreatedRequests(g, "t", null, null, new InvalidTokenException());
+		failGetCreatedRequests(g, "t", null, null, null, null, new InvalidTokenException());
 	}
 	
 	private void failGetCreatedRequests(
@@ -441,9 +462,12 @@ public class RequestAPITest {
 			final String token,
 			final String excludeUpTo,
 			final String sortOrder,
+			final String resType,
+			final String res,
 			final Exception expected) {
 		try {
-			new RequestAPI(g).getCreatedRequests(token, excludeUpTo, null, sortOrder);
+			new RequestAPI(g).getCreatedRequests(
+					token, excludeUpTo, null, sortOrder, resType, res);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -492,8 +516,10 @@ public class RequestAPITest {
 	public void getTargetedRequests6() throws Exception {
 		final GetRequestsParams params = GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
-				.withNullableSortAscending(false).build();
-		getTargetedRequests(null, "", "desc", params);
+				.withNullableSortAscending(false)
+				.withResource(new ResourceType("t"), new ResourceID("r"))
+				.build();
+		getTargetedRequests(null, "", "desc", "t", "r", params);
 	}
 
 	private void getTargetedRequests(
@@ -502,13 +528,24 @@ public class RequestAPITest {
 			final String order,
 			final GetRequestsParams params)
 			throws Exception {
+		getTargetedRequests(excludeUpTo, closed, order, null, null, params);
+	}
+	
+	private void getTargetedRequests(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final String resType,
+			final String res,
+			final GetRequestsParams params)
+			throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getRequestsForTarget(new Token("t"), params))
 				.thenReturn(Arrays.asList(REQ_MIN, REQ_DENIED, REQ_TARG));
 		
 		final List<Map<String, Object>> ret = new RequestAPI(g).getTargetedRequests(
-				"t", excludeUpTo, closed, order);
+				"t", excludeUpTo, closed, order, resType, res);
 		
 		assertThat("incorrect reqs", ret, is(Arrays.asList(
 				REQ_MIN_JSON, REQ_DENIED_JSON, REQ_TARG_JSON)));
@@ -518,9 +555,9 @@ public class RequestAPITest {
 	public void getTargetedRequestsMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetTargetedRequests(g, null, null, null,
+		failGetTargetedRequests(g, null, null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetTargetedRequests(g, "    \t    ", null, null,
+		failGetTargetedRequests(g, "    \t    ", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
 	}
 
@@ -528,10 +565,16 @@ public class RequestAPITest {
 	public void getTargetedRequestsIllegalInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetTargetedRequests(g, "t", " whoo" , null,
+		failGetTargetedRequests(g, "t", " whoo" , null, null, null,
 				new IllegalParameterException("Invalid epoch ms: whoo"));
-		failGetTargetedRequests(g, "t", null, "but mommy   ",
+		failGetTargetedRequests(g, "t", null, "but mommy   ", null, null,
 				new IllegalParameterException("Invalid sort direction: but mommy"));
+		failGetTargetedRequests(g, "t", null, null, "t", null,
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
+		failGetTargetedRequests(g, "t", null, null, null, "r",
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
 	}
 	
 	@Test
@@ -541,7 +584,7 @@ public class RequestAPITest {
 		when(g.getRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
 		
-		failGetTargetedRequests(g, "t", null, null, new AuthenticationException(
+		failGetTargetedRequests(g, "t", null, null, null, null, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "yikes"));
 	}
 	
@@ -550,9 +593,11 @@ public class RequestAPITest {
 			final String token,
 			final String excludeUpTo,
 			final String order,
+			final String resType,
+			final String res,
 			final Exception expected) {
 		try {
-			new RequestAPI(g).getTargetedRequests(token, excludeUpTo, null, order);
+			new RequestAPI(g).getTargetedRequests(token, excludeUpTo, null, order, resType, res);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -601,8 +646,10 @@ public class RequestAPITest {
 	public void getRequestsForAdministratedGroups6() throws Exception {
 		final GetRequestsParams params = GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
-				.withNullableSortAscending(false).build();
-		getRequestsForAdministratedGroups(null, "", "desc", params);
+				.withNullableSortAscending(false)
+				.withResource(new ResourceType("t"), new ResourceID("r"))
+				.build();
+		getRequestsForAdministratedGroups(null, "", "desc", "t", "r", params);
 	}
 
 	private void getRequestsForAdministratedGroups(
@@ -611,13 +658,24 @@ public class RequestAPITest {
 			final String order,
 			final GetRequestsParams params)
 			throws Exception {
+		getRequestsForAdministratedGroups(excludeUpTo, closed, order, null, null, params);
+	}
+	
+	private void getRequestsForAdministratedGroups(
+			final String excludeUpTo,
+			final String closed,
+			final String order,
+			final String resType,
+			final String res,
+			final GetRequestsParams params)
+			throws Exception {
 		final Groups g = mock(Groups.class);
 		
 		when(g.getRequestsForGroups(new Token("t"), params))
 				.thenReturn(Arrays.asList(REQ_MIN, REQ_DENIED, REQ_TARG));
 		
 		final List<Map<String, Object>> ret = new RequestAPI(g).getRequestsForAdministratedGroups(
-				"t", excludeUpTo, closed, order);
+				"t", excludeUpTo, closed, order, resType, res);
 		
 		assertThat("incorrect reqs", ret, is(Arrays.asList(
 				REQ_MIN_JSON, REQ_DENIED_JSON, REQ_TARG_JSON)));
@@ -627,9 +685,9 @@ public class RequestAPITest {
 	public void getRequestsForAdministratedGroupsMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForAdministratedGroups(g, null, null, null,
+		failGetRequestsForAdministratedGroups(g, null, null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForAdministratedGroups(g, "    \t    ", null, null,
+		failGetRequestsForAdministratedGroups(g, "    \t    ", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
 	}
 
@@ -637,10 +695,16 @@ public class RequestAPITest {
 	public void getRequestsForAdministratedGroupsIllegalInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForAdministratedGroups(g, "t", " whoo" , null,
+		failGetRequestsForAdministratedGroups(g, "t", " whoo" , null, null, null,
 				new IllegalParameterException("Invalid epoch ms: whoo"));
-		failGetRequestsForAdministratedGroups(g, "t", null, "but mommy   ",
+		failGetRequestsForAdministratedGroups(g, "t", null, "but mommy   ", null, null,
 				new IllegalParameterException("Invalid sort direction: but mommy"));
+		failGetRequestsForAdministratedGroups(g, "t", null, null, "t", null,
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
+		failGetRequestsForAdministratedGroups(g, "t", null, null, null, "r",
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
 	}
 	
 	@Test
@@ -650,8 +714,8 @@ public class RequestAPITest {
 		when(g.getRequestsForGroups(new Token("t"), GetRequestsParams.getBuilder().build()))
 				.thenThrow(new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
 		
-		failGetRequestsForAdministratedGroups(g, "t", null, null, new AuthenticationException(
-				ErrorType.AUTHENTICATION_FAILED, "yikes"));
+		failGetRequestsForAdministratedGroups(g, "t", null, null, null, null,
+				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED, "yikes"));
 	}
 	
 	private void failGetRequestsForAdministratedGroups(
@@ -659,9 +723,12 @@ public class RequestAPITest {
 			final String token,
 			final String excludeUpTo,
 			final String order,
+			final String resType,
+			final String res,
 			final Exception expected) {
 		try {
-			new RequestAPI(g).getRequestsForAdministratedGroups(token, excludeUpTo, null, order);
+			new RequestAPI(g).getRequestsForAdministratedGroups(
+					token, excludeUpTo, null, order, resType, res);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

@@ -288,13 +288,15 @@ public class GroupsAPI {
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
 				GroupsStorageException, NoSuchResourceTypeException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID),
-				getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				getRequestsParams(excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@DELETE

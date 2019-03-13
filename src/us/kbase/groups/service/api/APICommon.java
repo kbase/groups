@@ -203,6 +203,10 @@ public class APICommon {
 	 * Otherwise they are excluded from the results.
 	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
 	 * for a descending sort.
+	 * @param resourceType the type of the resource that will be used to filter the list. The
+	 * resource parameter must also be specified if this parameter is present.
+	 * @param resource the ID of the resource that will be used to filter the list. The
+	 * resourceType parameter must also be specified if this parameter is present.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
 	 * @return the get request parameters.
@@ -213,11 +217,25 @@ public class APICommon {
 			final String excludeUpTo,
 			final String includeClosed,
 			final String sortDirection,
+			final String resourceType,
+			final String resource,
 			final boolean defaultSort)
 			throws IllegalParameterException {
 		final GetRequestsParams.Builder b = GetRequestsParams.getBuilder();
 		if (!isNullOrEmpty(excludeUpTo)) {
 			b.withNullableExcludeUpTo(epochMilliStringToInstant(excludeUpTo));
+		}
+		if (isNullOrEmpty(resourceType) ^ isNullOrEmpty(resource)) { // xor
+			throw new IllegalParameterException("Either both or neither of the resource type " +
+					"and resource ID must be provided");
+		}
+		if (!isNullOrEmpty(resourceType)) {
+			try {
+				b.withResource(new ResourceType(resourceType), new ResourceID(resource));
+			} catch (MissingParameterException e) {
+				throw new RuntimeException(
+						"Reality appears to be broken. Please turn it off then on again", e);
+			}
 		}
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		

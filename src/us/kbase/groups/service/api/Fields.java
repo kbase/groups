@@ -121,6 +121,10 @@ public class Fields {
 	public static final String GET_REQUESTS_INCLUDE_CLOSED = "closed";
 	/** Set the sort order. */
 	public static final String GET_REQUESTS_SORT_ORDER = "order";
+	/** Set the resource type with which to filter the list. */
+	public static final String GET_REQUESTS_RESOURCE_TYPE = "resourcetype";
+	/** Set the resource ID with which to filter the list. */
+	public static final String GET_REQUESTS_RESOURCE_ID = "resource";
 	
 	/* ***********************
 	 * other fields
