@@ -165,6 +165,22 @@ public class MongoGroupsStorage implements GroupsStorage {
 		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID,
 				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
 				Fields.REQUEST_MODIFICATION), null);
+		// find by resource ID and requester and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID, Fields.REQUEST_REQUESTER,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION),
+				null);
+		// find by resource ID and requester and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID, Fields.REQUEST_REQUESTER,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
+				Fields.REQUEST_MODIFICATION), null);
+		// find by resource ID and group and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID, Fields.REQUEST_GROUP_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION),
+				null);
+		// find by resource ID and group and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID, Fields.REQUEST_GROUP_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
+				Fields.REQUEST_MODIFICATION), null);
 		// find expired requests.
 		requests.put(Arrays.asList(Fields.REQUEST_EXPIRATION), null);
 		// ensure equivalent requests are rejected. See getCharacteristicString()
@@ -1255,7 +1271,8 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public List<GroupRequest> getRequestsByRequester(
 			final UserName requester,
-			final GetRequestsParams params) throws GroupsStorageException {
+			final GetRequestsParams params)
+			throws GroupsStorageException {
 		checkNotNull(requester, "requester");
 		return findRequests(new Document(Fields.REQUEST_REQUESTER, requester.getName()), params);
 	}
@@ -1300,9 +1317,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 			throw new IllegalArgumentException(
 					"A resource must be specified in the method parameters");
 		}
-		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name())
-				.append(Fields.REQUEST_RESOURCE_TYPE, params.getResourceType().get().getName())
-				.append(Fields.REQUEST_RESOURCE_ID, params.getResourceID().get().getName());
+		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name());
 		return findRequests(query, params);
 	}
 
@@ -1355,6 +1370,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
 			query.append(Fields.REQUEST_MODIFICATION,
 					new Document(inequality, Date.from(params.getExcludeUpTo().get())));
+		}
+		if (params.getResourceType().isPresent()) {
+			query.append(Fields.REQUEST_RESOURCE_TYPE, params.getResourceType().get().getName())
+				.append(Fields.REQUEST_RESOURCE_ID, params.getResourceID().get().getName());
 		}
 		// allow other sorts? can't think of any particularly useful ones
 		final Document sort = new Document(Fields.REQUEST_MODIFICATION,
