@@ -3290,6 +3290,12 @@ public class MongoGroupsStorageOpsTest {
 		
 		failGetRequestsByTarget(new UserName("u"), Collections.emptyMap(), null,
 				new NullPointerException("params"));
+		
+		failGetRequestsByTarget(new UserName("u"), Collections.emptyMap(),
+				GetRequestsParams.getBuilder()
+						.withResource(new ResourceType("t"), new ResourceID("i")).build(),
+				new IllegalArgumentException(
+						"This method may not be parameterized with a specific resource ID"));
 	}
 	
 	private void failGetRequestsByTarget(

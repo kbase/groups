@@ -1258,8 +1258,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			final GetRequestsParams params)
 			throws GroupsStorageException {
-		checkNotNull(target, "target");
-		checkNotNull(resources, "resources");
+		requireNonNull(target, "target");
+		requireNonNull(resources, "resources");
+		if (requireNonNull(params, "params").getResourceType().isPresent()) {
+			throw new IllegalArgumentException(
+					"This method may not be parameterized with a specific resource ID");
+		}
 		final List<Document> or = new LinkedList<>();
 		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name())
 				.append("$or", or);

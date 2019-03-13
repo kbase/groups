@@ -257,7 +257,8 @@ public interface GroupsStorage {
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param resources the resources that user administrates.
-	 * @param params the parameters for getting the requests.
+	 * @param params the parameters for getting the requests. A particular resource may not
+	 * be specified in the parameters.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
