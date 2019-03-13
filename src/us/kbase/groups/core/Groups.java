@@ -753,7 +753,8 @@ public class Groups {
 		return storage.getRequestsByRequester(user, params);
 	}
 	
-	/** Get requests where the user is the target of the request.
+	/** Get requests where the user is the target of the request, including requests
+	 * associated with resources the user administrates.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param params the parameters for getting the requests.
@@ -763,25 +764,41 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
 	 * @throws NoSuchResourceTypeException if the resource type does not exist.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws UnauthorizedException if the user is not an administrator for the resource.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				ResourceHandlerException, NoSuchResourceTypeException {
-		checkNotNull(userToken, "userToken");
-		checkResourceRegisted(checkNotNull(params, "params"));
+				ResourceHandlerException, NoSuchResourceTypeException, NoSuchResourceException,
+				IllegalResourceIDException, UnauthorizedException {
+		requireNonNull(userToken, "userToken");
+		requireNonNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
-		final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
-		// TODO CODE optimize by only fetching resources for the resource type and resource ID in params. Adds complexity to this code so YAGNI for now.
-		for (final ResourceType t: resourceHandlers.keySet()) {
-			final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
-					.getAdministratedResources(user);
-			if (!reslist.isEmpty()) {
-				resources.put(t, reslist);
+		final List<GroupRequest> ret;
+		if (params.getResourceType().isPresent()) {
+			final ResourceType type = params.getResourceType().get();
+			final ResourceID id = params.getResourceID().get();
+			if (!getHandler(type).isAdministrator(id, user)) {
+				throw new UnauthorizedException(String.format(
+						"User %s is not an admin for %s %s",
+						user.getName(), type.getName(), id.getName()));
 			}
+			ret = storage.getRequestsByTarget(params);
+		} else {
+			final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
+			for (final ResourceType t: resourceHandlers.keySet()) {
+				final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
+						.getAdministratedResources(user);
+				if (!reslist.isEmpty()) {
+					resources.put(t, reslist);
+				}
+			}
+			ret = storage.getRequestsByTarget(user, resources, params);
 		}
-		return storage.getRequestsByTarget(user, resources, params);
+		return ret;
 	}
 
 	/** Get requests where the group is the target of the request.
