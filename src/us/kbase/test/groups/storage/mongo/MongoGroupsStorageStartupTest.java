@@ -297,6 +297,41 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "resrid_1_restype_1_status_1_type_1_mod_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
+						.append("key", new Document("resrid", 1)
+								.append("requester", 1)
+								.append("restype", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "resrid_1_requester_1_restype_1_type_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("resrid", 1)
+								.append("requester", 1)
+								.append("restype", 1)
+								.append("status", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "resrid_1_requester_1_restype_1_status_1_type_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("resrid", 1)
+								.append("gid", 1)
+								.append("restype", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "resrid_1_gid_1_restype_1_type_1_mod_1")
+						.append("ns", col),
+				new Document("v", manager.indexVer)
+						.append("key", new Document("resrid", 1)
+								.append("gid", 1)
+								.append("restype", 1)
+								.append("status", 1)
+								.append("type", 1)
+								.append("mod", 1))
+						.append("name", "resrid_1_gid_1_restype_1_status_1_type_1_mod_1")
+						.append("ns", col),		
+						
+				new Document("v", manager.indexVer)
 						.append("key", new Document("expire", 1))
 						.append("name", "expire_1")
 						.append("ns", col),

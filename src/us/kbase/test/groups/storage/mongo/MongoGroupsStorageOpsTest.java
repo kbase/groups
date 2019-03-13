@@ -2829,12 +2829,12 @@ public class MongoGroupsStorageOpsTest {
 				is(Arrays.asList(second, third, fourth)));
 
 		assertThat("incorrect get by requester",
-				manager.storage.getRequestsByRequester(new UserName("bar"), 
+				manager.storage.getRequestsByRequester(new UserName("bar"),
 						GetRequestsParams.getBuilder().withNullableSortAscending(false).build()),
 				is(Arrays.asList(fourth, third, second, first)));
 
 		assertThat("incorrect get by requester",
-				manager.storage.getRequestsByRequester(new UserName("bar"), 
+				manager.storage.getRequestsByRequester(new UserName("bar"),
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.withNullableIncludeClosed(true)
@@ -2842,12 +2842,36 @@ public class MongoGroupsStorageOpsTest {
 				is(Arrays.asList(closed, fourth, third, second, first)));
 		
 		assertThat("incorrect get by requester",
-				manager.storage.getRequestsByRequester(new UserName("bar"), 
+				manager.storage.getRequestsByRequester(new UserName("bar"),
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.withNullableExcludeUpTo(inst(140000))
 								.build()),
 				is(Arrays.asList(second, first)));
+		
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("bar"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.build()),
+				is(Arrays.asList(first)));
+		
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("bar"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(first, closed)));
+		
+		assertThat("incorrect get by requester",
+				manager.storage.getRequestsByRequester(new UserName("bar"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("user"), new ResourceID("bar"))
+								.withNullableIncludeClosed(true)
+								.withNullableSortAscending(false)
+								.build()),
+				is(Arrays.asList(closed, first)));
 
 		assertThat("incorrect get by requester",
 				manager.storage.getRequestsByRequester(new UserName("baz"), p),
@@ -3647,9 +3671,19 @@ public class MongoGroupsStorageOpsTest {
 							.build())
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
+		final GroupRequest closedws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo"), new UserName("closedws"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(170000))
+							.build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("45")))
+				.withStatus(GroupRequestStatus.expired())
+				.build();
 		
 		manager.storage.storeRequest(fourth);
 		manager.storage.storeRequest(target);
+		manager.storage.storeRequest(closedws);
 		manager.storage.storeRequest(othergroup);
 		manager.storage.storeRequest(first);
 		manager.storage.storeRequest(targetws);
@@ -3675,7 +3709,7 @@ public class MongoGroupsStorageOpsTest {
 								.withNullableExcludeUpTo(inst(130000))
 								.withNullableIncludeClosed(true)
 								.build()),
-				is(Arrays.asList(third, fourth, closed)));
+				is(Arrays.asList(third, fourth, closed, closedws)));
 		assertThat("incorrect get by group",
 				manager.storage.getRequestsByGroup(new GroupID("foo"),
 						GetRequestsParams.getBuilder()
@@ -3698,7 +3732,7 @@ public class MongoGroupsStorageOpsTest {
 								.withNullableSortAscending(false)
 								.withNullableIncludeClosed(true)
 								.build()),
-				is(Arrays.asList(closed, fourth, third, second, first)));
+				is(Arrays.asList(closedws, closed, fourth, third, second, first)));
 		assertThat("incorrect get by group",
 				manager.storage.getRequestsByGroup(new GroupID("foo"),
 						GetRequestsParams.getBuilder()
@@ -3707,6 +3741,29 @@ public class MongoGroupsStorageOpsTest {
 								.build()),
 				is(Arrays.asList(second, first)));
 		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.build()),
+				is(Arrays.asList(second)));
+		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(second, closedws)));
+		
+		assertThat("incorrect get by group",
+				manager.storage.getRequestsByGroup(new GroupID("foo"),
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.withNullableIncludeClosed(true)
+								.withNullableSortAscending(false)
+								.build()),
+				is(Arrays.asList(closedws, second)));
 		
 		assertThat("incorrect get by group",
 				manager.storage.getRequestsByGroup(new GroupID("other"), p),
@@ -3941,9 +3998,19 @@ public class MongoGroupsStorageOpsTest {
 							.build())
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
+		final GroupRequest closedws = GroupRequest.getBuilder(
+				new RequestID(UUID.randomUUID()), new GroupID("foo3"), new UserName("closedws"),
+					CreateModAndExpireTimes.getBuilder(Instant.ofEpochMilli(20000), forever)
+							.withModificationTime(Instant.ofEpochMilli(170000))
+							.build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("45")))
+				.withStatus(GroupRequestStatus.expired())
+				.build();
 		
 		manager.storage.storeRequest(fourth);
 		manager.storage.storeRequest(target);
+		manager.storage.storeRequest(closedws);
 		manager.storage.storeRequest(othergroup);
 		manager.storage.storeRequest(first);
 		manager.storage.storeRequest(targetws);
@@ -3957,50 +4024,50 @@ public class MongoGroupsStorageOpsTest {
 				new GroupID("foo3"), new GroupID("foo4"), new GroupID("foo5"),
 				new GroupID("foo87"));
 		
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids, p), is(
 						Arrays.asList(first, second, third, fourth)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(
 						set(new GroupID("foo"), new GroupID("foo2"), new GroupID("foo87")), p),
 				is(Arrays.asList(first, third)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(130000))
 								.build()),
 				is(Arrays.asList(third, fourth)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(130000))
 								.withNullableIncludeClosed(true)
 								.build()),
-				is(Arrays.asList(third, fourth, closed)));
-		assertThat("incorrect get by group",
+				is(Arrays.asList(third, fourth, closed, closedws)));
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(120000))
 								.build()),
 				is(Arrays.asList(second, third, fourth)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableExcludeUpTo(inst(129999))
 								.build()),
 				is(Arrays.asList(second, third, fourth)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder().withNullableSortAscending(false).build()),
 				is(Arrays.asList(fourth, third, second, first)));
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
 								.withNullableIncludeClosed(true)
 								.build()),
-				is(Arrays.asList(closed, fourth, third, second, first)));
-		assertThat("incorrect get by group",
+				is(Arrays.asList(closedws, closed, fourth, third, second, first)));
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(ids,
 						GetRequestsParams.getBuilder()
 								.withNullableSortAscending(false)
@@ -4008,12 +4075,35 @@ public class MongoGroupsStorageOpsTest {
 								.build()),
 				is(Arrays.asList(second, first)));
 		
+		assertThat("incorrect get by groups",
+				manager.storage.getRequestsByGroups(ids,
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.build()),
+				is(Arrays.asList(second)));
 		
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
+				manager.storage.getRequestsByGroups(ids,
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.withNullableIncludeClosed(true)
+								.build()),
+				is(Arrays.asList(second, closedws)));
+		
+		assertThat("incorrect get by groups",
+				manager.storage.getRequestsByGroups(ids,
+						GetRequestsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("45"))
+								.withNullableIncludeClosed(true)
+								.withNullableSortAscending(false)
+								.build()),
+				is(Arrays.asList(closedws, second)));
+		
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(set(new GroupID("other")), p),
 				is(Arrays.asList(othergroup)));
 		
-		assertThat("incorrect get by group",
+		assertThat("incorrect get by groups",
 				manager.storage.getRequestsByGroups(set(new GroupID("baz")), p),
 				is(Collections.emptyList()));
 	}
