@@ -1350,12 +1350,14 @@ public class MongoGroupsStorage implements GroupsStorage {
 									.toInstant())
 							.build())
 					.withType(RequestType.valueOf(req.getString(Fields.REQUEST_TYPE)))
-					.withResourceType(new ResourceType(
-							req.getString(Fields.REQUEST_RESOURCE_TYPE)))
-					.withResource(new ResourceDescriptor(
-							new ResourceAdministrativeID(
-									req.getString(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID)),
-							new ResourceID(req.getString(Fields.REQUEST_RESOURCE_ID))))
+					.withResource(
+							new ResourceType(
+									req.getString(Fields.REQUEST_RESOURCE_TYPE)),
+							new ResourceDescriptor(
+									new ResourceAdministrativeID(
+											req.getString(
+													Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID)),
+									new ResourceID(req.getString(Fields.REQUEST_RESOURCE_ID))))
 					.withStatus(GroupRequestStatus.from(
 							GroupRequestStatusType.valueOf(req.getString(Fields.REQUEST_STATUS)),
 							closedBy == null ? null : new UserName(closedBy),
