@@ -149,12 +149,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 		// find by requester and state and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_REQUESTER, Fields.REQUEST_STATUS,
 				Fields.REQUEST_MODIFICATION), null);
-		// find by resource and sort/filter by modification time.
+		// find by resource admin ID and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID,
 				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION),
 				null);
-		// find by resource and state and sort/filter by modification time.
+		// find by resource admin ID and state and sort/filter by modification time.
 		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ADMINISTRATIVE_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
+				Fields.REQUEST_MODIFICATION), null);
+		// find by resource ID and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID,
+				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_TYPE, Fields.REQUEST_MODIFICATION),
+				null);
+		// find by resource ID and state and sort/filter by modification time.
+		requests.put(Arrays.asList(Fields.REQUEST_RESOURCE_ID,
 				Fields.REQUEST_RESOURCE_TYPE, Fields.REQUEST_STATUS, Fields.REQUEST_TYPE,
 				Fields.REQUEST_MODIFICATION), null);
 		// find expired requests.
@@ -1258,8 +1266,13 @@ public class MongoGroupsStorage implements GroupsStorage {
 			final Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			final GetRequestsParams params)
 			throws GroupsStorageException {
-		checkNotNull(target, "target");
-		checkNotNull(resources, "resources");
+		requireNonNull(target, "target");
+		requireNonNull(resources, "resources");
+		if (requireNonNull(params, "params").getResourceType().isPresent()) {
+			// making a whole new class just to avoid this seems silly
+			throw new IllegalArgumentException(
+					"This method may not be parameterized with a specific resource ID");
+		}
 		final List<Document> or = new LinkedList<>();
 		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name())
 				.append("$or", or);
@@ -1276,6 +1289,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 							"$in", resources.get(t).stream().map(r -> r.getName())
 									.collect(Collectors.toList()))));
 		}
+		return findRequests(query, params);
+	}
+	
+	@Override
+	public List<GroupRequest> getRequestsByTarget(final GetRequestsParams params)
+			throws GroupsStorageException {
+		if (!requireNonNull(params, "params").getResourceType().isPresent()) {
+			// making a whole new class just to avoid this seems silly
+			throw new IllegalArgumentException(
+					"A resource must be specified in the method parameters");
+		}
+		final Document query = new Document(Fields.REQUEST_TYPE, RequestType.INVITE.name())
+				.append(Fields.REQUEST_RESOURCE_TYPE, params.getResourceType().get().getName())
+				.append(Fields.REQUEST_RESOURCE_ID, params.getResourceID().get().getName());
 		return findRequests(query, params);
 	}
 

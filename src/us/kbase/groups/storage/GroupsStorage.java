@@ -257,7 +257,8 @@ public interface GroupsStorage {
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param resources the resources that user administrates.
-	 * @param params the parameters for getting the requests.
+	 * @param params the parameters for getting the requests. A particular resource may not
+	 * be specified in the parameters.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
@@ -265,6 +266,17 @@ public interface GroupsStorage {
 			UserName target,
 			Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			GetRequestsParams params)
+			throws GroupsStorageException;
+	
+	/** Get the open requests that target a specific resource (e.g. the request type is always
+	 * {@link RequestType#INVITE}) sorted by the modification time of the request.
+	 * At most 100 requests are returned.
+	 * @param params the parameters for getting the requests. A particular resource must
+	 * be specified in the parameters.
+	 * @return the requests.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	List<GroupRequest> getRequestsByTarget(GetRequestsParams params)
 			throws GroupsStorageException;
 
 	/** Get the open requests that target a group, sorted by the modification time of the request.
