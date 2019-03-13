@@ -3148,7 +3148,6 @@ public class GroupsTest {
 				GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
-						.withResource(new ResourceType("catalogmethod"), new ResourceID("meth"))
 						.build()))
 				.thenReturn(Collections.emptyList());
 		
@@ -3156,7 +3155,30 @@ public class GroupsTest {
 				new Token("token"), GetRequestsParams.getBuilder()
 						.withNullableExcludeUpTo(inst(10000))
 						.withNullableIncludeClosed(true)
-						.withResource(new ResourceType("catalogmethod"), new ResourceID("meth"))
+						.build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getRequestsForTargetWithResourceEmpty() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("22"), new UserName("user")))
+				.thenReturn(true);
+		when(mocks.storage.getRequestsByTarget(
+				GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("22"))
+						.build()))
+				.thenReturn(Collections.emptyList());
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("22"))
 						.build()),
 				is(Collections.emptyList()));
 	}
@@ -3265,27 +3287,135 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getRequestsForTargetWithResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("4"), new UserName("target")))
+				.thenReturn(true);
+		when(mocks.storage.getRequestsByTarget(
+				GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.withResource(new ResourceType("workspace"), new ResourceID("4"))
+						.build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid1"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid3"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						));
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.withResource(new ResourceType("workspace"), new ResourceID("4"))
+						.build()),
+				is(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid1"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid3"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						)));
+	}
+	
+	@Test
 	public void getRequestsForTargetFailNulls() throws Exception {
-		failGetRequestsForTarget(null, GetRequestsParams.getBuilder().build(),
+		final Groups g = initTestMocks().groups;
+		
+		failGetRequestsForTarget(g, null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("userToken"));
-		failGetRequestsForTarget(new Token("t"), null, new NullPointerException("params"));
+		failGetRequestsForTarget(g, new Token("t"), null, new NullPointerException("params"));
 	}
 	
 	@Test
 	public void getRequestsForTargetFailBadType() throws Exception {
-		failGetRequestsForTarget(new Token("t"), GetRequestsParams.getBuilder()
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u"));
+		
+		failGetRequestsForTarget(mocks.groups, new Token("t"), GetRequestsParams.getBuilder()
 				.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
 				new NoSuchResourceTypeException("bad"));
 	}
 	
+	@Test
+	public void getRequestsForTargetFailNotResourceAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("u")))
+				.thenReturn(false);
+		
+		failGetRequestsForTarget(mocks.groups, new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceID("56")).build(),
+				new UnauthorizedException("User u is not an admin for workspace 56"));
+	}
+	
 	private void failGetRequestsForTarget(
+			final Groups g,
 			final Token token,
 			final GetRequestsParams params,
-			final Exception expected)
-			throws Exception {
-		final TestMocks mocks = initTestMocks();
+			final Exception expected) {
 		try {
-			mocks.groups.getRequestsForTarget(token, params);
+			g.getRequestsForTarget(token, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

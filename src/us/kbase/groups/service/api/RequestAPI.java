@@ -125,7 +125,8 @@ public class RequestAPI {
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
 			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				IllegalParameterException, ResourceHandlerException, NoSuchResourceTypeException {
+				IllegalParameterException, ResourceHandlerException, NoSuchResourceTypeException,
+				NoSuchResourceException, IllegalResourceIDException, UnauthorizedException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
 				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
 	}
