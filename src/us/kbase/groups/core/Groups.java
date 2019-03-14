@@ -584,10 +584,9 @@ public class Groups {
 		}
 		final UserName user = getOptionalUser(userToken);
 		final Set<Group> groups = storage.getGroups(groupIDs);
-		final Map<GroupID, Group> idToGroup = groups.stream()
-				.collect(Collectors.toMap(g -> g.getGroupID(), g -> g));
-		return groupIDs.stream().map(gid -> toMinimalView(user, idToGroup.get(gid)))
-				.collect(Collectors.toList());
+		final Map<Object, GroupView> idToGroup = groups.stream()
+				.collect(Collectors.toMap(g -> g.getGroupID(), g -> toMinimalView(user, g)));
+		return groupIDs.stream().map(gid -> idToGroup.get(gid)).collect(Collectors.toList());
 	}
 	
 	/** Request membership in a group.
