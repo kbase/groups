@@ -9,6 +9,7 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,10 +34,12 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
 import us.kbase.groups.core.OptionalString;
+import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -80,15 +83,40 @@ public class GroupsAPI {
 	public List<Map<String, Object>> getGroups(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
-			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
-				InvalidTokenException, AuthenticationException {
-		return groups.getGroups(
-				getToken(token, false),
-				getGroupsParams(excludeUpTo, order, true))
-				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
+				InvalidTokenException, AuthenticationException, NoSuchGroupException {
+		final List<GroupID> gids = getGroupIDs(groupIDs);
+		final Token t = getToken(token, false);
+		final List<GroupView> grps;
+		if (!gids.isEmpty()) {
+			grps = groups.getGroups(t, gids);
+		} else {
+			grps = groups.getGroups(t, getGroupsParams(excludeUpTo, order, true));
+		}
+		return grps.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
+	private List<GroupID> getGroupIDs(final String groupIDsCommaSepList)
+			throws IllegalParameterException {
+		final List<GroupID> ret = new LinkedList<>();
+		if (groupIDsCommaSepList == null) {
+			return ret;
+		}
+		final String[] gids = groupIDsCommaSepList.split(",");
+		for (final String g: gids) {
+			if (!g.trim().isEmpty()) {
+				try {
+					ret.add(new GroupID(g.trim()));
+				} catch (MissingParameterException e) {
+					throw new RuntimeException("This should be impossible", e);
+				}
+			}
+		}
+		return ret;
+	}
+
 	private static Map<NumberedCustomField, OptionalString> getCustomFieldsAndTypeCheck(
 			final Object customFields,
 			final String fieldName)

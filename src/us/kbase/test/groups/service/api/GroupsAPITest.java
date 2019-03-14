@@ -267,32 +267,36 @@ public class GroupsAPITest {
 
 	@Test
 	public void getGroupsNulls() throws Exception {
-		getGroups(null, null, null, null, GetGroupsParams.getBuilder().build());
+		getGroups(null, null, null, null, null, GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespace() throws Exception {
-		getGroups("   \t   ", "   \t   ", "   \t   ", null, GetGroupsParams.getBuilder().build());
+		getGroups("   \t   ", "   \t   ", "   \t   ", "   \t    ", null,
+				GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesAsc() throws Exception {
-		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", new Token("    tok \t   "),
+		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", "    ,    \t   ,    ",
+				new Token("    tok \t   "),
 				GetGroupsParams.getBuilder()
 						.withNullableExcludeUpTo("foo").build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesDesc() throws Exception {
-		getGroups("t", "   foo  \t  ", "  desc  \t ", new Token("t"), GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("foo")
-				.withNullableSortAscending(false).build());
+		getGroups("t", "   foo  \t  ", "  desc  \t ", ",", new Token("t"),
+				GetGroupsParams.getBuilder()
+						.withNullableExcludeUpTo("foo")
+						.withNullableSortAscending(false).build());
 	}
 
 	private void getGroups(
 			final String token,
 			final String excludeUpTo,
 			final String order,
+			final String ids, // this must be null or contain ws (with commas)
 			final Token expectedToken,
 			final GetGroupsParams expected)
 			throws Exception {
@@ -305,21 +309,76 @@ public class GroupsAPITest {
 						.withPublicUserFieldDeterminer(f -> f.getField().equals("something"))
 						.build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
-				.getGroups(token, excludeUpTo, order);
+				.getGroups(token, excludeUpTo, order, ids);
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
 	}
 	
 	@Test
-	public void failGetGroups() throws Exception {
+	public void getGroupsWithIDs() throws Exception {
+		getGroupsWithIDs(null, null);
+		getGroupsWithIDs("   \t   ", null);
+		getGroupsWithIDs("t", new Token("t"));
+	}
+	
+	private void getGroupsWithIDs(
+			final String token,
+			final Token expectedToken)
+			throws Exception {
 		final Groups g = mock(Groups.class);
+		when(g.getGroups(expectedToken,
+				Arrays.asList(new GroupID("id2"), new GroupID("priv"), new GroupID("id"))))
+				.thenReturn(Arrays.asList(
+						GroupView.getBuilder(GROUP_MAX, new UserName("u2"))
+								.withMinimalViewFieldDeterminer(
+										f -> f.getField().equals("field-1"))
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("priv"), new GroupName("fake"),
+								GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
+								new CreateAndModTimes(inst(1000)))
+								.withIsPrivate(true)
+								.build(),
+								new UserName("nonmember"))
+								.build(),
+						GroupView.getBuilder(GROUP_MIN, new UserName("u2"))
+								.withPublicUserFieldDeterminer(
+										f -> f.getField().equals("something"))
+								.build()));
+		
+		final List<Map<String, Object>> ret = new GroupsAPI(g)
+				.getGroups(token, "id", "asc", "id2   , priv,  id   ");
+		
+		assertThat("incorrect groups", ret,
+				is(Arrays.asList(
+						GROUP_MAX_JSON_MIN,
+						ImmutableMap.of("private", true, "role", "None", "id", "priv"),
+						GROUP_MIN_JSON_MIN)));
+	}
+	
+	@Test
+	public void getGroupsFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetGroups(g, "t", null, "  asd   ", null, new IllegalParameterException(
+				"Invalid sort direction: asd"));
+		failGetGroups(g, "t", null, null, " id1 , id*bad", new IllegalParameterException(
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id id*bad: *"));
+	}
+	
+	private void failGetGroups(
+			final Groups g,
+			final String token,
+			final String excludeUpTo,
+			final String order,
+			final String ids,
+			final Exception expected) {
 		try {
-			new GroupsAPI(g).getGroups("t", null, "  asd   ");
+			new GroupsAPI(g).getGroups(token, excludeUpTo, order, ids);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
-					"Invalid sort direction: asd"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -863,7 +922,8 @@ public class GroupsAPITest {
 		when(g.getGroups(new Token("toke2"), GetGroupsParams.getBuilder().build()))
 				.thenReturn(Arrays.asList(gv.withStandardView(false).build()));
 		
-		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null).get(0);
+		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null, null)
+				.get(0);
 		final Map<String, Object> expectedmin = new HashMap<>();
 		expectedmin.putAll(GROUP_MAX_JSON_MIN);
 		expectedmin.put("role", "Admin");

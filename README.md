@@ -243,7 +243,7 @@ RETURNS:
 
 ```
 AUTHORIZATION OPTIONAL
-GET /group[?excludeupto=<exlude string>&order=<sort order>]
+GET /group[?excludeupto=<exlude string>&order=<sort order>&groupids=<ids>]
 
 RETURNS:
 A list of Groups. Only the id, private, name, owner, role, memcount, rescount, custom,
@@ -264,6 +264,15 @@ The query parameters are all optional:
   depending on the sort order. `asc` and `desc` sorts will include groups with
   group IDs, respectively, after and before the `excludeupto` string, non-inclusive.
   This can be used to page through the groups if needed.
+* `groupids` - list specific groups by ID in a comma separated list
+  (e.g. `?groupids=groupid1,groupid2,...,groupidN`). If this parameter is specified,
+  all other parameters are ignored. This method of listing groups is much faster than getting
+  each group from the `/group/<id>` endpoint as external resource servers are not contacted
+  for data. The order of the returned list is as the order of the IDs.
+  If an ID is listed more than once, the group data will also be listed more than once at the
+  same locations. At most 100 IDs may be included. Unlike the standard list, if a private group
+  where the user is not a member is specified, it *will* be returned, but only the `id`,
+  `private`, and `role` fields will be included. Whitespace between commas is ignored.
 
 If the user is anonymous or not a member of the group, only custom fields that are both public and
 group listable (see custom fields below) are included. If the user is a member of the group,
@@ -364,6 +373,11 @@ GET /group/<group id>
 
 RETURNS: A Group.
 ```
+
+This endpoint is fairly expensive as it causes the Groups server to contact external
+resource servers for data, potentially many times depending on the amount of external resource
+data in the group and the API of the resource server. See the `/group` endpoint for
+cheaper options.
 
 If the user is not a member of the group or no authorization is provided and the group is
 private, only the `groupid`, `private`, `role`, and `resources` fields are included. Only
