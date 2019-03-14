@@ -1236,14 +1236,27 @@ public class GroupsAPITest {
 	public void getRequestsForGroup6() throws Exception {
 		final GetRequestsParams params = GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
-				.withNullableSortAscending(false).build();
-		getRequestsForGroup(null, "", "desc", params);
+				.withNullableSortAscending(false)
+				.withResource(new ResourceType("t"), new ResourceID("r"))
+				.build();
+		getRequestsForGroup(null, "", "desc", "t", "r", params);
 	}
 
 	private void getRequestsForGroup(
 			final String excludeUpTo,
 			final String closed,
 			final String sortOrder,
+			final GetRequestsParams params)
+			throws Exception {
+		getRequestsForGroup(excludeUpTo, closed, sortOrder, null, null, params);
+	}
+	
+	private void getRequestsForGroup(
+			final String excludeUpTo,
+			final String closed,
+			final String sortOrder,
+			final String resType,
+			final String resource,
 			final GetRequestsParams params)
 			throws Exception {
 		final Groups g = mock(Groups.class);
@@ -1275,7 +1288,7 @@ public class GroupsAPITest {
 						));
 		
 		final List<Map<String, Object>> ret = new GroupsAPI(g).getRequestsForGroup(
-				"t", "id", excludeUpTo, closed, sortOrder);
+				"t", "id", excludeUpTo, closed, sortOrder, resType, resource);
 		
 		assertThat("incorrect requests", ret, is(Arrays.asList(
 				MapBuilder.newHashMap()
@@ -1309,13 +1322,13 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForGroup(g, null, "i", null, null,
+		failGetRequestsForGroup(g, null, "i", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "    \t    ", "i", null, null,
+		failGetRequestsForGroup(g, "    \t    ", "i", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "t", null, null, null,
+		failGetRequestsForGroup(g, "t", null, null, null, null, null,
 				new MissingParameterException("group id"));
-		failGetRequestsForGroup(g, "t", "   \t   ", null, null,
+		failGetRequestsForGroup(g, "t", "   \t   ", null, null, null, null,
 				new MissingParameterException("group id"));
 	}
 	
@@ -1323,10 +1336,16 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailIllegalInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForGroup(g, "t", "g", " bar ", null,
+		failGetRequestsForGroup(g, "t", "g", " bar ", null, null, null,
 				new IllegalParameterException("Invalid epoch ms: bar"));
-		failGetRequestsForGroup(g, "t", "g", "", "   bat   ", 
+		failGetRequestsForGroup(g, "t", "g", "", "   bat   ", null, null,
 				new IllegalParameterException("Invalid sort direction: bat"));
+		failGetRequestsForGroup(g, "t", "g", null, null, "t", null,
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
+		failGetRequestsForGroup(g, "t", "g", null, null, null, "r",
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
 	}
 
 	@Test
@@ -1337,7 +1356,8 @@ public class GroupsAPITest {
 				GetRequestsParams.getBuilder().build()))
 				.thenThrow(new UnauthorizedException("yay"));
 		
-		failGetRequestsForGroup(g, "t", "i",  null, null, new UnauthorizedException("yay"));
+		failGetRequestsForGroup(g, "t", "i",  null, null, null, null,
+				new UnauthorizedException("yay"));
 	}
 	
 	private void failGetRequestsForGroup(
@@ -1346,9 +1366,12 @@ public class GroupsAPITest {
 			final String groupid,
 			final String excludeUpTo,
 			final String sortOrder,
+			final String resType,
+			final String resource,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).getRequestsForGroup(token, groupid, excludeUpTo, null, sortOrder);
+			new GroupsAPI(g).getRequestsForGroup(
+					token, groupid, excludeUpTo, null, sortOrder, resType, resource);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

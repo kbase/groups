@@ -109,11 +109,14 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
 			IllegalParameterException, NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@GET
@@ -123,12 +126,15 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
 				IllegalParameterException, ResourceHandlerException, NoSuchResourceTypeException,
 				NoSuchResourceException, IllegalResourceIDException, UnauthorizedException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@GET
@@ -138,12 +144,15 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, NoTokenProvidedException, AuthenticationException,
 					IllegalParameterException, GroupsStorageException,
 					NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForGroups(getToken(token, true),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@PUT

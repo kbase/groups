@@ -579,11 +579,13 @@ public class APICommonTest {
 	
 	@Test
 	public void getRequestParamsNulls() throws Exception {
-		final GetRequestsParams p = APICommon.getRequestsParams(null, null, null, true);
+		final GetRequestsParams p = APICommon.getRequestsParams(
+				null, null, null, null, null, true);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder().build()));
 		
-		final GetRequestsParams p2 = APICommon.getRequestsParams(null, null, null, false);
+		final GetRequestsParams p2 = APICommon.getRequestsParams(
+				null, null, null, null, null, false);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableSortAscending(false)
@@ -593,13 +595,13 @@ public class APICommonTest {
 	@Test
 	public void getRequestParamsWhitespace() throws Exception {
 		final String ws = "    \t    ";
-		final GetRequestsParams p = APICommon.getRequestsParams(ws, ws, ws, true);
+		final GetRequestsParams p = APICommon.getRequestsParams(ws, ws, ws, ws, ws, true);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
 				.build()));
 		
-		final GetRequestsParams p2 = APICommon.getRequestsParams(ws, ws, ws, false);
+		final GetRequestsParams p2 = APICommon.getRequestsParams(ws, ws, ws, ws, ws, false);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableSortAscending(false)
@@ -610,15 +612,16 @@ public class APICommonTest {
 	@Test
 	public void getRequestParamsValues() throws Exception {
 		final GetRequestsParams p = APICommon.getRequestsParams(
-				"   \t   12000   ", " yes ", "  asc  ", false);
+				"   \t   12000   ", " yes ", "  asc  ", "type", "res", false);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(12000))
 				.withNullableIncludeClosed(true)
+				.withResource(new ResourceType("type"), new ResourceID("res"))
 				.build()));
 		
 		final GetRequestsParams p2 = APICommon.getRequestsParams(
-				"   \t   " + Long.MAX_VALUE + "   ", " no ", "  desc  ", true);
+				"   \t   " + Long.MAX_VALUE + "   ", " no ", "  desc  ", null, "  \t ", true);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(Long.MAX_VALUE))
@@ -627,27 +630,35 @@ public class APICommonTest {
 				.build()));
 		
 		final GetRequestsParams p3 = APICommon.getRequestsParams(
-				"   \t   " + Long.MIN_VALUE + "   ", null, null, true);
+				"   \t   " + Long.MIN_VALUE + "   ", null, null, "t", "r", true);
 		
 		assertThat("incorrect params", p3, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(Long.MIN_VALUE))
+				.withResource(new ResourceType("t"), new ResourceID("r"))
 				.build()));
 	}
 	
 	@Test
 	public void getRequestParamsFail() throws Exception {
-		failGetRequestParams("   foo   ", null,
+		failGetRequestParams("   foo   ", null, null, null,
 				new IllegalParameterException("Invalid epoch ms: foo"));
-		failGetRequestParams(null, "asd", new IllegalParameterException(
+		failGetRequestParams(null, "asd", null, null, new IllegalParameterException(
 				"Invalid sort direction: asd"));
+		failGetRequestParams(null, null, "t", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		failGetRequestParams(null, null, "  \t  ", "r", new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		
 	}
 	
 	private void failGetRequestParams(
 			final String excludeUpTo,
 			final String sortDirection,
+			final String resType,
+			final String res,
 			final Exception expected) {
 		try {
-			APICommon.getRequestsParams(excludeUpTo, null, sortDirection, true);
+			APICommon.getRequestsParams(excludeUpTo, null, sortDirection, resType, res, true);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
