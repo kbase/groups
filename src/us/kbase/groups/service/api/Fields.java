@@ -107,6 +107,8 @@ public class Fields {
 	public static final String GET_GROUPS_EXCLUDE_UP_TO = "excludeupto";
 	/** Set the sort order. */
 	public static final String GET_GROUPS_SORT_ORDER = "order";
+	/** Determine which groups to list. */
+	public static final String GET_GROUPS_IDS = "groupids";
 	
 	/* ***********************
 	 * request listing fields
