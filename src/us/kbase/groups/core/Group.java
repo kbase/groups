@@ -131,6 +131,13 @@ public class Group {
 		/** The owner of the group. */
 		OWNER	("Owner");
 		
+		private static final Map<String, Role> REP_MAP = new HashMap<>();
+		static {
+			for (final Role r: Role.values()) {
+				REP_MAP.put(r.getRepresentation(), r);
+			}
+		}
+		
 		private final String representation;
 		
 		private Role(final String representation) {
@@ -142,6 +149,18 @@ public class Group {
 		 */
 		public String getRepresentation() {
 			return representation;
+		}
+		
+		/** Get a role based on a supplied representation.
+		 * @param representation the representation of the role as a string.
+		 * @return a role type.
+		 * @throws IllegalArgumentException if there is no role matching the representation.
+		 */
+		public static Role fromRepresentation(final String representation) {
+			if (!REP_MAP.containsKey(representation)) {
+				throw new IllegalArgumentException("Invalid role: " + representation);
+			}
+			return REP_MAP.get(representation);
 		}
 	}
 	
