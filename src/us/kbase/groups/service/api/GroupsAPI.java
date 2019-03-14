@@ -86,7 +86,8 @@ public class GroupsAPI {
 			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order,
 			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
-				InvalidTokenException, AuthenticationException, NoSuchGroupException {
+				InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				UnauthorizedException {
 		final List<GroupID> gids = getGroupIDs(groupIDs);
 		final Token t = getToken(token, false);
 		final List<GroupView> grps;

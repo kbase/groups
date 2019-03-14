@@ -55,6 +55,7 @@ import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -1785,12 +1786,42 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getGroupsFail() throws Exception {
+	public void getGroupsWithRole() throws Exception {
+		// just tests that getting groups with a token & a role doesn't throw an error.
+		final TestMocks mocks = initTestMocks();
+		
+		final Group g1 = Group.getBuilder(new GroupID("g1"), new GroupName("n1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		
+		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
+		when(mocks.storage.getGroups(any(), eq(new UserName("m1"))))
+				.thenReturn(Arrays.asList(g1));
+		
+		for (final Role r: Role.values()) {
+			assertThat("incorrect groups", mocks.groups.getGroups(
+					new Token("t1"), GetGroupsParams.getBuilder().withRole(r).build()),
+					is(Arrays.asList(GroupView.getBuilder(g1, new UserName("m1")).build())));
+		}
+	}
+	
+	@Test
+	public void getGroupsFailBadArgs() throws Exception {
+		getGroupsFail(new Token("t"), null, new NullPointerException("params"));
+		for (final Role r: set(Role.MEMBER, Role.ADMIN, Role.OWNER)) {
+				getGroupsFail(null, GetGroupsParams.getBuilder().withRole(r).build(),
+						new UnauthorizedException(
+								"A token is required when filtering groups by role"));
+		}
+	}
+	
+	private void getGroupsFail(final Token t, final GetGroupsParams p, final Exception expected) {
 		try {
-			initTestMocks().groups.getGroups(null, (GetGroupsParams) null);
+			initTestMocks().groups.getGroups(t, p);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
