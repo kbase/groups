@@ -21,6 +21,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -1556,12 +1558,12 @@ public class GroupsTest {
 				null))
 				.thenReturn(Arrays.asList(
 						Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
-								.build(),
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("m1"))
+								.withAdministrator(toGUser("a1"))
+										.build(),
 						Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -1575,19 +1577,19 @@ public class GroupsTest {
 				.build()),
 				is(Arrays.asList(
 						GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
-						.build(),
-						null)
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
 						.build(),
 						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-								.withMember(toGUser("whee"))
-								.withAdministrator(toGUser("whoo"))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
 								.build(), null)
 								.build())
 						));
@@ -1607,6 +1609,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getGroupsWithCustomFields() throws Exception {
+		// tests both getGroups methods that return minimal views
 		// tests that the custom fields are displayed correctly
 		// note user custom fields are never displayed in list view
 		final TestMocks mocks = initTestMocks();
@@ -1615,24 +1618,25 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("m1"))).thenReturn(new UserName("m1"));
 		when(mocks.userHandler.getUser(new Token("m2"))).thenReturn(new UserName("m2"));
-		when(mocks.storage.getGroups(eq(mtparams), any()))
-				.thenReturn(Arrays.asList(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						gGWCFWithCF(GroupUser.getBuilder(new UserName("o1"), inst(10000))),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(gGWCFWithCF(GroupUser.getBuilder(new UserName("m1"),
-								inst(20000))))
-						.withAdministrator(gGWCFWithCF(GroupUser.getBuilder(new UserName("a1"),
-								inst(30000))))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
-						.withCustomField(new NumberedCustomField("pub-8"), "pub")
-						.withCustomField(new NumberedCustomField("priv-9"), "priv")
-						// mockito returns Optional.empty() by default, so no need to mock
-						.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
-						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
-						.build()));
+		final Group grp = Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				gGWCFWithCF(GroupUser.getBuilder(new UserName("o1"), inst(10000))),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withMember(gGWCFWithCF(GroupUser.getBuilder(new UserName("m1"),
+						inst(20000))))
+				.withAdministrator(gGWCFWithCF(GroupUser.getBuilder(new UserName("a1"),
+						inst(30000))))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+				.withCustomField(new NumberedCustomField("pub-8"), "pub")
+				.withCustomField(new NumberedCustomField("priv-9"), "priv")
+				// mockito returns Optional.empty() by default, so no need to mock
+				.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
+				.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
+				.build();
+		when(mocks.storage.getGroups(eq(mtparams), any())).thenReturn(Arrays.asList(grp));
+		when(mocks.storage.getGroups(Arrays.asList(new GroupID("id1")))).thenReturn(set(grp));
 		
 		when(mocks.validators.getConfigOrEmpty(new CustomField("minpub"))).thenReturn(
 				Optional.of(FieldConfiguration.getBuilder()
@@ -1670,70 +1674,80 @@ public class GroupsTest {
 						.withNullableIsMinimalViewField(true)
 						.build()));
 
-
-		
 		// null user
-		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected1 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						null)
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				null)
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
+				is(Arrays.asList(expected1)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(null, Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected1)));
 		
 		// non member
-		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected2 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						new UserName("m2"))
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				new UserName("m2"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
+				is(Arrays.asList(expected2)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(new Token("m2"), Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected1)));
 		
 		//member
-		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
-						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected3 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						new UserName("m1"))
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+				.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				new UserName("m1"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
+				is(Arrays.asList(expected3)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(new Token("m1"), Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected3)));
 	}
 
 	@Test
-	public void getGroupsWithUser() throws Exception {
+	public void getGroupsWithPrivateGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		final GetGroupsParams ggp = GetGroupsParams.getBuilder()
@@ -1773,11 +1787,124 @@ public class GroupsTest {
 	@Test
 	public void getGroupsFail() throws Exception {
 		try {
-			initTestMocks().groups.getGroups(null, null);
+			initTestMocks().groups.getGroups(null, (GetGroupsParams) null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
 		}
+	}
+	
+	@Test
+	public void getGroupsByIDsEmpty() throws Exception {
+		assertThat("incorrect groups",
+				initTestMocks().groups.getGroups(null, Collections.emptyList()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getGroupsByIDs() throws Exception {
+		// tests that private groups have a private view and are included, unlike the list 
+		final TestMocks mocks = initTestMocks();
+		when(mocks.storage.getGroups(Arrays.asList(
+				new GroupID("id1"), new GroupID("id2"), new GroupID("id4"), new GroupID("id3"),
+				new GroupID("id4"))))
+				.thenReturn(set(
+						Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("m1"))
+								.withAdministrator(toGUser("a1"))
+										.build(),
+						Group.getBuilder(
+								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withIsPrivate(true)
+								.withMember(toGUser("whee"))
+								.withAdministrator(toGUser("whoo"))
+								.build(),
+						Group.getBuilder(
+								new GroupID("id3"), new GroupName("name3"), toGUser("u3"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("bar"))
+								.withAdministrator(toGUser("baz"))
+								.build(),
+						Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("boop"))
+								.withAdministrator(toGUser("poob"))
+								.build()
+						));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(null, Arrays.asList(
+				new GroupID("id1"), new GroupID("id2"), new GroupID("id4"), new GroupID("id3"),
+				new GroupID("id4"))),
+				is(Arrays.asList(
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id2"), new GroupName("fake"), toGUser("fake"),
+								new CreateAndModTimes(Instant.ofEpochMilli(50000)))
+								.withIsPrivate(true)
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id3"), new GroupName("name3"), toGUser("u3"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build()
+						)));
+	}
+	
+	@Test
+	public void getGroupsByIDsFailBadArgs() throws Exception {
+		getGroupsByIDsFail(null, new NullPointerException("groupIDs"));
+		getGroupsByIDsFail(Arrays.asList(new GroupID("id"), null), new NullPointerException(
+				"Null item in collection groupIDs"));
+		final List<GroupID> hundy = new LinkedList<>();
+		for (int i = 1; i < 102; i++) {
+			hundy.add(new GroupID("a" + i));
+		}
+		getGroupsByIDsFail(hundy, new IllegalParameterException(
+				"No more than 100 group IDs may be specified"));
+	}
+	
+	private void getGroupsByIDsFail(final List<GroupID> ids, final Exception expected) {
+		try {
+			initTestMocks().groups.getGroups(null, ids);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 	
 	@Test

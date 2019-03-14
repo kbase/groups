@@ -1,6 +1,7 @@
 package us.kbase.groups.storage;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +78,7 @@ public interface GroupsStorage {
 	 * @throws NoSuchGroupException if one or more of the groups does not exist.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	Set<Group> getGroups(Set<GroupID> groupIDs)
+	Set<Group> getGroups(Collection<GroupID> groupIDs)
 			throws NoSuchGroupException, GroupsStorageException;
 	
 	/** Get the name of one or more groups.

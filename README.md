@@ -246,8 +246,8 @@ AUTHORIZATION OPTIONAL
 GET /group[?excludeupto=<exlude string>&order=<sort order>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
-createdate, and moddate fields are included.
+A list of Groups. Only the id, private, name, owner, role, memcount, rescount, custom,
+lastvisit, createdate, and moddate fields are included.
 ```
 
 The owner field consists only of the user name for this endpoint. For most other endpoints,
@@ -538,7 +538,7 @@ Possible actions are `Cancel`, `Accept`, and `Deny`.
 AUTHORIZATION REQUIRED
 GET /request/id/<request id>/group
 
-A Group. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
+A Group. Only the id, name, private, owner, role, memcount, rescount, custom, lastvisit,
 createdate, and moddate fields are included.
 ```
 

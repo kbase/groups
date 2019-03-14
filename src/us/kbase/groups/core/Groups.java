@@ -71,6 +71,7 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private static final int MAX_GROUP_NAMES_RETURNED = 1000;
 	private static final int MAX_GROUP_HAS_REQUESTS_COUNT = 100;
+	private static final int MAX_GROUP_LIST_COUNT = 100;
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Map<ResourceType, ResourceHandler> resourceHandlers;
@@ -545,15 +546,47 @@ public class Groups {
 		checkNotNull(params, "params");
 		final UserName user = getOptionalUser(userToken);
 		return storage.getGroups(params, user).stream()
-				.map(g -> GroupView.getBuilder(g, user)
-						// this seems odd. Maybe there's a better way to deal with this?
-						.withMinimalViewFieldDeterminer(
-								f -> validators.getConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isMinimalViewField()).orElse(false))
-						.withPublicFieldDeterminer(
-								f -> validators.getConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isPublicField()).orElse(false))
-						.build())
+				.map(g -> toMinimalView(user, g)).collect(Collectors.toList());
+	}
+
+	private GroupView toMinimalView(final UserName user, final Group g) {
+		return GroupView.getBuilder(g, user)
+				// this seems odd. Maybe there's a better way to deal with this?
+				.withMinimalViewFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isMinimalViewField()).orElse(false))
+				.withPublicFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false))
+				.build();
+	}
+	
+	/** Get a set of specified groups. At most 100 groups may be specified.
+	 * @param userToken the user's token.
+	 * @param groupIDs the IDs of the group to fetch.
+	 * @return the groups, listed in the same order as the input IDs.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws NoSuchGroupException if there is no corresponding group for one of the IDs.
+	 * @throws IllegalParameterException if more than 100 group IDs are submitted.
+	 */
+	public List<GroupView> getGroups(final Token userToken, final List<GroupID> groupIDs)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, IllegalParameterException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		if (groupIDs.isEmpty()) {
+			return Collections.emptyList();
+		}
+		if (groupIDs.size() > MAX_GROUP_LIST_COUNT) {
+			throw new IllegalParameterException(String.format(
+					"No more than %s group IDs may be specified", MAX_GROUP_LIST_COUNT));
+		}
+		final UserName user = getOptionalUser(userToken);
+		final Set<Group> groups = storage.getGroups(groupIDs);
+		final Map<GroupID, Group> idToGroup = groups.stream()
+				.collect(Collectors.toMap(g -> g.getGroupID(), g -> g));
+		return groupIDs.stream().map(gid -> toMinimalView(user, idToGroup.get(gid)))
 				.collect(Collectors.toList());
 	}
 	
