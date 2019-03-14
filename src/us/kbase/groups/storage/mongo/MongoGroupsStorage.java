@@ -593,6 +593,23 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
+	public Set<Group> getGroups(final Set<GroupID> groupIDs)
+			throws NoSuchGroupException, GroupsStorageException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		final Document query = new Document(Fields.GROUP_ID, new Document("$in", groupIDs.stream()
+				.map(g -> g.getName()).collect(Collectors.toList())));
+		final List<Group> retgrp = getList(COL_GROUPS, query, null, null, 0, d ->toGroup(d));
+		final Set<GroupID> got = retgrp.stream().map(g -> g.getGroupID())
+				.collect(Collectors.toSet());
+		final Set<GroupID> missing = new HashSet<>(groupIDs); // in case groups is immutable
+		missing.removeAll(got);
+		if (!missing.isEmpty()) {
+			throw new NoSuchGroupException(missing.iterator().next().getName());
+		}
+		return new HashSet<>(retgrp);
+	}
+	
+	@Override
 	public List<GroupIDNameMembership> getGroupNames(
 			final UserName user,
 			final Set<GroupID> groupIDs)

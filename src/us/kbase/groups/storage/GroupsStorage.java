@@ -71,6 +71,15 @@ public interface GroupsStorage {
 	 */
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
+	/** Get multiple groups.
+	 * @param groupIDs the IDs of the groups.
+	 * @return the groups.
+	 * @throws NoSuchGroupException if one or more of the groups does not exist.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	Set<Group> getGroups(Set<GroupID> groupIDs)
+			throws NoSuchGroupException, GroupsStorageException;
+	
 	/** Get the name of one or more groups.
 	 * @param user an optional user to determine whether the user is a member of the group.
 	 * If no user is provided, group membership is considered to be false.
@@ -89,7 +98,7 @@ public interface GroupsStorage {
 	 */
 	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
 
-	/** Get the groups the member belongs to, up to a maximum of 100000 groups, sorted by ID.
+	/** Get the groups the member belongs to, sorted by ID.
 	 * @param user the user for whom groups will be returned.
 	 * @return the user's groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
