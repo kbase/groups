@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -593,7 +594,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public Set<Group> getGroups(final Set<GroupID> groupIDs)
+	public Set<Group> getGroups(final Collection<GroupID> groupIDs)
 			throws NoSuchGroupException, GroupsStorageException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
 		final Document query = new Document(Fields.GROUP_ID, new Document("$in", groupIDs.stream()
