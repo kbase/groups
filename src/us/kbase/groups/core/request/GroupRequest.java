@@ -342,7 +342,7 @@ public class GroupRequest {
 		}
 		
 		/** Set the resource that is the target of this request.
-		 * @param the type of the resource.
+		 * @param type the type of the resource.
 		 * @param resource the resource.
 		 * @return this builder.
 		 */

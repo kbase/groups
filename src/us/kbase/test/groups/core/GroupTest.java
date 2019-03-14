@@ -397,6 +397,31 @@ public class GroupTest {
 	}
 	
 	@Test
+	public void roleGetFromRepresentation() throws Exception {
+		assertThat("incorrect role", Role.fromRepresentation("None"), is(Role.NONE));
+		assertThat("incorrect role", Role.fromRepresentation("Member"), is(Role.MEMBER));
+		assertThat("incorrect role", Role.fromRepresentation("Admin"), is(Role.ADMIN));
+		assertThat("incorrect role", Role.fromRepresentation("Owner"), is(Role.OWNER));
+	}
+
+	@Test
+	public void roleGetFromRepresentationFail() throws Exception {
+		roleGetFromRepresentationFail(null, new IllegalArgumentException("Invalid role: null"));
+		roleGetFromRepresentationFail("   \t  ", new IllegalArgumentException(
+				"Invalid role:    \t  "));
+		roleGetFromRepresentationFail("foo", new IllegalArgumentException("Invalid role: foo"));
+	}
+	
+	private void roleGetFromRepresentationFail(final String rep, final Exception expected) {
+		try {
+			Role.fromRepresentation(rep);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void failGetRole() throws Exception {
 		final Group g = Group.getBuilder(
 				new GroupID("id"), new GroupName("name"),
