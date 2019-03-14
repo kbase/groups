@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -258,6 +259,106 @@ public class MongoGroupsStorageOpsTest {
 	}
 	
 	@Test
+	public void getGroups() throws Exception {
+		//minimal
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		// also minimal
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid21"), new GroupName("name"), toGUser("uname"),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.build());
+		
+		//maximal
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid6"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("uname"), inst(21000))
+						.withCustomField(new NumberedCustomField("f"), "val")
+						.withNullableLastVisit(inst(42000))
+						.build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+				.withIsPrivate(true)
+				.withPrivateMemberList(false)
+				.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
+						.withNullableLastVisit(inst(76000))
+						.withCustomField(new NumberedCustomField("field"), "value")
+						.build())
+				.withMember(toGUser("bar"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(GroupUser.getBuilder(new UserName("a3"), inst(50000))
+						.withCustomField(new NumberedCustomField("whee"), "whoo")
+						.withCustomField(new NumberedCustomField("droogies"), "hihihi")
+						.withNullableLastVisit(inst(78000))
+						.build())
+				.withResource(new ResourceType("t"), new ResourceDescriptor(new ResourceID("r")))
+				.withResource(new ResourceType("t"), new ResourceDescriptor(
+						new ResourceAdministrativeID("a"),
+						new ResourceID("b")),
+						inst(76000))
+				.withResource(new ResourceType("x"), new ResourceDescriptor(new ResourceID("y")),
+						inst(34000))
+				.withResource(new ResourceType("x"), new ResourceDescriptor(
+						new ResourceAdministrativeID("b"),
+						new ResourceID("z")))
+				.withCustomField(new NumberedCustomField("foo-83"), "bar")
+				.withCustomField(new NumberedCustomField("whoo"), "whee")
+				.build());
+		
+		assertThat("incorrect groups", manager.storage.getGroups(
+				set(new GroupID("gid"), new GroupID("gid21"), new GroupID("gid6"))),
+				is(new HashSet<>(Arrays.asList(
+						Group.getBuilder(
+								new GroupID("gid"), new GroupName("name"), toGUser("uname"),
+								new CreateAndModTimes(inst(20000), inst(30000)))
+								.build(),
+						Group.getBuilder(
+								new GroupID("gid21"), new GroupName("name"), toGUser("uname"),
+								new CreateAndModTimes(inst(20000), inst(30000)))
+								.build(),
+						Group.getBuilder(
+								new GroupID("gid6"), new GroupName("name"),
+								GroupUser.getBuilder(new UserName("uname"), inst(21000))
+										.withCustomField(new NumberedCustomField("f"), "val")
+										.withNullableLastVisit(inst(42000))
+										.build(),
+								new CreateAndModTimes(inst(20000), inst(30000)))
+								.withIsPrivate(true)
+								.withPrivateMemberList(false)
+								.withMember(GroupUser.getBuilder(new UserName("foo"), inst(40000))
+										.withNullableLastVisit(inst(76000))
+										.withCustomField(new NumberedCustomField("field"), "value")
+										.build())
+								.withMember(toGUser("bar"))
+								.withAdministrator(toGUser("a1"))
+								.withAdministrator(GroupUser.getBuilder(
+										new UserName("a3"), inst(50000))
+										.withCustomField(new NumberedCustomField("whee"), "whoo")
+										.withCustomField(
+												new NumberedCustomField("droogies"), "hihihi")
+										.withNullableLastVisit(inst(78000))
+										.build())
+								.withResource(new ResourceType("t"),
+										new ResourceDescriptor(new ResourceID("r")))
+								.withResource(new ResourceType("t"), new ResourceDescriptor(
+										new ResourceAdministrativeID("a"),
+										new ResourceID("b")),
+										inst(76000))
+								.withResource(new ResourceType("x"),
+										new ResourceDescriptor(new ResourceID("y")),
+										inst(34000))
+								.withResource(new ResourceType("x"), new ResourceDescriptor(
+										new ResourceAdministrativeID("b"),
+										new ResourceID("z")))
+								.withCustomField(new NumberedCustomField("foo-83"), "bar")
+								.withCustomField(new NumberedCustomField("whoo"), "whee")
+								.build()
+						))));
+	}
+	
+	@Test
 	public void getGroupWithDefaultPrivateMemberList() throws Exception {
 		manager.storage.createGroup(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("uname"),
@@ -412,6 +513,33 @@ public class MongoGroupsStorageOpsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("groupID"));
+		}
+	}
+
+	@Test
+	public void getGroupsByIDsFail() throws Exception {
+		getGroupsFail(null, new NullPointerException("groupIDs"));
+		getGroupsFail(set(new GroupID("i"), null), new NullPointerException(
+				"Null item in collection groupIDs"));
+		
+		final Set<GroupID> ids = new HashSet<>();
+		for (int i = 1; i < 5; i++) {
+			manager.storage.createGroup(Group.getBuilder(
+					new GroupID("gid" + i), new GroupName("name"), toGUser("uname"),
+					new CreateAndModTimes(Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000)))
+					.build());
+			ids.add(new GroupID("gid" + i));
+		}
+		ids.add(new GroupID("gid6"));
+		getGroupsFail(ids, new NoSuchGroupException("gid6"));
+	}
+	
+	private void getGroupsFail(final Set<GroupID> ids, final Exception expected) {
+		try {
+			manager.storage.getGroups(ids);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
