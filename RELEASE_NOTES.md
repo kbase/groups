@@ -2,9 +2,18 @@
 
 ## 0.1.6
 
+### Admin notes:
+
+* The `group` collection `own_1` and `admin_1` MongoDB indexes have been replaced by
+  `own_1_id_1` and `admin_1_id_1` indexes and can be deleted.
+
+### Release notes
+
 * Added the `/request/groups` endpoint.
 * Resource administrators can now see their resources in private groups
   for which they are not a member in the `/group/<group id> endpoint`.
+* Added the `ids` parameter to the `/groups` endpoint.
+* Added `resourcetype` and `resource` parameters to the four request listing endpoints.
 
 ## 0.1.5
 

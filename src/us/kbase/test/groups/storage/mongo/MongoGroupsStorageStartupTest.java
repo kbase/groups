@@ -211,12 +211,12 @@ public class MongoGroupsStorageStartupTest {
 						.append("name", "id_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("own", 1))
-						.append("name", "own_1")
+						.append("key", new Document("own", 1).append("id", 1))
+						.append("name", "own_1_id_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
-						.append("key", new Document("admin", 1))
-						.append("name", "admin_1")
+						.append("key", new Document("admin", 1).append("id", 1))
+						.append("name", "admin_1_id_1")
 						.append("ns", col),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))

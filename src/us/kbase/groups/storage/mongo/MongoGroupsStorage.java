@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,7 @@ import us.kbase.groups.core.CreateModAndExpireTimes;
 import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.GroupExistsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -122,10 +124,10 @@ public class MongoGroupsStorage implements GroupsStorage {
 		final Map<List<String>, IndexOptions> groups = new HashMap<>();
 		// will probably need to sort by time at some point
 		groups.put(Arrays.asList(Fields.GROUP_ID), IDX_UNIQ);
-		// find by owner
-		groups.put(Arrays.asList(Fields.GROUP_OWNER), null);
-		// find by admin
-		groups.put(Arrays.asList(Fields.GROUP_ADMINS), null);
+		// find by owner and sort by ID
+		groups.put(Arrays.asList(Fields.GROUP_OWNER, Fields.GROUP_ID), null);
+		// find by admin and sort by ID
+		groups.put(Arrays.asList(Fields.GROUP_ADMINS, Fields.GROUP_ID), null);
 		// find public groups and sort by ID (not needed?)
 		groups.put(Arrays.asList(Fields.GROUP_IS_PRIVATE, Fields.GROUP_ID), null);
 		// find groups by member and sort by ID
@@ -746,17 +748,32 @@ public class MongoGroupsStorage implements GroupsStorage {
 	public List<Group> getGroups(final GetGroupsParams params, final UserName user)
 			throws GroupsStorageException {
 		requireNonNull(params, "params");
+		if (user == null && !params.getRole().equals(Role.NONE)) { // TODO NOW test in Groups and throw error
+			return Collections.emptyList();
+		}
 		final Document query = new Document();
 		if (params.getExcludeUpTo().isPresent()) {
 			final String inequality = params.isSortAscending() ? "$gt" : "$lt";
 			query.append(Fields.GROUP_ID, new Document(inequality, params.getExcludeUpTo().get()));
 		}
+		final String memberField = Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
+				Fields.GROUP_MEMBER_NAME;
 		if (user == null) {
 			query.append(Fields.GROUP_IS_PRIVATE, false);
-		} else {
+		} else if (params.getRole().equals(Role.NONE)) {
 			query.append("$or", Arrays.asList(new Document(Fields.GROUP_IS_PRIVATE, false),
-					new Document(Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
-							Fields.GROUP_MEMBER_NAME, user.getName())));
+					// members contains all members
+					new Document(memberField, user.getName())));
+		} else if (params.getRole().equals(Role.OWNER)) {
+			query.append(Fields.GROUP_OWNER, user.getName());
+		} else if (params.getRole().equals(Role.ADMIN)) {
+			query.append("$or", Arrays.asList(
+					new Document(Fields.GROUP_ADMINS, user.getName()),
+					new Document(Fields.GROUP_OWNER, user.getName())
+					));
+		} else {
+			// members contains all members
+			query.append(memberField, user.getName());
 		}
 		// may want to allow alternate sorts later, will need indexes
 		final Document sort = new Document(Fields.GROUP_ID, params.isSortAscending() ? 1 : -1);
