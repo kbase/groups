@@ -615,7 +615,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 	@Override
 	public List<GroupIDNameMembership> getGroupNames(
 			final UserName user,
-			final Set<GroupID> groupIDs)
+			final Collection<GroupID> groupIDs)
 			throws NoSuchGroupException, GroupsStorageException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
 		final Document projection = new Document(Fields.GROUP_ID, 1)

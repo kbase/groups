@@ -267,6 +267,7 @@ public class APICommon {
 	 * Null or whitespace only values are ignored.
 	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
 	 * for a descending sort.
+	 * @param role the minimum role the user must possess.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
 	 * @return the get groups parameters.
@@ -275,10 +276,18 @@ public class APICommon {
 	public static GetGroupsParams getGroupsParams(
 			final String excludeUpTo,
 			final String sortDirection,
+			final String role,
 			final boolean defaultSort)
 			throws IllegalParameterException {
 		final GetGroupsParams.Builder b = GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo(excludeUpTo);
+		if (!isNullOrEmpty(role)) {
+			try {
+				b.withRole(Role.fromRepresentation(role));
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException(e.getMessage(), e);
+			}
+		}
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		return b.build();
 	}
@@ -299,21 +308,23 @@ public class APICommon {
 		}
 	}
 	
-	/** Split a comma separated string into a set of group IDs. Whitespace only entries are
+	/** Split a comma separated string into a list of group IDs. Whitespace only entries are
 	 * ignored.
 	 * @param commaSeparatedGroupIDs the group IDs as a comma separated string.
 	 * @return the group IDs.
 	 * @throws IllegalParameterException if an ID is illegal.
 	 */
-	public static Set<GroupID> toGroupIDs(final String commaSeparatedGroupIDs)
+	public static List<GroupID> toGroupIDs(final String commaSeparatedGroupIDs)
 			throws IllegalParameterException {
-		final Set<GroupID> groupIDs = new HashSet<>();
-		for (final String id: requireNonNull(commaSeparatedGroupIDs, "commaSeparatedGroupIDs")
-				.split(",")) {
+		final List<GroupID> groupIDs = new LinkedList<>();
+		if (commaSeparatedGroupIDs == null) {
+			return groupIDs;
+		}
+		for (final String id: commaSeparatedGroupIDs.split(",")) {
 			// can't use streams due to checked exceptions
 			if (!id.trim().isEmpty()) {
 				try {
-					groupIDs.add(new GroupID(id));
+					groupIDs.add(new GroupID(id.trim()));
 				} catch (MissingParameterException e) {
 					throw new RuntimeException("This is impossible. It didn't happen.", e);
 				}

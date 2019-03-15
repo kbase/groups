@@ -455,7 +455,7 @@ public class Groups {
 	 */
 	public List<GroupIDNameMembership> getGroupNames(
 			final Token userToken,
-			final Set<GroupID> groupIDs)
+			final Collection<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, IllegalParameterException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
@@ -496,7 +496,7 @@ public class Groups {
 	 */
 	public Map<GroupID, GroupHasRequests> groupsHaveRequests(
 			final Token userToken,
-			final Set<GroupID> groupIDs)
+			final Collection<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
 				NoSuchGroupException, GroupsStorageException, IllegalParameterException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
