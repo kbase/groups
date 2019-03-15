@@ -106,7 +106,7 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Before
 	public void before() throws Exception {
-		manager.reset(set(new ResourceType("workspace")));
+		manager.reset(set(new ResourceType("workspace"), new ResourceType("catalogmethod")));
 		logEvents.clear();
 	}
 	
@@ -1405,6 +1405,15 @@ public class MongoGroupsStorageOpsTest {
 				.build();
 		manager.storage.createGroup(g3);
 		
+		// different resource type
+		final Group g4 = Group.getBuilder(
+				new GroupID("gid4"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		manager.storage.createGroup(g4);
+		
 		// private resource
 		assertThat("incorrect get groups",
 				manager.storage.getGroups(
@@ -1474,7 +1483,14 @@ public class MongoGroupsStorageOpsTest {
 				.withResource(new ResourceType("workspace"),
 						new ResourceDescriptor(new ResourceID("6")))
 				.build();
+		final Group difftypemem = Group.getBuilder(
+				new GroupID("difftypemem"), new GroupName("name3"), toGUser("mem"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(1000000)))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
 		
+		manager.storage.createGroup(difftypemem);
 		manager.storage.createGroup(priv);
 		manager.storage.createGroup(g1);
 		manager.storage.createGroup(diffrespub);
