@@ -209,9 +209,9 @@ public class MongoGroupsStorage implements GroupsStorage {
 	/** Create MongoDB based storage for the Groups application.
 	 * @param db the MongoDB database the storage system will use.
 	 * @param types the resource types for which indexes will be created. Querying against
-	 * resource types not declared here will result in a table scan. Note that 4 indexes
+	 * resource types not declared here will result in a table scan. Note that 3 indexes
 	 * are created per type and 5 indexes are created automatically, which means that at most
-	 * 14 types can be registered given MongoDBs 64 index / collection limit.
+	 * 19 types can be registered given MongoDBs 64 index / collection limit.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
 	public MongoGroupsStorage(final MongoDatabase db, final Collection<ResourceType> types)
@@ -357,20 +357,20 @@ public class MongoGroupsStorage implements GroupsStorage {
 	private void ensureIndexes(final Collection<ResourceType> types) throws StorageInitException {
 		final Map<List<String>, IndexOptions> groups = new HashMap<>();
 		for (final ResourceType t: types) {
+			/* Note admins and members cannot be indexed here because mongo will not allow
+			 * a compound index including more than one array.
+			 * Hence we add a general resource ID index and allow Mongo to select the best index
+			 * to use when doing user + resource ID look ups (and it might use both and combine
+			 * the results).
+			 */
 			final String resourceIDField = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + t.getName()
 					+ Fields.FIELD_SEP + Fields.GROUP_RESOURCE_ID;
+			// find by resource ID and sort by ID
+			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_ID), null);
 			// find by resource ID & owner and sort by ID
 			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_OWNER, Fields.GROUP_ID), null);
-			// find by resource ID & admin and sort by ID
-			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_ADMINS, Fields.GROUP_ID), null);
 			// find public groups by resource ID and sort by ID (not needed?)
 			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_IS_PRIVATE, Fields.GROUP_ID),
-					null);
-			// find by resource ID & member and sort by ID
-			groups.put(Arrays.asList(
-					resourceIDField, 
-					Fields.GROUP_MEMBERS + Fields.FIELD_SEP + Fields.GROUP_MEMBER_NAME,
-					Fields.GROUP_ID),
 					null);
 		}
 		
@@ -779,10 +779,15 @@ public class MongoGroupsStorage implements GroupsStorage {
 	}
 	
 	@Override
-	public List<Group> getGroups(final GetGroupsParams params, final UserName user)
+	public List<Group> getGroups(
+			final GetGroupsParams params,
+			final boolean resourceIsPublic,
+			final UserName user)
 			throws GroupsStorageException {
+		// ugh. This method is not pretty.
 		requireNonNull(params, "params");
-		if (user == null && !params.getRole().equals(Role.NONE)) { // TODO NOW test in Groups and throw error
+		if (user == null && (!params.getRole().equals(Role.NONE) ||
+				(params.getResourceType().isPresent() && !resourceIsPublic))) {
 			return Collections.emptyList();
 		}
 		final Document query = new Document();
@@ -792,12 +797,18 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 		final String memberField = Fields.GROUP_MEMBERS + Fields.FIELD_SEP +
 				Fields.GROUP_MEMBER_NAME;
+		appendResourceInPlace(params, query); // resource is public if present && user == null
 		if (user == null) {
 			query.append(Fields.GROUP_IS_PRIVATE, false);
 		} else if (params.getRole().equals(Role.NONE)) {
-			query.append("$or", Arrays.asList(new Document(Fields.GROUP_IS_PRIVATE, false),
-					// members contains all members
-					new Document(memberField, user.getName())));
+			// members array contains all members
+			final Document memberQuery = new Document(memberField, user.getName());
+			if (resourceIsPublic || !params.getResourceType().isPresent()) {
+				final Document pubquery = new Document(Fields.GROUP_IS_PRIVATE, false);
+				query.append("$or", Arrays.asList(pubquery, memberQuery));
+			} else {
+				query.putAll(memberQuery);
+			}
 		} else if (params.getRole().equals(Role.OWNER)) {
 			query.append(Fields.GROUP_OWNER, user.getName());
 		} else if (params.getRole().equals(Role.ADMIN)) {
@@ -806,7 +817,7 @@ public class MongoGroupsStorage implements GroupsStorage {
 					new Document(Fields.GROUP_OWNER, user.getName())
 					));
 		} else {
-			// members contains all members
+			// members array contains all members
 			query.append(memberField, user.getName());
 		}
 		// may want to allow alternate sorts later, will need indexes
@@ -815,6 +826,16 @@ public class MongoGroupsStorage implements GroupsStorage {
 		return getList(COL_GROUPS, query, new Document(), sort, 100, d -> toGroup(d));
 	}
 	
+	private Document appendResourceInPlace(final GetGroupsParams params, final Document query) {
+		if (params.getResourceType().isPresent()) {
+			final String resourceKey = Fields.GROUP_RESOURCES + Fields.FIELD_SEP +
+					params.getResourceType().get().getName() + Fields.FIELD_SEP +
+					Fields.GROUP_RESOURCE_ID;
+			query.append(resourceKey, params.getResourceID().get().getName());
+		}
+		return query;
+	}
+
 	private Group toGroup(final Document grp) throws GroupsStorageException {
 		try {
 			final Map<UserName, GroupUser> members = getMembers(grp);

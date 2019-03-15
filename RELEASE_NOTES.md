@@ -6,6 +6,9 @@
 
 * The `group` collection `own_1` and `admin_1` MongoDB indexes have been replaced by
   `own_1_id_1` and `admin_1_id_1` indexes and can be deleted.
+* In total, 14 new MongoDB indexes have been added to support the new features in this version.
+  As such, the first server startup on existing data will take extra time as the indexes are
+  built.
 
 ### Release notes
 

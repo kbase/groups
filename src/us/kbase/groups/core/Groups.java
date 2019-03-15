@@ -551,7 +551,7 @@ public class Groups {
 			throw new UnauthorizedException("A token is required when filtering groups by role");
 		}
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroups(params, user).stream()
+		return storage.getGroups(params, false, user).stream() //TODO NOW check resource
 				.map(g -> toMinimalView(user, g)).collect(Collectors.toList());
 	}
 

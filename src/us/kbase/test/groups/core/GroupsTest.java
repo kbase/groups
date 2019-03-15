@@ -1539,6 +1539,7 @@ public class GroupsTest {
 				.withNullableExcludeUpTo("ex")
 				.withNullableSortAscending(false)
 				.build(),
+				false,
 				null))
 				.thenReturn(Collections.emptyList());
 		
@@ -1556,6 +1557,7 @@ public class GroupsTest {
 		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("someex")
 				.build(),
+				false,
 				null))
 				.thenReturn(Arrays.asList(
 						Group.getBuilder(
@@ -1636,7 +1638,8 @@ public class GroupsTest {
 				.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
 				.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
 				.build();
-		when(mocks.storage.getGroups(eq(mtparams), any())).thenReturn(Arrays.asList(grp));
+		when(mocks.storage.getGroups(eq(mtparams), eq(false), any()))
+				.thenReturn(Arrays.asList(grp));
 		when(mocks.storage.getGroups(Arrays.asList(new GroupID("id1")))).thenReturn(set(grp));
 		
 		when(mocks.validators.getConfigOrEmpty(new CustomField("minpub"))).thenReturn(
@@ -1771,8 +1774,8 @@ public class GroupsTest {
 				.build();
 		
 		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
-		when(mocks.storage.getGroups(ggp, null)).thenReturn(Arrays.asList(g1, g3));
-		when(mocks.storage.getGroups(ggp, new UserName("m1")))
+		when(mocks.storage.getGroups(ggp, false, null)).thenReturn(Arrays.asList(g1, g3));
+		when(mocks.storage.getGroups(ggp, false, new UserName("m1")))
 				.thenReturn(Arrays.asList(g1, g2, g3));
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(null, ggp),
@@ -1796,7 +1799,7 @@ public class GroupsTest {
 				.build();
 		
 		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
-		when(mocks.storage.getGroups(any(), eq(new UserName("m1"))))
+		when(mocks.storage.getGroups(any(), eq(false), eq(new UserName("m1"))))
 				.thenReturn(Arrays.asList(g1));
 		
 		for (final Role r: Role.values()) {

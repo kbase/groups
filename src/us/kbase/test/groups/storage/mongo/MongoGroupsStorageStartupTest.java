@@ -267,23 +267,15 @@ public class MongoGroupsStorageStartupTest {
 								.append("ns", col),
 						new Document("v", manager.indexVer)
 								.append("key", new Document(resKey, 1)
-										.append("admin", 1)
 										.append("id", 1))
-								.append("name", resKey + "_1_admin_1_id_1")
+								.append("name", resKey + "_1_id_1")
 								.append("ns", col),
 						new Document("v", manager.indexVer)
 								.append("key", new Document(resKey, 1)
 										.append("priv", 1)
 										.append("id", 1))
 								.append("name", resKey + "_1_priv_1_id_1")
-								.append("ns", col),
-						new Document("v", manager.indexVer)
-								.append("key", new Document(resKey, 1)
-										.append("memb.user", 1)
-										.append("id", 1))
-								.append("name", resKey + "_1_memb.user_1_id_1")
 								.append("ns", col)
-						
 						));
 			}
 			assertThat("incorrect indexes", indexes, is(expected));

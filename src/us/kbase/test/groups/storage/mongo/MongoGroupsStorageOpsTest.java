@@ -106,7 +106,7 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Before
 	public void before() throws Exception {
-		manager.reset();
+		manager.reset(set(new ResourceType("workspace"), new ResourceType("catalogmethod")));
 		logEvents.clear();
 	}
 	
@@ -1187,16 +1187,20 @@ public class MongoGroupsStorageOpsTest {
 	
 	@Test
 	public void getGroupsNoUserWithRole() throws Exception {
+		manager.storage.createGroup(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.build());
 		assertThat("incorrect get groups",
 				manager.storage.getGroups(
-						GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), null),
+						GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), false, null),
 				is(Collections.emptyList()));
 	}
 	
 	@Test
 	public void getGroupsEmpty() throws Exception {
 		assertThat("incorrect get groups",
-				manager.storage.getGroups(GetGroupsParams.getBuilder().build(), null),
+				manager.storage.getGroups(GetGroupsParams.getBuilder().build(), false, null),
 				is(Collections.emptyList()));
 	}
 	
@@ -1236,7 +1240,7 @@ public class MongoGroupsStorageOpsTest {
 				.build());
 		
 		assertThat("incorrect get group", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().build(), null), is(Arrays.asList(
+				GetGroupsParams.getBuilder().build(), false, null), is(Arrays.asList(
 						Group.getBuilder(new GroupID("aid"), new GroupName("name1"),
 								GroupUser.getBuilder(new UserName("uname1"), inst(12000))
 										.withCustomField(
@@ -1309,53 +1313,240 @@ public class MongoGroupsStorageOpsTest {
 		manager.storage.createGroup(g4);
 		
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().build(), null),
+				GetGroupsParams.getBuilder().build(), false, null),
 				is(Arrays.asList(g2, g3, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.NONE).build(), null),
+				GetGroupsParams.getBuilder().withRole(Role.NONE).build(), false, null),
 				is(Arrays.asList(g2, g3, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.NONE).build(), new UserName("a1")),
+				GetGroupsParams.getBuilder().withRole(Role.NONE).build(),
+				false, new UserName("a1")),
 				is(Arrays.asList(g1, g2, g3, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.NONE).build(), new UserName("m")),
+				GetGroupsParams.getBuilder().withRole(Role.NONE).build(),
+				false, new UserName("m")),
 				is(Arrays.asList(g2, g3, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), new UserName("a1")),
+				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(),
+				false, new UserName("a1")),
 				is(Arrays.asList(g1, g2, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), new UserName("m")),
+				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(),
+				false, new UserName("m")),
 				is(Arrays.asList(g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), new UserName("o")),
+				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(),
+				false, new UserName("o")),
 				is(Arrays.asList(g1, g4)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(), new UserName("v")),
+				GetGroupsParams.getBuilder().withRole(Role.MEMBER).build(),
+				false, new UserName("v")),
 				is(Collections.emptyList()));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(), new UserName("a1")),
+				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(),
+				false, new UserName("a1")),
 				is(Arrays.asList(g1, g2)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(), new UserName("m1")),
+				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(),
+				false, new UserName("m1")),
 				is(Arrays.asList(g2)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(), new UserName("m")),
+				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(),
+				false, new UserName("m")),
 				is(Collections.emptyList()));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(), new UserName("o")),
+				GetGroupsParams.getBuilder().withRole(Role.ADMIN).build(),
+				false, new UserName("o")),
 				is(Arrays.asList(g1)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(), new UserName("m1")),
+				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(),
+				false, new UserName("m1")),
 				is(Collections.emptyList()));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(), new UserName("a1")),
+				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(),
+				false, new UserName("a1")),
 				is(Arrays.asList(g2)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(), new UserName("o")),
+				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(),
+				false, new UserName("o")),
 				is(Arrays.asList(g1)));
 		assertThat("incorrect groups", manager.storage.getGroups(
-				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(), new UserName("o1")),
+				GetGroupsParams.getBuilder().withRole(Role.OWNER).build(),
+				false, new UserName("o1")),
 				is(Arrays.asList(g3, g4)));
+	}
+	
+	@Test
+	public void getGroupsWithResourceNoUser() throws Exception {
+		final Group g1 = Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		manager.storage.createGroup(g1);
+		
+		// private group, invisible
+		final Group g2 = Group.getBuilder(
+				new GroupID("gid2"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.withIsPrivate(true)
+				.build();
+		manager.storage.createGroup(g2);
+		
+		// different resource
+		final Group g3 = Group.getBuilder(
+				new GroupID("gid3"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("6")))
+				.build();
+		manager.storage.createGroup(g3);
+		
+		// different resource type
+		final Group g4 = Group.getBuilder(
+				new GroupID("gid4"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		manager.storage.createGroup(g4);
+		
+		// private resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(
+						GetGroupsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("7"))
+								.build(),
+						false, null),
+				is(Collections.emptyList()));
+		
+		// public resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(
+						GetGroupsParams.getBuilder()
+								.withResource(new ResourceType("workspace"), new ResourceID("7"))
+								.build(),
+						true, null),
+				is(Arrays.asList(g1)));
+	}
+	
+	@Test
+	public void getGroupsWithResourceWithUserWithRoles() throws Exception {
+		final Group g1 = Group.getBuilder(
+				new GroupID("gid"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(50000)))
+				.withMember(toGUser("mem"))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		final Group g2 = Group.getBuilder(
+				new GroupID("gid2"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(60000)))
+				.withAdministrator(toGUser("mem"))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		final Group g3 = Group.getBuilder(
+				new GroupID("gid3"), new GroupName("name3"), toGUser("mem"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(70000)))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		final Group priv = Group.getBuilder(
+				new GroupID("priv"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(80000)))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		final Group pub = Group.getBuilder(
+				new GroupID("pub"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(90000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		final Group diffrespub = Group.getBuilder(
+				new GroupID("diffrespub"), new GroupName("name3"), toGUser("uname3"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(90000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("6")))
+				.build();
+		final Group diffresmem = Group.getBuilder(
+				new GroupID("diffresmem"), new GroupName("name3"), toGUser("mem"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(90000)))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("6")))
+				.build();
+		final Group difftypemem = Group.getBuilder(
+				new GroupID("difftypemem"), new GroupName("name3"), toGUser("mem"),
+				new CreateAndModTimes(Instant.ofEpochMilli(40000), Instant.ofEpochMilli(1000000)))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("7")))
+				.build();
+		
+		manager.storage.createGroup(difftypemem);
+		manager.storage.createGroup(priv);
+		manager.storage.createGroup(g1);
+		manager.storage.createGroup(diffrespub);
+		manager.storage.createGroup(g2);
+		manager.storage.createGroup(pub);
+		manager.storage.createGroup(diffresmem);
+		manager.storage.createGroup(g3);
+		
+		final GetGroupsParams.Builder p = GetGroupsParams.getBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceID("7"));
+
+		// no role, private resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), false, new UserName("mem")),
+				is(Arrays.asList(g1, g2, g3)));
+		
+		// no role, public resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), true, new UserName("mem")),
+				is(Arrays.asList(g1, g2, g3, pub)));
+		
+		p.withRole(Role.MEMBER);
+		
+		// member, private resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), false, new UserName("mem")),
+				is(Arrays.asList(g1, g2, g3)));
+		
+		// member, public resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), true, new UserName("mem")),
+				is(Arrays.asList(g1, g2, g3)));
+		
+		p.withRole(Role.ADMIN);
+		
+		// admin, private resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), false, new UserName("mem")),
+				is(Arrays.asList(g2, g3)));
+		
+		// admin, public resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), true, new UserName("mem")),
+				is(Arrays.asList(g2, g3)));
+		
+		p.withRole(Role.OWNER);
+		
+		// owner, private resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), false, new UserName("mem")),
+				is(Arrays.asList(g3)));
+		
+		// owner, public resource
+		assertThat("incorrect get groups",
+				manager.storage.getGroups(p.build(), true, new UserName("mem")),
+				is(Arrays.asList(g3)));
 	}
 	
 	@Test
@@ -1394,13 +1585,13 @@ public class MongoGroupsStorageOpsTest {
 		
 		final GetGroupsParams p = GetGroupsParams.getBuilder().build();
 		
-		assertThat("incorrect groups", manager.storage.getGroups(p, null),
+		assertThat("incorrect groups", manager.storage.getGroups(p, false, null),
 				is(Arrays.asList(g2)));
-		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("o")),
+		assertThat("incorrect groups", manager.storage.getGroups(p, false, new UserName("o")),
 				is(Arrays.asList(g1, g2)));
-		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("a")),
+		assertThat("incorrect groups", manager.storage.getGroups(p, false, new UserName("a")),
 				is(Arrays.asList(g2, g3)));
-		assertThat("incorrect groups", manager.storage.getGroups(p, new UserName("m")),
+		assertThat("incorrect groups", manager.storage.getGroups(p, false, new UserName("m")),
 				is(Arrays.asList(g2, g4)));
 	}
 	
@@ -1492,9 +1683,9 @@ public class MongoGroupsStorageOpsTest {
 			manager.storage.createGroup(b.build());
 		}
 		final List<Group> resNull = manager.storage.getGroups(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("g010").build(), null);
+				.withNullableExcludeUpTo("g010").build(), false, null);
 		final List<Group> resNonMember = manager.storage.getGroups(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("g010").build(), new UserName("nonmember"));
+				.withNullableExcludeUpTo("g010").build(), false, new UserName("nonmember"));
 		
 		final List<String> expected = new LinkedList<>();
 		for (int i = 11; i < 210; i += 2) {
@@ -1513,7 +1704,7 @@ public class MongoGroupsStorageOpsTest {
 		}
 		
 		final List<Group> res2 = manager.storage.getGroups(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("g010").build(), new UserName("m"));
+				.withNullableExcludeUpTo("g010").build(), false, new UserName("m"));
 		
 		final List<String> expected2 = new LinkedList<>();
 		for (int i = 10; i < 110; i += 1) {
@@ -1536,7 +1727,7 @@ public class MongoGroupsStorageOpsTest {
 			final int size)
 			throws Exception {
 		final List<Group> res = manager.storage.getGroups(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo(excludeUpTo).build(), null);
+				.withNullableExcludeUpTo(excludeUpTo).build(), false, null);
 		assertThat("incorrect size", res.size(), is(size));
 		int i = start;
 		for (final Group g: res) {
@@ -1549,13 +1740,13 @@ public class MongoGroupsStorageOpsTest {
 	
 	private void checkGroupsList(final GetGroupsParams p, final List<Group> expected)
 			throws GroupsStorageException {
-		assertThat("incorrect groups", manager.storage.getGroups(p, null), is(expected));
+		assertThat("incorrect groups", manager.storage.getGroups(p, false, null), is(expected));
 	}
 	
 	@Test
 	public void getGroupsFail() throws Exception {
 		try {
-			manager.storage.getGroups(null, new UserName("foo"));
+			manager.storage.getGroups(null, false, new UserName("foo"));
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
