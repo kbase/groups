@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.bson.Document;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -207,19 +208,29 @@ public class MongoGroupsStorage implements GroupsStorage {
 	
 	/** Create MongoDB based storage for the Groups application.
 	 * @param db the MongoDB database the storage system will use.
+	 * @param types the resource types for which indexes will be created. Querying against
+	 * resource types not declared here will result in a table scan. Note that 4 indexes
+	 * are created per type and 5 indexes are created automatically, which means that at most
+	 * 14 types can be registered given MongoDBs 64 index / collection limit.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
-	public MongoGroupsStorage(final MongoDatabase db) throws StorageInitException {
-		this(db, Clock.systemDefaultZone());
+	public MongoGroupsStorage(final MongoDatabase db, final Collection<ResourceType> types)
+			throws StorageInitException {
+		this(db, types, Clock.systemDefaultZone());
 	}
 	
 	// for tests
-	private MongoGroupsStorage(final MongoDatabase db, final Clock clock)
+	private MongoGroupsStorage(
+			final MongoDatabase db,
+			final Collection<ResourceType> types,
+			final Clock clock)
 			throws StorageInitException {
 		checkNotNull(db, "db");
+		checkNoNullsInCollection(types, "types");
 		this.db = db;
 		this.clock = clock;
-		ensureIndexes(); // MUST come before check config
+		ensureIndexes(INDEXES); // MUST come before check config
+		ensureIndexes(types);
 		checkConfig();
 		startExpirationAgent(EXPIRATION_AGENT_FREQUENCY_SEC);
 	}
@@ -320,11 +331,12 @@ public class MongoGroupsStorage implements GroupsStorage {
 		}
 	}
 
-	private void ensureIndexes() throws StorageInitException {
-		for (final String col: INDEXES.keySet()) {
-			for (final List<String> idx: INDEXES.get(col).keySet()) {
+	private void ensureIndexes(Map<String, Map<List<String>, IndexOptions>> indexes)
+			throws StorageInitException {
+		for (final String col: indexes.keySet()) {
+			for (final List<String> idx: indexes.get(col).keySet()) {
 				final Document index = new Document();
-				final IndexOptions opts = INDEXES.get(col).get(idx);
+				final IndexOptions opts = indexes.get(col).get(idx);
 				for (final String field: idx) {
 					index.put(field, 1);
 				}
@@ -342,7 +354,29 @@ public class MongoGroupsStorage implements GroupsStorage {
 			}
 		}
 	}
-
+	private void ensureIndexes(final Collection<ResourceType> types) throws StorageInitException {
+		final Map<List<String>, IndexOptions> groups = new HashMap<>();
+		for (final ResourceType t: types) {
+			final String resourceIDField = Fields.GROUP_RESOURCES + Fields.FIELD_SEP + t.getName()
+					+ Fields.FIELD_SEP + Fields.GROUP_RESOURCE_ID;
+			// find by resource ID & owner and sort by ID
+			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_OWNER, Fields.GROUP_ID), null);
+			// find by resource ID & admin and sort by ID
+			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_ADMINS, Fields.GROUP_ID), null);
+			// find public groups by resource ID and sort by ID (not needed?)
+			groups.put(Arrays.asList(resourceIDField, Fields.GROUP_IS_PRIVATE, Fields.GROUP_ID),
+					null);
+			// find by resource ID & member and sort by ID
+			groups.put(Arrays.asList(
+					resourceIDField, 
+					Fields.GROUP_MEMBERS + Fields.FIELD_SEP + Fields.GROUP_MEMBER_NAME,
+					Fields.GROUP_ID),
+					null);
+		}
+		
+		ensureIndexes(ImmutableMap.of(COL_GROUPS, groups));
+	}
+	
 	private static class DuplicateKeyExceptionChecker {
 		
 		// might need this stuff later, so keeping for now.
