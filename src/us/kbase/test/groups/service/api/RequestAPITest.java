@@ -1009,7 +1009,7 @@ public class RequestAPITest {
 		
 		when(g.groupsHaveRequests(
 				new Token("tokyn"),
-				set(new GroupID("id1"), new GroupID("id2"), new GroupID("id3"))))
+				Arrays.asList(new GroupID("id1"), new GroupID("id2"), new GroupID("id3"))))
 				.thenReturn(ImmutableMap.of(
 						new GroupID("id1"), GroupHasRequests.NONE,
 						new GroupID("id2"), GroupHasRequests.OLD,

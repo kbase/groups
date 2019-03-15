@@ -5,7 +5,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static us.kbase.test.groups.TestCommon.set;
 
 import java.util.Arrays;
 import java.util.List;
@@ -32,7 +31,8 @@ public class NamesAPITest {
 		
 		final NamesAPI napi = new NamesAPI(g);
 		
-		when(g.getGroupNames(null, set(new GroupID("i3"), new GroupID("i1"), new GroupID("i22"))))
+		when(g.getGroupNames(null, Arrays.asList(
+				new GroupID("i3"), new GroupID("i1"), new GroupID("i22"))))
 				.thenReturn(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("i1"))
 								.withGroupName(new GroupName("n1"))
@@ -72,7 +72,7 @@ public class NamesAPITest {
 		final NamesAPI napi = new NamesAPI(g);
 		
 		when(g.getGroupNames(new Token("token"),
-				set(new GroupID("i3"), new GroupID("i1"), new GroupID("i22"))))
+				Arrays.asList(new GroupID("i3"), new GroupID("i1"), new GroupID("i22"))))
 				.thenReturn(Arrays.asList(
 						GroupIDNameMembership.getBuilder(new GroupID("i1"))
 								.withGroupName(new GroupName("n1"))
@@ -106,7 +106,7 @@ public class NamesAPITest {
 	@Test
 	public void failGetGroupNames() throws Exception {
 		failGetGroupNames("  id1, bad*id, ", new IllegalParameterException(
-				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id  bad*id: *"));
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id bad*id: *"));
 	}
 	
 	private void failGetGroupNames(final String ids, final Exception expected) {

@@ -109,6 +109,8 @@ public class Fields {
 	public static final String GET_GROUPS_SORT_ORDER = "order";
 	/** Determine which groups to list. */
 	public static final String GET_GROUPS_IDS = "groupids";
+	/** Determine the user role to require. */
+	public static final String GET_GROUPS_ROLE = "role";
 	
 	/* ***********************
 	 * request listing fields

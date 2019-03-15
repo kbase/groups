@@ -9,7 +9,6 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,40 +83,22 @@ public class GroupsAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_GROUPS_ROLE) final String role,
 			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
 				InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				UnauthorizedException {
-		final List<GroupID> gids = getGroupIDs(groupIDs);
+		final List<GroupID> gids = APICommon.toGroupIDs(groupIDs);
 		final Token t = getToken(token, false);
 		final List<GroupView> grps;
 		if (!gids.isEmpty()) {
 			grps = groups.getGroups(t, gids);
 		} else {
-			grps = groups.getGroups(t, getGroupsParams(excludeUpTo, order, true));
+			grps = groups.getGroups(t, getGroupsParams(excludeUpTo, order, role, true));
 		}
 		return grps.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
-	private List<GroupID> getGroupIDs(final String groupIDsCommaSepList)
-			throws IllegalParameterException {
-		final List<GroupID> ret = new LinkedList<>();
-		if (groupIDsCommaSepList == null) {
-			return ret;
-		}
-		final String[] gids = groupIDsCommaSepList.split(",");
-		for (final String g: gids) {
-			if (!g.trim().isEmpty()) {
-				try {
-					ret.add(new GroupID(g.trim()));
-				} catch (MissingParameterException e) {
-					throw new RuntimeException("This should be impossible", e);
-				}
-			}
-		}
-		return ret;
-	}
-
 	private static Map<NumberedCustomField, OptionalString> getCustomFieldsAndTypeCheck(
 			final Object customFields,
 			final String fieldName)

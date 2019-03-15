@@ -5,7 +5,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.inst;
-import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -29,6 +28,7 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -691,11 +691,11 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsNulls() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams(null, null, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(null, null, null, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, null, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -704,11 +704,11 @@ public class APICommonTest {
 	@Test
 	public void getGroupParamsWhitespace() throws Exception {
 		final String ws = "    \t  ";
-		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, ws, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, ws, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -716,41 +716,69 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsValues() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams("   foo   ", "asc", false);
+		final GetGroupsParams p = APICommon.getGroupsParams("   foo   ", "asc", "Member", false);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("foo").build()));
+				.withRole(Role.MEMBER)
+				.withNullableExcludeUpTo("foo")
+				.build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams("  \t  bar  ", "desc", true);
+		final GetGroupsParams p2 = APICommon.getGroupsParams("  \t  bar  ", "desc", "Admin", true);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
+				.withRole(Role.ADMIN)
 				.withNullableExcludeUpTo("bar")
-				.withNullableSortAscending(false).build()));
+				.withNullableSortAscending(false)
+				.build()));
+		
+		final GetGroupsParams p3 = APICommon.getGroupsParams("   foo   ", "asc", "Owner", false);
+		
+		assertThat("incorrect params", p3, is(GetGroupsParams.getBuilder()
+				.withRole(Role.OWNER)
+				.withNullableExcludeUpTo("foo")
+				.build()));
+		
+		final GetGroupsParams p4 = APICommon.getGroupsParams("   foo   ", "asc", "None", false);
+		
+		assertThat("incorrect params", p4, is(GetGroupsParams.getBuilder()
+				.withRole(Role.NONE)
+				.withNullableExcludeUpTo("foo")
+				.build()));
 	}
 	
 	@Test
-	public void getGroupParamsFail() throws Exception {
+	public void getGroupParamsFailBadArgs() throws Exception {
+		getGroupParamsFail("asd", null, new IllegalParameterException(
+				"Invalid sort direction: asd"));
+		getGroupParamsFail(null, "member", new IllegalParameterException("Invalid role: member"));
+	}
+	
+	private void getGroupParamsFail(
+			final String sort,
+			final String role,
+			final Exception expected) {
 		try {
-			APICommon.getGroupsParams(null, "asd", false);
+			APICommon.getGroupsParams(null, sort, role, false);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
-					"Invalid sort direction: asd"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
 	@Test
 	public void toGroupIDs() throws Exception {
-		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(set()));
+		final List<GroupID> mt = Collections.emptyList();
+		assertThat("incorrect group IDs", APICommon.toGroupIDs(null), is(mt));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(mt));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t , ,    "), is(mt));
 		assertThat("incorrect group IDs", APICommon.toGroupIDs("   foo,  \t ,  bar   ,baz,    \t"),
-				is(set(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
+				is(Arrays.asList(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
 	}
 	
 	@Test
 	public void failToGroupIDs() throws Exception {
-		failToGroupIDs(null, new NullPointerException("commaSeparatedGroupIDs"));
 		failToGroupIDs("  \t , foo, bad*name, bar", new IllegalParameterException(
-				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id  bad*name: *"));
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id bad*name: *"));
 	}
 	
 	private void failToGroupIDs(final String ids, final Exception expected) {

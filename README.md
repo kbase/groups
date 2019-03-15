@@ -243,7 +243,7 @@ RETURNS:
 
 ```
 AUTHORIZATION OPTIONAL
-GET /group[?excludeupto=<exlude string>&order=<sort order>&groupids=<ids>]
+GET /group[?excludeupto=<exlude string>&order=<sort order>&role=<role>&groupids=<ids>]
 
 RETURNS:
 A list of Groups. Only the id, private, name, owner, role, memcount, rescount, custom,
@@ -264,6 +264,8 @@ The query parameters are all optional:
   depending on the sort order. `asc` and `desc` sorts will include groups with
   group IDs, respectively, after and before the `excludeupto` string, non-inclusive.
   This can be used to page through the groups if needed.
+* `role` - Filters the group list by a minimum user role, one of `Member`, `Admin`,
+  or `Owner`. If a role is supplied an authorization token must also be supplied.
 * `groupids` - list specific groups by ID in a comma separated list
   (e.g. `?groupids=groupid1,groupid2,...,groupidN`). If this parameter is specified,
   all other parameters are ignored. This method of listing groups is much faster than getting
