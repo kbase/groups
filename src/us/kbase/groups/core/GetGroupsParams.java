@@ -6,6 +6,8 @@ import static us.kbase.groups.util.Util.isNullOrEmpty;
 import java.util.Optional;
 
 import us.kbase.groups.core.Group.Role;
+import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceType;
 
 /** Parameters for getting a list of groups.
  * @author gaprice@lbl.gov
@@ -13,17 +15,25 @@ import us.kbase.groups.core.Group.Role;
  */
 public class GetGroupsParams {
 	
+	// pretty similar to GetRequestsParams, but inheritance + builders is a pain.
+	
 	private final boolean sortAscending;
 	private final Optional<String> excludeUpTo;
 	private final Role role;
+	private final Optional<ResourceType> resourceType;
+	private final Optional<ResourceID> resourceID;
 	
 	private GetGroupsParams(
 			final boolean sortAscending,
 			final Optional<String> excludeUpTo,
-			final Role role) {
+			final Role role,
+			final Optional<ResourceType> resourceType,
+			final Optional<ResourceID> resourceID) {
 		this.sortAscending = sortAscending;
 		this.excludeUpTo = excludeUpTo;
 		this.role = role;
+		this.resourceType = resourceType;
+		this.resourceID = resourceID;
 	}
 
 	/** Get whether the list should be sorted in ascending or descending order.
@@ -48,12 +58,32 @@ public class GetGroupsParams {
 	public Role getRole() {
 		return role;
 	}
+	
+	/** Get the resource type that must limit the list of groups. If the type is present,
+	 * {@link #getResourceID()} will always return a resource ID. The combination of the two
+	 * must limit the list of groups.
+	 * @return the resource type that all the groups must possess.
+	 */
+	public Optional<ResourceType> getResourceType() {
+		return resourceType;
+	}
+	
+	/** Get the resource ID that must limit the list of groups. If the ID is present,
+	 * {@link #getResourceType()} will always return a resource type. The combination of the two
+	 * must limit the list of groups.
+	 * @return the resource ID that all the groups must possess.
+	 */
+	public Optional<ResourceID> getResourceID() {
+		return resourceID;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((excludeUpTo == null) ? 0 : excludeUpTo.hashCode());
+		result = prime * result + ((resourceID == null) ? 0 : resourceID.hashCode());
+		result = prime * result + ((resourceType == null) ? 0 : resourceType.hashCode());
 		result = prime * result + ((role == null) ? 0 : role.hashCode());
 		result = prime * result + (sortAscending ? 1231 : 1237);
 		return result;
@@ -78,11 +108,21 @@ public class GetGroupsParams {
 		} else if (!excludeUpTo.equals(other.excludeUpTo)) {
 			return false;
 		}
-		if (role == null) {
-			if (other.role != null) {
+		if (resourceID == null) {
+			if (other.resourceID != null) {
 				return false;
 			}
-		} else if (!role.equals(other.role)) {
+		} else if (!resourceID.equals(other.resourceID)) {
+			return false;
+		}
+		if (resourceType == null) {
+			if (other.resourceType != null) {
+				return false;
+			}
+		} else if (!resourceType.equals(other.resourceType)) {
+			return false;
+		}
+		if (role != other.role) {
 			return false;
 		}
 		if (sortAscending != other.sortAscending) {
@@ -107,6 +147,8 @@ public class GetGroupsParams {
 		private boolean sortAscending = true;
 		private Optional<String> excludeUpTo = Optional.empty();
 		private Role role = Role.NONE;
+		private Optional<ResourceType> resourceType = Optional.empty();
+		private Optional<ResourceID> resourceID = Optional.empty();
 		
 		private Builder() {}
 		
@@ -150,11 +192,23 @@ public class GetGroupsParams {
 			return this;
 		}
 		
+		/** Set a resource ID that limits the list of groups to include only groups
+		 * that contain that resource ID.
+		 * @param type the type of the resource.
+		 * @param id the resource ID.
+		 * @return this builder.
+		 */
+		public Builder withResource(final ResourceType type, final ResourceID id) {
+			this.resourceType = Optional.of(requireNonNull(type, "type"));
+			this.resourceID = Optional.of(requireNonNull(id, "id"));
+			return this;
+		}
+		
 		/** Build the {@link GetGroupsParams}.
 		 * @return the params.
 		 */
 		public GetGroupsParams build() {
-			return new GetGroupsParams(sortAscending, excludeUpTo, role);
+			return new GetGroupsParams(sortAscending, excludeUpTo, role, resourceType, resourceID);
 		}
 	}
 }
