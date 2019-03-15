@@ -16,6 +16,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.common.test.controllers.mongo.MongoController;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 
 public class MongoStorageTestManager {
@@ -65,6 +66,10 @@ public class MongoStorageTestManager {
 	}
 	
 	public void reset() throws Exception {
+		reset(Collections.emptySet());
+	}
+	
+	public void reset(Collection<ResourceType> types) throws Exception {
 		if (storage != null) {
 			// not sure this will fix the occasional test errors due to too many expires
 			// running during the test, but worth a try. Maybe some of the previously
@@ -79,6 +84,6 @@ public class MongoStorageTestManager {
 		final Constructor<MongoGroupsStorage> con = MongoGroupsStorage.class.
 				getDeclaredConstructor(MongoDatabase.class, Collection.class, Clock.class);
 		con.setAccessible(true);
-		storage = con.newInstance(db, Collections.emptySet(), clockMock);
+		storage = con.newInstance(db, types, clockMock);
 	}
 }

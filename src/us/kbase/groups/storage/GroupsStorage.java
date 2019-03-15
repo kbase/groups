@@ -117,12 +117,17 @@ public interface GroupsStorage {
 	 * At most 100 groups are returned.
 	 * If the user is null and the user's role is not {@link Group.Role#NONE} no groups
 	 * are returned.
+	 * If the user is null, a resource is present in the parameters, and that resource is private,
+	 * no groups are returned.
 	 * @param params the parameters for getting the groups.
+	 * @param resourceIsPublic true if the resource in the params is public, false otherwise.
+	 * Ignored if no resource is present.
 	 * @param user an optional user. If no user is provided, only public groups are returned.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<Group> getGroups(GetGroupsParams params, UserName user) throws GroupsStorageException;
+	List<Group> getGroups(GetGroupsParams params, boolean resourceIsPublic, UserName user)
+			throws GroupsStorageException;
 	
 	/** Add a member to a group.
 	 * @param groupID the ID of the group.
