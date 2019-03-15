@@ -188,7 +188,7 @@ public class SDKClientCatalogHandlerTest {
 				.isAdministrator(new ResourceID("modname.mod"), new UserName(name)), is(expected));
 	}
 	
-	public ModuleVersionInfo getMVI(final List<String> narrs, final List<String> locals) {
+	private ModuleVersionInfo getMVI(final List<String> narrs, final List<String> locals) {
 		final ModuleVersionInfo mvi = new ModuleVersionInfo();
 		mvi.setAdditionalProperties("local_functions", locals);
 		mvi.setAdditionalProperties("narrative_methods", narrs);
@@ -273,6 +273,30 @@ public class SDKClientCatalogHandlerTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void isPublic() throws Exception {
+		final SDKClientCatalogHandler cli = new SDKClientCatalogHandler(mock(CatalogClient.class));
+		
+		assertThat("incorrect is public", cli.isPublic(new ResourceID("foo.bar")), is(true));
+		assertThat("incorrect is public", cli.isPublic(new ResourceID("DataFileUtil.get_objects")),
+				is(true));
+	}
+	
+	@Test
+	public void isPublicFailBadID() throws Exception {
+		final SDKClientCatalogHandler cli = new SDKClientCatalogHandler(mock(CatalogClient.class));
+		
+		for (final String mm: BAD_NAMES.keySet()) {
+			try {
+				cli.isPublic(new ResourceID(mm));
+				fail("expected exception");
+			} catch (Exception got) {
+				TestCommon.assertExceptionCorrect(got, new IllegalResourceIDException(
+						"Illegal catalog method name: " + BAD_NAMES.get(mm)));
+			}
 		}
 	}
 	

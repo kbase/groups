@@ -3,12 +3,14 @@ package us.kbase.test.groups.workspacehandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.groups.TestCommon.set;
 
@@ -270,6 +272,106 @@ public class SDKClientWorkspaceHandlerTest {
 			final Exception expected) {
 		try {
 			h.isAdministrator(id, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void isPublicFalse() throws Exception {
+		isPublic(false);
+	}
+	
+	@Test
+	public void isPublicTrue() throws Exception {
+		isPublic(true);
+	}
+
+	private void isPublic(final boolean pub) throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn(MIN_WS_VER);
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		doReturn(getWorkspaceInfoResponse(3, "name3", "user1", "2018-10-27T02:16:53+0000", pub,
+				Collections.emptyMap()))
+				.when(c).administer(argThat(getWSInfoCommandMatcher(3)));
+		
+		assertThat("incorrect is public", h.isPublic(new ResourceID("3")), is(pub));
+		
+		verify(c, times(2)).administer(any()); // admin() is called in the constructor
+	}
+	
+	@Test
+	public void isPublicFailBadArgs() throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn(MIN_WS_VER);
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		failIsPublic(h, null, new NullPointerException("resource"));
+		failIsPublic(h, new ResourceID("yay"), new IllegalResourceIDException("yay"));
+	}
+	
+	@Test
+	public void isPublicFailDeletedWS() throws Exception {
+		isPublicFail(new ServerException("Workspace 24 is deleted", -1, "n"),
+				new NoSuchResourceException("24"));
+	}
+	
+	@Test
+	public void isPublicFailMissingWS() throws Exception {
+		isPublicFail(new ServerException("No workspace with id 24 exists", -1, "n"),
+				new NoSuchResourceException("24"));
+	}
+	
+	@Test
+	public void isPublicFailOtherServerException() throws Exception {
+		isPublicFail(new ServerException("You pootied real bad I can smell it", -1, "n"),
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void isPublicFailJsonClientException() throws Exception {
+		isPublicFail(new JsonClientException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void isPublicFailIOException() throws Exception {
+		isPublicFail(new IOException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	@Test
+	public void isPublicFailIllegalStateException() throws Exception {
+		isPublicFail(new IllegalStateException("You pootied real bad I can smell it"),
+				new ResourceHandlerException("Error contacting workspace at http://foo.com"));
+	}
+	
+	private void isPublicFail(final Exception exception, final Exception expected)
+			throws Exception {
+		final WorkspaceClient c = mock(WorkspaceClient.class);
+		
+		when(c.ver()).thenReturn(MIN_WS_VER);
+		when(c.getURL()).thenReturn(new URL("http://foo.com"));
+		
+		final SDKClientWorkspaceHandler h = new SDKClientWorkspaceHandler(c);
+		
+		when(c.administer(argThat(getWSInfoCommandMatcher(3)))).thenThrow(exception);
+		
+		failIsPublic(h, new ResourceID("3"), expected);
+	}
+	
+	private void failIsPublic(
+			final SDKClientWorkspaceHandler h,
+			final ResourceID id,
+			final Exception expected) {
+		try {
+			h.isPublic(id);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

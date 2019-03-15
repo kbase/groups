@@ -36,6 +36,17 @@ public interface ResourceHandler {
 	boolean isAdministrator(ResourceID resource, UserName user)
 			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException;
 
+	/** Check if a resource is public. The resource handler implementation may or may not
+	 * check for the existence of the resource if all resources are public.
+	 * @param resource the resource to check.
+	 * @return true if the resource is public, false otherwise.
+	 * @throws IllegalResourceIDException if the resource ID is not in a legal format.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 */
+	boolean isPublic(ResourceID resource)
+			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException;
+	
 	/** Get the set of administrators of a resource.
 	 * @param resource the resource.
 	 * @return the set of administrators of that resource.
