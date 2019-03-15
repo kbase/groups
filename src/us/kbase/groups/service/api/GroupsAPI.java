@@ -87,7 +87,8 @@ public class GroupsAPI {
 			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
 				InvalidTokenException, AuthenticationException, NoSuchGroupException,
-				UnauthorizedException {
+				UnauthorizedException, NoSuchResourceException, IllegalResourceIDException,
+				NoSuchResourceTypeException, ResourceHandlerException {
 		final List<GroupID> gids = APICommon.toGroupIDs(groupIDs);
 		final Token t = getToken(token, false);
 		final List<GroupView> grps;
