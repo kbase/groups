@@ -1066,7 +1066,6 @@ see /design/*.md
     * Every filter & sort combination (usually) requires a new MongoDB index & more
       time & maintenance cost, so choose carefully
     * Remember - skip is evil
-    * Find groups where I'm (owner / admin / member)
     * Find groups where user X is an owner or admin
     * Find groups where user X is a member and I'm a member
     * Find groups that contain workspaces I administrate
