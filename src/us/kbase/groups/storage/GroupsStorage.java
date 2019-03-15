@@ -115,6 +115,8 @@ public interface GroupsStorage {
 	
 	/** Get groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.
+	 * If the user is null and the user's role is not {@link Group.Role#NONE} no groups
+	 * are returned.
 	 * @param params the parameters for getting the groups.
 	 * @param user an optional user. If no user is provided, only public groups are returned.
 	 * @return the groups.

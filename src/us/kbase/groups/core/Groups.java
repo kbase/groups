@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -540,10 +541,15 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
+	 * @throws UnauthorizedException if a role is specified but no token is provided.
 	 */
 	public List<GroupView> getGroups(final Token userToken, final GetGroupsParams params)
-			throws GroupsStorageException, InvalidTokenException, AuthenticationException {
+			throws GroupsStorageException, InvalidTokenException, AuthenticationException,
+				UnauthorizedException {
 		checkNotNull(params, "params");
+		if (userToken == null && !params.getRole().equals(Role.NONE)) {
+			throw new UnauthorizedException("A token is required when filtering groups by role");
+		}
 		final UserName user = getOptionalUser(userToken);
 		return storage.getGroups(params, user).stream()
 				.map(g -> toMinimalView(user, g)).collect(Collectors.toList());
