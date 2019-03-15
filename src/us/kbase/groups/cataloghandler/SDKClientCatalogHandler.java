@@ -104,6 +104,12 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 		checkNotNull(user, "user");
 		return getModuleOwners(resource).contains(user.getName());
 	}
+	
+	@Override
+	public boolean isPublic(final ResourceID resource) throws IllegalResourceIDException {
+		getModMeth(resource); // check format
+		return true;
+	}
 
 	private List<String> getModuleOwners(final ResourceID module)
 			throws ResourceHandlerException, NoSuchResourceException, IllegalResourceIDException {
@@ -235,7 +241,7 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 	}
 
 	@Override
-	public void setReadPermission(ResourceID resource, UserName user) {
+	public void setReadPermission(final ResourceID resource, final UserName user) {
 		return; // nothing to do, catalog methods are all public
 	}
 }

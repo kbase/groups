@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -60,6 +61,7 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	private static final String PERM_WRITE = "w";
 	private static final String PERM_READ = "r";
 	private static final String GLOBAL_READ_USER = "*";
+	private static final String PUBLIC = "public";
 	
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern(
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ssX");
@@ -108,10 +110,17 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	@Override
 	public boolean isAdministrator(final ResourceID resource, final UserName user)
 			throws NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
-		checkNotNull(resource, "resource");
-		checkNotNull(user, "user");
+		requireNonNull(resource, "resource");
+		requireNonNull(user, "user");
 		final Perms perms = getPermissions(Arrays.asList(getWSID(resource)), true);
 		return new Perm(user, perms.perms.get(0)).perm.isAdmin();
+	}
+	
+	@Override
+	public boolean isPublic(final ResourceID resource)
+			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException {
+		requireNonNull(resource, "resource");
+		return (boolean) getWSInfo(getWSID(resource), false, true).wi.get(PUBLIC);
 	}
 	
 	private final TypeReference<Map<String, List<Map<String, String>>>> TR_GET_PERMS =
@@ -214,7 +223,12 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 			} else {
 				final Perm perm = new Perm(user, perms.perms.get(0));
 				if (hasAccess(perm, access)) {
-					final WSInfoOwner wi = getWSInfo(wsid);
+					final WSInfoOwner wi;
+					try {
+						wi = getWSInfo(wsid, true, false);
+					} catch (NoSuchResourceException e) {
+						throw new RuntimeException("Shouldn't be possible", e);
+					}
 					if (wi == null) {
 						// should almost never happen since we checked for inaccessible ws above
 						b.withNonexistentResource(rid);
@@ -263,23 +277,37 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 	}
 						
 	// returns null if missing or deleted
-	private WSInfoOwner getWSInfo(final long wsid) throws ResourceHandlerException {
+	private WSInfoOwner getWSInfo(
+			final long wsid,
+			boolean withDescriptionAndNarrativeInfo,
+			boolean throwNoWorkspaceException)
+			throws ResourceHandlerException, NoSuchResourceException {
 		final Tuple9<Long, String, String, String, Long, String, String, String,
 				Map<String, String>> wsinfo;
 		final String desc;
-		final NarrInfo narrInfo;
+		final Optional<NarrInfo> narrInfo;
 		try {
 			final WorkspaceIdentity wsi = new WorkspaceIdentity().withId((long) wsid);
 			wsinfo = client.administer(new UObject(ImmutableMap.of(
 					"command", "getWorkspaceInfo", "params", wsi)))
 					.asClassInstance(WS_INFO_TYPEREF);
-			final UObject d = client.administer(new UObject(ImmutableMap.of(
-					"command", "getWorkspaceDescription", "params", wsi)));
-			desc = d == null ? null : d.asScalar();
-			narrInfo = getNarrativeInfo(wsinfo.getE1(), wsinfo.getE9());
+			if (withDescriptionAndNarrativeInfo) {
+				final UObject d = client.administer(new UObject(ImmutableMap.of(
+						"command", "getWorkspaceDescription", "params", wsi)));
+				desc = d == null ? null : d.asScalar();
+				narrInfo = Optional.of(getNarrativeInfo(wsinfo.getE1(), wsinfo.getE9()));
+			} else {
+				desc = null;
+				narrInfo = Optional.empty();
+			}
 		} catch (ServerException e) {
-			if (getWorkspaceID(e) != null) { // deleted or missing
-				return null;
+			final Integer errorid = getWorkspaceID(e);
+			if (errorid != null) { // deleted or missing
+				if (throwNoWorkspaceException) {
+					throw new NoSuchResourceException(errorid + "", e);
+				} else {
+					return null;
+				}
 			} else {
 				throw getGeneralWSException(e);
 			}
@@ -288,9 +316,9 @@ public class SDKClientWorkspaceHandler implements ResourceHandler {
 		}
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("name", wsinfo.getE2());
-		ret.put("narrname", narrInfo.name);
-		ret.put("narrcreate", narrInfo.created);
-		ret.put("public", PERM_READ.equals(wsinfo.getE7()));
+		ret.put("narrname", narrInfo.map(n -> n.name).orElse(null));
+		ret.put("narrcreate", narrInfo.map(n -> n.created).orElse(null));
+		ret.put(PUBLIC, PERM_READ.equals(wsinfo.getE7()));
 		ret.put("moddate", timestampToEpochMS(wsinfo.getE4()));
 		ret.put("description", desc);
 		return new WSInfoOwner(ret, wsinfo.getE3());
