@@ -7,6 +7,7 @@ import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -29,6 +30,7 @@ import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUser;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.exceptions.StorageInitException;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
 import us.kbase.test.groups.MongoStorageTestManager;
@@ -55,20 +57,18 @@ public class MongoGroupsStorageStartupTest {
 		manager.reset();
 	}
 	
-	@Test
-	public void nullConstructor() throws Exception {
-		try {
-			new MongoGroupsStorage(null);
-			fail("expected exception");
-		} catch (NullPointerException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("db"));
-		}
-	}
 	
+	@Test
+	public void failConstructNulls() throws Exception {
+		failMongoStart(null, set(), new NullPointerException("db"));
+		failMongoStart(manager.db, null, new NullPointerException("types"));
+		failMongoStart(manager.db, set(new ResourceType("t"), null), new NullPointerException(
+				"Null item in collection types"));
+	}
 	@Test
 	public void startUpAndCheckConfigDoc() throws Exception {
 		final MongoDatabase db = manager.mc.getDatabase("startUpAndCheckConfigDoc");
-		new MongoGroupsStorage(db);
+		new MongoGroupsStorage(db, set());
 		final MongoCollection<Document> col = db.getCollection("config");
 		assertThat("Only one config doc", col.countDocuments(), is(1L));
 		final FindIterable<Document> c = col.find();
@@ -79,7 +79,7 @@ public class MongoGroupsStorageStartupTest {
 		assertThat("schema v1", (Integer)d.get("schemaver"), is(1));
 		
 		//check startup works with the config object in place
-		final MongoGroupsStorage ms = new MongoGroupsStorage(db);
+		final MongoGroupsStorage ms = new MongoGroupsStorage(db, set());
 		
 		final GroupUser u = GroupUser.getBuilder(new UserName("u"), Instant.ofEpochMilli(10000))
 				.build();
@@ -111,7 +111,7 @@ public class MongoGroupsStorageStartupTest {
 				"startUpWith2ConfigDocs.config( index: |\\.\\$)schema_1\\s+dup key: " +
 				"\\{ : \"schema\" \\}'");
 		try {
-			new MongoGroupsStorage(db);
+			new MongoGroupsStorage(db, set());
 			fail("started mongo with bad config");
 		} catch (StorageInitException e) {
 			final Matcher match = errorPattern.matcher(e.getMessage());
@@ -148,10 +148,16 @@ public class MongoGroupsStorageStartupTest {
 				"schema. Aborting startup."));
 	}
 	
-	private void failMongoStart(final MongoDatabase db, final Exception exp)
-			throws Exception {
+	private void failMongoStart(final MongoDatabase db, final Exception exp) throws Exception {
+		failMongoStart(db, set(), exp);
+	}
+	
+	private void failMongoStart(
+			final MongoDatabase db,
+			final Collection<ResourceType> types,
+			final Exception exp) throws Exception {
 		try {
-			new MongoGroupsStorage(db);
+			new MongoGroupsStorage(db, types);
 			fail("started mongo with bad config");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exp);
@@ -203,8 +209,12 @@ public class MongoGroupsStorageStartupTest {
 		final Set<Document> indexes = new HashSet<>();
 		manager.db.getCollection("groups").listIndexes()
 				.forEach((Consumer<Document>) indexes::add);
+		assertThat("incorrect indexes", indexes, is(getDefaultGroupsIndexes()));
+	}
+
+	private Set<Document> getDefaultGroupsIndexes() {
 		final String col = "test_mongogroupsstorage.groups";
-		assertThat("incorrect indexes", indexes, is(set(
+		return set(
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
@@ -230,7 +240,57 @@ public class MongoGroupsStorageStartupTest {
 						.append("key", new Document("memb.user", 1).append("id", 1))
 						.append("name", "memb.user_1_id_1")
 						.append("ns", col)
-				)));
+				);
+	}
+	
+	//TODO NOW check indexes are getting used
+	@Test
+	public void indexesGroupsWithResourceTypes() throws Exception {
+		manager.db.drop();
+		try {
+			new MongoGroupsStorage(
+					manager.db, Arrays.asList(new ResourceType("t1"), new ResourceType("t2")));
+			final Set<Document> indexes = new HashSet<>();
+			manager.db.getCollection("groups").listIndexes()
+					.forEach((Consumer<Document>) indexes::add);
+			
+			final String col = "test_mongogroupsstorage.groups";
+			final Set<Document> expected = getDefaultGroupsIndexes();
+			for (final String t: set("t1", "t2")) {
+				final String resKey = "resources." + t + ".rid";
+				expected.addAll(set(
+						new Document("v", manager.indexVer)
+								.append("key", new Document(resKey, 1)
+										.append("own", 1)
+										.append("id", 1))
+								.append("name", resKey + "_1_own_1_id_1")
+								.append("ns", col),
+						new Document("v", manager.indexVer)
+								.append("key", new Document(resKey, 1)
+										.append("admin", 1)
+										.append("id", 1))
+								.append("name", resKey + "_1_admin_1_id_1")
+								.append("ns", col),
+						new Document("v", manager.indexVer)
+								.append("key", new Document(resKey, 1)
+										.append("priv", 1)
+										.append("id", 1))
+								.append("name", resKey + "_1_priv_1_id_1")
+								.append("ns", col),
+						new Document("v", manager.indexVer)
+								.append("key", new Document(resKey, 1)
+										.append("memb.user", 1)
+										.append("id", 1))
+								.append("name", resKey + "_1_memb.user_1_id_1")
+								.append("ns", col)
+						
+						));
+			}
+			assertThat("incorrect indexes", indexes, is(expected));
+		} finally {
+			manager.db.drop();
+		}
+		
 	}
 	
 	@Test

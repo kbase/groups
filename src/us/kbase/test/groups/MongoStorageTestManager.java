@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.time.Clock;
+import java.util.Collection;
+import java.util.Collections;
 
 import org.bson.Document;
 
@@ -75,8 +77,8 @@ public class MongoStorageTestManager {
 		TestCommon.destroyDB(db);
 		clockMock = mock(Clock.class);
 		final Constructor<MongoGroupsStorage> con = MongoGroupsStorage.class.
-				getDeclaredConstructor(MongoDatabase.class, Clock.class);
+				getDeclaredConstructor(MongoDatabase.class, Collection.class, Clock.class);
 		con.setAccessible(true);
-		storage = con.newInstance(db, clockMock);
+		storage = con.newInstance(db, Collections.emptySet(), clockMock);
 	}
 }

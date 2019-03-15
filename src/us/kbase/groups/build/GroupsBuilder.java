@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 import org.slf4j.LoggerFactory;
 
@@ -231,7 +232,8 @@ public class GroupsBuilder {
 					e.getMessage(), e);
 		}
 		//TODO TEST authenticate to db, write actual test with authentication
-		return new MongoGroupsStorage(db);
+		return new MongoGroupsStorage(
+				db, Arrays.asList(RESOURCE_TYPE_WORKSPACE, RESOURCE_TYPE_CATALOG_METHOD));
 	}
 	
 	/** Get the mongo client associated with the groups instance.
