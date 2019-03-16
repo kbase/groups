@@ -1810,6 +1810,39 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getGroupsWithResourceTrue() throws Exception {
+		// checks that the resource privacy is correctly handled
+		getGroupsWithResource(true);
+	}
+
+	@Test
+	public void getGroupsWithResourceFalse() throws Exception {
+		// checks that the resource privacy is correctly handled
+		getGroupsWithResource(false);
+	}
+	
+	private void getGroupsWithResource(final boolean resourceIsPublic) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final Group g1 = Group.getBuilder(new GroupID("g1"), new GroupName("n1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		
+		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
+		when(mocks.wsHandler.isPublic(new ResourceID("86"))).thenReturn(resourceIsPublic);
+		
+		when(mocks.storage.getGroups(any(), eq(resourceIsPublic), eq(new UserName("m1"))))
+				.thenReturn(Arrays.asList(g1));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(
+				new Token("t1"), GetGroupsParams.getBuilder()
+						.withResource(new ResourceType("workspace"), new ResourceID("86"))
+						.build()),
+				is(Arrays.asList(GroupView.getBuilder(g1, new UserName("m1")).build())));
+	}
+	
+	@Test
 	public void getGroupsFailBadArgs() throws Exception {
 		getGroupsFail(new Token("t"), null, new NullPointerException("params"));
 		for (final Role r: set(Role.MEMBER, Role.ADMIN, Role.OWNER)) {
@@ -1817,6 +1850,13 @@ public class GroupsTest {
 						new UnauthorizedException(
 								"A token is required when filtering groups by role"));
 		}
+	}
+	
+	@Test
+	public void getGroupsFailNoResourceType() throws Exception {
+		getGroupsFail(null, GetGroupsParams.getBuilder()
+				.withResource(new ResourceType("t"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("t"));
 	}
 	
 	private void getGroupsFail(final Token t, final GetGroupsParams p, final Exception expected) {

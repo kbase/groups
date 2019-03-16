@@ -535,6 +535,8 @@ public class Groups {
 	
 	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
+	 * If the token is null, a resource is present in the parameters, and that resource is private,
+	 * no groups are returned.
 	 * @param userToken the user's token. If null, only public groups are returned.
 	 * @param params the parameters for getting the groups.
 	 * @return the groups.
@@ -542,16 +544,26 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws UnauthorizedException if a role is specified but no token is provided.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceTypeException if the specified resource type does not exist.
+	 * @throws IllegalResourceIDException if the specified resource id is illegal.
+	 * @throws NoSuchResourceException if the specified resource does not exist.
 	 */
 	public List<GroupView> getGroups(final Token userToken, final GetGroupsParams params)
 			throws GroupsStorageException, InvalidTokenException, AuthenticationException,
-				UnauthorizedException {
+				UnauthorizedException, NoSuchResourceException, IllegalResourceIDException,
+				NoSuchResourceTypeException, ResourceHandlerException {
 		checkNotNull(params, "params");
 		if (userToken == null && !params.getRole().equals(Role.NONE)) {
 			throw new UnauthorizedException("A token is required when filtering groups by role");
 		}
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroups(params, false, user).stream() //TODO NOW check resource
+		boolean resourceIsPublic = false;
+		if (params.getResourceType().isPresent()) {
+			resourceIsPublic = getHandler(params.getResourceType().get())
+					.isPublic(params.getResourceID().get());
+		}
+		return storage.getGroups(params, resourceIsPublic, user).stream()
 				.map(g -> toMinimalView(user, g)).collect(Collectors.toList());
 	}
 
