@@ -691,11 +691,11 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsNulls() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams(null, null, null, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(null, null, null, null, null, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, null, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, null, null, null, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -704,11 +704,11 @@ public class APICommonTest {
 	@Test
 	public void getGroupParamsWhitespace() throws Exception {
 		final String ws = "    \t  ";
-		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, ws, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, ws, ws, ws, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, ws, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, ws, ws, ws, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -716,14 +716,17 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsValues() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams("   foo   ", "asc", "Member", false);
+		final GetGroupsParams p = APICommon.getGroupsParams(
+				"   foo   ", "asc", "Member", "type", "id", false);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder()
 				.withRole(Role.MEMBER)
 				.withNullableExcludeUpTo("foo")
+				.withResource(new ResourceType("type"), new ResourceID("id"))
 				.build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams("  \t  bar  ", "desc", "Admin", true);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(
+				"  \t  bar  ", "desc", "Admin", null, null, true);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withRole(Role.ADMIN)
@@ -731,14 +734,16 @@ public class APICommonTest {
 				.withNullableSortAscending(false)
 				.build()));
 		
-		final GetGroupsParams p3 = APICommon.getGroupsParams("   foo   ", "asc", "Owner", false);
+		final GetGroupsParams p3 = APICommon.getGroupsParams(
+				"   foo   ", "asc", "Owner", null, null, false);
 		
 		assertThat("incorrect params", p3, is(GetGroupsParams.getBuilder()
 				.withRole(Role.OWNER)
 				.withNullableExcludeUpTo("foo")
 				.build()));
 		
-		final GetGroupsParams p4 = APICommon.getGroupsParams("   foo   ", "asc", "None", false);
+		final GetGroupsParams p4 = APICommon.getGroupsParams(
+				"   foo   ", "asc", "None", null, null, false);
 		
 		assertThat("incorrect params", p4, is(GetGroupsParams.getBuilder()
 				.withRole(Role.NONE)
@@ -748,17 +753,24 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsFailBadArgs() throws Exception {
-		getGroupParamsFail("asd", null, new IllegalParameterException(
+		getGroupParamsFail("asd", null, null, null, new IllegalParameterException(
 				"Invalid sort direction: asd"));
-		getGroupParamsFail(null, "member", new IllegalParameterException("Invalid role: member"));
+		getGroupParamsFail(null, "member", null, null,
+				new IllegalParameterException("Invalid role: member"));
+		getGroupParamsFail(null, null, "t", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		getGroupParamsFail(null, null, "  \t  ", "r", new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
 	}
 	
 	private void getGroupParamsFail(
 			final String sort,
 			final String role,
+			final String resType,
+			final String resource,
 			final Exception expected) {
 		try {
-			APICommon.getGroupsParams(null, sort, role, false);
+			APICommon.getGroupsParams(null, sort, role, resType, resource, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
