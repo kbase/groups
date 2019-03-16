@@ -243,7 +243,8 @@ RETURNS:
 
 ```
 AUTHORIZATION OPTIONAL
-GET /group[?excludeupto=<exlude string>&order=<sort order>&role=<role>&groupids=<ids>]
+GET /group[?excludeupto=<exlude string>&order=<sort order>&role=<role>
+    &resourcetype=<resource type>&resource=<resource ID>&groupids=<ids>]
 
 RETURNS:
 A list of Groups. Only the id, private, name, owner, role, memcount, rescount, custom,
@@ -266,6 +267,11 @@ The query parameters are all optional:
   This can be used to page through the groups if needed.
 * `role` - Filters the group list by a minimum user role, one of `Member`, `Admin`,
   or `Owner`. If a role is supplied an authorization token must also be supplied.
+* `resourcetype` - the type of a resource, for example `workspace`. If this parameter is
+  present `resource` must also be present. See below for an explanation of the effects.
+* `resource` - a resource ID, for example `56` for the `workspace` resource type. If this
+  parameter is present, the `resourcetype` parameter must also be present.
+  See below for an explanation of the effects.
 * `groupids` - list specific groups by ID in a comma separated list
   (e.g. `?groupids=groupid1,groupid2,...,groupidN`). If this parameter is specified,
   all other parameters are ignored. This method of listing groups is much faster than getting
@@ -279,6 +285,23 @@ The query parameters are all optional:
 If the user is anonymous or not a member of the group, only custom fields that are both public and
 group listable (see custom fields below) are included. If the user is a member of the group,
 all group listable fields are included.
+
+If a resource filter is included in the parameters (by specifying *both* `resourcetype` and
+`resource`), only groups that contain that resource are included in the results. The filter
+interacts with the user token and `role` parameter as follows:
+
+* If no token is provided:
+  * If the resource is a private resource, no groups are returned.
+  * If the resource is a public resource, only public groups containing the resource are returned.
+* If a token is provided and `role` is `None`:
+  * If the resource is a private resource, only groups that contain the resource where the
+    user is a member are returned.
+  * If the resource is a public resource, additionally public groups containing the resource
+    are returned.
+* If a token is provided and `role` is other than `None`, only groups containing the resource
+  where the user has at least the given role are returned.
+
+Whether the user administrates the resource or not is not currently taken into account.
 
 ### Get group names from IDs
 

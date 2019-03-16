@@ -111,6 +111,11 @@ public class Fields {
 	public static final String GET_GROUPS_IDS = "groupids";
 	/** Determine the user role to require. */
 	public static final String GET_GROUPS_ROLE = "role";
+	/** Set the resource type with which to filter the list. */
+	public static final String GET_GROUPS_RESOURCE_TYPE = "resourcetype";
+	/** Set the resource ID with which to filter the list. */
+	public static final String GET_GROUPS_RESOURCE_ID = "resource";
+	
 	
 	/* ***********************
 	 * request listing fields

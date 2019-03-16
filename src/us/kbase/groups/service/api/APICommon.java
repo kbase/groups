@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -225,18 +226,7 @@ public class APICommon {
 		if (!isNullOrEmpty(excludeUpTo)) {
 			b.withNullableExcludeUpTo(epochMilliStringToInstant(excludeUpTo));
 		}
-		if (isNullOrEmpty(resourceType) ^ isNullOrEmpty(resource)) { // xor
-			throw new IllegalParameterException("Either both or neither of the resource type " +
-					"and resource ID must be provided");
-		}
-		if (!isNullOrEmpty(resourceType)) {
-			try {
-				b.withResource(new ResourceType(resourceType), new ResourceID(resource));
-			} catch (MissingParameterException e) {
-				throw new RuntimeException(
-						"Reality appears to be broken. Please turn it off then on again", e);
-			}
-		}
+		setResource(resourceType, resource, (t, r) -> b.withResource(t, r));
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		
 		return b.withNullableIncludeClosed(includeClosed != null).build();
@@ -268,6 +258,10 @@ public class APICommon {
 	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
 	 * for a descending sort.
 	 * @param role the minimum role the user must possess.
+	 * @param resourceType the type of the resource that will be used to filter the list. The
+	 * resource parameter must also be specified if this parameter is present.
+	 * @param resource the ID of the resource that will be used to filter the list. The
+	 * resourceType parameter must also be specified if this parameter is present.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
 	 * @return the get groups parameters.
@@ -277,6 +271,8 @@ public class APICommon {
 			final String excludeUpTo,
 			final String sortDirection,
 			final String role,
+			final String resourceType,
+			final String resource,
 			final boolean defaultSort)
 			throws IllegalParameterException {
 		final GetGroupsParams.Builder b = GetGroupsParams.getBuilder()
@@ -288,8 +284,29 @@ public class APICommon {
 				throw new IllegalParameterException(e.getMessage(), e);
 			}
 		}
+		setResource(resourceType, resource, (t, r) -> b.withResource(t, r));
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		return b.build();
+	}
+	
+
+	private static void setResource(
+			final String resourceType,
+			final String resource,
+			final BiConsumer<ResourceType, ResourceID> resourceConsumer)
+			throws IllegalParameterException {
+		if (isNullOrEmpty(resourceType) ^ isNullOrEmpty(resource)) { // xor
+			throw new IllegalParameterException("Either both or neither of the resource type " +
+					"and resource ID must be provided");
+		}
+		if (!isNullOrEmpty(resourceType)) {
+			try {
+				resourceConsumer.accept(new ResourceType(resourceType), new ResourceID(resource));
+			} catch (MissingParameterException e) {
+				throw new RuntimeException(
+						"Reality appears to be broken. Please turn it off then on again", e);
+			}
+		}
 	}
 
 	private static void setSortDirection(

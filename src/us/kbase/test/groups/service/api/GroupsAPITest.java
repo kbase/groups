@@ -268,28 +268,30 @@ public class GroupsAPITest {
 
 	@Test
 	public void getGroupsNulls() throws Exception {
-		getGroups(null, null, null, null, null, null, GetGroupsParams.getBuilder().build());
-	}
-	
-	@Test
-	public void getGroupsWhitespace() throws Exception {
-		getGroups("   \t   ", "   \t   ", "   \t   ", "   \t    ", "   \t    ", null,
+		getGroups(null, null, null, null, null, null, null, null,
 				GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
+	public void getGroupsWhitespace() throws Exception {
+		final String ws = "   \t   ";
+		getGroups(ws, ws, ws, ws, ws, ws, ws, null, GetGroupsParams.getBuilder().build());
+	}
+	
+	@Test
 	public void getGroupsWhitespaceValuesAsc() throws Exception {
-		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", "Member",  "    ,    \t   ,    ",
-				new Token("    tok \t   "),
+		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", "Member",
+				"t", "r", "    ,    \t   ,    ", new Token("    tok \t   "),
 				GetGroupsParams.getBuilder()
 						.withRole(Role.MEMBER)
 						.withNullableExcludeUpTo("foo")
+						.withResource(new ResourceType("t"), new ResourceID("r"))
 						.build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesDesc() throws Exception {
-		getGroups("t", "   foo  \t  ", "  desc  \t ", "Admin", ",", new Token("t"),
+		getGroups("t", "   foo  \t  ", "  desc  \t ", "Admin", null, "  \t  ", ",", new Token("t"),
 				GetGroupsParams.getBuilder()
 						.withRole(Role.ADMIN)
 						.withNullableExcludeUpTo("foo")
@@ -301,6 +303,8 @@ public class GroupsAPITest {
 			final String excludeUpTo,
 			final String order,
 			final String role,
+			final String resType,
+			final String resource,
 			final String ids, // this must be null or contain ws (with commas)
 			final Token expectedToken,
 			final GetGroupsParams expected)
@@ -314,7 +318,7 @@ public class GroupsAPITest {
 						.withPublicUserFieldDeterminer(f -> f.getField().equals("something"))
 						.build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
-				.getGroups(token, excludeUpTo, order, role, ids);
+				.getGroups(token, excludeUpTo, order, role, resType, resource, ids);
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
@@ -353,7 +357,7 @@ public class GroupsAPITest {
 								.build()));
 		
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
-				.getGroups(token, "id", "asc", "Owner", "id2   , priv,  id   ");
+				.getGroups(token, "id", "asc", "Owner", null, null, "id2   , priv,  id   ");
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(
@@ -366,12 +370,17 @@ public class GroupsAPITest {
 	public void getGroupsFailBadArgs() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetGroups(g, "t", null, "  asd   ", null, null, new IllegalParameterException(
-				"Invalid sort direction: asd"));
-		failGetGroups(g, "t", null, null, "owner", null, new IllegalParameterException(
+		failGetGroups(g, "t", null, "  asd   ", null, null, null, null,
+				new IllegalParameterException("Invalid sort direction: asd"));
+		failGetGroups(g, "t", null, null, "owner", null, null, null, new IllegalParameterException(
 				"Invalid role: owner"));
-		failGetGroups(g, "t", null, null, null, " id1 , id*bad", new IllegalParameterException(
-				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id id*bad: *"));
+		failGetGroups(g, "t", null, null, null, null, null, " id1 , id*bad",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id id*bad: *"));
+		failGetGroups(g, "t", null, null, null, "t", null, null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		failGetGroups(g, "t", null, null, null, " ", "r", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
 	}
 	
 	private void failGetGroups(
@@ -380,10 +389,12 @@ public class GroupsAPITest {
 			final String excludeUpTo,
 			final String order,
 			final String role,
+			final String resType,
+			final String resource,
 			final String ids,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).getGroups(token, excludeUpTo, order, role, ids);
+			new GroupsAPI(g).getGroups(token, excludeUpTo, order, role, resType, resource, ids);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -931,7 +942,7 @@ public class GroupsAPITest {
 				.thenReturn(Arrays.asList(gv.withStandardView(false).build()));
 		
 		final Map<String, Object> retmin = new GroupsAPI(g)
-				.getGroups("toke2", null, null, null, null).get(0);
+				.getGroups("toke2", null, null, null, null, null, null).get(0);
 		final Map<String, Object> expectedmin = new HashMap<>();
 		expectedmin.putAll(GROUP_MAX_JSON_MIN);
 		expectedmin.put("role", "Admin");

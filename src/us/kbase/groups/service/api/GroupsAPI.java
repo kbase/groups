@@ -84,6 +84,8 @@ public class GroupsAPI {
 			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order,
 			@QueryParam(Fields.GET_GROUPS_ROLE) final String role,
+			@QueryParam(Fields.GET_GROUPS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_GROUPS_RESOURCE_ID) final String resource,
 			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
 				InvalidTokenException, AuthenticationException, NoSuchGroupException,
@@ -95,7 +97,8 @@ public class GroupsAPI {
 		if (!gids.isEmpty()) {
 			grps = groups.getGroups(t, gids);
 		} else {
-			grps = groups.getGroups(t, getGroupsParams(excludeUpTo, order, role, true));
+			grps = groups.getGroups(t, getGroupsParams(
+					excludeUpTo, order, role, resType, resource, true));
 		}
 		return grps.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
