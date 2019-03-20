@@ -632,7 +632,7 @@ AUTHORIZATION REQUIRED
 POST /request/id/<request id>/getperm
 ```
 
-The request type must be `Request`, the resource type cannot be `user`,
+The request must be open and the type must be `Request`, the resource type cannot be `user`,
 and the user must be a group administrator. Read permissions are only granted if the user
 has no explicit permission to the resource and the resource is not publicly readable.
 

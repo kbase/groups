@@ -91,6 +91,7 @@ import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.GroupsStorage;
@@ -6008,7 +6009,8 @@ public class GroupsTest {
 				.build());
 		
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
-				new UnauthorizedException("User u1 is not an admin for group gid"));
+				new UnauthorizedException(
+						"User u1 is not an admin for the group associated with request " + id));
 	}
 	
 	@Test
@@ -6029,7 +6031,7 @@ public class GroupsTest {
 				b -> b.withResource(new ResourceType("user"),
 						ResourceDescriptor.from(new UserName("u"))),
 				new UnauthorizedException("Requests with a user resource type do not allow " +
-						"for permissions changes."));
+						"for resource permissions changes."));
 	}
 	
 	@Test
@@ -6042,31 +6044,6 @@ public class GroupsTest {
 				new RuntimeException(
 						"No handler configured for resource type wrkspce in request " +
 						id.toString()));
-	}
-	
-	private void setReadPermissionResourceFail(
-			final UUID id,
-			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
-			final Exception expected)
-			throws Exception {
-		final TestMocks mocks = initTestMocks();
-		
-		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
-		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
-				builderFn.apply(GroupRequest.getBuilder(
-						new RequestID(id), new GroupID("gid"), new UserName("user"),
-						CreateModAndExpireTimes.getBuilder(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
-						.build());
-		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
-				new GroupID("gid"), new GroupName("name"), toGUser("own"),
-				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-				.withMember(toGUser("u1"))
-				.withMember(toGUser("u3"))
-				.withAdministrator(toGUser("admin"))
-				.build());
-		
-		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id), expected);
 	}
 	
 	@Test
@@ -6097,12 +6074,281 @@ public class GroupsTest {
 	}
 	
 	private void setReadPermissionResourceFail(
+			final UUID id,
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
+			final Exception expected)
+			throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id), expected);
+	}
+	
+	private void setReadPermissionResourceFail(
 			final Groups g,
 			final Token t,
 			final RequestID i,
 			final Exception expected) {
 		try {
 			g.setReadPermission(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getResourceInformationAdmin() throws Exception {
+		getResourceInformation(new UserName("admin"));
+	}
+	
+	@Test
+	public void getResourceInformationOwner() throws Exception {
+		getResourceInformation(new UserName("own"));
+	}
+
+	private void getResourceInformation(final UserName user) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(user);
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("m"),
+										new ResourceID("m.meth")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		when(mocks.catHandler.getResourceInformation(
+				user, set(new ResourceID("m.meth")), ResourceAccess.ALL))
+				.thenReturn(ResourceInformationSet.getBuilder(user)
+						.withResourceField(new ResourceID("m.meth"), "f1", 1)
+						.withResourceField(new ResourceID("m.meth"), "f2", "cat has no fields")
+						.build());
+		
+		final ResourceInformation ret = mocks.groups.getResourceInformation(
+				new Token("token"), new RequestID(id));
+		
+		assertThat("incorrect info", ret, is(ResourceInformation.getBuilder(
+				new ResourceType("catalogmethod"), new ResourceID("m.meth"))
+				.withField("f1", 1)
+				.withField("f2", "cat has no fields")
+				.build()));
+	}
+	
+	@Test
+	public void getResourceInformationFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		
+		getResourceInformationFail(g, null, new RequestID(UUID.randomUUID()),
+				new NullPointerException("userToken"));
+		getResourceInformationFail(g, new Token("t"), null,
+				new NullPointerException("requestID"));
+	}
+	
+	@Test
+	public void getResourceInformationFailFailNoGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid")))
+				.thenThrow(new NoSuchGroupException("gid"));
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Request %s's group doesn't exist: 50000 No such group: gid",
+						id.toString())));
+	}
+	
+	@Test
+	public void getResourceInformationFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
+				new UnauthorizedException(
+						"User u1 is not an admin for the group associated with request " + id));
+	}
+	
+	@Test
+	public void getResourceInformationFailInvite() throws Exception {
+		getResourceInformationFail(
+				UUID.randomUUID(),
+				b -> b.withType(RequestType.INVITE)
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("2"))),
+				new UnauthorizedException(
+						"Only Request type requests allow for resource access."));
+	}
+	
+	@Test
+	public void getResourceInformationFailResourceType() throws Exception {
+		getResourceInformationFail(
+				UUID.randomUUID(),
+				b -> b.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("u"))),
+				new UnauthorizedException("Requests with a user resource type do not allow " +
+						"for resource access."));
+	}
+	
+	@Test
+	public void getResourceInformationFailNoResourceHandler() throws Exception {
+		final UUID id = UUID.randomUUID();
+		getResourceInformationFail(
+				id,
+				b -> b.withResource(new ResourceType("wrkspce"),
+						new ResourceDescriptor(new ResourceID("3"))),
+				new RuntimeException(
+						"No handler configured for resource type wrkspce in request " +
+						id.toString()));
+	}
+	
+	@Test
+	public void getResourceInformationFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.withStatus(GroupRequestStatus.denied(new UserName("d"), null))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
+				new ClosedRequestException(id + ""));
+	}
+	
+	@Test
+	public void getResourceInformationFailNoSuchResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("a1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("m"),
+										new ResourceID("m.meth")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		when(mocks.catHandler.getResourceInformation(
+				new UserName("a1"), set(new ResourceID("m.meth")), ResourceAccess.ALL))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("a1"))
+						.withNonexistentResource(new ResourceID("m.meth"))
+						.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("token"), new RequestID(id),
+				new NoSuchResourceException("m.meth"));
+	}
+	
+	private void getResourceInformationFail(
+			final UUID id,
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
+			final Exception expected)
+			throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id), expected);
+	}
+	
+	private void getResourceInformationFail(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final Exception expected) {
+		try {
+			g.getResourceInformation(t, i);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

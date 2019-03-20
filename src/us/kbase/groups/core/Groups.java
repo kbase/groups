@@ -56,6 +56,7 @@ import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.GroupsStorage;
@@ -1354,8 +1355,8 @@ public class Groups {
 	
 	/** Set read permissions on a resource that has been requested to be added to a group
 	 * for the user if the resource is not already readable (including publicly so). The user
-	 * must be a group administrator for the request, the request type must be
-	 * {@link RequestType#INVITE}, and the resource type may not be "user".
+	 * must be a group administrator for the request, the request must be open and of type
+	 * {@link RequestType#REQUEST}, and the resource type may not be "user".
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request.
 	 * @throws NoSuchRequestException if no request with that ID exists.
@@ -1373,28 +1374,91 @@ public class Groups {
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, ClosedRequestException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(requestID, "requestID");
-		final UserName user = userHandler.getUser(userToken);
+		requireNonNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final GroupRequest r = getAndCheckRequest(
+				requestID, user, "resource permissions changes");
+		final ResourceHandler h = getHandlerRuntimeException(r);
+		// catch no such resource exception and close request? Don't worry about it for now.
+		h.setReadPermission(r.getResource().getResourceID(), user);
+	}
+
+	// check that the request is valid for the case where a group admin wants to get
+	// information about the resource in the request. E.g. type = REQUEST, is open, is group
+	// admin.
+	private GroupRequest getAndCheckRequest(
+			final RequestID requestID,
+			final UserName user,
+			final String operation)
+			throws NoSuchRequestException, GroupsStorageException, UnauthorizedException,
+				ClosedRequestException {
 		final GroupRequest r = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(r);
 		if (!g.isAdministrator(user)) {
-			throw new UnauthorizedException(String.format("User %s is not an admin for group %s",
-					user.getName(), g.getGroupID().getName()));
+			throw new UnauthorizedException(String.format(
+					"User %s is not an admin for the group associated with request %s",
+					user.getName(), requestID.getID()));
 		}
 		if (!RequestType.REQUEST.equals(r.getType())) {
-			throw new UnauthorizedException(
-					"Only Request type requests allow for resource permissions changes.");
+			throw new UnauthorizedException(String.format(
+					"Only Request type requests allow for %s.", operation));
 		}
 		if (USER_TYPE.equals(r.getResourceType())) {
-			throw new UnauthorizedException(
-					"Requests with a user resource type do not allow for permissions changes.");
+			throw new UnauthorizedException(String.format(
+					"Requests with a user resource type do not allow for %s.", operation));
 		}
 		ensureIsOpen(r);
-		final ResourceHandler h = getHandlerRuntimeException(r);
-		h.setReadPermission(r.getResource().getResourceID(), user);
+		return r;
 	}
 	
+	/** Get information about a resource that has been requested to be added to a group.
+	 * The user must be a group administrator for the request, the request must be open and of type
+	 * {@link RequestType#REQUEST}, and the resource type may not be "user".
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request.
+	 * @return the resource information.
+	 * @throws NoSuchRequestException if no request with that ID exists.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * request type is not correct.
+	 * @throws ClosedRequestException if the request is closed.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 */
+	public ResourceInformation getResourceInformation(
+			final Token userToken, final RequestID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				UnauthorizedException, ClosedRequestException, GroupsStorageException,
+				IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException {
+		requireNonNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final GroupRequest r = getAndCheckRequest(requestID, user, "resource access");
+		final ResourceHandler h = getHandlerRuntimeException(r);
+		final ResourceInformationSet riSet = h.getResourceInformation(
+				user,
+				new HashSet<>(Arrays.asList(r.getResource().getResourceID())),
+				ResourceAccess.ALL);
+		if (!riSet.getNonexistentResources().isEmpty()) {
+			// Close request? Don't worry about it for now.
+			throw new NoSuchResourceException(r.getResource().getResourceID().getName());
+		}
+		return toResourceInformation(r.getResourceType(), riSet);
+	}
+	
+	// expects a 1 entry set
+	private ResourceInformation toResourceInformation(
+			final ResourceType resourceType,
+			final ResourceInformationSet riSet) {
+		final ResourceID rid = riSet.getResources().iterator().next();
+		final ResourceInformation.Builder b = ResourceInformation.getBuilder(resourceType, rid);
+		riSet.getFields(rid).entrySet().stream()
+				.forEach(e -> b.withField(e.getKey(), e.getValue()));
+		return b.build();
+	}
+
 	/** Set read permission on a resource for the user.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.
