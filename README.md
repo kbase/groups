@@ -636,6 +636,18 @@ The request must be open and the type must be `Request`, the resource type canno
 and the user must be a group administrator. Read permissions are only granted if the user
 has no explicit permission to the resource and the resource is not publicly readable.
 
+### Get information about a resource associated with a request
+
+```
+AUTHORIZATION REQUIRED
+GET /request/id/<request id>/resource
+
+Returns a resource entry less the added field (see Resources above).
+```
+
+The request must be open and the type must be `Request`, the resource type cannot be `user`,
+and the user must be a group administrator.
+
 ### Listing requests
 
 There are four endpoints for listing requests detailed below - one for listing requests you
@@ -1092,9 +1104,7 @@ see /design/*.md
     * Find groups where user X is an owner or admin
     * Find groups where user X is a member and I'm a member
     * Find groups that contain workspaces I administrate
-    * Find groups that contain workspace X and where I'm a group member
     * Find groups that contain catalog methods I own
-    * Find groups that contain catalog method X
 * New features
   * Relations between groups
     * This needs a lot of thought / design if the relations are hierarchical /

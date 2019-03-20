@@ -6,6 +6,7 @@ import static us.kbase.groups.service.api.APICommon.toGroupIDs;
 import static us.kbase.groups.service.api.APICommon.toGroupJSON;
 import static us.kbase.groups.service.api.APICommon.toGroupRequestJSON;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -44,6 +45,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.REQUEST)
@@ -102,6 +104,28 @@ public class RequestAPI {
 		groups.setReadPermission(getToken(token, true), new RequestID(requestID));
 	}
 	
+	@GET
+	@Path(ServicePaths.REQUEST_ID_RESOURCE)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getResourceInformation(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID)
+			throws NoSuchRequestException, InvalidTokenException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, IllegalParameterException,
+				MissingParameterException, GroupsStorageException, ClosedRequestException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
+		return toResourceInfo(
+				groups.getResourceInformation(getToken(token, true), new RequestID(requestID)));
+	}
+	
+	private Map<String, Object> toResourceInfo(final ResourceInformation resourceInformation) {
+		final Map<String, Object> ret = new HashMap<>();
+		ret.putAll(resourceInformation.getResourceFields());
+		ret.put(Fields.REQUEST_RESOURCE_ID, resourceInformation.getResourceID().getName());
+		ret.put(Fields.REQUEST_RESOURCE_TYPE, resourceInformation.getResourceType().getName());
+		return ret;
+	}
+
 	@GET
 	@Path(ServicePaths.REQUEST_CREATED)
 	@Produces(MediaType.APPLICATION_JSON)
