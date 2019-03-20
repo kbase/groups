@@ -15,6 +15,7 @@
 * Added the `ids`, `role`, `resourcetype`, and `resource` parameters to the `/groups`
   endpoint.
 * Added the `/request/groups` endpoint.
+* Added the `/request/id/<id>/resource` endpoint.
 * Added `resourcetype` and `resource` parameters to the four request listing endpoints.
 * Resource administrators can now see their resources in private groups
   for which they are not a member in the `/group/<group id> endpoint`.

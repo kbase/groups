@@ -50,6 +50,7 @@ import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.service.api.RequestAPI;
 import us.kbase.groups.service.api.RequestAPI.DenyRequestJSON;
@@ -338,6 +339,62 @@ public class RequestAPITest {
 			final Exception expected) {
 		try {
 			new RequestAPI(g).getPerms(token, requestID);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getResourceInformation() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final String id = UUID.randomUUID().toString();
+		
+		when(g.getResourceInformation(new Token("token"), new RequestID(id)))
+				.thenReturn(ResourceInformation.getBuilder(
+						new ResourceType("t"), new ResourceID("i"))
+						.withField("rid", 78) // expect overwrite
+						.withField("resourcetype", 89) // expect overwrite
+						.withField("f1", 90)
+						.withField("f2", "foo")
+						.build());
+		
+		final Map<String, Object> ret = new RequestAPI(g).getResourceInformation("token", id);
+		
+		assertThat("incorrect fields", ret, is(MapBuilder.newHashMap()
+				.with("rid", "i")
+				.with("resourcetype", "t")
+				.with("f1", 90)
+				.with("f2", "foo")
+				.build()));
+	}
+	
+	@Test
+	public void getResourceInformationFailMissingInput() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		final String id = UUID.randomUUID().toString();
+		
+		getResourceInformationFail(g, null, id,
+				new NoTokenProvidedException("No token provided"));
+		getResourceInformationFail(g, "    \t    ", id,
+				new NoTokenProvidedException("No token provided"));
+		getResourceInformationFail(g, "t", null,
+				new MissingParameterException("request id"));
+		getResourceInformationFail(g, "t", "   \t   ",
+				new MissingParameterException("request id"));
+		getResourceInformationFail(g, "t", "foo",
+				new IllegalParameterException("foo is not a valid request id"));
+	}
+	
+	public void getResourceInformationFail(
+			final Groups g,
+			final String token,
+			final String requestID,
+			final Exception expected) {
+		try {
+			new RequestAPI(g).getResourceInformation(token, requestID);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

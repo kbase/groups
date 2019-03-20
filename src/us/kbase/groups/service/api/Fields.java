@@ -55,6 +55,7 @@ public class Fields {
 	public static final String GROUP_RESOURCE_TYPE = "resourcetype";
 	/** The resource ID. */
 	public static final String GROUP_RESOURCE_ID = "rid";
+	/** The date a resource was added to a group. */
 	public static final String GROUP_RESOURCE_ADDED = "added";
 	
 	/** Whether an action is complete or not, and therefore whether a request object is
@@ -95,6 +96,8 @@ public class Fields {
 	public static final String REQUEST_LATER_THAN = "laterthan";
 	/** Whether a group has new requests. */
 	public static final String REQUEST_NEW = "new";
+	/** The resource ID. */
+	public static final String REQUEST_RESOURCE_ID = "rid";
 	
 	/* ***********************
 	 * groups listing fields
