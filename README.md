@@ -625,6 +625,23 @@ group a value of approximately 14Gy BCE is assumed and thus in most cases groups
 Each group is mapped to a further mapping to allow for backwards-compatible expansion of the
 API in the future.
 
+### Get information about a resource associated with a request
+
+```
+AUTHORIZATION REQUIRED
+GET /request/id/<request id>/resource
+
+RETURNS: a resource entry (but see below).
+```
+
+Resource entries are described in `Resources` above. The resource entry returned here is slightly
+different: a) there is no `added` field because presumably the resource has not yet been added
+to the group, and b) there is an additional `resourcetype` field that specifies the type
+of the resource.
+
+The request must be open and the type must be `Request`, the resource type cannot be `user`,
+and the user must be a group administrator.
+
 ### Get permission to read a resource associated with a request
 
 ```
@@ -635,18 +652,6 @@ POST /request/id/<request id>/getperm
 The request must be open and the type must be `Request`, the resource type cannot be `user`,
 and the user must be a group administrator. Read permissions are only granted if the user
 has no explicit permission to the resource and the resource is not publicly readable.
-
-### Get information about a resource associated with a request
-
-```
-AUTHORIZATION REQUIRED
-GET /request/id/<request id>/resource
-
-Returns a resource entry less the added field (see Resources above).
-```
-
-The request must be open and the type must be `Request`, the resource type cannot be `user`,
-and the user must be a group administrator.
 
 ### Listing requests
 
