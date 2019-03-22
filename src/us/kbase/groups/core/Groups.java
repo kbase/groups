@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -50,10 +51,12 @@ import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.GroupsStorage;
@@ -70,6 +73,7 @@ public class Groups {
 	private static final Duration REQUEST_EXPIRE_TIME = Duration.of(14, ChronoUnit.DAYS);
 	private static final int MAX_GROUP_NAMES_RETURNED = 1000;
 	private static final int MAX_GROUP_HAS_REQUESTS_COUNT = 100;
+	private static final int MAX_GROUP_LIST_COUNT = 100;
 	private final GroupsStorage storage;
 	private final UserHandler userHandler;
 	private final Map<ResourceType, ResourceHandler> resourceHandlers;
@@ -402,7 +406,7 @@ public class Groups {
 					user,
 					g.getResources(type).stream().map(r -> r.getResourceID())
 							.collect(Collectors.toSet()),
-					!g.isMember(user));
+					getAccessLevel(g, user));
 		} catch (IllegalResourceIDException e) {
 			throw new RuntimeException(String.format(
 					"Illegal data associated with group %s: %s",
@@ -416,6 +420,16 @@ public class Groups {
 			}
 		}
 		return info;
+	}
+
+	private ResourceAccess getAccessLevel(final Group g, final UserName user) {
+		if (g.isMember(user)) {
+			return ResourceAccess.ALL;
+		} else if (!g.isPrivate()) {
+			return ResourceAccess.ADMINISTRATED_AND_PUBLIC;
+		} else {
+			return ResourceAccess.ADMINISTRATED;
+		}
 	}
 
 	/** Check if a group exists based on the group ID.
@@ -442,7 +456,7 @@ public class Groups {
 	 */
 	public List<GroupIDNameMembership> getGroupNames(
 			final Token userToken,
-			final Set<GroupID> groupIDs)
+			final Collection<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
 				GroupsStorageException, IllegalParameterException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
@@ -483,7 +497,7 @@ public class Groups {
 	 */
 	public Map<GroupID, GroupHasRequests> groupsHaveRequests(
 			final Token userToken,
-			final Set<GroupID> groupIDs)
+			final Collection<GroupID> groupIDs)
 			throws InvalidTokenException, AuthenticationException, UnauthorizedException,
 				NoSuchGroupException, GroupsStorageException, IllegalParameterException {
 		checkNoNullsInCollection(groupIDs, "groupIDs");
@@ -522,28 +536,76 @@ public class Groups {
 	
 	/** Get minimal views of the groups in the system.
 	 * At most 100 groups are returned.
+	 * If the token is null, a resource is present in the parameters, and that resource is private,
+	 * no groups are returned.
 	 * @param userToken the user's token. If null, only public groups are returned.
 	 * @param params the parameters for getting the groups.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
+	 * @throws UnauthorizedException if a role is specified but no token is provided.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceTypeException if the specified resource type does not exist.
+	 * @throws IllegalResourceIDException if the specified resource id is illegal.
+	 * @throws NoSuchResourceException if the specified resource does not exist.
 	 */
 	public List<GroupView> getGroups(final Token userToken, final GetGroupsParams params)
-			throws GroupsStorageException, InvalidTokenException, AuthenticationException {
+			throws GroupsStorageException, InvalidTokenException, AuthenticationException,
+				UnauthorizedException, NoSuchResourceException, IllegalResourceIDException,
+				NoSuchResourceTypeException, ResourceHandlerException {
 		checkNotNull(params, "params");
+		if (userToken == null && !params.getRole().equals(Role.NONE)) {
+			throw new UnauthorizedException("A token is required when filtering groups by role");
+		}
 		final UserName user = getOptionalUser(userToken);
-		return storage.getGroups(params, user).stream()
-				.map(g -> GroupView.getBuilder(g, user)
-						// this seems odd. Maybe there's a better way to deal with this?
-						.withMinimalViewFieldDeterminer(
-								f -> validators.getConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isMinimalViewField()).orElse(false))
-						.withPublicFieldDeterminer(
-								f -> validators.getConfigOrEmpty(f.getFieldRoot())
-										.map(c -> c.isPublicField()).orElse(false))
-						.build())
-				.collect(Collectors.toList());
+		boolean resourceIsPublic = false;
+		if (params.getResourceType().isPresent()) {
+			resourceIsPublic = getHandler(params.getResourceType().get())
+					.isPublic(params.getResourceID().get());
+		}
+		return storage.getGroups(params, resourceIsPublic, user).stream()
+				.map(g -> toMinimalView(user, g)).collect(Collectors.toList());
+	}
+
+	private GroupView toMinimalView(final UserName user, final Group g) {
+		return GroupView.getBuilder(g, user)
+				// this seems odd. Maybe there's a better way to deal with this?
+				.withMinimalViewFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isMinimalViewField()).orElse(false))
+				.withPublicFieldDeterminer(
+						f -> validators.getConfigOrEmpty(f.getFieldRoot())
+								.map(c -> c.isPublicField()).orElse(false))
+				.build();
+	}
+	
+	/** Get a set of specified groups. At most 100 groups may be specified.
+	 * @param userToken the user's token.
+	 * @param groupIDs the IDs of the group to fetch.
+	 * @return the groups, listed in the same order as the input IDs.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws NoSuchGroupException if there is no corresponding group for one of the IDs.
+	 * @throws IllegalParameterException if more than 100 group IDs are submitted.
+	 */
+	public List<GroupView> getGroups(final Token userToken, final List<GroupID> groupIDs)
+			throws InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				GroupsStorageException, IllegalParameterException {
+		checkNoNullsInCollection(groupIDs, "groupIDs");
+		if (groupIDs.isEmpty()) {
+			return Collections.emptyList();
+		}
+		if (groupIDs.size() > MAX_GROUP_LIST_COUNT) {
+			throw new IllegalParameterException(String.format(
+					"No more than %s group IDs may be specified", MAX_GROUP_LIST_COUNT));
+		}
+		final UserName user = getOptionalUser(userToken);
+		final Set<Group> groups = storage.getGroups(groupIDs);
+		final Map<Object, GroupView> idToGroup = groups.stream()
+				.collect(Collectors.toMap(g -> g.getGroupID(), g -> toMinimalView(user, g)));
+		return groupIDs.stream().map(gid -> idToGroup.get(gid)).collect(Collectors.toList());
 	}
 	
 	/** Request membership in a group.
@@ -629,8 +691,7 @@ public class Groups {
 				CreateModAndExpireTimes.getBuilder(
 						now, now.plus(REQUEST_EXPIRE_TIME)).build())
 				.withType(type)
-				.withResourceType(resourceType)
-				.withResource(resource)
+				.withResource(resourceType, resource)
 				.build();
 		storage.storeRequest(request);
 		notifications.notify(notifyTargets, request);
@@ -730,18 +791,21 @@ public class Groups {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForRequester(
 			final Token userToken,
 			final GetRequestsParams params)
-			throws InvalidTokenException, AuthenticationException, GroupsStorageException {
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+					NoSuchResourceTypeException {
 		checkNotNull(userToken, "userToken");
-		checkNotNull(params, "params");
+		checkResourceRegisted(checkNotNull(params, "params"));
 		final UserName user = userHandler.getUser(userToken);
 		return storage.getRequestsByRequester(user, params);
 	}
 	
-	/** Get requests where the user is the target of the request.
+	/** Get requests where the user is the target of the request, including requests
+	 * associated with resources the user administrates.
 	 * At most 100 requests are returned.
 	 * @param userToken the user's token.
 	 * @param params the parameters for getting the requests.
@@ -750,24 +814,42 @@ public class Groups {
 	 * @throws AuthenticationException if authentication fails.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 * @throws UnauthorizedException if the user is not an administrator for the resource.
 	 */
 	public List<GroupRequest> getRequestsForTarget(
 			final Token userToken,
 			final GetRequestsParams params)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				ResourceHandlerException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(params, "params");
+				ResourceHandlerException, NoSuchResourceTypeException, NoSuchResourceException,
+				IllegalResourceIDException, UnauthorizedException {
+		requireNonNull(userToken, "userToken");
+		requireNonNull(params, "params");
 		final UserName user = userHandler.getUser(userToken);
-		final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
-		for (final ResourceType t: resourceHandlers.keySet()) {
-			final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
-					.getAdministratedResources(user);
-			if (!reslist.isEmpty()) {
-				resources.put(t, reslist);
+		final List<GroupRequest> ret;
+		if (params.getResourceType().isPresent()) {
+			final ResourceType type = params.getResourceType().get();
+			final ResourceID id = params.getResourceID().get();
+			if (!getHandler(type).isAdministrator(id, user)) {
+				throw new UnauthorizedException(String.format(
+						"User %s is not an admin for %s %s",
+						user.getName(), type.getName(), id.getName()));
 			}
+			ret = storage.getRequestsByTarget(params);
+		} else {
+			final Map<ResourceType, Set<ResourceAdministrativeID>> resources = new HashMap<>();
+			for (final ResourceType t: resourceHandlers.keySet()) {
+				final Set<ResourceAdministrativeID> reslist = resourceHandlers.get(t)
+						.getAdministratedResources(user);
+				if (!reslist.isEmpty()) {
+					resources.put(t, reslist);
+				}
+			}
+			ret = storage.getRequestsByTarget(user, resources, params);
 		}
-		return storage.getRequestsByTarget(user, resources, params);
+		return ret;
 	}
 
 	/** Get requests where the group is the target of the request.
@@ -781,17 +863,17 @@ public class Groups {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws UnauthorizedException if the user is not a group admin.
 	 * @throws NoSuchGroupException if the group does not exist.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
 	 */
 	public List<GroupRequest> getRequestsForGroup(
 			final Token userToken,
 			final GroupID groupID,
 			final GetRequestsParams params)
 			throws UnauthorizedException, InvalidTokenException, AuthenticationException,
-				NoSuchGroupException, GroupsStorageException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(groupID, "groupID");
-		checkNotNull(params, "params");
-		final UserName user = userHandler.getUser(userToken);
+				NoSuchGroupException, GroupsStorageException, NoSuchResourceTypeException {
+		requireNonNull(groupID, "groupID");
+		checkResourceRegisted(requireNonNull(params, "params"));
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
 		final Group g = storage.getGroup(groupID);
 		if (!g.isAdministrator(user)) {
 			throw new UnauthorizedException(String.format(
@@ -799,6 +881,34 @@ public class Groups {
 					user.getName(), groupID.getName()));
 		}
 		return storage.getRequestsByGroup(groupID, params);
+	}
+	
+	private void checkResourceRegisted(final GetRequestsParams params)
+			throws NoSuchResourceTypeException {
+		if (params.getResourceType().isPresent()) {
+			getHandler(params.getResourceType().get());
+		}
+	}
+
+	/** Get requests where the user administrates groups that are the target of the request.
+	 * At most 100 requests are returned.
+	 * @param userToken the user's token.
+	 * @param params the parameters for getting the requests.
+	 * @return the requests.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws NoSuchResourceTypeException if the resource type does not exist.
+	 */
+	public List<GroupRequest> getRequestsForGroups(
+			final Token userToken,
+			final GetRequestsParams params)
+			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
+			NoSuchResourceTypeException {
+		checkResourceRegisted(requireNonNull(params, "params"));
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final Set<GroupID> gids = storage.getAdministratedGroups(user);
+		return storage.getRequestsByGroups(gids, params);
 	}
 
 	private Group getGroupFromKnownGoodRequest(final GroupRequest request)
@@ -1245,8 +1355,8 @@ public class Groups {
 	
 	/** Set read permissions on a resource that has been requested to be added to a group
 	 * for the user if the resource is not already readable (including publicly so). The user
-	 * must be a group administrator for the request, the request type must be
-	 * {@link RequestType#INVITE}, and the resource type may not be "user".
+	 * must be a group administrator for the request, the request must be open and of type
+	 * {@link RequestType#REQUEST}, and the resource type may not be "user".
 	 * @param userToken the user's token.
 	 * @param requestID the ID of the request.
 	 * @throws NoSuchRequestException if no request with that ID exists.
@@ -1264,28 +1374,91 @@ public class Groups {
 			throws NoSuchRequestException, GroupsStorageException, InvalidTokenException,
 				AuthenticationException, UnauthorizedException, ClosedRequestException,
 				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
-		checkNotNull(userToken, "userToken");
-		checkNotNull(requestID, "requestID");
-		final UserName user = userHandler.getUser(userToken);
+		requireNonNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final GroupRequest r = getAndCheckRequest(
+				requestID, user, "resource permissions changes");
+		final ResourceHandler h = getHandlerRuntimeException(r);
+		// catch no such resource exception and close request? Don't worry about it for now.
+		h.setReadPermission(r.getResource().getResourceID(), user);
+	}
+
+	// check that the request is valid for the case where a group admin wants to get
+	// information about the resource in the request. E.g. type = REQUEST, is open, is group
+	// admin.
+	private GroupRequest getAndCheckRequest(
+			final RequestID requestID,
+			final UserName user,
+			final String operation)
+			throws NoSuchRequestException, GroupsStorageException, UnauthorizedException,
+				ClosedRequestException {
 		final GroupRequest r = storage.getRequest(requestID);
 		final Group g = getGroupFromKnownGoodRequest(r);
 		if (!g.isAdministrator(user)) {
-			throw new UnauthorizedException(String.format("User %s is not an admin for group %s",
-					user.getName(), g.getGroupID().getName()));
+			throw new UnauthorizedException(String.format(
+					"User %s is not an admin for the group associated with request %s",
+					user.getName(), requestID.getID()));
 		}
 		if (!RequestType.REQUEST.equals(r.getType())) {
-			throw new UnauthorizedException(
-					"Only Request type requests allow for resource permissions changes.");
+			throw new UnauthorizedException(String.format(
+					"Only Request type requests allow for %s.", operation));
 		}
 		if (USER_TYPE.equals(r.getResourceType())) {
-			throw new UnauthorizedException(
-					"Requests with a user resource type do not allow for permissions changes.");
+			throw new UnauthorizedException(String.format(
+					"Requests with a user resource type do not allow for %s.", operation));
 		}
 		ensureIsOpen(r);
-		final ResourceHandler h = getHandlerRuntimeException(r);
-		h.setReadPermission(r.getResource().getResourceID(), user);
+		return r;
 	}
 	
+	/** Get information about a resource that has been requested to be added to a group.
+	 * The user must be a group administrator for the request, the request must be open and of type
+	 * {@link RequestType#REQUEST}, and the resource type may not be "user".
+	 * @param userToken the user's token.
+	 * @param requestID the ID of the request.
+	 * @return the resource information.
+	 * @throws NoSuchRequestException if no request with that ID exists.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if authentication fails.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 * @throws UnauthorizedException if the user is not an administrator of the group or the
+	 * request type is not correct.
+	 * @throws ClosedRequestException if the request is closed.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws IllegalResourceIDException if the resource ID is illegal.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 */
+	public ResourceInformation getResourceInformation(
+			final Token userToken, final RequestID requestID)
+			throws InvalidTokenException, AuthenticationException, NoSuchRequestException,
+				UnauthorizedException, ClosedRequestException, GroupsStorageException,
+				IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException {
+		requireNonNull(requestID, "requestID");
+		final UserName user = userHandler.getUser(requireNonNull(userToken, "userToken"));
+		final GroupRequest r = getAndCheckRequest(requestID, user, "resource access");
+		final ResourceHandler h = getHandlerRuntimeException(r);
+		final ResourceInformationSet riSet = h.getResourceInformation(
+				user,
+				new HashSet<>(Arrays.asList(r.getResource().getResourceID())),
+				ResourceAccess.ALL);
+		if (!riSet.getNonexistentResources().isEmpty()) {
+			// Close request? Don't worry about it for now.
+			throw new NoSuchResourceException(r.getResource().getResourceID().getName());
+		}
+		return toResourceInformation(r.getResourceType(), riSet);
+	}
+	
+	// expects a 1 entry set
+	private ResourceInformation toResourceInformation(
+			final ResourceType resourceType,
+			final ResourceInformationSet riSet) {
+		final ResourceID rid = riSet.getResources().iterator().next();
+		final ResourceInformation.Builder b = ResourceInformation.getBuilder(resourceType, rid);
+		riSet.getFields(rid).entrySet().stream()
+				.forEach(e -> b.withField(e.getKey(), e.getValue()));
+		return b.build();
+	}
+
 	/** Set read permission on a resource for the user.
 	 * @param userToken the user's token.
 	 * @param groupID the ID of the group to be modified.

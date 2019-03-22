@@ -70,9 +70,9 @@ public class GroupRequestTest {
 						.withModificationTime(Instant.ofEpochMilli(30000))
 				.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("module"),
-						new ResourceID("module.method")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("module"),
+								new ResourceID("module.method")))
 				.withStatus(GroupRequestStatus.denied(new UserName("immean"), "targ is junky"))
 				.build();
 		
@@ -105,9 +105,9 @@ public class GroupRequestTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 				.build())
-				.withResourceType(new ResourceType("githubrepo"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("kbase"),
-						new ResourceID("kbase/groups")))
+				.withResource(new ResourceType("githubrepo"),
+						new ResourceDescriptor(new ResourceAdministrativeID("kbase"),
+								new ResourceID("kbase/groups")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -205,22 +205,21 @@ public class GroupRequestTest {
 	}
 	
 	@Test
-	public void withResourceTypeFail() throws Exception {
-		try {
-			getBuilder().withResourceType(null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("resourceType"));
-		}
+	public void withResourceFail() throws Exception {
+		withResourceFail(null, new ResourceDescriptor(new ResourceID("i")),
+				new NullPointerException("type"));
+		withResourceFail(new ResourceType("t"), null, new NullPointerException("resource"));
 	}
 	
-	@Test
-	public void withResourceFail() throws Exception {
+	private void withResourceFail(
+			final ResourceType t,
+			final ResourceDescriptor d,
+			final Exception expected) {
 		try {
-			getBuilder().withResource(null);
+			getBuilder().withResource(t, d);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("resource"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	

@@ -6,6 +6,7 @@ import static us.kbase.groups.service.api.APICommon.toGroupIDs;
 import static us.kbase.groups.service.api.APICommon.toGroupJSON;
 import static us.kbase.groups.service.api.APICommon.toGroupRequestJSON;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -36,6 +37,7 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchGroupException;
 import us.kbase.groups.core.exceptions.NoSuchRequestException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.exceptions.NoSuchResourceTypeException;
 import us.kbase.groups.core.exceptions.NoTokenProvidedException;
 import us.kbase.groups.core.exceptions.ResourceExistsException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
@@ -43,6 +45,7 @@ import us.kbase.groups.core.exceptions.UnauthorizedException;
 import us.kbase.groups.core.exceptions.UserIsMemberException;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.storage.exceptions.GroupsStorageException;
 
 @Path(ServicePaths.REQUEST)
@@ -102,17 +105,42 @@ public class RequestAPI {
 	}
 	
 	@GET
+	@Path(ServicePaths.REQUEST_ID_RESOURCE)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getResourceInformation(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@PathParam(Fields.REQUEST_ID) final String requestID)
+			throws NoSuchRequestException, InvalidTokenException, NoTokenProvidedException,
+				AuthenticationException, UnauthorizedException, IllegalParameterException,
+				MissingParameterException, GroupsStorageException, ClosedRequestException,
+				NoSuchResourceException, IllegalResourceIDException, ResourceHandlerException {
+		return toResourceInfo(
+				groups.getResourceInformation(getToken(token, true), new RequestID(requestID)));
+	}
+	
+	private Map<String, Object> toResourceInfo(final ResourceInformation resourceInformation) {
+		final Map<String, Object> ret = new HashMap<>();
+		ret.putAll(resourceInformation.getResourceFields());
+		ret.put(Fields.REQUEST_RESOURCE_ID, resourceInformation.getResourceID().getName());
+		ret.put(Fields.REQUEST_RESOURCE_TYPE, resourceInformation.getResourceType().getName());
+		return ret;
+	}
+
+	@GET
 	@Path(ServicePaths.REQUEST_CREATED)
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Map<String, Object>> getCreatedRequests(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-			IllegalParameterException {
+			IllegalParameterException, NoSuchResourceTypeException {
 		return toGroupRequestJSON(groups.getRequestsForRequester(getToken(token, true),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@GET
@@ -122,11 +150,33 @@ public class RequestAPI {
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, AuthenticationException, GroupsStorageException,
-				IllegalParameterException, ResourceHandlerException {
+				IllegalParameterException, ResourceHandlerException, NoSuchResourceTypeException,
+				NoSuchResourceException, IllegalResourceIDException, UnauthorizedException {
 		return toGroupRequestJSON(groups.getRequestsForTarget(getToken(token, true),
-				APICommon.getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
+	}
+	
+	@GET
+	@Path(ServicePaths.REQUEST_GROUPS)
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Map<String, Object>> getRequestsForAdministratedGroups(
+			@HeaderParam(HEADER_TOKEN) final String token,
+			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
+			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
+			throws InvalidTokenException, NoTokenProvidedException, AuthenticationException,
+					IllegalParameterException, GroupsStorageException,
+					NoSuchResourceTypeException {
+		return toGroupRequestJSON(groups.getRequestsForGroups(getToken(token, true),
+				APICommon.getRequestsParams(
+						excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@PUT

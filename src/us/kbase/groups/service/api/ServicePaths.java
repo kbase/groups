@@ -9,6 +9,7 @@ public class ServicePaths {
 	private static final String UPDATE = "update";
 	private static final String GETPERM = "getperm";
 	private static final String GROUP_STR = "group";
+	private static final String RESOURCE = "resource";
 
 	/* general strings */
 
@@ -45,7 +46,7 @@ public class ServicePaths {
 	public static final String GROUP_USER_ID_ADMIN = GROUP_USER_ID + SEP + "admin";
 	
 	// resources
-	private static final String GROUP_RESOURCE = SEP + "resource" + SEP ;
+	private static final String GROUP_RESOURCE = SEP + RESOURCE + SEP ;
 	/** The location to add or remove a resource from a group. */
 	public static final String GROUP_RESOURCE_ID = GROUP_ID + GROUP_RESOURCE + "{" +
 			Fields.GROUP_RESOURCE_TYPE + "}" + SEP + "{" + Fields.GROUP_RESOURCE_ID + "}";
@@ -64,6 +65,8 @@ public class ServicePaths {
 	/** The location to request permissions to view an outside resource associated with a
 	 * request. */
 	public static final String REQUEST_ID_PERMS = REQUEST_ID + SEP + GETPERM;
+	/** The location to get information about an outside resource associated with a request. */
+	public static final String REQUEST_ID_RESOURCE = REQUEST_ID + SEP + RESOURCE;
 	/** The location to cancel a request. */
 	public static final String REQUEST_CANCEL = REQUEST_ID + SEP + "cancel";
 	/** The location to accept a request. */
@@ -74,6 +77,8 @@ public class ServicePaths {
 	public static final String REQUEST_CREATED = SEP + "created";
 	/** The location to list requests targeted at the user. */
 	public static final String REQUEST_TARGETED = SEP + "targeted";
+	/** The location to list requests targeted at groups the user administrates. */
+	public static final String REQUEST_GROUPS = SEP + "groups";
 	/** The location to determine whether groups have open requests. */
 	public static final String REQUEST_NEW = SEP + "groups" + SEP + "{" + Fields.IDS + "}" +
 			SEP + "new";

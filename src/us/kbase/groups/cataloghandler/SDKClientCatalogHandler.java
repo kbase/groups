@@ -1,14 +1,17 @@
 package us.kbase.groups.cataloghandler;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.groups.util.Util.checkNoNullsInCollection;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import us.kbase.catalog.BasicModuleInfo;
 import us.kbase.catalog.CatalogClient;
@@ -22,6 +25,7 @@ import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
@@ -99,6 +103,12 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 		checkNotNull(resource, "resource");
 		checkNotNull(user, "user");
 		return getModuleOwners(resource).contains(user.getName());
+	}
+	
+	@Override
+	public boolean isPublic(final ResourceID resource) throws IllegalResourceIDException {
+		getModMeth(resource); // check format
+		return true;
 	}
 
 	private List<String> getModuleOwners(final ResourceID module)
@@ -191,21 +201,47 @@ public class SDKClientCatalogHandler implements ResourceHandler {
 	@Override
 	public ResourceInformationSet getResourceInformation(
 			final UserName user,
-			final Set<ResourceID> resources,
-			final boolean administratedResourcesOnly)
-			throws IllegalResourceIDException {
+			Set<ResourceID> resources,
+			final ResourceAccess access)
+			throws IllegalResourceIDException, ResourceHandlerException {
 		checkNoNullsInCollection(resources, "resources");
-		final Builder b = ResourceInformationSet.getBuilder(user);
-		
+		requireNonNull(access, "access");
 		for (final ResourceID r: resources) {
-			getModMeth(r); // check id is valid
-			b.withResource(r);
+			getModMeth(r); // check ids are valid before we do anything else
 		}
+		// check != so that if another level is added to ResourceAccess it doesn't
+		// accidentally grant access
+		if (!ResourceAccess.ALL.equals(access) &&
+				!ResourceAccess.ADMINISTRATED_AND_PUBLIC.equals(access)) {
+			if (user == null) {
+				resources = Collections.emptySet();
+			} else {
+				resources = filterNonAdministrated(resources, user);
+			}
+		}
+		final Builder b = ResourceInformationSet.getBuilder(user);
+		resources.stream().forEach(r -> b.withResource(r));
 		return b.build();
 	}
 
+	private Set<ResourceID> filterNonAdministrated(
+			final Set<ResourceID> resources,
+			final UserName user)
+			throws ResourceHandlerException, IllegalResourceIDException {
+		// there are no bulk methods for getting catalog methods, so just list all admin'd mods
+		final Set<String> admined = getAdministratedResources(user).stream().map(r -> r.getName())
+				.collect(Collectors.toSet());
+		final Set<ResourceID> ret = new HashSet<>();
+		for (final ResourceID r: resources) {
+			if (admined.contains(getModMeth(r).mod)) {
+				ret.add(r);
+			}
+		}
+		return ret;
+	}
+
 	@Override
-	public void setReadPermission(ResourceID resource, UserName user) {
+	public void setReadPermission(final ResourceID resource, final UserName user) {
 		return; // nothing to do, catalog methods are all public
 	}
 }

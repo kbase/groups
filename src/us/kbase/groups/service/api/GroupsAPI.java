@@ -33,10 +33,12 @@ import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
 import us.kbase.groups.core.GroupUpdateParams;
+import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Groups;
 import us.kbase.groups.core.OptionalGroupFields;
 import us.kbase.groups.core.OptionalGroupFields.Builder;
 import us.kbase.groups.core.OptionalString;
+import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.GroupExistsException;
@@ -80,13 +82,25 @@ public class GroupsAPI {
 	public List<Map<String, Object>> getGroups(
 			@HeaderParam(HEADER_TOKEN) final String token,
 			@QueryParam(Fields.GET_GROUPS_EXCLUDE_UP_TO) final String excludeUpTo,
-			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_GROUPS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_GROUPS_ROLE) final String role,
+			@QueryParam(Fields.GET_GROUPS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_GROUPS_RESOURCE_ID) final String resource,
+			@QueryParam(Fields.GET_GROUPS_IDS) final String groupIDs)
 			throws GroupsStorageException, IllegalParameterException, NoTokenProvidedException,
-				InvalidTokenException, AuthenticationException {
-		return groups.getGroups(
-				getToken(token, false),
-				getGroupsParams(excludeUpTo, order, true))
-				.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
+				InvalidTokenException, AuthenticationException, NoSuchGroupException,
+				UnauthorizedException, NoSuchResourceException, IllegalResourceIDException,
+				NoSuchResourceTypeException, ResourceHandlerException {
+		final List<GroupID> gids = APICommon.toGroupIDs(groupIDs);
+		final Token t = getToken(token, false);
+		final List<GroupView> grps;
+		if (!gids.isEmpty()) {
+			grps = groups.getGroups(t, gids);
+		} else {
+			grps = groups.getGroups(t, getGroupsParams(
+					excludeUpTo, order, role, resType, resource, true));
+		}
+		return grps.stream().map(g -> toGroupJSON(g)).collect(Collectors.toList());
 	}
 	
 	private static Map<NumberedCustomField, OptionalString> getCustomFieldsAndTypeCheck(
@@ -288,13 +302,15 @@ public class GroupsAPI {
 			@PathParam(Fields.GROUP_ID) final String groupID,
 			@QueryParam(Fields.GET_REQUESTS_EXCLUDE_UP_TO) final String excludeUpTo,
 			@QueryParam(Fields.GET_REQUESTS_INCLUDE_CLOSED) final String closed,
-			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order)
+			@QueryParam(Fields.GET_REQUESTS_SORT_ORDER) final String order,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_TYPE) final String resType,
+			@QueryParam(Fields.GET_REQUESTS_RESOURCE_ID) final String resource)
 			throws InvalidTokenException, NoSuchGroupException, UnauthorizedException,
 				AuthenticationException, MissingParameterException, IllegalParameterException,
-				GroupsStorageException {
+				GroupsStorageException, NoSuchResourceTypeException {
 		return APICommon.toGroupRequestJSON(groups.getRequestsForGroup(
 				getToken(token, true), new GroupID(groupID),
-				getRequestsParams(excludeUpTo, closed, order, closed == null)));
+				getRequestsParams(excludeUpTo, closed, order, resType, resource, closed == null)));
 	}
 	
 	@DELETE

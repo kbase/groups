@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -80,6 +81,13 @@ public class APICommon {
 		ret.put(Fields.GROUP_ID, group.getGroupID().getName());
 		ret.put(Fields.GROUP_IS_PRIVATE, group.isPrivate());
 		ret.put(Fields.GROUP_ROLE, group.getRole().getRepresentation());
+		if (group.isStandardView()) {
+			final Map<String, Object> resources = new HashMap<>();
+			ret.put(Fields.GROUP_RESOURCES, resources);
+			for (final ResourceType t: group.getResourceTypes()) {
+				resources.put(t.getName(), getResourceList(group, t));
+			}
+		}
 		if (!group.isPrivateView()) {
 			ret.put(Fields.GROUP_NAME, group.getGroupName().get().getName());
 			ret.put(Fields.GROUP_OWNER, group.getOwner().get().getName());
@@ -98,11 +106,6 @@ public class APICommon {
 				ret.put(Fields.GROUP_OWNER, toUserJson(group.getMember(group.getOwner().get())));
 				ret.put(Fields.GROUP_MEMBERS, toMemberList(group.getMembers(), group));
 				ret.put(Fields.GROUP_ADMINS, toMemberList(group.getAdministrators(), group));
-				final Map<String, Object> resources = new HashMap<>();
-				ret.put(Fields.GROUP_RESOURCES, resources);
-				for (final ResourceType t: group.getResourceTypes()) {
-					resources.put(t.getName(), getResourceList(group, t));
-				}
 			}
 		}
 		return ret;
@@ -201,6 +204,10 @@ public class APICommon {
 	 * Otherwise they are excluded from the results.
 	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
 	 * for a descending sort.
+	 * @param resourceType the type of the resource that will be used to filter the list. The
+	 * resource parameter must also be specified if this parameter is present.
+	 * @param resource the ID of the resource that will be used to filter the list. The
+	 * resourceType parameter must also be specified if this parameter is present.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
 	 * @return the get request parameters.
@@ -211,12 +218,15 @@ public class APICommon {
 			final String excludeUpTo,
 			final String includeClosed,
 			final String sortDirection,
+			final String resourceType,
+			final String resource,
 			final boolean defaultSort)
 			throws IllegalParameterException {
 		final GetRequestsParams.Builder b = GetRequestsParams.getBuilder();
 		if (!isNullOrEmpty(excludeUpTo)) {
 			b.withNullableExcludeUpTo(epochMilliStringToInstant(excludeUpTo));
 		}
+		setResource(resourceType, resource, (t, r) -> b.withResource(t, r));
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		
 		return b.withNullableIncludeClosed(includeClosed != null).build();
@@ -247,6 +257,11 @@ public class APICommon {
 	 * Null or whitespace only values are ignored.
 	 * @param sortDirection the direction of the sort - 'asc' for an ascending sort, and 'desc'
 	 * for a descending sort.
+	 * @param role the minimum role the user must possess.
+	 * @param resourceType the type of the resource that will be used to filter the list. The
+	 * resource parameter must also be specified if this parameter is present.
+	 * @param resource the ID of the resource that will be used to filter the list. The
+	 * resourceType parameter must also be specified if this parameter is present.
 	 * @param defaultSort if sortDirection is null or whitespace only, this value is used instead.
 	 * true sets an ascending sort, false sets a descending sort.
 	 * @return the get groups parameters.
@@ -255,12 +270,43 @@ public class APICommon {
 	public static GetGroupsParams getGroupsParams(
 			final String excludeUpTo,
 			final String sortDirection,
+			final String role,
+			final String resourceType,
+			final String resource,
 			final boolean defaultSort)
 			throws IllegalParameterException {
 		final GetGroupsParams.Builder b = GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo(excludeUpTo);
+		if (!isNullOrEmpty(role)) {
+			try {
+				b.withRole(Role.fromRepresentation(role));
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException(e.getMessage(), e);
+			}
+		}
+		setResource(resourceType, resource, (t, r) -> b.withResource(t, r));
 		setSortDirection(sortDirection, defaultSort, s -> b.withNullableSortAscending(s));
 		return b.build();
+	}
+	
+
+	private static void setResource(
+			final String resourceType,
+			final String resource,
+			final BiConsumer<ResourceType, ResourceID> resourceConsumer)
+			throws IllegalParameterException {
+		if (isNullOrEmpty(resourceType) ^ isNullOrEmpty(resource)) { // xor
+			throw new IllegalParameterException("Either both or neither of the resource type " +
+					"and resource ID must be provided");
+		}
+		if (!isNullOrEmpty(resourceType)) {
+			try {
+				resourceConsumer.accept(new ResourceType(resourceType), new ResourceID(resource));
+			} catch (MissingParameterException e) {
+				throw new RuntimeException(
+						"Reality appears to be broken. Please turn it off then on again", e);
+			}
+		}
 	}
 
 	private static void setSortDirection(
@@ -279,21 +325,23 @@ public class APICommon {
 		}
 	}
 	
-	/** Split a comma separated string into a set of group IDs. Whitespace only entries are
+	/** Split a comma separated string into a list of group IDs. Whitespace only entries are
 	 * ignored.
 	 * @param commaSeparatedGroupIDs the group IDs as a comma separated string.
 	 * @return the group IDs.
 	 * @throws IllegalParameterException if an ID is illegal.
 	 */
-	public static Set<GroupID> toGroupIDs(final String commaSeparatedGroupIDs)
+	public static List<GroupID> toGroupIDs(final String commaSeparatedGroupIDs)
 			throws IllegalParameterException {
-		final Set<GroupID> groupIDs = new HashSet<>();
-		for (final String id: requireNonNull(commaSeparatedGroupIDs, "commaSeparatedGroupIDs")
-				.split(",")) {
+		final List<GroupID> groupIDs = new LinkedList<>();
+		if (commaSeparatedGroupIDs == null) {
+			return groupIDs;
+		}
+		for (final String id: commaSeparatedGroupIDs.split(",")) {
 			// can't use streams due to checked exceptions
 			if (!id.trim().isEmpty()) {
 				try {
-					groupIDs.add(new GroupID(id));
+					groupIDs.add(new GroupID(id.trim()));
 				} catch (MissingParameterException e) {
 					throw new RuntimeException("This is impossible. It didn't happen.", e);
 				}

@@ -55,6 +55,7 @@ public class Fields {
 	public static final String GROUP_RESOURCE_TYPE = "resourcetype";
 	/** The resource ID. */
 	public static final String GROUP_RESOURCE_ID = "rid";
+	/** The date a resource was added to a group. */
 	public static final String GROUP_RESOURCE_ADDED = "added";
 	
 	/** Whether an action is complete or not, and therefore whether a request object is
@@ -95,6 +96,8 @@ public class Fields {
 	public static final String REQUEST_LATER_THAN = "laterthan";
 	/** Whether a group has new requests. */
 	public static final String REQUEST_NEW = "new";
+	/** The resource ID. */
+	public static final String REQUEST_RESOURCE_ID = "rid";
 	
 	/* ***********************
 	 * groups listing fields
@@ -107,6 +110,15 @@ public class Fields {
 	public static final String GET_GROUPS_EXCLUDE_UP_TO = "excludeupto";
 	/** Set the sort order. */
 	public static final String GET_GROUPS_SORT_ORDER = "order";
+	/** Determine which groups to list. */
+	public static final String GET_GROUPS_IDS = "groupids";
+	/** Determine the user role to require. */
+	public static final String GET_GROUPS_ROLE = "role";
+	/** Set the resource type with which to filter the list. */
+	public static final String GET_GROUPS_RESOURCE_TYPE = "resourcetype";
+	/** Set the resource ID with which to filter the list. */
+	public static final String GET_GROUPS_RESOURCE_ID = "resource";
+	
 	
 	/* ***********************
 	 * request listing fields
@@ -121,6 +133,10 @@ public class Fields {
 	public static final String GET_REQUESTS_INCLUDE_CLOSED = "closed";
 	/** Set the sort order. */
 	public static final String GET_REQUESTS_SORT_ORDER = "order";
+	/** Set the resource type with which to filter the list. */
+	public static final String GET_REQUESTS_RESOURCE_TYPE = "resourcetype";
+	/** Set the resource ID with which to filter the list. */
+	public static final String GET_REQUESTS_RESOURCE_ID = "resource";
 	
 	/* ***********************
 	 * other fields

@@ -243,11 +243,12 @@ RETURNS:
 
 ```
 AUTHORIZATION OPTIONAL
-GET /group[?excludeupto=<exlude string>&order=<sort order>]
+GET /group[?excludeupto=<exlude string>&order=<sort order>&role=<role>
+    &resourcetype=<resource type>&resource=<resource ID>&groupids=<ids>]
 
 RETURNS:
-A list of Groups. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
-createdate, and moddate fields are included.
+A list of Groups. Only the id, private, name, owner, role, memcount, rescount, custom,
+lastvisit, createdate, and moddate fields are included.
 ```
 
 The owner field consists only of the user name for this endpoint. For most other endpoints,
@@ -264,10 +265,43 @@ The query parameters are all optional:
   depending on the sort order. `asc` and `desc` sorts will include groups with
   group IDs, respectively, after and before the `excludeupto` string, non-inclusive.
   This can be used to page through the groups if needed.
+* `role` - Filters the group list by a minimum user role, one of `Member`, `Admin`,
+  or `Owner`. If a role is supplied an authorization token must also be supplied.
+* `resourcetype` - the type of a resource, for example `workspace`. If this parameter is
+  present `resource` must also be present. See below for an explanation of the effects.
+* `resource` - a resource ID, for example `56` for the `workspace` resource type. If this
+  parameter is present, the `resourcetype` parameter must also be present.
+  See below for an explanation of the effects.
+* `groupids` - list specific groups by ID in a comma separated list
+  (e.g. `?groupids=groupid1,groupid2,...,groupidN`). If this parameter is specified,
+  all other parameters are ignored. This method of listing groups is much faster than getting
+  each group from the `/group/<id>` endpoint as external resource servers are not contacted
+  for data. The order of the returned list is as the order of the IDs.
+  If an ID is listed more than once, the group data will also be listed more than once at the
+  same locations. At most 100 IDs may be included. Unlike the standard list, if a private group
+  where the user is not a member is specified, it *will* be returned, but only the `id`,
+  `private`, and `role` fields will be included. Whitespace between commas is ignored.
 
 If the user is anonymous or not a member of the group, only custom fields that are both public and
 group listable (see custom fields below) are included. If the user is a member of the group,
 all group listable fields are included.
+
+If a resource filter is included in the parameters (by specifying *both* `resourcetype` and
+`resource`), only groups that contain that resource are included in the results. The filter
+interacts with the user token and `role` parameter as follows:
+
+* If no token is provided:
+  * If the resource is a private resource, no groups are returned.
+  * If the resource is a public resource, only public groups containing the resource are returned.
+* If a token is provided and `role` is `None`:
+  * If the resource is a private resource, only groups that contain the resource where the
+    user is a member are returned.
+  * If the resource is a public resource, additionally public groups containing the resource
+    are returned.
+* If a token is provided and `role` is other than `None`, only groups containing the resource
+  where the user has at least the given role are returned.
+
+Whether the user administrates the resource or not is not currently taken into account.
 
 ### Get group names from IDs
 
@@ -365,8 +399,14 @@ GET /group/<group id>
 RETURNS: A Group.
 ```
 
+This endpoint is fairly expensive as it causes the Groups server to contact external
+resource servers for data, potentially many times depending on the amount of external resource
+data in the group and the API of the resource server. See the `/group` endpoint for
+cheaper options.
+
 If the user is not a member of the group or no authorization is provided and the group is
-private, only the `groupid`, `private`, and `role` fields are included.
+private, only the `groupid`, `private`, `role`, and `resources` fields are included. Only
+resources the user user administrates will be available in `resources`.
 
 If no authorization is provided, the members list is populated or not based on the
 `privatemembers` field, only public custom fields are included, and only public resources
@@ -537,7 +577,7 @@ Possible actions are `Cancel`, `Accept`, and `Deny`.
 AUTHORIZATION REQUIRED
 GET /request/id/<request id>/group
 
-A Group. Only the id, name, owner, role, memcount, rescount, custom, lastvisit,
+A Group. Only the id, name, private, owner, role, memcount, rescount, custom, lastvisit,
 createdate, and moddate fields are included.
 ```
 
@@ -585,6 +625,23 @@ group a value of approximately 14Gy BCE is assumed and thus in most cases groups
 Each group is mapped to a further mapping to allow for backwards-compatible expansion of the
 API in the future.
 
+### Get information about a resource associated with a request
+
+```
+AUTHORIZATION REQUIRED
+GET /request/id/<request id>/resource
+
+RETURNS: a resource entry (but see below).
+```
+
+Resource entries are described in `Resources` above. The resource entry returned here is slightly
+different: a) there is no `added` field because presumably the resource has not yet been added
+to the group, and b) there is an additional `resourcetype` field that specifies the type
+of the resource.
+
+The request must be open and the type must be `Request`, the resource type cannot be `user`,
+and the user must be a group administrator.
+
 ### Get permission to read a resource associated with a request
 
 ```
@@ -592,15 +649,15 @@ AUTHORIZATION REQUIRED
 POST /request/id/<request id>/getperm
 ```
 
-The request type must be `Request`, the resource type cannot be `user`,
+The request must be open and the type must be `Request`, the resource type cannot be `user`,
 and the user must be a group administrator. Read permissions are only granted if the user
 has no explicit permission to the resource and the resource is not publicly readable.
 
 ### Listing requests
 
-There are three endpoints for listing requests detailed below - one for listing requests you
-created, one for listing requests targeted at you, and one for listing requests targeted at
-a specific group.
+There are four endpoints for listing requests detailed below - one for listing requests you
+created, one for listing requests targeted at you, one for listing requests targeted at
+a specific group, and one for listing requests targeted at the groups you administrate.
 
 All endpoints return a maximum of 100 requests at once.
 
@@ -617,6 +674,11 @@ return. They all have the following optional query parameters:
   depending on the sort order. `asc` and `desc` sorts will include requests with
   modification dates, respectively, after and before the `excludeupto` date, non-inclusive.
   This can be used to page through the requests if needed.
+* `resourcetype` - the type of a resource, for example `workspace`. If this parameter is
+  present `resource` must also be present. See that parameter for an explanation of the effects.
+* `resource` - a resource ID, for example `56` for the `workspace` resource type. If this
+  parameter is present, the `resourcetype` parameter must also be present and only requests
+  involving that resource will be returned.
 
 Examples:
 
@@ -661,6 +723,17 @@ RETURNS: A list of Requests.
 
 The user must be a group administrator. The requests only include those where a group administrator
 must take action on the request.
+
+#### Get the list of requests that target administrated groups.
+
+```
+AUTHORIZATION REQUIRED
+GET /request/groups[?parameters]
+
+RETURNS: A list of Requests.
+```
+
+The requests only include those where a group administrator must take action on the request.
 
 ### Cancel a request
 
@@ -1022,8 +1095,6 @@ see /design/*.md
     * Cache results
   * Cache results of catalog service queries
 * Usability
-  * Endpoint for getting all requests targeted at groups I administrate
-    * Currently I have to go group by group
   * Text search - need product team feedback
     * In an ideal world this would be added to search but...
   * Hide groups? Since we can't delete groups we'll wind up with a bunch of crap in the groups
@@ -1035,13 +1106,10 @@ see /design/*.md
     * Every filter & sort combination (usually) requires a new MongoDB index & more
       time & maintenance cost, so choose carefully
     * Remember - skip is evil
-    * Find groups where I'm (owner / admin / member)
     * Find groups where user X is an owner or admin
-    * Find groups where users X is a member and I'm a member
+    * Find groups where user X is a member and I'm a member
     * Find groups that contain workspaces I administrate
-    * Find groups that contain workspace X and where I'm a group member
     * Find groups that contain catalog methods I own
-    * Find groups that contain catalog method X
 * New features
   * Relations between groups
     * This needs a lot of thought / design if the relations are hierarchical /

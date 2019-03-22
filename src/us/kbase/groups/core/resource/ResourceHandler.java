@@ -36,6 +36,17 @@ public interface ResourceHandler {
 	boolean isAdministrator(ResourceID resource, UserName user)
 			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException;
 
+	/** Check if a resource is public. The resource handler implementation may or may not
+	 * check for the existence of the resource if all resources are public.
+	 * @param resource the resource to check.
+	 * @return true if the resource is public, false otherwise.
+	 * @throws IllegalResourceIDException if the resource ID is not in a legal format.
+	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
+	 * @throws NoSuchResourceException if there is no such resource.
+	 */
+	boolean isPublic(ResourceID resource)
+			throws IllegalResourceIDException, ResourceHandlerException, NoSuchResourceException;
+	
 	/** Get the set of administrators of a resource.
 	 * @param resource the resource.
 	 * @return the set of administrators of that resource.
@@ -59,8 +70,8 @@ public interface ResourceHandler {
 	 * @param user the user at which any user-specific fields should be targeted. If null,
 	 * indicating an anonymous user, only public resources are returned.
 	 * @param resources the resources to retrieve.
-	 * @param administratedResourcesOnly if true, only return public resources and resources
-	 * the user administrates. If false, return all resources (unless the user is null).
+	 * @param access the level of access to the resources the user possesses. Note that
+	 * an anonymous user will, in most cases, administrate no resources.
 	 * @return the resource information.
 	 * @throws IllegalResourceIDException if the resource ID is not in a legal format.
 	 * @throws ResourceHandlerException if an error occurs contacting the resource service.
@@ -68,7 +79,7 @@ public interface ResourceHandler {
 	ResourceInformationSet getResourceInformation(
 			UserName user,
 			Set<ResourceID> resources,
-			boolean administratedResourcesOnly)
+			ResourceAccess access)
 			throws IllegalResourceIDException, ResourceHandlerException;
 
 	/** Grant a user permission to view or read a resource, if the user does not already have

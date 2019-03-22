@@ -21,6 +21,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -53,6 +55,7 @@ import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UUIDGenerator;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.AuthenticationException;
 import us.kbase.groups.core.exceptions.ClosedRequestException;
 import us.kbase.groups.core.exceptions.ErrorType;
@@ -83,10 +86,12 @@ import us.kbase.groups.core.request.GroupRequestUserAction;
 import us.kbase.groups.core.request.GroupRequestWithActions;
 import us.kbase.groups.core.request.RequestID;
 import us.kbase.groups.core.request.RequestType;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceHandler;
 import us.kbase.groups.core.resource.ResourceID;
+import us.kbase.groups.core.resource.ResourceInformation;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.GroupsStorage;
@@ -886,8 +891,8 @@ public class GroupsTest {
 		when(mocks.validators.getUserFieldConfigOrEmpty(new CustomField("noconfig")))
 				.thenReturn(Optional.empty());
 		
-		when(mocks.wsHandler.getResourceInformation(
-				null, set(new ResourceID("92"), new ResourceID("86")), true))
+		when(mocks.wsHandler.getResourceInformation(null, set(new ResourceID("92"),
+				new ResourceID("86")), ResourceAccess.ADMINISTRATED_AND_PUBLIC))
 				.thenReturn(ResourceInformationSet.getBuilder(null)
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("92"), "public", true)
@@ -924,7 +929,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getGroupNonMemberToken() throws Exception {
+	public void getGroupNonMember() throws Exception {
 		// can get public and admin'd resources
 		// tests that there's still a resource entry in the group view if missing from the group
 		final TestMocks mocks = initTestMocks();
@@ -961,7 +966,7 @@ public class GroupsTest {
 
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
-						new ResourceID("86")), true))
+						new ResourceID("86")), ResourceAccess.ADMINISTRATED_AND_PUBLIC))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("57"), "name", "my ws2")
@@ -1017,6 +1022,54 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getGroupNonMemberPrivate() throws Exception {
+		// can get admin'd resources
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.storage.getGroup(new GroupID("bar"))).thenReturn(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withIsPrivate(true)
+				.withMember(GroupUser.getBuilder(new UserName("baz"), inst(20000)).build())
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("57")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86")))
+				.build());
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("whee"));
+
+		when(mocks.wsHandler.getResourceInformation(
+				new UserName("whee"), set(new ResourceID("92"), new ResourceID("57"),
+						new ResourceID("86")), ResourceAccess.ADMINISTRATED))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("whee"))
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.build());
+		
+		final GroupView g = mocks.groups.getGroup(new Token("token"), new GroupID("bar"));
+		
+		assertThat("incorrect group", g, is(GroupView.getBuilder(Group.getBuilder(
+				new GroupID("bar"), new GroupName("name"),
+				GroupUser.getBuilder(new UserName("foo"), inst(10000)).build(),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withIsPrivate(true)
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("92")))
+				.build(), new UserName("whee"))
+				.withStandardView(true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.withResourceType(new ResourceType("catalogmethod"))
+				.withResource(new ResourceType("workspace"), ResourceInformationSet
+						.getBuilder(new UserName("whee"))
+						.withResourceField(new ResourceID("92"), "name", "my ws")
+						.build())
+				.build()));
+	}
+	
+	@Test
 	public void getGroupMemberTokenWithNonexistentResources() throws Exception {
 		// tests non existent resource code
 		// can get all resources
@@ -1064,7 +1117,8 @@ public class GroupsTest {
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("92"), new ResourceID("6"),
-						new ResourceID("57"), new ResourceID("86"), new ResourceID("34")), false))
+						new ResourceID("57"), new ResourceID("86"), new ResourceID("34")),
+				ResourceAccess.ALL))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
 						.withResourceField(new ResourceID("92"), "name", "my ws")
 						.withResourceField(new ResourceID("6"), "name", "my other ws")
@@ -1075,7 +1129,7 @@ public class GroupsTest {
 						.build());
 		when(mocks.catHandler.getResourceInformation(
 				new UserName("baz"), set(new ResourceID("mod1.meth1"),
-						new ResourceID("mod2.meth2")), false))
+						new ResourceID("mod2.meth2")), ResourceAccess.ALL))
 				.thenReturn(ResourceInformationSet.getBuilder(new UserName("baz"))
 						.withResource(new ResourceID("mod2.meth2"))
 						.build());
@@ -1196,7 +1250,7 @@ public class GroupsTest {
 				.build());
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("baz"));
 		when(mocks.wsHandler.getResourceInformation(
-				new UserName("baz"), set(new ResourceID("not a ws id")), false))
+				new UserName("baz"), set(new ResourceID("not a ws id")), ResourceAccess.ALL))
 				.thenThrow(new IllegalResourceIDException("oh heck"));
 		
 		failGetGroup(mocks.groups, new Token("token"), new GroupID("bar"), new RuntimeException(
@@ -1486,6 +1540,7 @@ public class GroupsTest {
 				.withNullableExcludeUpTo("ex")
 				.withNullableSortAscending(false)
 				.build(),
+				false,
 				null))
 				.thenReturn(Collections.emptyList());
 		
@@ -1503,15 +1558,16 @@ public class GroupsTest {
 		when(mocks.storage.getGroups(GetGroupsParams.getBuilder()
 				.withNullableExcludeUpTo("someex")
 				.build(),
+				false,
 				null))
 				.thenReturn(Arrays.asList(
 						Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
-								.build(),
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("m1"))
+								.withAdministrator(toGUser("a1"))
+										.build(),
 						Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
@@ -1525,19 +1581,19 @@ public class GroupsTest {
 				.build()),
 				is(Arrays.asList(
 						GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
-						.build(),
-						null)
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
 						.build(),
 						GroupView.getBuilder(Group.getBuilder(
 								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
 								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
-								.withMember(toGUser("whee"))
-								.withAdministrator(toGUser("whoo"))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
 								.build(), null)
 								.build())
 						));
@@ -1557,6 +1613,7 @@ public class GroupsTest {
 	
 	@Test
 	public void getGroupsWithCustomFields() throws Exception {
+		// tests both getGroups methods that return minimal views
 		// tests that the custom fields are displayed correctly
 		// note user custom fields are never displayed in list view
 		final TestMocks mocks = initTestMocks();
@@ -1565,24 +1622,26 @@ public class GroupsTest {
 		
 		when(mocks.userHandler.getUser(new Token("m1"))).thenReturn(new UserName("m1"));
 		when(mocks.userHandler.getUser(new Token("m2"))).thenReturn(new UserName("m2"));
-		when(mocks.storage.getGroups(eq(mtparams), any()))
-				.thenReturn(Arrays.asList(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						gGWCFWithCF(GroupUser.getBuilder(new UserName("o1"), inst(10000))),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withMember(gGWCFWithCF(GroupUser.getBuilder(new UserName("m1"),
-								inst(20000))))
-						.withAdministrator(gGWCFWithCF(GroupUser.getBuilder(new UserName("a1"),
-								inst(30000))))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
-						.withCustomField(new NumberedCustomField("pub-8"), "pub")
-						.withCustomField(new NumberedCustomField("priv-9"), "priv")
-						// mockito returns Optional.empty() by default, so no need to mock
-						.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
-						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
-						.build()));
+		final Group grp = Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				gGWCFWithCF(GroupUser.getBuilder(new UserName("o1"), inst(10000))),
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withMember(gGWCFWithCF(GroupUser.getBuilder(new UserName("m1"),
+						inst(20000))))
+				.withAdministrator(gGWCFWithCF(GroupUser.getBuilder(new UserName("a1"),
+						inst(30000))))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+				.withCustomField(new NumberedCustomField("pub-8"), "pub")
+				.withCustomField(new NumberedCustomField("priv-9"), "priv")
+				// mockito returns Optional.empty() by default, so no need to mock
+				.withCustomField(new NumberedCustomField("missingmin"), "missingonmin")
+				.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
+				.build();
+		when(mocks.storage.getGroups(eq(mtparams), eq(false), any()))
+				.thenReturn(Arrays.asList(grp));
+		when(mocks.storage.getGroups(Arrays.asList(new GroupID("id1")))).thenReturn(set(grp));
 		
 		when(mocks.validators.getConfigOrEmpty(new CustomField("minpub"))).thenReturn(
 				Optional.of(FieldConfiguration.getBuilder()
@@ -1620,70 +1679,80 @@ public class GroupsTest {
 						.withNullableIsMinimalViewField(true)
 						.build()));
 
-
-		
 		// null user
-		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected1 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						null)
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				null)
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(null, mtparams),
+				is(Arrays.asList(expected1)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(null, Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected1)));
 		
 		// non member
-		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected2 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						new UserName("m2"))
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				new UserName("m2"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m2"), mtparams),
+				is(Arrays.asList(expected2)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(new Token("m2"), Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected1)));
 		
 		//member
-		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
-				is(Arrays.asList(GroupView.getBuilder(Group.getBuilder(
-						new GroupID("id1"), new GroupName("name1"),
-						GroupUser.getBuilder(new UserName("o1"), inst(10000))
-								.build(),
-						new CreateAndModTimes(
-								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
-						.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
-						.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
-						.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
-						// these are basically dummies to test the is member logic in group view
-						.withMember(toGUser("m1"))
-						.withAdministrator(toGUser("a1"))
+		final GroupView expected3 = GroupView.getBuilder(Group.getBuilder(
+				new GroupID("id1"), new GroupName("name1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000))
 						.build(),
-						new UserName("m1"))
-						.withMinimalViewFieldDeterminer(f -> true)
-						.withPublicFieldDeterminer(f -> true)
-						.withPublicUserFieldDeterminer(f -> true)
-						.build())));
+				new CreateAndModTimes(
+						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+				.withCustomField(new NumberedCustomField("minpub-6"), "minpub")
+				.withCustomField(new NumberedCustomField("minpriv-7"), "minpriv")
+				.withCustomField(new NumberedCustomField("missingpub"), "missingonpub")
+				// these are basically dummies to test the is member logic in group view
+				.withMember(toGUser("m1"))
+				.withAdministrator(toGUser("a1"))
+				.build(),
+				new UserName("m1"))
+				.withMinimalViewFieldDeterminer(f -> true)
+				.withPublicFieldDeterminer(f -> true)
+				.withPublicUserFieldDeterminer(f -> true)
+				.build();
+		assertThat("incorrect groups", mocks.groups.getGroups(new Token("m1"), mtparams),
+				is(Arrays.asList(expected3)));
+		assertThat("incorrect groups",
+				mocks.groups.getGroups(new Token("m1"), Arrays.asList(new GroupID("id1"))),
+				is(Arrays.asList(expected3)));
 	}
 
 	@Test
-	public void getGroupsWithUser() throws Exception {
+	public void getGroupsWithPrivateGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		final GetGroupsParams ggp = GetGroupsParams.getBuilder()
@@ -1706,8 +1775,8 @@ public class GroupsTest {
 				.build();
 		
 		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
-		when(mocks.storage.getGroups(ggp, null)).thenReturn(Arrays.asList(g1, g3));
-		when(mocks.storage.getGroups(ggp, new UserName("m1")))
+		when(mocks.storage.getGroups(ggp, false, null)).thenReturn(Arrays.asList(g1, g3));
+		when(mocks.storage.getGroups(ggp, false, new UserName("m1")))
 				.thenReturn(Arrays.asList(g1, g2, g3));
 		
 		assertThat("incorrect groups", mocks.groups.getGroups(null, ggp),
@@ -1721,13 +1790,196 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getGroupsFail() throws Exception {
+	public void getGroupsWithRole() throws Exception {
+		// just tests that getting groups with a token & a role doesn't throw an error.
+		final TestMocks mocks = initTestMocks();
+		
+		final Group g1 = Group.getBuilder(new GroupID("g1"), new GroupName("n1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		
+		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
+		when(mocks.storage.getGroups(any(), eq(false), eq(new UserName("m1"))))
+				.thenReturn(Arrays.asList(g1));
+		
+		for (final Role r: Role.values()) {
+			assertThat("incorrect groups", mocks.groups.getGroups(
+					new Token("t1"), GetGroupsParams.getBuilder().withRole(r).build()),
+					is(Arrays.asList(GroupView.getBuilder(g1, new UserName("m1")).build())));
+		}
+	}
+	
+	@Test
+	public void getGroupsWithResourceTrue() throws Exception {
+		// checks that the resource privacy is correctly handled
+		getGroupsWithResource(true);
+	}
+
+	@Test
+	public void getGroupsWithResourceFalse() throws Exception {
+		// checks that the resource privacy is correctly handled
+		getGroupsWithResource(false);
+	}
+	
+	private void getGroupsWithResource(final boolean resourceIsPublic) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final Group g1 = Group.getBuilder(new GroupID("g1"), new GroupName("n1"),
+				GroupUser.getBuilder(new UserName("o1"), inst(10000)).build(),
+				new CreateAndModTimes(inst(1000)))
+				.build();
+		
+		when(mocks.userHandler.getUser(new Token("t1"))).thenReturn(new UserName("m1"));
+		when(mocks.wsHandler.isPublic(new ResourceID("86"))).thenReturn(resourceIsPublic);
+		
+		when(mocks.storage.getGroups(any(), eq(resourceIsPublic), eq(new UserName("m1"))))
+				.thenReturn(Arrays.asList(g1));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(
+				new Token("t1"), GetGroupsParams.getBuilder()
+						.withResource(new ResourceType("workspace"), new ResourceID("86"))
+						.build()),
+				is(Arrays.asList(GroupView.getBuilder(g1, new UserName("m1")).build())));
+	}
+	
+	@Test
+	public void getGroupsFailBadArgs() throws Exception {
+		getGroupsFail(new Token("t"), null, new NullPointerException("params"));
+		for (final Role r: set(Role.MEMBER, Role.ADMIN, Role.OWNER)) {
+				getGroupsFail(null, GetGroupsParams.getBuilder().withRole(r).build(),
+						new UnauthorizedException(
+								"A token is required when filtering groups by role"));
+		}
+	}
+	
+	@Test
+	public void getGroupsFailNoResourceType() throws Exception {
+		getGroupsFail(null, GetGroupsParams.getBuilder()
+				.withResource(new ResourceType("t"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("t"));
+	}
+	
+	private void getGroupsFail(final Token t, final GetGroupsParams p, final Exception expected) {
 		try {
-			initTestMocks().groups.getGroups(null, null);
+			initTestMocks().groups.getGroups(t, p);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("params"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void getGroupsByIDsEmpty() throws Exception {
+		assertThat("incorrect groups",
+				initTestMocks().groups.getGroups(null, Collections.emptyList()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getGroupsByIDs() throws Exception {
+		// tests that private groups have a private view and are included, unlike the list 
+		final TestMocks mocks = initTestMocks();
+		when(mocks.storage.getGroups(Arrays.asList(
+				new GroupID("id1"), new GroupID("id2"), new GroupID("id4"), new GroupID("id3"),
+				new GroupID("id4"))))
+				.thenReturn(set(
+						Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("m1"))
+								.withAdministrator(toGUser("a1"))
+										.build(),
+						Group.getBuilder(
+								new GroupID("id2"), new GroupName("name2"), toGUser("u2"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withIsPrivate(true)
+								.withMember(toGUser("whee"))
+								.withAdministrator(toGUser("whoo"))
+								.build(),
+						Group.getBuilder(
+								new GroupID("id3"), new GroupName("name3"), toGUser("u3"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("bar"))
+								.withAdministrator(toGUser("baz"))
+								.build(),
+						Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("boop"))
+								.withAdministrator(toGUser("poob"))
+								.build()
+						));
+		
+		assertThat("incorrect groups", mocks.groups.getGroups(null, Arrays.asList(
+				new GroupID("id1"), new GroupID("id2"), new GroupID("id4"), new GroupID("id3"),
+				new GroupID("id4"))),
+				is(Arrays.asList(
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id1"), new GroupName("name1"), toGUser("u1"),
+								new CreateAndModTimes(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id2"), new GroupName("fake"), toGUser("fake"),
+								new CreateAndModTimes(Instant.ofEpochMilli(50000)))
+								.withIsPrivate(true)
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id3"), new GroupName("name3"), toGUser("u3"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("id4"), new GroupName("name4"), toGUser("u4"),
+								new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+								.withMember(toGUser("fakename"))
+								.withAdministrator(toGUser("fakename2"))
+								.build(),
+								null)
+								.build()
+						)));
+	}
+	
+	@Test
+	public void getGroupsByIDsFailBadArgs() throws Exception {
+		getGroupsByIDsFail(null, new NullPointerException("groupIDs"));
+		getGroupsByIDsFail(Arrays.asList(new GroupID("id"), null), new NullPointerException(
+				"Null item in collection groupIDs"));
+		final List<GroupID> hundy = new LinkedList<>();
+		for (int i = 1; i < 102; i++) {
+			hundy.add(new GroupID("a" + i));
+		}
+		getGroupsByIDsFail(hundy, new IllegalParameterException(
+				"No more than 100 group IDs may be specified"));
+	}
+	
+	private void getGroupsByIDsFail(final List<GroupID> ids, final Exception expected) {
+		try {
+			initTestMocks().groups.getGroups(null, ids);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 	
 	@Test
@@ -1895,7 +2147,7 @@ public class GroupsTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("foo")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("foo")))
 				.build());
 		
 		verify(mocks.notifs).notify(
@@ -1906,7 +2158,8 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("foo")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("foo")))
 						.build()
 				);
 		
@@ -1916,7 +2169,7 @@ public class GroupsTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("foo")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("foo")))
 				.build()
 				));
 	}
@@ -2046,7 +2299,8 @@ public class GroupsTest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1209610000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("foo")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("foo")))
 						.build()
 				);
 		
@@ -2104,8 +2358,8 @@ public class GroupsTest {
 	public void getRequestResourceCreatorOpen() throws Exception {
 		getRequest(
 				new UserName("user"),
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("78"))),
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("78"))),
 				set(GroupRequestUserAction.CANCEL));
 	}
 	
@@ -2113,8 +2367,8 @@ public class GroupsTest {
 	public void getRequestResourceCreatorClosed() throws Exception {
 		getRequest(
 				new UserName("user"),
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("78")))
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("78")))
 						.withStatus(GroupRequestStatus.canceled()),
 				set());
 	}
@@ -2123,8 +2377,8 @@ public class GroupsTest {
 	public void getRequestResourceAdminOpen() throws Exception {
 		getRequest(
 				new UserName("own"),
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("78"))),
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("78"))),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
 	}
 	
@@ -2132,8 +2386,8 @@ public class GroupsTest {
 	public void getRequestResourceAdminClosed() throws Exception {
 		getRequest(
 				new UserName("admin"),
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("78")))
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("78")))
 						.withStatus(GroupRequestStatus.expired()),
 				set());
 	}
@@ -2143,7 +2397,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("user"),
 				b -> b.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite"))),
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite"))),
 				set(GroupRequestUserAction.CANCEL));
 	}
 	
@@ -2152,7 +2407,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("user"),
 				b -> b.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.withStatus(GroupRequestStatus.canceled()),
 				set());
 	}
@@ -2162,7 +2418,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("invite"),
 				b -> b.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite"))),
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite"))),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
 	}
 	
@@ -2171,7 +2428,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("invite"),
 				b -> b.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.withStatus(GroupRequestStatus.expired()),
 				set());
 	}
@@ -2181,8 +2439,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("user"),
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("87"))),
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("87"))),
 				set(GroupRequestUserAction.CANCEL));
 	}
 	
@@ -2191,8 +2449,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("user"),
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("87")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("87")))
 						.withStatus(GroupRequestStatus.canceled()),
 				set());
 	}
@@ -2202,8 +2460,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("wsadmin"),
 				b -> b.withType(RequestType.INVITE)
-					.withResourceType(new ResourceType("workspace"))
-					.withResource(new ResourceDescriptor(new ResourceID("87"))),
+					.withResource(new ResourceType("workspace"),
+							new ResourceDescriptor(new ResourceID("87"))),
 				set(GroupRequestUserAction.ACCEPT, GroupRequestUserAction.DENY));
 	}
 	
@@ -2212,8 +2470,8 @@ public class GroupsTest {
 		getRequest(
 				new UserName("wsadmin"),
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("87")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("87")))
 						.withStatus(GroupRequestStatus.expired()),
 				set());
 	}
@@ -2300,7 +2558,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.withStatus(GroupRequestStatus.expired())
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid")))
@@ -2345,7 +2604,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2368,8 +2628,8 @@ public class GroupsTest {
 				new RequestID(id), new GroupID("gid"), new UserName("requester"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("67")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("67")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2393,8 +2653,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("96")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2421,8 +2681,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("96")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2449,9 +2709,9 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-						new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2481,7 +2741,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
+				.withResource(GroupRequest.USER_TYPE,
+						new ResourceDescriptor(new ResourceID("bad*user")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2508,9 +2769,9 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("caterlawgmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-						new ResourceID("mod.meth")))
+				.withResource(new ResourceType("caterlawgmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2543,8 +2804,8 @@ public class GroupsTest {
 		getGroupForRequest(
 				new UserName("target"),
 				b -> b.withType(RequestType.INVITE)
-					.withResourceType(new ResourceType("user"))
-					.withResource(new ResourceDescriptor(new ResourceID("target"))));
+					.withResource(new ResourceType("user"),
+							new ResourceDescriptor(new ResourceID("target"))));
 	}
 	
 	@Test
@@ -2552,8 +2813,8 @@ public class GroupsTest {
 		getGroupForRequest(
 				new UserName("wsadmin"),
 				b -> b.withType(RequestType.INVITE)
-					.withResourceType(new ResourceType("workspace"))
-					.withResource(new ResourceDescriptor(new ResourceID("87"))));
+					.withResource(new ResourceType("workspace"),
+							new ResourceDescriptor(new ResourceID("87"))));
 	}
 	
 	private void getGroupForRequest(
@@ -2664,7 +2925,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.withStatus(GroupRequestStatus.expired())
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid")))
@@ -2709,7 +2971,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2756,7 +3019,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(new ResourceDescriptor(new ResourceID("target")))
+				.withResource(GroupRequest.USER_TYPE,
+						new ResourceDescriptor(new ResourceID("target")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -2780,8 +3044,8 @@ public class GroupsTest {
 				new RequestID(id), new GroupID("gid"), new UserName("requester"),
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("67")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("67")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2805,8 +3069,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("96")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2833,8 +3097,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("96")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("96")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2861,8 +3125,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"),
 						new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -2893,7 +3157,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
+				.withResource(GroupRequest.USER_TYPE,
+						new ResourceDescriptor(new ResourceID("bad*user")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2921,9 +3186,9 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("caterlawgmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-						new ResourceID("mod.meth")))
+				.withResource(new ResourceType("caterlawgmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -2951,6 +3216,14 @@ public class GroupsTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	/* There's 4 pretty similar methods for getting requests, and they use the same
+	 * params class. In the Groups class there's a check that the params resource type, if
+	 * present, is registered. Instead of 12 tests (4 methods * test without rtype, test
+	 * with good rtype, and test with bad rtype) we write a successful test for each method.
+	 * Two of the methods contain good rtypes and two don't. We also write a failure test
+	 * for each method with a bad rtype.
+	 */
 	
 	@Test
 	public void getRequestsForRequesterEmpty() throws Exception {
@@ -2981,6 +3254,7 @@ public class GroupsTest {
 				new UserName("user"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("workspace"), new ResourceID("someid"))
 						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -2989,14 +3263,17 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("invite")))
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("someid")))
 								.build(),
 						GroupRequest.getBuilder(
-								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("someid")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 						));
@@ -3005,6 +3282,7 @@ public class GroupsTest {
 				new Token("token"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("workspace"), new ResourceID("someid"))
 						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3013,24 +3291,34 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("invite")))
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("someid")))
 								.build(),
 						GroupRequest.getBuilder(
-								new RequestID(id2), new GroupID("gid"), new UserName("user"),
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
-								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
-								.build()
-						)));
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("someid")))
+						.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+						.build()
+				)));
 	}
 	
 	@Test
-	public void getRequestsForRequesterFail() throws Exception {
+	public void getRequestsForRequesterFailNulls() throws Exception {
 		failGetRequestsForRequester(null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("userToken"));
 		failGetRequestsForRequester(new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForRequesterFailBadType() throws Exception {
+		failGetRequestsForRequester(new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
 	}
 	
 	private void failGetRequestsForRequester(
@@ -3074,6 +3362,30 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getRequestsForTargetWithResourceEmpty() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("user"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("22"), new UserName("user")))
+				.thenReturn(true);
+		when(mocks.storage.getRequestsByTarget(
+				GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("22"))
+						.build()))
+				.thenReturn(Collections.emptyList());
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableExcludeUpTo(inst(10000))
+						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("22"))
+						.build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
 	public void getRequestsForTarget() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id1 = UUID.randomUUID();
@@ -3105,7 +3417,8 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 								.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("target")))
+								.withResource(GroupRequest.USER_TYPE,
+										ResourceDescriptor.from(new UserName("target")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3114,8 +3427,8 @@ public class GroupsTest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("workspace"))
-								.withResource(new ResourceDescriptor(new ResourceID("24")))
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("24")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
 								.build(),
 						GroupRequest.getBuilder(
@@ -3125,10 +3438,10 @@ public class GroupsTest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("catalogmethod"))
-								.withResource(new ResourceDescriptor(
-										new ResourceAdministrativeID("mod2"),
-										new ResourceID("mod2.meth")))
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod2"),
+												new ResourceID("mod2.meth")))
 								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						));
@@ -3145,7 +3458,8 @@ public class GroupsTest {
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResource(ResourceDescriptor.from(new UserName("target")))
+								.withResource(GroupRequest.USER_TYPE,
+										ResourceDescriptor.from(new UserName("target")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3154,8 +3468,8 @@ public class GroupsTest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("workspace"))
-								.withResource(new ResourceDescriptor(new ResourceID("24")))
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("24")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
 								.build(),
 						GroupRequest.getBuilder(
@@ -3165,30 +3479,145 @@ public class GroupsTest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("catalogmethod"))
-								.withResource(new ResourceDescriptor(
-								new ResourceAdministrativeID("mod2"),
-								new ResourceID("mod2.meth")))
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod2"),
+												new ResourceID("mod2.meth")))
 								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						)));
 	}
 	
 	@Test
-	public void getRequestsForTargetFail() throws Exception {
-		failGetRequestsForTarget(null, GetRequestsParams.getBuilder().build(),
+	public void getRequestsForTargetWithResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("target"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("4"), new UserName("target")))
+				.thenReturn(true);
+		when(mocks.storage.getRequestsByTarget(
+				GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.withResource(new ResourceType("workspace"), new ResourceID("4"))
+						.build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid1"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid3"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						));
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForTarget(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(10000))
+						.withResource(new ResourceType("workspace"), new ResourceID("4"))
+						.build()),
+				is(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("gid1"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+								.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid2"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.accepted(new UserName("wsadmin")))
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("gid3"), new UserName("user"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withType(RequestType.INVITE)
+								.withResource(new ResourceType("workspace"),
+										new ResourceDescriptor(new ResourceID("4")))
+								.withStatus(GroupRequestStatus.canceled())
+								.build()
+						)));
+	}
+	
+	@Test
+	public void getRequestsForTargetFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		
+		failGetRequestsForTarget(g, null, GetRequestsParams.getBuilder().build(),
 				new NullPointerException("userToken"));
-		failGetRequestsForTarget(new Token("t"), null, new NullPointerException("params"));
+		failGetRequestsForTarget(g, new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForTargetFailBadType() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u"));
+		
+		failGetRequestsForTarget(mocks.groups, new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
+	}
+	
+	@Test
+	public void getRequestsForTargetFailNotResourceAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u"));
+		when(mocks.wsHandler.isAdministrator(new ResourceID("56"), new UserName("u")))
+				.thenReturn(false);
+		
+		failGetRequestsForTarget(mocks.groups, new Token("t"), GetRequestsParams.getBuilder()
+				.withResource(new ResourceType("workspace"), new ResourceID("56")).build(),
+				new UnauthorizedException("User u is not an admin for workspace 56"));
 	}
 	
 	private void failGetRequestsForTarget(
+			final Groups g,
 			final Token token,
 			final GetRequestsParams params,
-			final Exception expected)
-			throws Exception {
-		final TestMocks mocks = initTestMocks();
+			final Exception expected) {
 		try {
-			mocks.groups.getRequestsForTarget(token, params);
+			g.getRequestsForTarget(token, params);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -3238,6 +3667,7 @@ public class GroupsTest {
 				new GroupID("gid"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("mod.m"))
 						.build()))
 				.thenReturn(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3245,6 +3675,10 @@ public class GroupsTest {
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod"),
+												new ResourceID("mod.m")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3252,6 +3686,10 @@ public class GroupsTest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod"),
+												new ResourceID("mod.m")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 						));
@@ -3260,6 +3698,7 @@ public class GroupsTest {
 				new Token("token"), new GroupID("gid"), GetRequestsParams.getBuilder()
 						.withNullableIncludeClosed(true)
 						.withNullableSortAscending(false)
+						.withResource(new ResourceType("catalogmethod"), new ResourceID("mod.m"))
 						.build()),
 				is(Arrays.asList(
 						GroupRequest.getBuilder(
@@ -3267,6 +3706,10 @@ public class GroupsTest {
 								CreateModAndExpireTimes.getBuilder(
 										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 										.build())
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod"),
+												new ResourceID("mod.m")))
 								.build(),
 						GroupRequest.getBuilder(
 								new RequestID(id2), new GroupID("gid"), new UserName("user"),
@@ -3274,6 +3717,10 @@ public class GroupsTest {
 										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
+								.withResource(new ResourceType("catalogmethod"),
+										new ResourceDescriptor(
+												new ResourceAdministrativeID("mod"),
+												new ResourceID("mod.m")))
 								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
 								.build()
 				)));
@@ -3293,7 +3740,15 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailInvalidToken() throws Exception {
+	public void getRequestsForGroupFailBadType() throws Exception {
+		failGetRequestsForGroup(initTestMocks().groups, new Token("t"), new GroupID("i"),
+				GetRequestsParams.getBuilder()
+						.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
+	}
+	
+	@Test
+	public void getRequestsForGroupFailInvalidToken() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
@@ -3304,7 +3759,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailNoSuchGroup() throws Exception {
+	public void getRequestsForGroupFailNoSuchGroup() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
@@ -3317,7 +3772,7 @@ public class GroupsTest {
 	}
 	
 	@Test
-	public void getRequestForGroupFailNotAdmin() throws Exception {
+	public void getRequestsForGroupFailNotAdmin() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		
 		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("u1"));
@@ -3349,6 +3804,127 @@ public class GroupsTest {
 	}
 	
 	@Test
+	public void getRequestsForGroupsEmpty() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getAdministratedGroups(new UserName("own")))
+				.thenReturn(set());
+		when(mocks.storage.getRequestsByGroups(set(), GetRequestsParams.getBuilder()
+				.withNullableIncludeClosed(true)
+				.withResource(new ResourceType("workspace"), new ResourceID("2"))
+				.build()))
+				.thenReturn(Collections.emptyList());
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForGroups(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withResource(new ResourceType("workspace"), new ResourceID("2"))
+						.build()),
+				is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void getRequestsForGroups() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		final UUID id1 = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getAdministratedGroups(new UserName("own")))
+				.thenReturn(set(new GroupID("foo"), new GroupID("bar")));
+		when(mocks.storage.getRequestsByGroups(
+				set(new GroupID("foo"), new GroupID("bar")),
+				GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(15000))
+						.build()))
+				.thenReturn(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("foo"), new UserName("usera"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+										.build())
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("bar"), new UserName("userb"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+								.build()
+				));
+		
+		assertThat("incorrect requests", mocks.groups.getRequestsForGroups(
+				new Token("token"), GetRequestsParams.getBuilder()
+						.withNullableIncludeClosed(true)
+						.withNullableSortAscending(false)
+						.withNullableExcludeUpTo(inst(15000))
+						.build()),
+				is(Arrays.asList(
+						GroupRequest.getBuilder(
+								new RequestID(id1), new GroupID("foo"), new UserName("usera"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+										.build())
+								.build(),
+						GroupRequest.getBuilder(
+								new RequestID(id2), new GroupID("bar"), new UserName("userb"),
+								CreateModAndExpireTimes.getBuilder(
+										Instant.ofEpochMilli(20000), Instant.ofEpochMilli(30000))
+										.withModificationTime(Instant.ofEpochMilli(25000))
+										.build())
+								.withStatus(GroupRequestStatus.accepted(new UserName("admin")))
+								.build()
+				)));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailNulls() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final Groups g = mocks.groups;
+		final GetRequestsParams p = GetRequestsParams.getBuilder().build();
+		
+		failGetRequestsForGroups(g, null, p, new NullPointerException("userToken"));
+		failGetRequestsForGroups(g, new Token("t"), null, new NullPointerException("params"));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailBadType() throws Exception {
+		failGetRequestsForGroups(initTestMocks().groups, new Token("t"),
+				GetRequestsParams.getBuilder()
+						.withResource(new ResourceType("bad"), new ResourceID("i")).build(),
+				new NoSuchResourceTypeException("bad"));
+	}
+	
+	@Test
+	public void getRequestsForGroupsFailInvalidToken() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenThrow(new InvalidTokenException());
+		
+		failGetRequestsForGroups(mocks.groups, new Token("token"),
+				GetRequestsParams.getBuilder().build(),
+				new InvalidTokenException());
+	}
+	
+	private void failGetRequestsForGroups(
+			final Groups g,
+			final Token t,
+			final GetRequestsParams params,
+			final Exception expected) {
+		try {
+			g.getRequestsForGroups(t, params);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void cancelRequest() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
@@ -3360,7 +3936,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
@@ -3369,7 +3946,8 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.withStatus(GroupRequestStatus.canceled())
 						.build());
 		when(mocks.clock.instant()).thenReturn(Instant.ofEpochMilli(15000));
@@ -3387,7 +3965,8 @@ public class GroupsTest {
 						.withModificationTime(Instant.ofEpochMilli(15000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build()));
 	}
@@ -3427,7 +4006,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.build());
 		
 		failCancelRequest(mocks.groups, new Token("token"), new RequestID(id),
@@ -3446,7 +4026,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("invite")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("invite")))
 						.withStatus(GroupRequestStatus.accepted(new UserName("someguy")))
 						.build());
 		
@@ -3480,16 +4061,16 @@ public class GroupsTest {
 	@Test
 	public void denyRequestAdminWhitespaceReasonRequestResource() throws Exception {
 		denyRequestAdmin("    \t    ", "admin",
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("86"))));
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("86"))));
 	}
 	
 	@Test
 	public void denyRequestAdminReasonInviteResource() throws Exception {
 		denyRequestAdmin(" reason  ", "wsadmin",
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("86"))));
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("86"))));
 	}
 	
 	private void denyRequestAdmin(
@@ -3567,7 +4148,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.build(),
 				GroupRequest.getBuilder(
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
@@ -3576,7 +4158,8 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -3603,7 +4186,8 @@ public class GroupsTest {
 								.withModificationTime(Instant.ofEpochMilli(15000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 						.build());
 		
@@ -3614,7 +4198,8 @@ public class GroupsTest {
 						.withModificationTime(Instant.ofEpochMilli(15000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("target")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("target")))
 				.withStatus(GroupRequestStatus.denied(new UserName("target"), "reason"))
 				.build()));
 	}
@@ -3652,7 +4237,8 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 				.withType(RequestType.INVITE)
-				.withResource(ResourceDescriptor.from(new UserName("invite")))
+				.withResource(GroupRequest.USER_TYPE,
+						ResourceDescriptor.from(new UserName("invite")))
 				.withStatus(GroupRequestStatus.expired())
 				.build());
 		when(mocks.storage.getGroup(new GroupID("gid")))
@@ -3675,7 +4261,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -3695,17 +4282,17 @@ public class GroupsTest {
 	
 	@Test
 	public void denyRequestFailNotAdminRequestResource() throws Exception {
-		denyRequestFailNotAdmin(b -> b.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("foo"),
+		denyRequestFailNotAdmin(b -> b.withResource(new ResourceType("catalogmethod"),
+				new ResourceDescriptor(new ResourceAdministrativeID("foo"),
 						new ResourceID("foo.bar"))));
 	}
 	
 	@Test
 	public void denyRequestFailNotAdminInviteResource() throws Exception {
 		denyRequestFailNotAdmin(b -> b.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("foo"),
-						new ResourceID("foo.baz"))));
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("foo"),
+								new ResourceID("foo.baz"))));
 	}
 	
 	private void denyRequestFailNotAdmin(
@@ -3749,7 +4336,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.withStatus(GroupRequestStatus.canceled())
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -3775,8 +4363,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("56")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -3804,9 +4392,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -3837,7 +4425,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
+						.withResource(GroupRequest.USER_TYPE,
+								new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -3865,9 +4454,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("caterlogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("caterlogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -3920,7 +4509,8 @@ public class GroupsTest {
 		acceptRequest(mocks, new UserName("target"),
 				set(new UserName("own"), new UserName("admin"), new UserName("a3")),
 				b -> b.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target"))));
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target"))));
 
 		final GroupUser u = GroupUser.getBuilder(new UserName("target"), inst(12000)).build();
 		verify(mocks.storage).addMember(new GroupID("gid"), u, inst(12000));
@@ -3935,8 +4525,8 @@ public class GroupsTest {
 		acceptRequest(mocks, new UserName("admin"),
 				set(new UserName("u1"), new UserName("u2"), new UserName("own"),
 						new UserName("a3"), new UserName("u3")),
-				b -> b.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("56"))));
+				b -> b.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("56"))));
 
 		verify(mocks.storage).addResource(
 				new GroupID("gid"),
@@ -3957,9 +4547,9 @@ public class GroupsTest {
 				set(new UserName("admin"), new UserName("u4"), new UserName("own"),
 						new UserName("a3"), new UserName("u1"), new UserName("u3")),
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.n"))));
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.n"))));
 
 		verify(mocks.storage).addResource(
 				new GroupID("gid"),
@@ -4053,7 +4643,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4073,15 +4664,15 @@ public class GroupsTest {
 	
 	@Test
 	public void acceptRequestResourceFailNotAdmin() throws Exception {
-		acceptRequestFailNotAdmin(b -> b.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("34"))));
+		acceptRequestFailNotAdmin(b -> b.withResource(new ResourceType("workspace"),
+				new ResourceDescriptor(new ResourceID("34"))));
 	}
 	
 	@Test
 	public void acceptRequestResourceFailNotResourceAdmin() throws Exception {
 		acceptRequestFailNotAdmin(b -> b.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("55"))));
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("55"))));
 	}
 	
 	private void acceptRequestFailNotAdmin(
@@ -4123,7 +4714,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.withStatus(GroupRequestStatus.expired())
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -4180,7 +4772,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(ResourceDescriptor.from(new UserName("target")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("target")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4210,8 +4803,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("56")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4240,9 +4833,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("md"),
-								new ResourceID("md.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("md"),
+										new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4270,8 +4863,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("56")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("56")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4307,8 +4900,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("4")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("4")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4339,9 +4932,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("md"),
-								new ResourceID("md.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("md"),
+										new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4371,7 +4964,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
+						.withResource(GroupRequest.USER_TYPE,
+								new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4400,8 +4994,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("worksperce"))
-						.withResource(new ResourceDescriptor(new ResourceID("4")))
+						.withResource(new ResourceType("worksperce"),
+									new ResourceDescriptor(new ResourceID("4")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4430,7 +5024,8 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResource(new ResourceDescriptor(new ResourceID("bad*user")))
+						.withResource(GroupRequest.USER_TYPE,
+								new ResourceDescriptor(new ResourceID("bad*user")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4460,9 +5055,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("certerlergmerthod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("md"),
-								new ResourceID("md.meth")))
+						.withResource(new ResourceType("certerlergmerthod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("md"),
+										new ResourceID("md.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -4867,9 +5462,9 @@ public class GroupsTest {
 				CreateModAndExpireTimes.getBuilder(
 						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 						.build())
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-						new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+								new ResourceID("mod.meth")))
 				.build());
 		
 		verify(mocks.notifs).notify(
@@ -4879,9 +5474,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build()
 				);
 		
@@ -4891,9 +5486,9 @@ public class GroupsTest {
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build())));
 	}
 	
@@ -4928,8 +5523,8 @@ public class GroupsTest {
 						Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("34")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("34")))
 				.build());
 		
 		verify(mocks.notifs).notify(
@@ -4940,8 +5535,8 @@ public class GroupsTest {
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("34")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("34")))
 						.build()
 				);
 		
@@ -4952,8 +5547,8 @@ public class GroupsTest {
 								Instant.ofEpochMilli(20000), Instant.ofEpochMilli(1209620000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("34")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("34")))
 						.build())));
 	}
 	
@@ -5339,9 +5934,9 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("m"),
-								new ResourceID("m.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("m"),
+										new ResourceID("m.meth")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -5379,8 +5974,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("43")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid")))
 				.thenThrow(new NoSuchGroupException("gid"));
@@ -5402,8 +5997,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("43")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
 				new GroupID("gid"), new GroupName("name"), toGUser("own"),
@@ -5414,7 +6009,8 @@ public class GroupsTest {
 				.build());
 		
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
-				new UnauthorizedException("User u1 is not an admin for group gid"));
+				new UnauthorizedException(
+						"User u1 is not an admin for the group associated with request " + id));
 	}
 	
 	@Test
@@ -5422,7 +6018,8 @@ public class GroupsTest {
 		setReadPermissionResourceFail(
 				UUID.randomUUID(),
 				b -> b.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("workspace")),
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("2"))),
 				new UnauthorizedException(
 						"Only Request type requests allow for resource permissions changes."));
 	}
@@ -5431,9 +6028,10 @@ public class GroupsTest {
 	public void setReadPermissionResourceFailResourceType() throws Exception {
 		setReadPermissionResourceFail(
 				UUID.randomUUID(),
-				b -> b.withResourceType(new ResourceType("user")),
+				b -> b.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("u"))),
 				new UnauthorizedException("Requests with a user resource type do not allow " +
-						"for permissions changes."));
+						"for resource permissions changes."));
 	}
 	
 	@Test
@@ -5441,10 +6039,38 @@ public class GroupsTest {
 		final UUID id = UUID.randomUUID();
 		setReadPermissionResourceFail(
 				id,
-				b -> b.withResourceType(new ResourceType("wrkspce")),
+				b -> b.withResource(new ResourceType("wrkspce"),
+						new ResourceDescriptor(new ResourceID("3"))),
 				new RuntimeException(
 						"No handler configured for resource type wrkspce in request " +
 						id.toString()));
+	}
+	
+	@Test
+	public void setReadPermissionResourceFailClosed() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("admin"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.withStatus(GroupRequestStatus.denied(new UserName("d"), null))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
+				new ClosedRequestException(id + ""));
 	}
 	
 	private void setReadPermissionResourceFail(
@@ -5472,8 +6098,165 @@ public class GroupsTest {
 		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id), expected);
 	}
 	
+	private void setReadPermissionResourceFail(
+			final Groups g,
+			final Token t,
+			final RequestID i,
+			final Exception expected) {
+		try {
+			g.setReadPermission(t, i);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 	@Test
-	public void setReadPermissionResourceFailClosed() throws Exception {
+	public void getResourceInformationAdmin() throws Exception {
+		getResourceInformation(new UserName("admin"));
+	}
+	
+	@Test
+	public void getResourceInformationOwner() throws Exception {
+		getResourceInformation(new UserName("own"));
+	}
+
+	private void getResourceInformation(final UserName user) throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(user);
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("m"),
+										new ResourceID("m.meth")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		when(mocks.catHandler.getResourceInformation(
+				user, set(new ResourceID("m.meth")), ResourceAccess.ALL))
+				.thenReturn(ResourceInformationSet.getBuilder(user)
+						.withResourceField(new ResourceID("m.meth"), "f1", 1)
+						.withResourceField(new ResourceID("m.meth"), "f2", "cat has no fields")
+						.build());
+		
+		final ResourceInformation ret = mocks.groups.getResourceInformation(
+				new Token("token"), new RequestID(id));
+		
+		assertThat("incorrect info", ret, is(ResourceInformation.getBuilder(
+				new ResourceType("catalogmethod"), new ResourceID("m.meth"))
+				.withField("f1", 1)
+				.withField("f2", "cat has no fields")
+				.build()));
+	}
+	
+	@Test
+	public void getResourceInformationFailNulls() throws Exception {
+		final Groups g = initTestMocks().groups;
+		
+		getResourceInformationFail(g, null, new RequestID(UUID.randomUUID()),
+				new NullPointerException("userToken"));
+		getResourceInformationFail(g, new Token("t"), null,
+				new NullPointerException("requestID"));
+	}
+	
+	@Test
+	public void getResourceInformationFailFailNoGroup() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid")))
+				.thenThrow(new NoSuchGroupException("gid"));
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
+				new RuntimeException(String.format(
+						"Request %s's group doesn't exist: 50000 No such group: gid",
+						id.toString())));
+	}
+	
+	@Test
+	public void getResourceInformationFailNotAdmin() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("u1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
+				new UnauthorizedException(
+						"User u1 is not an admin for the group associated with request " + id));
+	}
+	
+	@Test
+	public void getResourceInformationFailInvite() throws Exception {
+		getResourceInformationFail(
+				UUID.randomUUID(),
+				b -> b.withType(RequestType.INVITE)
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("2"))),
+				new UnauthorizedException(
+						"Only Request type requests allow for resource access."));
+	}
+	
+	@Test
+	public void getResourceInformationFailResourceType() throws Exception {
+		getResourceInformationFail(
+				UUID.randomUUID(),
+				b -> b.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("u"))),
+				new UnauthorizedException("Requests with a user resource type do not allow " +
+						"for resource access."));
+	}
+	
+	@Test
+	public void getResourceInformationFailNoResourceHandler() throws Exception {
+		final UUID id = UUID.randomUUID();
+		getResourceInformationFail(
+				id,
+				b -> b.withResource(new ResourceType("wrkspce"),
+						new ResourceDescriptor(new ResourceID("3"))),
+				new RuntimeException(
+						"No handler configured for resource type wrkspce in request " +
+						id.toString()));
+	}
+	
+	@Test
+	public void getResourceInformationFailClosed() throws Exception {
 		final TestMocks mocks = initTestMocks();
 		final UUID id = UUID.randomUUID();
 		
@@ -5483,8 +6266,8 @@ public class GroupsTest {
 						new RequestID(id), new GroupID("gid"), new UserName("user"),
 						CreateModAndExpireTimes.getBuilder(
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("43")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("43")))
 						.withStatus(GroupRequestStatus.denied(new UserName("d"), null))
 						.build());
 		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
@@ -5495,17 +6278,77 @@ public class GroupsTest {
 				.withAdministrator(toGUser("admin"))
 				.build());
 		
-		setReadPermissionResourceFail(mocks.groups, new Token("t"), new RequestID(id),
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id),
 				new ClosedRequestException(id + ""));
 	}
 	
-	private void setReadPermissionResourceFail(
+	@Test
+	public void getResourceInformationFailNoSuchResource() throws Exception {
+		final TestMocks mocks = initTestMocks();
+		final UUID id = UUID.randomUUID();
+		
+		when(mocks.userHandler.getUser(new Token("token"))).thenReturn(new UserName("a1"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build())
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("m"),
+										new ResourceID("m.meth")))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("a1"))
+				.withAdministrator(toGUser("a3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		when(mocks.catHandler.getResourceInformation(
+				new UserName("a1"), set(new ResourceID("m.meth")), ResourceAccess.ALL))
+				.thenReturn(ResourceInformationSet.getBuilder(new UserName("a1"))
+						.withNonexistentResource(new ResourceID("m.meth"))
+						.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("token"), new RequestID(id),
+				new NoSuchResourceException("m.meth"));
+	}
+	
+	private void getResourceInformationFail(
+			final UUID id,
+			final FuncExcept<GroupRequest.Builder, GroupRequest.Builder> builderFn,
+			final Exception expected)
+			throws Exception {
+		final TestMocks mocks = initTestMocks();
+		
+		when(mocks.userHandler.getUser(new Token("t"))).thenReturn(new UserName("own"));
+		when(mocks.storage.getRequest(new RequestID(id))).thenReturn(
+				builderFn.apply(GroupRequest.getBuilder(
+						new RequestID(id), new GroupID("gid"), new UserName("user"),
+						CreateModAndExpireTimes.getBuilder(
+								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000)).build()))
+						.build());
+		when(mocks.storage.getGroup(new GroupID("gid"))).thenReturn(Group.getBuilder(
+				new GroupID("gid"), new GroupName("name"), toGUser("own"),
+				new CreateAndModTimes(Instant.ofEpochMilli(10000)))
+				.withMember(toGUser("u1"))
+				.withMember(toGUser("u3"))
+				.withAdministrator(toGUser("admin"))
+				.build());
+		
+		getResourceInformationFail(mocks.groups, new Token("t"), new RequestID(id), expected);
+	}
+	
+	private void getResourceInformationFail(
 			final Groups g,
 			final Token t,
 			final RequestID i,
 			final Exception expected) {
 		try {
-			g.setReadPermission(t, i);
+			g.getResourceInformation(t, i);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

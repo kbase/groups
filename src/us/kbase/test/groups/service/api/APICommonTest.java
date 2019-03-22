@@ -5,7 +5,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.groups.TestCommon.inst;
-import static us.kbase.test.groups.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -29,6 +28,7 @@ import us.kbase.groups.core.GroupView;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.exceptions.ErrorType;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.MissingParameterException;
@@ -86,8 +86,7 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("n")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("n")))
 				.build();
 		
 		assertThat("incorrect request", APICommon.toGroupRequestJSON(r), is(MapBuilder.newHashMap()
@@ -114,8 +113,7 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("inv")))
+				.withResource(GroupRequest.USER_TYPE, ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -143,8 +141,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("42")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -172,8 +170,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -201,8 +199,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(25000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("catalogmethod"))
-				.withResource(new ResourceDescriptor(new ResourceID("mod.meth")))
+				.withResource(new ResourceType("catalogmethod"),
+						new ResourceDescriptor(new ResourceID("mod.meth")))
 				.withStatus(GroupRequestStatus.expired())
 				.build();
 		
@@ -239,8 +237,8 @@ public class APICommonTest {
 						Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("n1")))
+				.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("n1")))
 				.build();
 		
 		final UUID id2 = UUID.randomUUID();
@@ -251,8 +249,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(26000))
 						.build())
 				.withType(RequestType.INVITE)
-				.withResourceType(new ResourceType("user"))
-				.withResource(ResourceDescriptor.from(new UserName("inv")))
+				.withResource(new ResourceType("user"),
+						ResourceDescriptor.from(new UserName("inv")))
 				.withStatus(GroupRequestStatus.denied(new UserName("den"), "r"))
 				.build();
 		
@@ -264,8 +262,8 @@ public class APICommonTest {
 						.withModificationTime(Instant.ofEpochMilli(27000))
 						.build())
 				.withType(RequestType.REQUEST)
-				.withResourceType(new ResourceType("workspace"))
-				.withResource(new ResourceDescriptor(new ResourceID("42")))
+				.withResource(new ResourceType("workspace"),
+						new ResourceDescriptor(new ResourceID("42")))
 				.withStatus(GroupRequestStatus.canceled())
 				.build();
 		
@@ -514,6 +512,35 @@ public class APICommonTest {
 	}
 	
 	@Test
+	public void toGroupJSONStandardViewResourcesNonMemberPrivate() throws Exception {
+		final UserName userName = new UserName("non");
+		final GroupView gv = GroupView.getBuilder(
+				getGroupMaxBuilder()
+				.withIsPrivate(true)
+				.build(),
+				userName)
+				.withResource(new ResourceType("ws"), ResourceInformationSet
+						.getBuilder(userName)
+						.withResourceField(new ResourceID("a"), "f1", "x")
+						.build())
+				.withStandardView(true)
+				.build();
+		
+		assertThat("incorrect JSON", APICommon.toGroupJSON(gv), is(MapBuilder.newHashMap()
+				.with("id", "id2")
+				.with("private", true)
+				.with("role", "None")
+				.with("resources", ImmutableMap.of(
+						"ws", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("rid", "a")
+										.with("added", null)
+										.with("f1", "x")
+										.build())))
+				.build()));
+	}
+	
+	@Test
 	public void toGroupJSONFail() throws Exception {
 		try {
 			APICommon.toGroupJSON(null);
@@ -552,11 +579,13 @@ public class APICommonTest {
 	
 	@Test
 	public void getRequestParamsNulls() throws Exception {
-		final GetRequestsParams p = APICommon.getRequestsParams(null, null, null, true);
+		final GetRequestsParams p = APICommon.getRequestsParams(
+				null, null, null, null, null, true);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder().build()));
 		
-		final GetRequestsParams p2 = APICommon.getRequestsParams(null, null, null, false);
+		final GetRequestsParams p2 = APICommon.getRequestsParams(
+				null, null, null, null, null, false);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableSortAscending(false)
@@ -566,13 +595,13 @@ public class APICommonTest {
 	@Test
 	public void getRequestParamsWhitespace() throws Exception {
 		final String ws = "    \t    ";
-		final GetRequestsParams p = APICommon.getRequestsParams(ws, ws, ws, true);
+		final GetRequestsParams p = APICommon.getRequestsParams(ws, ws, ws, ws, ws, true);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
 				.build()));
 		
-		final GetRequestsParams p2 = APICommon.getRequestsParams(ws, ws, ws, false);
+		final GetRequestsParams p2 = APICommon.getRequestsParams(ws, ws, ws, ws, ws, false);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableSortAscending(false)
@@ -583,15 +612,16 @@ public class APICommonTest {
 	@Test
 	public void getRequestParamsValues() throws Exception {
 		final GetRequestsParams p = APICommon.getRequestsParams(
-				"   \t   12000   ", " yes ", "  asc  ", false);
+				"   \t   12000   ", " yes ", "  asc  ", "type", "res", false);
 		
 		assertThat("incorrect params", p, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(12000))
 				.withNullableIncludeClosed(true)
+				.withResource(new ResourceType("type"), new ResourceID("res"))
 				.build()));
 		
 		final GetRequestsParams p2 = APICommon.getRequestsParams(
-				"   \t   " + Long.MAX_VALUE + "   ", " no ", "  desc  ", true);
+				"   \t   " + Long.MAX_VALUE + "   ", " no ", "  desc  ", null, "  \t ", true);
 		
 		assertThat("incorrect params", p2, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(Long.MAX_VALUE))
@@ -600,27 +630,35 @@ public class APICommonTest {
 				.build()));
 		
 		final GetRequestsParams p3 = APICommon.getRequestsParams(
-				"   \t   " + Long.MIN_VALUE + "   ", null, null, true);
+				"   \t   " + Long.MIN_VALUE + "   ", null, null, "t", "r", true);
 		
 		assertThat("incorrect params", p3, is(GetRequestsParams.getBuilder()
 				.withNullableExcludeUpTo(inst(Long.MIN_VALUE))
+				.withResource(new ResourceType("t"), new ResourceID("r"))
 				.build()));
 	}
 	
 	@Test
 	public void getRequestParamsFail() throws Exception {
-		failGetRequestParams("   foo   ", null,
+		failGetRequestParams("   foo   ", null, null, null,
 				new IllegalParameterException("Invalid epoch ms: foo"));
-		failGetRequestParams(null, "asd", new IllegalParameterException(
+		failGetRequestParams(null, "asd", null, null, new IllegalParameterException(
 				"Invalid sort direction: asd"));
+		failGetRequestParams(null, null, "t", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		failGetRequestParams(null, null, "  \t  ", "r", new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		
 	}
 	
 	private void failGetRequestParams(
 			final String excludeUpTo,
 			final String sortDirection,
+			final String resType,
+			final String res,
 			final Exception expected) {
 		try {
-			APICommon.getRequestsParams(excludeUpTo, null, sortDirection, true);
+			APICommon.getRequestsParams(excludeUpTo, null, sortDirection, resType, res, true);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -653,11 +691,11 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsNulls() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams(null, null, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(null, null, null, null, null, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(null, null, null, null, null, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -666,11 +704,11 @@ public class APICommonTest {
 	@Test
 	public void getGroupParamsWhitespace() throws Exception {
 		final String ws = "    \t  ";
-		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, true);
+		final GetGroupsParams p = APICommon.getGroupsParams(ws, ws, ws, ws, ws, true);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder().build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, false);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(ws, ws, ws, ws, ws, false);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
 				.withNullableSortAscending(false).build()));
@@ -678,41 +716,81 @@ public class APICommonTest {
 	
 	@Test
 	public void getGroupParamsValues() throws Exception {
-		final GetGroupsParams p = APICommon.getGroupsParams("   foo   ", "asc", false);
+		final GetGroupsParams p = APICommon.getGroupsParams(
+				"   foo   ", "asc", "Member", "type", "id", false);
 		
 		assertThat("incorrect params", p, is(GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("foo").build()));
+				.withRole(Role.MEMBER)
+				.withNullableExcludeUpTo("foo")
+				.withResource(new ResourceType("type"), new ResourceID("id"))
+				.build()));
 		
-		final GetGroupsParams p2 = APICommon.getGroupsParams("  \t  bar  ", "desc", true);
+		final GetGroupsParams p2 = APICommon.getGroupsParams(
+				"  \t  bar  ", "desc", "Admin", null, null, true);
 		
 		assertThat("incorrect params", p2, is(GetGroupsParams.getBuilder()
+				.withRole(Role.ADMIN)
 				.withNullableExcludeUpTo("bar")
-				.withNullableSortAscending(false).build()));
+				.withNullableSortAscending(false)
+				.build()));
+		
+		final GetGroupsParams p3 = APICommon.getGroupsParams(
+				"   foo   ", "asc", "Owner", null, null, false);
+		
+		assertThat("incorrect params", p3, is(GetGroupsParams.getBuilder()
+				.withRole(Role.OWNER)
+				.withNullableExcludeUpTo("foo")
+				.build()));
+		
+		final GetGroupsParams p4 = APICommon.getGroupsParams(
+				"   foo   ", "asc", "None", null, null, false);
+		
+		assertThat("incorrect params", p4, is(GetGroupsParams.getBuilder()
+				.withRole(Role.NONE)
+				.withNullableExcludeUpTo("foo")
+				.build()));
 	}
 	
 	@Test
-	public void getGroupParamsFail() throws Exception {
+	public void getGroupParamsFailBadArgs() throws Exception {
+		getGroupParamsFail("asd", null, null, null, new IllegalParameterException(
+				"Invalid sort direction: asd"));
+		getGroupParamsFail(null, "member", null, null,
+				new IllegalParameterException("Invalid role: member"));
+		getGroupParamsFail(null, null, "t", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		getGroupParamsFail(null, null, "  \t  ", "r", new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+	}
+	
+	private void getGroupParamsFail(
+			final String sort,
+			final String role,
+			final String resType,
+			final String resource,
+			final Exception expected) {
 		try {
-			APICommon.getGroupsParams(null, "asd", false);
+			APICommon.getGroupsParams(null, sort, role, resType, resource, false);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
-					"Invalid sort direction: asd"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
 	@Test
 	public void toGroupIDs() throws Exception {
-		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(set()));
+		final List<GroupID> mt = Collections.emptyList();
+		assertThat("incorrect group IDs", APICommon.toGroupIDs(null), is(mt));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t     "), is(mt));
+		assertThat("incorrect group IDs", APICommon.toGroupIDs("   \t , ,    "), is(mt));
 		assertThat("incorrect group IDs", APICommon.toGroupIDs("   foo,  \t ,  bar   ,baz,    \t"),
-				is(set(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
+				is(Arrays.asList(new GroupID("foo"), new GroupID("bar"), new GroupID("baz"))));
 	}
 	
 	@Test
 	public void failToGroupIDs() throws Exception {
-		failToGroupIDs(null, new NullPointerException("commaSeparatedGroupIDs"));
 		failToGroupIDs("  \t , foo, bad*name, bar", new IllegalParameterException(
-				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id  bad*name: *"));
+				ErrorType.ILLEGAL_GROUP_ID, "Illegal character in group id bad*name: *"));
 	}
 	
 	private void failToGroupIDs(final String ids, final Exception expected) {

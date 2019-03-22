@@ -1,6 +1,7 @@
 package us.kbase.groups.core.request;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -340,23 +341,14 @@ public class GroupRequest {
 			return this;
 		}
 		
-		/** Set the type of the resource that is the target of this request.
-		 * @param resourceType the resource type.
-		 * @return this builder.
-		 */
-		public Builder withResourceType(final ResourceType resourceType) {
-			checkNotNull(resourceType, "resourceType");
-			this.resourceType = resourceType;
-			return this;
-		}
-		
 		/** Set the resource that is the target of this request.
+		 * @param type the type of the resource.
 		 * @param resource the resource.
 		 * @return this builder.
 		 */
-		public Builder withResource(final ResourceDescriptor resource) {
-			checkNotNull(resource, "resource");
-			this.resource = resource;
+		public Builder withResource(final ResourceType type, final ResourceDescriptor resource) {
+			this.resourceType = requireNonNull(type, "type");
+			this.resource = requireNonNull(resource, "resource");
 			return this;
 		}
 		

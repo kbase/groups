@@ -411,7 +411,12 @@ public class ServiceIntegrationTest {
 		final Map<String, Object> g = res.readEntity(Map.class);
 		
 		assertThat("group is not private", g, is(ImmutableMap.of(
-				"id", groupID, "private", true, "role", "None")));
+				"id", groupID,
+				"private", true,
+				"role", "None",
+				"resources", ImmutableMap.of(
+						"catalogmethod", Collections.emptyList(),
+						"workspace", Collections.emptyList()))));
 	}
 	
 	private void assertGroupExists(final String gid, boolean exists) {

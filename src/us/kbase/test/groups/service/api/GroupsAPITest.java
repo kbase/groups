@@ -29,6 +29,7 @@ import us.kbase.groups.core.GetGroupsParams;
 import us.kbase.groups.core.GetRequestsParams;
 import us.kbase.groups.core.Group;
 import us.kbase.groups.core.Group.Builder;
+import us.kbase.groups.core.Group.Role;
 import us.kbase.groups.core.GroupCreationParams;
 import us.kbase.groups.core.GroupID;
 import us.kbase.groups.core.GroupName;
@@ -262,36 +263,49 @@ public class GroupsAPITest {
 			.with("id", "id2")
 			.with("private", true)
 			.with("role", "None")
+			.with("resources", Collections.emptyMap())
 			.build();
 
 	@Test
 	public void getGroupsNulls() throws Exception {
-		getGroups(null, null, null, null, GetGroupsParams.getBuilder().build());
+		getGroups(null, null, null, null, null, null, null, null,
+				GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespace() throws Exception {
-		getGroups("   \t   ", "   \t   ", "   \t   ", null, GetGroupsParams.getBuilder().build());
+		final String ws = "   \t   ";
+		getGroups(ws, ws, ws, ws, ws, ws, ws, null, GetGroupsParams.getBuilder().build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesAsc() throws Exception {
-		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", new Token("    tok \t   "),
+		getGroups("    tok \t   ", "   foo  \t  ", "  asc  \t ", "Member",
+				"t", "r", "    ,    \t   ,    ", new Token("    tok \t   "),
 				GetGroupsParams.getBuilder()
-						.withNullableExcludeUpTo("foo").build());
+						.withRole(Role.MEMBER)
+						.withNullableExcludeUpTo("foo")
+						.withResource(new ResourceType("t"), new ResourceID("r"))
+						.build());
 	}
 	
 	@Test
 	public void getGroupsWhitespaceValuesDesc() throws Exception {
-		getGroups("t", "   foo  \t  ", "  desc  \t ", new Token("t"), GetGroupsParams.getBuilder()
-				.withNullableExcludeUpTo("foo")
-				.withNullableSortAscending(false).build());
+		getGroups("t", "   foo  \t  ", "  desc  \t ", "Admin", null, "  \t  ", ",", new Token("t"),
+				GetGroupsParams.getBuilder()
+						.withRole(Role.ADMIN)
+						.withNullableExcludeUpTo("foo")
+						.withNullableSortAscending(false).build());
 	}
 
 	private void getGroups(
 			final String token,
 			final String excludeUpTo,
 			final String order,
+			final String role,
+			final String resType,
+			final String resource,
+			final String ids, // this must be null or contain ws (with commas)
 			final Token expectedToken,
 			final GetGroupsParams expected)
 			throws Exception {
@@ -304,21 +318,86 @@ public class GroupsAPITest {
 						.withPublicUserFieldDeterminer(f -> f.getField().equals("something"))
 						.build()));
 		final List<Map<String, Object>> ret = new GroupsAPI(g)
-				.getGroups(token, excludeUpTo, order);
+				.getGroups(token, excludeUpTo, order, role, resType, resource, ids);
 		
 		assertThat("incorrect groups", ret,
 				is(Arrays.asList(GROUP_MAX_JSON_MIN, GROUP_MIN_JSON_MIN)));
 	}
 	
 	@Test
-	public void failGetGroups() throws Exception {
+	public void getGroupsWithIDs() throws Exception {
+		getGroupsWithIDs(null, null);
+		getGroupsWithIDs("   \t   ", null);
+		getGroupsWithIDs("t", new Token("t"));
+	}
+	
+	private void getGroupsWithIDs(
+			final String token,
+			final Token expectedToken)
+			throws Exception {
 		final Groups g = mock(Groups.class);
+		when(g.getGroups(expectedToken,
+				Arrays.asList(new GroupID("id2"), new GroupID("priv"), new GroupID("id"))))
+				.thenReturn(Arrays.asList(
+						GroupView.getBuilder(GROUP_MAX, new UserName("u2"))
+								.withMinimalViewFieldDeterminer(
+										f -> f.getField().equals("field-1"))
+								.build(),
+						GroupView.getBuilder(Group.getBuilder(
+								new GroupID("priv"), new GroupName("fake"),
+								GroupUser.getBuilder(new UserName("u2"), inst(20000)).build(),
+								new CreateAndModTimes(inst(1000)))
+								.withIsPrivate(true)
+								.build(),
+								new UserName("nonmember"))
+								.build(),
+						GroupView.getBuilder(GROUP_MIN, new UserName("u2"))
+								.withPublicUserFieldDeterminer(
+										f -> f.getField().equals("something"))
+								.build()));
+		
+		final List<Map<String, Object>> ret = new GroupsAPI(g)
+				.getGroups(token, "id", "asc", "Owner", null, null, "id2   , priv,  id   ");
+		
+		assertThat("incorrect groups", ret,
+				is(Arrays.asList(
+						GROUP_MAX_JSON_MIN,
+						ImmutableMap.of("private", true, "role", "None", "id", "priv"),
+						GROUP_MIN_JSON_MIN)));
+	}
+	
+	@Test
+	public void getGroupsFailBadArgs() throws Exception {
+		final Groups g = mock(Groups.class);
+		
+		failGetGroups(g, "t", null, "  asd   ", null, null, null, null,
+				new IllegalParameterException("Invalid sort direction: asd"));
+		failGetGroups(g, "t", null, null, "owner", null, null, null, new IllegalParameterException(
+				"Invalid role: owner"));
+		failGetGroups(g, "t", null, null, null, null, null, " id1 , id*bad",
+				new IllegalParameterException(ErrorType.ILLEGAL_GROUP_ID,
+						"Illegal character in group id id*bad: *"));
+		failGetGroups(g, "t", null, null, null, "t", null, null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+		failGetGroups(g, "t", null, null, null, " ", "r", null, new IllegalParameterException(
+				"Either both or neither of the resource type and resource ID must be provided"));
+	}
+	
+	private void failGetGroups(
+			final Groups g,
+			final String token,
+			final String excludeUpTo,
+			final String order,
+			final String role,
+			final String resType,
+			final String resource,
+			final String ids,
+			final Exception expected) {
 		try {
-			new GroupsAPI(g).getGroups("t", null, "  asd   ");
+			new GroupsAPI(g).getGroups(token, excludeUpTo, order, role, resType, resource, ids);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new IllegalParameterException(
-					"Invalid sort direction: asd"));
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
@@ -862,7 +941,8 @@ public class GroupsAPITest {
 		when(g.getGroups(new Token("toke2"), GetGroupsParams.getBuilder().build()))
 				.thenReturn(Arrays.asList(gv.withStandardView(false).build()));
 		
-		final Map<String, Object> retmin = new GroupsAPI(g).getGroups("toke2", null, null).get(0);
+		final Map<String, Object> retmin = new GroupsAPI(g)
+				.getGroups("toke2", null, null, null, null, null, null).get(0);
 		final Map<String, Object> expectedmin = new HashMap<>();
 		expectedmin.putAll(GROUP_MAX_JSON_MIN);
 		expectedmin.put("role", "Admin");
@@ -1060,8 +1140,8 @@ public class GroupsAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
 						.withType(RequestType.REQUEST)
-						.withResourceType(new ResourceType("user"))
-						.withResource(ResourceDescriptor.from(new UserName("foo")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("foo")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).requestGroupMembership("t", "gid");
@@ -1130,8 +1210,8 @@ public class GroupsAPITest {
 								Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
 								.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("user"))
-						.withResource(ResourceDescriptor.from(new UserName("bar")))
+						.withResource(GroupRequest.USER_TYPE,
+								ResourceDescriptor.from(new UserName("bar")))
 						.build());
 		
 		final Map<String, Object> ret = new GroupsAPI(g).inviteMember("t", "gid", "bar");
@@ -1235,14 +1315,27 @@ public class GroupsAPITest {
 	public void getRequestsForGroup6() throws Exception {
 		final GetRequestsParams params = GetRequestsParams.getBuilder()
 				.withNullableIncludeClosed(true)
-				.withNullableSortAscending(false).build();
-		getRequestsForGroup(null, "", "desc", params);
+				.withNullableSortAscending(false)
+				.withResource(new ResourceType("t"), new ResourceID("r"))
+				.build();
+		getRequestsForGroup(null, "", "desc", "t", "r", params);
 	}
 
 	private void getRequestsForGroup(
 			final String excludeUpTo,
 			final String closed,
 			final String sortOrder,
+			final GetRequestsParams params)
+			throws Exception {
+		getRequestsForGroup(excludeUpTo, closed, sortOrder, null, null, params);
+	}
+	
+	private void getRequestsForGroup(
+			final String excludeUpTo,
+			final String closed,
+			final String sortOrder,
+			final String resType,
+			final String resource,
 			final GetRequestsParams params)
 			throws Exception {
 		final Groups g = mock(Groups.class);
@@ -1267,14 +1360,14 @@ public class GroupsAPITest {
 										.withModificationTime(Instant.ofEpochMilli(25000))
 										.build())
 								.withType(RequestType.INVITE)
-								.withResourceType(new ResourceType("user"))
-								.withResource(ResourceDescriptor.from(new UserName("baz")))
+								.withResource(GroupRequest.USER_TYPE,
+										ResourceDescriptor.from(new UserName("baz")))
 								.withStatus(GroupRequestStatus.canceled())
 								.build()
 						));
 		
 		final List<Map<String, Object>> ret = new GroupsAPI(g).getRequestsForGroup(
-				"t", "id", excludeUpTo, closed, sortOrder);
+				"t", "id", excludeUpTo, closed, sortOrder, resType, resource);
 		
 		assertThat("incorrect requests", ret, is(Arrays.asList(
 				MapBuilder.newHashMap()
@@ -1308,13 +1401,13 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailMissingInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForGroup(g, null, "i", null, null,
+		failGetRequestsForGroup(g, null, "i", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "    \t    ", "i", null, null,
+		failGetRequestsForGroup(g, "    \t    ", "i", null, null, null, null,
 				new NoTokenProvidedException("No token provided"));
-		failGetRequestsForGroup(g, "t", null, null, null,
+		failGetRequestsForGroup(g, "t", null, null, null, null, null,
 				new MissingParameterException("group id"));
-		failGetRequestsForGroup(g, "t", "   \t   ", null, null,
+		failGetRequestsForGroup(g, "t", "   \t   ", null, null, null, null,
 				new MissingParameterException("group id"));
 	}
 	
@@ -1322,10 +1415,16 @@ public class GroupsAPITest {
 	public void getRequestsForGroupFailIllegalInput() throws Exception {
 		final Groups g = mock(Groups.class);
 		
-		failGetRequestsForGroup(g, "t", "g", " bar ", null,
+		failGetRequestsForGroup(g, "t", "g", " bar ", null, null, null,
 				new IllegalParameterException("Invalid epoch ms: bar"));
-		failGetRequestsForGroup(g, "t", "g", "", "   bat   ", 
+		failGetRequestsForGroup(g, "t", "g", "", "   bat   ", null, null,
 				new IllegalParameterException("Invalid sort direction: bat"));
+		failGetRequestsForGroup(g, "t", "g", null, null, "t", null,
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
+		failGetRequestsForGroup(g, "t", "g", null, null, null, "r",
+				new IllegalParameterException("Either both or neither of the resource type " +
+						"and resource ID must be provided"));
 	}
 
 	@Test
@@ -1336,7 +1435,8 @@ public class GroupsAPITest {
 				GetRequestsParams.getBuilder().build()))
 				.thenThrow(new UnauthorizedException("yay"));
 		
-		failGetRequestsForGroup(g, "t", "i",  null, null, new UnauthorizedException("yay"));
+		failGetRequestsForGroup(g, "t", "i",  null, null, null, null,
+				new UnauthorizedException("yay"));
 	}
 	
 	private void failGetRequestsForGroup(
@@ -1345,9 +1445,12 @@ public class GroupsAPITest {
 			final String groupid,
 			final String excludeUpTo,
 			final String sortOrder,
+			final String resType,
+			final String resource,
 			final Exception expected) {
 		try {
-			new GroupsAPI(g).getRequestsForGroup(token, groupid, excludeUpTo, null, sortOrder);
+			new GroupsAPI(g).getRequestsForGroup(
+					token, groupid, excludeUpTo, null, sortOrder, resType, resource);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -1677,8 +1780,8 @@ public class GroupsAPITest {
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
 						.withType(RequestType.REQUEST)
-						.withResourceType(new ResourceType("workspace"))
-						.withResource(new ResourceDescriptor(new ResourceID("42")))
+						.withResource(new ResourceType("workspace"),
+								new ResourceDescriptor(new ResourceID("42")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)
@@ -1713,9 +1816,9 @@ public class GroupsAPITest {
 									Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 									.build())
 						.withType(RequestType.INVITE)
-						.withResourceType(new ResourceType("catalogmethod"))
-						.withResource(new ResourceDescriptor(new ResourceAdministrativeID("mod"),
-								new ResourceID("mod.meth")))
+						.withResource(new ResourceType("catalogmethod"),
+								new ResourceDescriptor(new ResourceAdministrativeID("mod"),
+										new ResourceID("mod.meth")))
 						.build()));
 		
 		final Map<String, Object> ret = new GroupsAPI(g)

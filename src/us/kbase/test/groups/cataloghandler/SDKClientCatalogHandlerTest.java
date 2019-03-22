@@ -36,6 +36,7 @@ import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
 import us.kbase.groups.core.exceptions.IllegalResourceIDException;
 import us.kbase.groups.core.exceptions.NoSuchResourceException;
+import us.kbase.groups.core.resource.ResourceAccess;
 import us.kbase.groups.core.resource.ResourceAdministrativeID;
 import us.kbase.groups.core.resource.ResourceDescriptor;
 import us.kbase.groups.core.resource.ResourceID;
@@ -187,7 +188,7 @@ public class SDKClientCatalogHandlerTest {
 				.isAdministrator(new ResourceID("modname.mod"), new UserName(name)), is(expected));
 	}
 	
-	public ModuleVersionInfo getMVI(final List<String> narrs, final List<String> locals) {
+	private ModuleVersionInfo getMVI(final List<String> narrs, final List<String> locals) {
 		final ModuleVersionInfo mvi = new ModuleVersionInfo();
 		mvi.setAdditionalProperties("local_functions", locals);
 		mvi.setAdditionalProperties("narrative_methods", narrs);
@@ -272,6 +273,30 @@ public class SDKClientCatalogHandlerTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void isPublic() throws Exception {
+		final SDKClientCatalogHandler cli = new SDKClientCatalogHandler(mock(CatalogClient.class));
+		
+		assertThat("incorrect is public", cli.isPublic(new ResourceID("foo.bar")), is(true));
+		assertThat("incorrect is public", cli.isPublic(new ResourceID("DataFileUtil.get_objects")),
+				is(true));
+	}
+	
+	@Test
+	public void isPublicFailBadID() throws Exception {
+		final SDKClientCatalogHandler cli = new SDKClientCatalogHandler(mock(CatalogClient.class));
+		
+		for (final String mm: BAD_NAMES.keySet()) {
+			try {
+				cli.isPublic(new ResourceID(mm));
+				fail("expected exception");
+			} catch (Exception got) {
+				TestCommon.assertExceptionCorrect(got, new IllegalResourceIDException(
+						"Illegal catalog method name: " + BAD_NAMES.get(mm)));
+			}
 		}
 	}
 	
@@ -546,23 +571,32 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
-	public void getResourceInformationMinimal() throws Exception {
+	public void getResourceInformationNoResources() throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
-				.getResourceInformation(null, set(), true);
+				.getResourceInformation(null, set(), ResourceAccess.ADMINISTRATED_AND_PUBLIC);
 		
 		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(null).build()));
 	}
 	
 	@Test
-	public void getResourceInformationMaximal() throws Exception {
+	public void getResourceInformationAllAccess() throws Exception {
+		getResourceInformation(ResourceAccess.ALL);
+	}
+	
+	@Test
+	public void getResourceInformationAdminAndPublicAccess() throws Exception {
+		getResourceInformation(ResourceAccess.ADMINISTRATED_AND_PUBLIC);
+	}
+
+	private void getResourceInformation(final ResourceAccess access) throws Exception {
 		final CatalogClient c = mock(CatalogClient.class);
 		
 		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
 				.getResourceInformation(new UserName("foo"),
 						set(new ResourceID("foo.bar"), new ResourceID("x.y")),
-						false);
+						access);
 		
 		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(
 				new UserName("foo"))
@@ -572,13 +606,49 @@ public class SDKClientCatalogHandlerTest {
 	}
 	
 	@Test
+	public void getResourceInformationAdminAccessNullUser() throws Exception {
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
+				.getResourceInformation(null,
+						set(new ResourceID("foo.bar"), new ResourceID("x.y")),
+						ResourceAccess.ADMINISTRATED);
+		
+		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(null).build()));
+	}
+	
+	@Test
+	public void getResourceInformationAdminAccess() throws Exception {
+		// don't retest the code from getAdministratedResources
+		final CatalogClient c = mock(CatalogClient.class);
+		
+		when(c.listBasicModuleInfo(argThat(new ListModuleParamsMatcher("foo", 1))))
+				.thenReturn(Arrays.asList(
+						new BasicModuleInfo().withModuleName("m1"),
+						new BasicModuleInfo().withModuleName("m2"),
+						new BasicModuleInfo().withModuleName("m3")));
+		
+		final ResourceInformationSet ris = new SDKClientCatalogHandler(c)
+				.getResourceInformation(new UserName("foo"),
+						set(new ResourceID("m2.method"), new ResourceID("m4.method")),
+						ResourceAccess.ADMINISTRATED);
+		
+		assertThat("incorrect infos", ris, is(ResourceInformationSet.getBuilder(
+				new UserName("foo"))
+				.withResource(new ResourceID("m2.method"))
+				.build()));
+	}
+	
+	@Test
 	public void getResourceInformationFailBadArgs() throws Exception {
-		failGetResourceInformation(null, new NullPointerException("resources"));
-		failGetResourceInformation(set(new ResourceID("i"), null),
+		final ResourceAccess a = ResourceAccess.ALL;
+		failGetResourceInformation(null, a, new NullPointerException("resources"));
+		failGetResourceInformation(set(new ResourceID("i"), null), a,
 				new NullPointerException("Null item in collection resources"));
+		failGetResourceInformation(set(), null, new NullPointerException("access"));
 		
 		for (final String n: BAD_NAMES.keySet()) {
-			failGetResourceInformation(set(new ResourceID("x.y"), new ResourceID(n)),
+			failGetResourceInformation(set(new ResourceID("x.y"), new ResourceID(n)), a,
 					new IllegalResourceIDException("Illegal catalog method name: " +
 							BAD_NAMES.get(n)));
 		}
@@ -586,10 +656,11 @@ public class SDKClientCatalogHandlerTest {
 	
 	private void failGetResourceInformation(
 			final Set<ResourceID> resources,
+			final ResourceAccess access,
 			final Exception expected) {
 		final CatalogClient c = mock(CatalogClient.class);
 		try {
-			new SDKClientCatalogHandler(c).getResourceInformation(null, resources, true);
+			new SDKClientCatalogHandler(c).getResourceInformation(null, resources, access);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

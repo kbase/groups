@@ -1,6 +1,7 @@
 package us.kbase.groups.storage;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +72,15 @@ public interface GroupsStorage {
 	 */
 	Group getGroup(GroupID groupID) throws GroupsStorageException, NoSuchGroupException;
 	
+	/** Get multiple groups.
+	 * @param groupIDs the IDs of the groups.
+	 * @return the groups.
+	 * @throws NoSuchGroupException if one or more of the groups does not exist.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	Set<Group> getGroups(Collection<GroupID> groupIDs)
+			throws NoSuchGroupException, GroupsStorageException;
+	
 	/** Get the name of one or more groups.
 	 * @param user an optional user to determine whether the user is a member of the group.
 	 * If no user is provided, group membership is considered to be false.
@@ -79,7 +89,7 @@ public interface GroupsStorage {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 * @throws NoSuchGroupException if there is no group with one of the given IDs.
 	 */
-	List<GroupIDNameMembership> getGroupNames(UserName user, Set<GroupID> groupID)
+	List<GroupIDNameMembership> getGroupNames(UserName user, Collection<GroupID> groupID)
 			throws GroupsStorageException, NoSuchGroupException;
 	
 	/** Check whether a group exists.
@@ -89,21 +99,34 @@ public interface GroupsStorage {
 	 */
 	boolean getGroupExists(GroupID groupID) throws GroupsStorageException;
 
-	/** Get the groups the member belongs to, up to a maximum of 100000 groups, sorted by ID.
+	/** Get the groups the member belongs to, sorted by ID.
 	 * @param user the user for whom groups will be returned.
 	 * @return the user's groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	List<GroupIDAndName> getMemberGroups(UserName user) throws GroupsStorageException;
 	
+	/** Get the IDs of the set of groups the user administrates, including the owner.
+	 * @param user the administrator.
+	 * @return the group IDs.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	Set<GroupID> getAdministratedGroups(UserName user) throws GroupsStorageException;
+	
 	/** Get groups in the system, sorted by the group ID.
 	 * At most 100 groups are returned.
+	 * If the user is null and the user's role is not None no groups are returned.
+	 * If the user is null, a resource is present in the parameters, and that resource is private,
+	 * no groups are returned.
 	 * @param params the parameters for getting the groups.
+	 * @param resourceIsPublic true if the resource in the params is public, false otherwise.
+	 * Ignored if no resource is present.
 	 * @param user an optional user. If no user is provided, only public groups are returned.
 	 * @return the groups.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
-	List<Group> getGroups(GetGroupsParams params, UserName user) throws GroupsStorageException;
+	List<Group> getGroups(GetGroupsParams params, boolean resourceIsPublic, UserName user)
+			throws GroupsStorageException;
 	
 	/** Add a member to a group.
 	 * @param groupID the ID of the group.
@@ -250,7 +273,8 @@ public interface GroupsStorage {
 	 * At most 100 requests are returned.
 	 * @param target the targeted user.
 	 * @param resources the resources that user administrates.
-	 * @param params the parameters for getting the requests.
+	 * @param params the parameters for getting the requests. A particular resource may not
+	 * be specified in the parameters.
 	 * @return the requests.
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
@@ -258,6 +282,17 @@ public interface GroupsStorage {
 			UserName target,
 			Map<ResourceType, Set<ResourceAdministrativeID>> resources,
 			GetRequestsParams params)
+			throws GroupsStorageException;
+	
+	/** Get the open requests that target a specific resource (e.g. the request type is always
+	 * {@link RequestType#INVITE}) sorted by the modification time of the request.
+	 * At most 100 requests are returned.
+	 * @param params the parameters for getting the requests. A particular resource must
+	 * be specified in the parameters.
+	 * @return the requests.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	List<GroupRequest> getRequestsByTarget(GetRequestsParams params)
 			throws GroupsStorageException;
 
 	/** Get the open requests that target a group, sorted by the modification time of the request.
@@ -269,6 +304,18 @@ public interface GroupsStorage {
 	 * @throws GroupsStorageException if an error occurs contacting the storage system.
 	 */
 	List<GroupRequest> getRequestsByGroup(GroupID groupID, GetRequestsParams params)
+			throws GroupsStorageException;
+	
+	/** Get the open requests that target a set of groups, sorted by the modification time of the
+	 * request.
+	 * At most 100 requests are returned.
+	 * Requests that target a group are of type {@link RequestType#REQUEST}.
+	 * @param groupIDs the targeted groups.
+	 * @param params the parameters for getting the requests.
+	 * @return the requests.
+	 * @throws GroupsStorageException if an error occurs contacting the storage system.
+	 */
+	List<GroupRequest> getRequestsByGroups(Set<GroupID> groupIDs, GetRequestsParams params)
 			throws GroupsStorageException;
 	
 	/** Check if a group has at least one open incoming
