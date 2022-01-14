@@ -1,0 +1,5 @@
+{
+    "name": "Tag Develop Latest",
+    "description": "Tags `latest` on the {appname}-develop image once a merge to develop is completed",
+    "iconName": "kbase-bot"
+}

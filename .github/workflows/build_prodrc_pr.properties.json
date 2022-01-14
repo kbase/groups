@@ -1,0 +1,5 @@
+{
+    "name": "Build Production RC Image",
+    "description": "Builds the (pre-merge) release candidate image on any PRs to main branch.",
+    "iconName": "kbase-bot"
+}

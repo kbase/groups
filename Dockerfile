@@ -1,4 +1,4 @@
-FROM ghcr.io/kbase/kb_jre-develop:latest 
+FROM ghcr.io/kbase/kb_jre-develop:pr-6 
 
 # These ARGs values are passed in via the docker build command
 ARG BUILD_DATE
