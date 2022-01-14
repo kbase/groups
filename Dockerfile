@@ -1,11 +1,11 @@
-FROM kbase/kb_jre:latest
+FROM ghcr.io/kbase/kb_jre-develop:pr-6 
 
 # These ARGs values are passed in via the docker build command
 ARG BUILD_DATE
 ARG VCS_REF
 ARG BRANCH=develop
 
-RUN apt-get -y update && apt-get -y install ant git openjdk-8-jdk
+RUN install_packages ant git openjdk-11-jdk
 
 COPY deployment/ /kb/deployment/
 COPY jettybase/ /kb/deployment/jettybase/
@@ -30,4 +30,4 @@ ENTRYPOINT [ "/kb/deployment/bin/dockerize" ]
 # be overidden by docker-compose at startup
 CMD [  "-multiline", \
        "-template", "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg", \
-       "java", "-Djetty.home=/usr/local/jetty", "-jar", "/usr/local/jetty/start.jar" ]
+       "java", "-Djetty.home=/usr/share/jetty9", "-jar", "/usr/share/jetty9/start.jar" ]

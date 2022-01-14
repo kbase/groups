@@ -1,0 +1,5 @@
+{
+    "name": "Build Develop Image",
+    "description": "Builds the (pre-merge) {appname}-develop image on any PRs to develop branch.",
+    "iconName": "kbase-bot"
+}
