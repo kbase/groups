@@ -69,7 +69,7 @@ jobs:
           cd $HOMEDIR
           cp -n test.cfg.example test.cfg
           sed -i "s#^test.jars.dir.*#test.jars.dir=$JARSDIR#" test.cfg
-          sed -i "s#^test.temp.dir =.*#test.temp.dir=temp_test_dir#" test.cfg
+          sed -i "s#^test.temp.dir.*#test.temp.dir=temp_test_dir#" test.cfg
           sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
           sed -i "s#^test.mongo.useWiredTiger.*#test.mongo.useWiredTiger=${{matrix.wired_tiger}}#" test.cfg
           cat test.cfg
