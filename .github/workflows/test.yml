@@ -80,7 +80,7 @@ jobs:
           ant ${{matrix.ant_test}}
 
       - name: Upload coverage to Codecov
-        if: matrix.include.codecov
+        if: matrix.codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
