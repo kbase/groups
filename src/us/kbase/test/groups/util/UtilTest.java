@@ -1,6 +1,8 @@
 package us.kbase.test.groups.util;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.CoreMatchers.endsWith;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -229,13 +231,23 @@ public class UtilTest {
 	
 	@Test
 	public void loadClassWithInterfaceFailPrivateConstructor() throws Exception {
-		failLoadClassWithInterface(FailOnInstantiationPrivateConstructor.class.getName(),
-				FieldValidatorFactory.class, new GroupsConfigurationException(
-						"Module us.kbase.test.groups.util.FailOnInstantiation" +
-						"PrivateConstructor could not be instantiated: Class us.kbase.groups." +
-						"util.Util can not access a member of class us." +
-						"kbase.test.groups.util.FailOnInstantiationPrivateConstructor " +
-						"with modifiers \"private\""));
+		try {
+			Util.loadClassWithInterface(
+					FailOnInstantiationPrivateConstructor.class.getName(),
+					FieldValidatorFactory.class);
+			fail("expected exception");
+		} catch (GroupsConfigurationException got) {
+			assertThat("incorrect exception message", got.getMessage(), startsWith(
+					"Module us.kbase.test.groups.util.FailOnInstantiation" +
+					"PrivateConstructor could not be instantiated: "
+			));
+			// trivial text changes from java 8 -> 11
+			assertThat("incorrect exception message", got.getMessage(), endsWith(
+					"not access a member of class us." +
+					"kbase.test.groups.util.FailOnInstantiationPrivateConstructor " +
+					"with modifiers \"private\""
+			));
+		}
 	}
 	
 	private void failLoadClassWithInterface(

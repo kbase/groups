@@ -110,7 +110,6 @@ public class ServiceIntegrationTest {
 
 		// set up auth
 		AUTH = new AuthController(
-				TestCommon.getJarsDir(),
 				"localhost:" + MANAGER.mongo.getServerPort(),
 				"GroupsServiceIntgrationTestAuth",
 				TEMP_DIR);
