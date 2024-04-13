@@ -9,7 +9,6 @@ plugins {
 	id 'org.ajoberstar.grgit' version '4.1.1'
 }
 
-// TODO NOW run tests from Eclipse w/o specifying classpath manually & remove sourceSets & classpath
 // TODO NOW update any ant refs in docs to gradle
 
 repositories {
@@ -65,26 +64,6 @@ jacocoTestReport {
 
 war {
 	webXml = file('war/web.xml')
-}
-
-// Custom java project layout
-sourceSets {
-	main {
-		java {
-			srcDirs = ["src"]
-			exclude '**/test/**'
-		}
-	}
-	test {
-		java {
-			srcDirs = ["src"]
-			include '**/test/**'
-		}
-		resources {
-			srcDirs = ["src"]
-			include "**/*wsjars"
-		}
-	}
 }
 
 configurations {
