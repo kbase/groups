@@ -22,7 +22,8 @@ import us.kbase.groups.core.fieldvalidation.IllegalFieldValueException;
 
 /** Validates that a gravatar hash is a valid MD5.
  * Include "strict-length": "true" in the configuration to enforce an exact 32 character MD5.
- * If omitted, any extra characters are ignored (which is what Gravatar does).
+ * If omitted, any extra characters are ignored. This may will likely cause the validation to fail
+ * if "image-exists" is true and Gravatar doesn't know how to process the extra characters.
  * Include "image-exists": "true" in the configuration to enforce that an image is associated
  * with the hash (see Default Image section at https://en.gravatar.com/site/implement/images/).
 

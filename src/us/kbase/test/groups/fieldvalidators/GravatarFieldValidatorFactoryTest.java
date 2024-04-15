@@ -53,7 +53,7 @@ public class GravatarFieldValidatorFactoryTest {
 		// if there's no error, the test passes
 		v.validate(KNOWN_GOOD);
 		// check that extra characters pass
-		v.validate(KNOWN_GOOD + "Z");
+		v.validate(KNOWN_GOOD + ".jpg");
 	}
 	
 	@Test

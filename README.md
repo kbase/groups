@@ -943,7 +943,8 @@ field-<field name>-param-image-exists=<'true' or any other value for false>
 ```
 
 `strict-length` will cause the validator to throw an error if the field is not exactly 32
-characters, and is false by default. Gravatar allows for extra characters at the end of the hash.
+characters, and is false by default. In some cases (such as adding a `.jpg` extension)
+Gravatar allows for extra characters at the end of the hash.
 
 `image-exists` will cause the validator to throw an error if there is no [image associated with
 the hash (see Default Image)](https://en.gravatar.com/site/implement/images/), and is false
