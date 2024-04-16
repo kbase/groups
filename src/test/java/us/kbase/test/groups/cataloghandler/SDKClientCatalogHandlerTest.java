@@ -30,7 +30,6 @@ import us.kbase.catalog.ModuleInfo;
 import us.kbase.catalog.ModuleVersionInfo;
 import us.kbase.catalog.SelectOneModuleParams;
 import us.kbase.common.service.JsonClientException;
-import us.kbase.common.test.TestException;
 import us.kbase.groups.cataloghandler.SDKClientCatalogHandler;
 import us.kbase.groups.core.UserName;
 import us.kbase.groups.core.exceptions.ResourceHandlerException;
@@ -43,6 +42,7 @@ import us.kbase.groups.core.resource.ResourceID;
 import us.kbase.groups.core.resource.ResourceInformationSet;
 import us.kbase.test.groups.MapBuilder;
 import us.kbase.test.groups.TestCommon;
+import us.kbase.testutils.TestException;
 
 public class SDKClientCatalogHandlerTest {
 

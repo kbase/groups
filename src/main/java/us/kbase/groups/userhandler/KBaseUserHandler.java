@@ -3,17 +3,15 @@ package us.kbase.groups.userhandler;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 
 import org.slf4j.LoggerFactory;
 
-import us.kbase.auth.AuthConfig;
 import us.kbase.auth.AuthException;
 import us.kbase.auth.AuthToken;
-import us.kbase.auth.ConfigurableAuthService;
+import us.kbase.auth.client.AuthClient;
 import us.kbase.groups.core.Token;
 import us.kbase.groups.core.UserHandler;
 import us.kbase.groups.core.UserName;
@@ -31,13 +29,9 @@ public class KBaseUserHandler implements UserHandler {
 
 	// TODO TEST
 	
-	// note the configurable auth service handles its own caching.
+	// note the auth client handles its own caching.
 	
-	private static final String GLOBUS_URL_SUFFIX = "api/legacy/globus";
-	private static final String KBASE_URL_SUFFIX = "api/legacy/KBase/Sessions/Login";
-	
-	private final URI rootAuthURI;
-	private final ConfigurableAuthService auth;
+	private final AuthClient auth;
 	private final Token serviceToken;
 	
 	/** Create the handler.
@@ -58,15 +52,14 @@ public class KBaseUserHandler implements UserHandler {
 				AuthenticationException {
 		checkNotNull(rootAuthURL, "rootAuthURL");
 		checkNotNull(serviceToken, "serviceToken");
-		if (rootAuthURL.toString().endsWith("/")) {
-			this.rootAuthURI = rootAuthURL.toURI();
-		} else {
-			this.rootAuthURI = new URL(rootAuthURL.toString() + "/").toURI();
+		try {
+			auth = AuthClient.from(rootAuthURL.toURI());
+		} catch (AuthException e) {
+			throw new AuthenticationException(
+					ErrorType.AUTHENTICATION_FAILED,
+					"Failed to contact the auth service: " + e.getMessage(),
+					e);
 		}
-		auth = new ConfigurableAuthService(new AuthConfig()
-				.withAllowInsecureURLs(allowInsecureURL)
-				.withKBaseAuthServerURL(this.rootAuthURI.resolve(KBASE_URL_SUFFIX).toURL())
-				.withGlobusAuthURL(this.rootAuthURI.resolve(GLOBUS_URL_SUFFIX).toURL()));
 		this.serviceToken = serviceToken;
 		getUser(this.serviceToken); // check token is valid
 	}
@@ -94,8 +87,7 @@ public class KBaseUserHandler implements UserHandler {
 		checkNotNull(userName, "userName");
 		try {
 			return auth.isValidUserName(
-					Arrays.asList(userName.getName()),
-					new AuthToken(serviceToken.getToken(), "fakeuser"))
+					Arrays.asList(userName.getName()), serviceToken.getToken())
 					.get(userName.getName());
 		} catch (IOException | AuthException e) {
 			LoggerFactory.getLogger(getClass()).error("Unexpected auth service response", e);

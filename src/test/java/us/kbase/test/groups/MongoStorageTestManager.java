@@ -15,9 +15,9 @@ import com.github.zafarkhaja.semver.Version;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
-import us.kbase.common.test.controllers.mongo.MongoController;
 import us.kbase.groups.core.resource.ResourceType;
 import us.kbase.groups.storage.mongo.MongoGroupsStorage;
+import us.kbase.testutils.controllers.mongo.MongoController;
 
 public class MongoStorageTestManager {
 

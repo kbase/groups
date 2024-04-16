@@ -49,10 +49,6 @@ jobs:
           # move to parent dir of homedir to install binaries etc
           cd ..
           
-          # set up jars
-          git clone https://github.com/kbase/jars
-          export JARSDIR=$(pwd)/jars/lib/jars/
-          
           # set up mongo
           wget -q http://fastdl.mongodb.org/linux/${{matrix.mongo}}.tgz
           tar xfz ${{matrix.mongo}}.tgz
@@ -61,7 +57,6 @@ jobs:
           # set up test config
           cd $HOMEDIR
           cp -n test.cfg.example test.cfg
-          sed -i "s#^test.jars.dir.*#test.jars.dir=$JARSDIR#" test.cfg
           sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
           sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
           sed -i "s#^test.mongo.useWiredTiger.*#test.mongo.useWiredTiger=${{matrix.wired_tiger}}#" test.cfg
