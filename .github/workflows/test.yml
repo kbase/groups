@@ -24,21 +24,14 @@ jobs:
         include:
           # the current production setup
           - java: '8'
-            codecov: true
             mongo: 'mongodb-linux-x86_64-3.6.13'
             wired_tiger: 'false'
-            ant_test: 'test'
+            gradle_test: 'test'
           # test all code w/ java 11
-          - java: '11'
-            codecov: true
-            mongo: 'mongodb-linux-x86_64-3.6.13'
-            wired_tiger: 'false'
-            ant_test: 'test'
-          # test the latest 3X version of mongo against just the mongo storage code
           - java: '11'
             mongo: 'mongodb-linux-x86_64-3.6.23'
             wired_tiger: 'true'
-            ant_test: 'test_mongo_storage'
+            gradle_test: 'test'
     steps:
       - uses: actions/checkout@v3
 
@@ -59,7 +52,7 @@ jobs:
           # set up jars
           git clone https://github.com/kbase/jars
           export JARSDIR=$(pwd)/jars/lib/jars/
-
+          
           # set up mongo
           wget -q http://fastdl.mongodb.org/linux/${{matrix.mongo}}.tgz
           tar xfz ${{matrix.mongo}}.tgz
@@ -77,10 +70,9 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          ant ${{matrix.ant_test}}
+          gradle ${{matrix.gradle_test}}
 
       - name: Upload coverage to Codecov
-        if: matrix.codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,5 +1,9 @@
 # KBase Groups Service release notes
 
+## 0.1.7
+
+* The build tool has been switched from Ant to Gradle.
+
 ## 0.1.6
 
 ### Admin notes:

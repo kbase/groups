@@ -133,6 +133,7 @@ public class GroupsConfig {
 			logger = new NullLogger();
 		} else {
 			// may want to allow configuring the logger name, but YAGNI
+			JsonServerSyslog.setStaticUseSyslog(false);
 			logger = new JsonServerSysLogAutoLogger(new JsonServerSyslog(
 					LOG_NAME, null, JsonServerSyslog.LOG_LEVEL_INFO, true));
 		}
