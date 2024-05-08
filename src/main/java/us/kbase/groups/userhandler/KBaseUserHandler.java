@@ -27,8 +27,6 @@ import us.kbase.groups.core.exceptions.MissingParameterException;
  */
 public class KBaseUserHandler implements UserHandler {
 
-	// TODO TEST
-	
 	// note the auth client handles its own caching.
 	
 	private final AuthClient auth;
@@ -38,7 +36,6 @@ public class KBaseUserHandler implements UserHandler {
 	 * @param rootAuthURL the root url of the KBase authentication service.
 	 * @param serviceToken a service token for the KBase authentication service. This is used
 	 * to check that user names are valid.
-	 * @param allowInsecureURL allow a non-https URL.
 	 * @throws IOException if the authentication service could not be contacted.
 	 * @throws URISyntaxException if the URL is not a valid URI.
 	 * @throws InvalidTokenException if the service token is invalid.
@@ -46,8 +43,7 @@ public class KBaseUserHandler implements UserHandler {
 	 */
 	public KBaseUserHandler(
 			final URL rootAuthURL,
-			final Token serviceToken,
-			final boolean allowInsecureURL)
+			final Token serviceToken)
 			throws IOException, URISyntaxException, InvalidTokenException,
 				AuthenticationException {
 		checkNotNull(rootAuthURL, "rootAuthURL");
@@ -71,12 +67,12 @@ public class KBaseUserHandler implements UserHandler {
 		try {
 			final AuthToken user = auth.validateToken(token.getToken());
 			return new UserName(user.getUserName());
-		} catch (IOException e) {
+		} catch (IOException e) { // no good way to test this
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Failed contacting authentication server: " + e.getMessage(), e);
 		} catch (AuthException e) {
 			throw new InvalidTokenException(e.getMessage(), e);
-		} catch (MissingParameterException | IllegalParameterException e) {
+		} catch (MissingParameterException | IllegalParameterException e) { // can't test
 			throw new RuntimeException(
 					"The auth service is returning invalid usernames, something is very wrong", e);
 		}
@@ -89,21 +85,10 @@ public class KBaseUserHandler implements UserHandler {
 			return auth.isValidUserName(
 					Arrays.asList(userName.getName()), serviceToken.getToken())
 					.get(userName.getName());
-		} catch (IOException | AuthException e) {
+		} catch (IOException | AuthException e) { // no good way to test this
 			LoggerFactory.getLogger(getClass()).error("Unexpected auth service response", e);
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Recieved unexpected response from authentication server.", e);
 		}
 	}
-
-	public static void main(final String[] args) throws Exception {
-		final String token = args[0];
-		final UserHandler uh = new KBaseUserHandler(new URL("https://ci.kbase.us/services/auth"),
-				new Token(token), false);
-		System.out.println(uh.getUser(new Token(token)));
-		
-		System.out.println(uh.isValidUser(new UserName("kkeller")));
-		System.out.println(uh.isValidUser(new UserName("veryfakeindeed")));
-	}
-	
 }
