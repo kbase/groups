@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableMap;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth.AuthToken;
-import us.kbase.common.test.RegexMatcher;
 import us.kbase.groups.core.exceptions.GroupsException;
 import us.kbase.groups.core.exceptions.IllegalParameterException;
 import us.kbase.groups.core.exceptions.NoSuchCustomFieldException;
@@ -55,8 +54,9 @@ import us.kbase.test.groups.MongoStorageTestManager;
 import us.kbase.test.groups.StandaloneGroupsServer;
 import us.kbase.test.groups.StandaloneGroupsServer.ServerThread;
 import us.kbase.test.groups.TestCommon;
-import us.kbase.test.groups.controllers.workspace.WorkspaceController;
 import us.kbase.test.groups.service.api.RootTest;
+import us.kbase.test.workspace.controllers.workspace.WorkspaceController;
+import us.kbase.testutils.RegexMatcher;
 import us.kbase.workspace.WorkspaceClient;
 
 public class ServiceIntegrationTest {
@@ -122,11 +122,11 @@ public class ServiceIntegrationTest {
 
 		// set up Workspace
 		WS = new WorkspaceController(
-				TestCommon.getJarsDir(),
 				"localhost:" + MANAGER.mongo.getServerPort(),
 				"GroupsServiceIntegTestWSDB",
+				"GroupsServiceIntegTestWSDB_types",
 				"user2",
-				authURL,
+				new URL(authURL.toString() + "/"),
 				TEMP_DIR);
 		WSDB = MANAGER.mc.getDatabase("GroupsServiceIntegTestWSDB");
 

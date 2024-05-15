@@ -129,8 +129,7 @@ public class GroupsBuilder {
 		// these handler creation methods may need changes if we want to allow alternate
 		// implementations. YAGNI for now.
 		try {
-			uh = new KBaseUserHandler(
-					c.getAuthURL(), c.getWorkspaceAdminToken(), c.isAllowInsecureURLs());
+			uh = new KBaseUserHandler(c.getAuthURL(), c.getWorkspaceAdminToken());
 		} catch (IOException | URISyntaxException | AuthenticationException e) {
 			//TODO CODE check for a bad login and note the workspace token failed or throw a better error from the handler
 			throw new GroupsConfigurationException(
