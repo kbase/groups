@@ -1032,7 +1032,8 @@ cd jettybase
 * Releases
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
-  * Update the version as per the semantic version rules in `src/main/java/us/kbase/groups/api/Root.java`.
+  * Update the version as per the semantic version rules in
+    `src/main/java/us/kbase/groups/service/api/Root.java`.
   * Tag the version in git and github.
 
 ### Running tests
