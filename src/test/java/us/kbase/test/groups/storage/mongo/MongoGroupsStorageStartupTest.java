@@ -107,9 +107,10 @@ public class MongoGroupsStorageStartupTest {
 		
 		final Pattern errorPattern = Pattern.compile(
 				"Failed to create index: Write failed with error code 11000 and error message " +
-				"'(exception: )?E11000 duplicate key error (index|collection): " +
+				"'(exception: )?(.*)E11000 duplicate key error (index|collection): " +
 				"startUpWith2ConfigDocs.config( index: |\\.\\$)schema_1\\s+dup key: " +
-				"\\{ : \"schema\" \\}'");
+				"(\\{ schema: \"schema\" \\}'|\\{ : \"schema\" \\}')");
+
 		try {
 			new MongoGroupsStorage(db, set());
 			fail("started mongo with bad config");
@@ -188,27 +189,21 @@ public class MongoGroupsStorageStartupTest {
 	
 	@Test
 	public void indexesConfig() {
-		final Set<Document> indexes = new HashSet<>();
-		manager.db.getCollection("config").listIndexes()
-				.forEach((Consumer<Document>) indexes::add);
+		final Set<Document> indexes = getAndNormalizeIndexes("config");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("key", new Document("schema", 1))
-						.append("name", "schema_1")
-						.append("ns", "test_mongogroupsstorage.config"),
+						.append("name", "schema_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongogroupsstorage.config")
 				)));
 	}
 	
 	@Test
 	public void indexesGroups() {
-		final Set<Document> indexes = new HashSet<>();
-		manager.db.getCollection("groups").listIndexes()
-				.forEach((Consumer<Document>) indexes::add);
+		final Set<Document> indexes = getAndNormalizeIndexes("groups");
 		assertThat("incorrect indexes", indexes, is(getDefaultGroupsIndexes()));
 	}
 
@@ -218,28 +213,22 @@ public class MongoGroupsStorageStartupTest {
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
-						.append("name", "id_1")
-						.append("ns", col),
+						.append("name", "id_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("own", 1).append("id", 1))
-						.append("name", "own_1_id_1")
-						.append("ns", col),
+						.append("name", "own_1_id_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("admin", 1).append("id", 1))
-						.append("name", "admin_1_id_1")
-						.append("ns", col),
+						.append("name", "admin_1_id_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", col),
+						.append("name", "_id_"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("priv", 1).append("id", 1))
-						.append("name", "priv_1_id_1")
-						.append("ns", col),
+						.append("name", "priv_1_id_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("memb.user", 1).append("id", 1))
 						.append("name", "memb.user_1_id_1")
-						.append("ns", col)
 				);
 	}
 	
@@ -250,10 +239,8 @@ public class MongoGroupsStorageStartupTest {
 		try {
 			new MongoGroupsStorage(
 					manager.db, Arrays.asList(new ResourceType("t1"), new ResourceType("t2")));
-			final Set<Document> indexes = new HashSet<>();
-			manager.db.getCollection("groups").listIndexes()
-					.forEach((Consumer<Document>) indexes::add);
-			
+			final Set<Document> indexes = getAndNormalizeIndexes("groups");
+
 			final String col = "test_mongogroupsstorage.groups";
 			final Set<Document> expected = getDefaultGroupsIndexes();
 			for (final String t: set("t1", "t2")) {
@@ -263,19 +250,16 @@ public class MongoGroupsStorageStartupTest {
 								.append("key", new Document(resKey, 1)
 										.append("own", 1)
 										.append("id", 1))
-								.append("name", resKey + "_1_own_1_id_1")
-								.append("ns", col),
+								.append("name", resKey + "_1_own_1_id_1"),
 						new Document("v", manager.indexVer)
 								.append("key", new Document(resKey, 1)
 										.append("id", 1))
-								.append("name", resKey + "_1_id_1")
-								.append("ns", col),
+								.append("name", resKey + "_1_id_1"),
 						new Document("v", manager.indexVer)
 								.append("key", new Document(resKey, 1)
 										.append("priv", 1)
 										.append("id", 1))
 								.append("name", resKey + "_1_priv_1_id_1")
-								.append("ns", col)
 						));
 			}
 			assertThat("incorrect indexes", indexes, is(expected));
@@ -287,75 +271,63 @@ public class MongoGroupsStorageStartupTest {
 	
 	@Test
 	public void indexesRequests() {
-		final Set<Document> indexes = new HashSet<>();
-		manager.db.getCollection("requests").listIndexes()
-				.forEach((Consumer<Document>) indexes::add);
+		final Set<Document> indexes = getAndNormalizeIndexes("requests");
 		final String col = "test_mongogroupsstorage.requests";
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
-						.append("name", "id_1")
-						.append("ns", col),
+						.append("name", "id_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("gid", 1).append("type", 1).append("mod", 1))
-						.append("name", "gid_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "gid_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("gid", 1)
 								.append("status", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "gid_1_status_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "gid_1_status_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("requester", 1).append("mod", 1))
-						.append("name", "requester_1_mod_1")
-						.append("ns", col),
+						.append("name", "requester_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("requester", 1)
 								.append("status", 1)
 								.append("mod", 1))
-						.append("name", "requester_1_status_1_mod_1")
-						.append("ns", col),
+						.append("name", "requester_1_status_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resaid", 1)
 								.append("restype", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resaid_1_restype_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resaid_1_restype_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resaid", 1)
 								.append("restype", 1)
 								.append("status", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resaid_1_restype_1_status_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resaid_1_restype_1_status_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("restype", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_restype_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resrid_1_restype_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("restype", 1)
 								.append("status", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_restype_1_status_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resrid_1_restype_1_status_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("requester", 1)
 								.append("restype", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_requester_1_restype_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resrid_1_requester_1_restype_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("requester", 1)
@@ -363,16 +335,14 @@ public class MongoGroupsStorageStartupTest {
 								.append("status", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_requester_1_restype_1_status_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resrid_1_requester_1_restype_1_status_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("gid", 1)
 								.append("restype", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_gid_1_restype_1_type_1_mod_1")
-						.append("ns", col),
+						.append("name", "resrid_1_gid_1_restype_1_type_1_mod_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("resrid", 1)
 								.append("gid", 1)
@@ -380,23 +350,34 @@ public class MongoGroupsStorageStartupTest {
 								.append("status", 1)
 								.append("type", 1)
 								.append("mod", 1))
-						.append("name", "resrid_1_gid_1_restype_1_status_1_type_1_mod_1")
-						.append("ns", col),		
+						.append("name", "resrid_1_gid_1_restype_1_status_1_type_1_mod_1"),
 						
 				new Document("v", manager.indexVer)
 						.append("key", new Document("expire", 1))
-						.append("name", "expire_1")
-						.append("ns", col),
+						.append("name", "expire_1"),
 				new Document("v", manager.indexVer)
 						.append("unique", true)
 						.append("sparse", true)
 						.append("key", new Document("charstr", 1))
-						.append("name", "charstr_1")
-						.append("ns", col),
+						.append("name", "charstr_1"),
 				new Document("v", manager.indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", col)
 				)));
+	}
+
+	private Set<Document> getAndNormalizeIndexes(final String collectionName) {
+		final Set<Document> indexes = new HashSet<>();
+		for (Document index: manager.db.getCollection(collectionName).listIndexes()) {
+			// In MongoDB 4.4, the listIndexes and the mongo shell helper method db.collection.getIndexes()
+			// no longer returns the namespace ns field in the index specification documents.
+			index.remove("ns");
+			// some versions of Mongo return ints, some longs. Convert all to longs.
+			if (index.containsKey("expireAfterSeconds")) {
+				index.put("expireAfterSeconds", ((Number) index.get("expireAfterSeconds")).longValue());
+			}
+			indexes.add(index);
+		}
+		return indexes;
 	}
 }
