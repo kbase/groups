@@ -60,8 +60,7 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: |
-          gradle test
+        run: ./gradlew test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
