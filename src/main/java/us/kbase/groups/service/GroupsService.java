@@ -4,7 +4,7 @@ import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;

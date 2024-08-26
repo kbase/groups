@@ -12,7 +12,8 @@ import java.util.Collections;
 import org.bson.Document;
 
 import com.github.zafarkhaja.semver.Version;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.groups.core.resource.ResourceType;
@@ -39,7 +40,7 @@ public class MongoStorageTestManager {
 		wiredTiger = TestCommon.useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				TestCommon.getMongoExe(), mongo.getServerPort()));
-		mc = new MongoClient("localhost:" + mongo.getServerPort());
+		mc = MongoClients.create("mongodb://localhost:" + mongo.getServerPort());
 		db = mc.getDatabase(dbName);
 		
 		final Document bi = db.runCommand(new Document("buildinfo", 1));
