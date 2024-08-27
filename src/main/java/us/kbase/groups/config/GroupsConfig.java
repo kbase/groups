@@ -54,6 +54,7 @@ public class GroupsConfig {
 	private static final String KEY_MONGO_DB = "mongo-db";
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
+	private static final String KEY_MONGO_RETRY_WRITES = "mongo-retrywrites";
 	private static final String KEY_AUTH_URL = "auth-url";
 	private static final String KEY_WORKSPACE_URL = "workspace-url";
 	private static final String KEY_WORKSPACE_TOKEN = "workspace-admin-token";
@@ -81,6 +82,7 @@ public class GroupsConfig {
 	private final String mongoDB;
 	private final Optional<String> mongoUser;
 	private final Optional<char[]> mongoPwd;
+	private final boolean mongoRetryWrites;
 	private final URL authURL;
 	private final URL workspaceURL;
 	private final Token workspaceAdminToken;
@@ -148,6 +150,7 @@ public class GroupsConfig {
 		notifierParameters = getParams(KEY_PREFIX_NOTIFIER_PARAMS, cfg);
 		mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 		mongoDB = getString(KEY_MONGO_DB, cfg, true);
+		mongoRetryWrites = TRUE.equals(getString(KEY_MONGO_RETRY_WRITES, cfg));
 		mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
 		Optional<String> mongop = Optional.fromNullable(getString(KEY_MONGO_PWD, cfg));
 		if (mongoUser.isPresent() ^ mongop.isPresent()) {
@@ -420,11 +423,18 @@ public class GroupsConfig {
 		return mongoHost;
 	}
 
-	/** Ge the MongoDB database to use.
+	/** Get the MongoDB database to use.
 	 * @return the database.
 	 */
 	public String getMongoDatabase() {
 		return mongoDB;
+	}
+
+	/** Get the retryWrites.
+	 * @return the retryWrites.
+	 */
+	public boolean getMongoRetryWrites() {
+		return mongoRetryWrites;
 	}
 
 	/** Get the MongoDB user name, if any. If provided a password will also be provided.

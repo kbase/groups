@@ -26,7 +26,7 @@ public class Root {
 	//TODO ZLATER ROOT add configurable contact email or link
 	//TODO ZLATER swagger
 	
-	private static final String VERSION = "0.1.7";
+	private static final String VERSION = "0.1.8";
 	private static final String SERVER_NAME = "Groups service";
 	
 	/** Return the root information.
