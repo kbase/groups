@@ -430,8 +430,8 @@ public class GroupsConfig {
 		return mongoDB;
 	}
 
-	/** Get the retryWrites.
-	 * @return the retryWrites.
+	/** Get whether the MongoDB retryWrites parameter should be set.
+	 * @return True to set the retryWrites parameter when connecting to MongoDB, false otherwise.
 	 */
 	public boolean getMongoRetryWrites() {
 		return mongoRetryWrites;
