@@ -89,6 +89,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(false));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect catalog url", cfg.getCatalogURL(), is(new URL("http://cat.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
@@ -116,6 +117,7 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=\n" +
 					 "mongo-pwd=\n" +
+				     "mongo-retrywrites=     false     \n" +
 					 "notifier-factory=     factoryclass   \n" +
 					 "notifier-param-p1    =     np1    \n" +
 					 "notifier-param-p2    =     np2    \n" +
@@ -165,6 +167,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(false));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("http://auth.com")));
 		assertThat("incorrect catalog url", cfg.getCatalogURL(), is(new URL("http://cat.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("http://ws.com")));
@@ -241,6 +244,7 @@ public class GroupsConfigTest {
 					 "mongo-db=database\n" +
 					 "mongo-user=userfoo\n" +
 					 "mongo-pwd=somepwd\n" +
+					 "mongo-retrywrites=true    \n" +
 					 "notifier-factory=     factoryclass   \n" + 
 					 "auth-url=https://auth.com\n" +
 					 "catalog-url=     http://cat.com       \n" +
@@ -256,6 +260,7 @@ public class GroupsConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("mongo"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(true));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("userfoo")));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd().get(),
 				equalTo("somepwd".toCharArray()));
@@ -292,6 +297,7 @@ public class GroupsConfigTest {
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(false));
 		assertThat("incorrect auth url", cfg.getAuthURL(), is(new URL("https://auth.com")));
 		assertThat("incorrect catalog url", cfg.getCatalogURL(), is(new URL("http://cat.com")));
 		assertThat("incorrect ws url", cfg.getWorkspaceURL(), is(new URL("https://ws.com")));
@@ -315,6 +321,7 @@ public class GroupsConfigTest {
 				 "mongo-db=database\n" +
 				 "mongo-user=userfoo\n" +
 				 "mongo-pwd=somepwd\n" +
+				 "mongo-retrywrites=true\n" +
 				 "notifier-factory=     factoryclass   \n" + 
 				 "auth-url=https://auth.com\n" +
 				 "catalog-url=     http://cat.com       \n" +
@@ -327,6 +334,7 @@ public class GroupsConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("mongo"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("database"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(true));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("userfoo")));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd().get(),
 				equalTo("somepwd".toCharArray()));

@@ -3,6 +3,7 @@ mongo-host={{ default .Env.mongo_host "ci-mongo" }}
 mongo-db={{ default .Env.mongo_db "groups" }}
 mongo-user={{ default .Env.mongo_user "" }}
 mongo-pwd={{ default .Env.mongo_pwd "" }}
+mongo-retrywrites={{ default .Env.mongo_retrywrites "false" }}
 auth-url={{ default .Env.auth_url "https://ci.kbase.us/services/auth" }}
 workspace-url={{ default .Env.workspace_url "https://ci.kbase.us/services/ws" }}
 workspace-admin-token={{ default .Env.workspace_admin_token ""}}
