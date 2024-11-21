@@ -1,13 +1,10 @@
 # KBase Groups Service release notes
 
-## 0.1.8
+## 0.1.7
 
 * The MongoDB clients have been updated to the most recent version.
 * Added the ``mongo-retrywrites`` configuration setting in ``deploy.cfg``, defaulting to
   ``false``.
-
-## 0.1.7
-
 * The build tool has been switched from Ant to Gradle.
 
 ## 0.1.6
