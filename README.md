@@ -3,7 +3,6 @@
 Service for creating and managing groups of KBase users and associated Narratives.
 
 Build status (master):
-[![Build Status](https://travis-ci.org/kbase/groups.svg?branch=master)](https://travis-ci.org/kbase/groups)
 [![codecov](https://codecov.io/gh/kbase/groups/branch/master/graph/badge.svg)](https://codecov.io/gh/kbase/groups)
 
 ## API Data structures
@@ -943,7 +942,8 @@ field-<field name>-param-image-exists=<'true' or any other value for false>
 ```
 
 `strict-length` will cause the validator to throw an error if the field is not exactly 32
-characters, and is false by default. Gravatar allows for extra characters at the end of the hash.
+characters, and is false by default. In some cases (such as adding a `.jpg` extension)
+Gravatar allows for extra characters at the end of the hash.
 
 `image-exists` will cause the validator to throw an error if there is no [image associated with
 the hash (see Default Image)](https://en.gravatar.com/site/implement/images/), and is false
@@ -982,24 +982,41 @@ that the fields be kept few and small in size.
 ## Requirements
 
 Java 8 (OpenJDK OK)  
-Apache Ant (http://ant.apache.org/)  
 MongoDB 2.6+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  
 This repo (git clone https://github.com/kbase/groups)  
-The jars repo (git clone https://github.com/kbase/jars)  
-The two repos above need to be in the same parent folder.
 
-## To start server
+## Starting the server
 
-start mongodb  
-if using mongo auth, create a mongo user  
-cd into the groups repo  
-`ant build`  
-copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
-`export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
-`cd jettybase`  
-`./jettybase$ java -jar -Djetty.http.port=<port> <path to jetty install>/start.jar`  
+### Docker
+
+The provided `Dockerfile` can be used to build and run an image. See the deployment template
+in `deployment/conf/.templates` for the environment variables available to configure the
+service - the `deploy.cfg.example` file provides documentation for these variables.
+
+`docker-compose --build -d` can be used to start a MongoDB instance and groups
+service pointed at the KBase environment of your choice.
+
+### Manually
+
+* Start mongodb
+* If using mongo auth, create a mongo user
+* `cd` into the groups repo
+
+```shell
+./gradlew war
+mkdir -p jettybase/webapps
+cp build/libs/groups.war jettybase/webapps/ROOT.war
+```
+
+* copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
+
+```shell
+export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>
+cd jettybase
+./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar
+```
 
 ## Developer notes
 
@@ -1015,14 +1032,15 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 * Releases
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
-  * Update the version as per the semantic version rules in `src/us/kbase/groups/api/Root.java`.
+  * Update the version as per the semantic version rules in
+    `src/main/java/us/kbase/groups/service/api/Root.java`.
   * Tag the version in git and github.
 
 ### Running tests
 
 * Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
   * If it works as is start buying lottery tickets immediately.
-* `ant test`
+* `./gradlew test`
 
 ### UI
 
