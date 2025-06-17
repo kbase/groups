@@ -144,7 +144,7 @@ dependencies {
 		// TODO BUILD on upgrade switch to the no dependencies version
 		exclude group: "com.fasterxml.jackson.core"
 	}
-	testImplementation 'org.eclipse.jetty:jetty-servlet:9.3.11.v20160721'
+	testImplementation 'org.eclipse.jetty:jetty-servlet:11.0.25'
 }
 
 task showTestClassPath {
