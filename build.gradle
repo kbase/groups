@@ -123,7 +123,7 @@ dependencies {
 	implementation 'org.mongodb:bson-record-codec:4.11.1'
 	implementation 'org.mongodb:bson:4.11.1'
 	implementation 'org.apache.kafka:kafka-clients:2.1.0'
-	implementation 'com.google.guava:guava:18.0'
+	implementation 'com.google.guava:guava:23.0'
 	implementation 'org.slf4j:slf4j-api:1.7.25'
 	implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.5.4'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.5.4'
