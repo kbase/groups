@@ -139,7 +139,7 @@ dependencies {
 	testImplementation 'nl.jqno.equalsverifier:equalsverifier:3.1.10'
 	testImplementation 'junit:junit:4.12'
 	testImplementation 'org.mockito:mockito-core:3.0.0'
-	testImplementation('org.mock-server:mockserver-netty:5.4.1') {
+	testImplementation('org.mock-server:mockserver-netty:5.15.0') {
 		// otherwise a newer jackson implementation is brought in and tests make a poo poo
 		// TODO BUILD on upgrade switch to the no dependencies version
 		exclude group: "com.fasterxml.jackson.core"
