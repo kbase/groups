@@ -92,7 +92,7 @@ def fromURL = { url, name ->
 
 dependencies {
 
-	compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
+	compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
 
 	implementation fromURL(
 		'https://github.com/kbase/jars/raw/master/lib/jars/kbase/catalog/kbase-catalog-client-2.1.3.jar',
