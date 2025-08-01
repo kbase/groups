@@ -125,7 +125,7 @@ dependencies {
 	implementation 'org.apache.kafka:kafka-clients:2.1.0'
 	implementation 'com.google.guava:guava:18.0'
 	implementation 'org.slf4j:slf4j-api:1.7.25'
-	implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.5.4'
+	implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.19.2'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.5.4'
 	implementation 'org.glassfish.jersey.containers:jersey-container-servlet:2.23.2'
 	implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.23.2'
