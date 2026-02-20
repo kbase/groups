@@ -101,7 +101,7 @@ dependencies {
 	// TODO DEPS Need to rework the java common logger to not use syslog4j at all since it's
 	// abandonware and has a ton of CVEs, even in the newer versions.
 	implementation "org.syslog4j:syslog4j:0.9.46"
-	implementation 'ch.qos.logback:logback-classic:1.1.2'
+	implementation 'ch.qos.logback:logback-classic:1.5.32'
 	implementation("com.github.kbase:auth2_client_java:0.5.0") {
 		exclude group: 'com.fasterxml.jackson.core'  // breaks everything if we upgrade
 	}
