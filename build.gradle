@@ -138,7 +138,7 @@ dependencies {
 	testImplementation 'com.github.kbase.workspace_deluxe:workspace_deluxe-test-shadow-all:0.15.0'
 	testImplementation 'nl.jqno.equalsverifier:equalsverifier:3.1.10'
 	testImplementation 'junit:junit:4.12'
-	testImplementation 'org.mockito:mockito-core:3.0.0'
+	testImplementation 'org.mockito:mockito-core:5.22.0'
 	testImplementation('org.mock-server:mockserver-netty:5.4.1') {
 		// otherwise a newer jackson implementation is brought in and tests make a poo poo
 		// TODO BUILD on upgrade switch to the no dependencies version
